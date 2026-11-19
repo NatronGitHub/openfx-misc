@@ -1196,7 +1196,7 @@ GodRaysPluginFactory::describe(ImageEffectDescriptor &desc)
 
     Transform3x3Describe(desc, true);
 
-    desc.setOverlayInteractDescriptor(new TransformOverlayDescriptorOldParams);
+    ofxsSetOverlayInteractDescriptorV2(desc, new TransformOverlayDescriptorOldParamsV2);
 }
 
 void

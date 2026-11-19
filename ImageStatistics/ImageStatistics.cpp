@@ -2120,7 +2120,7 @@ private:
 };
 
 class ImageStatisticsOverlayDescriptor
-    : public DefaultEffectOverlayDescriptor<ImageStatisticsOverlayDescriptor, ImageStatisticsInteract>
+    : public DefaultEffectOverlayDescriptorV2<ImageStatisticsOverlayDescriptor, ImageStatisticsInteract>
 {
 };
 
@@ -2161,7 +2161,7 @@ ImageStatisticsPluginFactory::describe(ImageEffectDescriptor &desc)
     // and scale the transform appropriately.
     // All other functions are usually in canonical coordinates.
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
-    desc.setOverlayInteractDescriptor(new ImageStatisticsOverlayDescriptor);
+    ofxsSetOverlayInteractDescriptorV2(desc, new ImageStatisticsOverlayDescriptor);
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(ePixelComponentNone);
 #endif

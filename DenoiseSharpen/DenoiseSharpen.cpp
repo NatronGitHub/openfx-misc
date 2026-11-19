@@ -3557,7 +3557,7 @@ DenoiseSharpenPlugin::updateSecret()
 }
 
 class DenoiseSharpenOverlayDescriptor
-    : public DefaultEffectOverlayDescriptor<DenoiseSharpenOverlayDescriptor, RectangleInteract>
+    : public DefaultEffectOverlayDescriptorV2<DenoiseSharpenOverlayDescriptor, RectangleInteract>
 {
 };
 
@@ -3594,7 +3594,7 @@ DenoiseSharpenPluginFactory::describe(ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
-    desc.setOverlayInteractDescriptor(new DenoiseSharpenOverlayDescriptor);
+    ofxsSetOverlayInteractDescriptorV2(desc, new DenoiseSharpenOverlayDescriptor);
 
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(ePixelComponentNone); // we have our own channel selector

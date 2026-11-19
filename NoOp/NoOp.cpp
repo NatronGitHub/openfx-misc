@@ -876,7 +876,7 @@ NoOpPluginFactory::describe(ImageEffectDescriptor &desc)
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(ePixelComponentNone);
 #endif
-    desc.setOverlayInteractDescriptor(new GeneratorOverlayDescriptor);
+    ofxsSetOverlayInteractDescriptorV2(desc, new GeneratorOverlayDescriptorV2);
 }
 
 void

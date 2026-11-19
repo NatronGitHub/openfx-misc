@@ -946,7 +946,7 @@ TrackerPMPluginFactory::describe(ImageEffectDescriptor &desc)
     // rendertwicealways must be set to true if the tracker cannot handle interlaced content (most don't)
     desc.setRenderTwiceAlways(true);
     desc.setRenderThreadSafety(kRenderThreadSafety);
-    desc.setOverlayInteractDescriptor(new TrackerRegionOverlayDescriptor);
+    ofxsSetOverlayInteractDescriptorV2(desc, new TrackerRegionOverlayDescriptorV2);
 
 #ifdef OFX_EXTENSIONS_NATRON
     // This plug-in is deprecated since Natron has its new tracker implementation

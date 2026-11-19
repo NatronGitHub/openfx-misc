@@ -1804,7 +1804,7 @@ private:
 };
 
 class HSVToolOverlayDescriptor
-    : public DefaultEffectOverlayDescriptor<HSVToolOverlayDescriptor, HSVToolInteract>
+    : public DefaultEffectOverlayDescriptorV2<HSVToolOverlayDescriptor, HSVToolInteract>
 {
 };
 
@@ -1835,7 +1835,7 @@ HSVToolPluginFactory::describe(ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
-    desc.setOverlayInteractDescriptor(new HSVToolOverlayDescriptor);
+    ofxsSetOverlayInteractDescriptorV2(desc, new HSVToolOverlayDescriptor);
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(ePixelComponentRGBA);
 #endif

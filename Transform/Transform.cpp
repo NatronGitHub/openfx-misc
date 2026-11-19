@@ -436,7 +436,7 @@ TransformPluginFactory::describe(ImageEffectDescriptor &desc)
 
     Transform3x3Describe(desc, false);
 
-    desc.setOverlayInteractDescriptor(new TransformOverlayDescriptorOldParams);
+    ofxsSetOverlayInteractDescriptorV2(desc, new TransformOverlayDescriptorOldParamsV2);
 }
 
 void
@@ -480,7 +480,7 @@ TransformMaskedPluginFactory::describe(ImageEffectDescriptor &desc)
 
     Transform3x3Describe(desc, true);
 
-    desc.setOverlayInteractDescriptor(new TransformOverlayDescriptorOldParams);
+    ofxsSetOverlayInteractDescriptorV2(desc, new TransformOverlayDescriptorOldParamsV2);
 }
 
 void
@@ -524,7 +524,7 @@ DirBlurPluginFactory::describe(ImageEffectDescriptor &desc)
 
     Transform3x3Describe(desc, true);
 
-    desc.setOverlayInteractDescriptor(new TransformOverlayDescriptorOldParams);
+    ofxsSetOverlayInteractDescriptorV2(desc, new TransformOverlayDescriptorOldParamsV2);
 }
 
 void

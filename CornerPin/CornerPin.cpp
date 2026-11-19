@@ -745,6 +745,7 @@ public:
         , _lastMousePos()
         , _dragMoved(false)
         , _penDownTrapped(false)
+        , _drawMode( OFX::ofxsOverlayDrawModeForNewInteract() )
     {
         assert(_plugin);
         _selected = _plugin->overlaySelected();
@@ -957,6 +958,7 @@ private:
     bool _interactiveDrag;
     bool _dragMoved; // the selected points were moved since pen down
     bool _penDownTrapped; // the last pen down was trapped: trap the matching pen up
+    OFX::OverlayDrawModeEnum _drawMode; // set by the descriptor that created the interact, see ofxsOverlayDraw.h
     OfxPointD _toOrig[4]; // the points at pen down, restored if the drag is cancelled
     OfxPointD _fromOrig[4];
 };
@@ -986,11 +988,17 @@ CornerPinTransformInteract::draw(const DrawArgs &args)
         0.8, 0.8, 0.8
     };
     getSuggestedColour(color);
+    // all drawing goes through d: OpenGL in V1 draws, the DrawSuite in V2 draws
+    OverlayDraw d(args, _drawMode);
+    if ( !d.canDraw() ) {
+        return false; // V2 draw without a draw context, or V1 draw without OpenGL
+    }
     GLdouble projection[16];
-    glGetDoublev( GL_PROJECTION_MATRIX, projection);
+    d.glGetDoublev( GL_PROJECTION_MATRIX, projection);
     GLint viewport[4];
-    glGetIntegerv(GL_VIEWPORT, viewport);
+    d.glGetIntegerv(GL_VIEWPORT, viewport);
 #ifdef CORNERPIN_DEBUG_OPENGL
+    if ( !d.usesDrawSuite() ) {
     GLdouble modelview[16];
     glGetDoublev( GL_MODELVIEW_MATRIX, modelview);
     std::cout << "modelview:\n";
@@ -1014,10 +1022,16 @@ CornerPinTransformInteract::draw(const DrawArgs &args)
     {
         std::cout << "[" << viewport[0] << ',' << viewport[1] << ',' << viewport[2] << ',' << viewport[3] << "]\n";
     }
+    }
 #endif
     OfxPointD shadow; // how much to translate GL_PROJECTION to get exactly one pixel on screen
-    shadow.x = 2. / (projection[0] * viewport[2]);
-    shadow.y = 2. / (projection[5] * viewport[3]);
+    // 0 for a degenerate viewport or projection (inf, then inf - inf = NaN)
+    {
+        const double denx = projection[0] * viewport[2];
+        const double deny = projection[5] * viewport[3];
+        shadow.x = (denx != 0.) ? 2. / denx : 0.;
+        shadow.y = (deny != 0.) ? 2. / deny : 0.;
+    }
 
     OfxPointD to[4];
     OfxPointD from[4];
@@ -1033,6 +1047,7 @@ CornerPinTransformInteract::draw(const DrawArgs &args)
     screenPixelRatio *= hostRatio;
     hiDPI |= hostRatio > 1;
 #endif
+    screenPixelRatio = d.overlayScreenPixelRatio(screenPixelRatio); // DrawSuite: 1
     TextRenderer::Font font = hiDPI ? TextRenderer::FONT_TIMES_ROMAN_24 : TextRenderer::FONT_HELVETICA_12;
 
     OfxPointD p[4];
@@ -1060,73 +1075,76 @@ CornerPinTransformInteract::draw(const DrawArgs &args)
     //glPushAttrib(GL_ALL_ATTRIB_BITS); // caller is responsible for protecting attribs
 
     //glDisable(GL_LINE_STIPPLE);
-    glEnable(GL_LINE_SMOOTH);
+    d.glEnable(GL_LINE_SMOOTH);
     //glEnable(GL_POINT_SMOOTH);
-    glEnable(GL_BLEND);
-    glHint(GL_LINE_SMOOTH_HINT, GL_DONT_CARE);
-    glLineWidth(1.5f * screenPixelRatio);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    d.glEnable(GL_BLEND);
+    d.glHint(GL_LINE_SMOOTH_HINT, GL_DONT_CARE);
+    d.glLineWidth(1.5f * screenPixelRatio);
+    d.glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    glPointSize(POINT_SIZE * screenPixelRatio);
+    d.glPointSize(POINT_SIZE * screenPixelRatio);
     // Draw everything twice
     // l = 0: shadow
     // l = 1: drawing
-    for (int l = 0; l < 2; ++l) {
+    // with the DrawSuite, no shadow (the host's job): only the drawing pass
+    for (int l = d.usesDrawSuite() ? 1 : 0; l < 2; ++l) {
         // shadow (uses GL_PROJECTION)
-        glMatrixMode(GL_PROJECTION);
-        int direction = (l == 0) ? 1 : -1;
-        // translate (1,-1) pixels
-        glTranslated(direction * shadow.x, -direction * shadow.y, 0);
-        glMatrixMode(GL_MODELVIEW); // Modelview should be used on Nuke
+        if ( !d.usesDrawSuite() ) {
+            d.glMatrixMode(GL_PROJECTION);
+            int direction = (l == 0) ? 1 : -1;
+            // translate (1,-1) pixels
+            d.glTranslated(direction * shadow.x, -direction * shadow.y, 0);
+            d.glMatrixMode(GL_MODELVIEW); // Modelview should be used on Nuke
+        }
 
         // Draw the motion curve a bit darker
         const double darken = 0.8;
-        glColor3d(color.r * darken * l, color.g * darken * l, color.b * darken * l);
-        glPointSize(POINT_SIZE * screenPixelRatio);
+        d.glColor3d(color.r * darken * l, color.g * darken * l, color.b * darken * l);
+        d.glPointSize(POINT_SIZE * screenPixelRatio);
 
         for (int i = enableBegin; i < enableEnd; ++i) {
             if (enable[i]) {
                 Double2DParam* p = useFrom ? _from[i] : _to[i];
-                drawPointTrajectory(p);
+                drawPointTrajectory(d, p);
             }
         }
 
-        glColor3f( (float)(color.r / 2) * l, (float)(color.g / 2) * l, (float)(color.b / 2) * l );
-        glBegin(GL_LINES);
+        d.glColor3f( (float)(color.r / 2) * l, (float)(color.g / 2) * l, (float)(color.b / 2) * l );
+        d.glBegin(GL_LINES);
         for (int i = enableBegin; i < enableEnd; ++i) {
             if (enable[i]) {
-                glVertex2d(p[i].x, p[i].y);
-                glVertex2d(q[i].x, q[i].y);
+                d.glVertex2d(p[i].x, p[i].y);
+                d.glVertex2d(q[i].x, q[i].y);
             }
         }
-        glEnd();
-        glColor3f( (float)color.r * l, (float)color.g * l, (float)color.b * l );
-        glBegin(GL_LINE_LOOP);
+        d.glEnd();
+        d.glColor3f( (float)color.r * l, (float)color.g * l, (float)color.b * l );
+        d.glBegin(GL_LINE_LOOP);
         for (int i = enableBegin; i < enableEnd; ++i) {
             if (enable[i]) {
-                glVertex2d(p[i].x, p[i].y);
+                d.glVertex2d(p[i].x, p[i].y);
             }
         }
-        glEnd();
-        glBegin(GL_POINTS);
+        d.glEnd();
+        d.glBegin(GL_POINTS);
         for (int i = enableBegin; i < enableEnd; ++i) {
             if (enable[i]) {
                 if ( (_hovering == i) || (_dragging == i) ) {
-                    glColor3f(0.f * l, 1.f * l, 0.f * l);
+                    d.glColor3f(0.f * l, 1.f * l, 0.f * l);
                 } else if (_selected[i]) {
                     // selected points are highlighted
-                    glColor3f(1.f * l, 0.75f * l, 0.f * l);
+                    d.glColor3f(1.f * l, 0.75f * l, 0.f * l);
                 } else {
-                    glColor3f( (float)color.r * l, (float)color.g * l, (float)color.b * l );
+                    d.glColor3f( (float)color.r * l, (float)color.g * l, (float)color.b * l );
                 }
-                glVertex2d(p[i].x, p[i].y);
+                d.glVertex2d(p[i].x, p[i].y);
             }
         }
-        glEnd();
-        glColor3f( (float)color.r * l, (float)color.g * l, (float)color.b * l );
+        d.glEnd();
+        d.glColor3f( (float)color.r * l, (float)color.g * l, (float)color.b * l );
         for (int i = enableBegin; i < enableEnd; ++i) {
             if (enable[i]) {
-                TextRenderer::bitmapString(p[i].x, p[i].y + POINT_SIZE * screenPixelRatio, useFrom ? kParamFrom[i] : kParamTo[i], font);
+                d.bitmapString(p[i].x, p[i].y + POINT_SIZE * screenPixelRatio, useFrom ? kParamFrom[i] : kParamTo[i], font);
             }
         }
 
@@ -1350,8 +1368,9 @@ CornerPinTransformInteract::loseFocus(const FocusArgs & /*args*/)
     abandonDrag();
 }
 
+// draws through OverlayDraw: the DrawSuite in V2 draws, OpenGL (with shadows) in V1 draws
 class CornerPinOverlayDescriptor
-    : public DefaultEffectOverlayDescriptor<CornerPinOverlayDescriptor, CornerPinTransformInteract>
+    : public DefaultEffectOverlayDescriptorV2<CornerPinOverlayDescriptor, CornerPinTransformInteract>
 {
 };
 
@@ -1688,7 +1707,7 @@ CornerPinPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
         desc.setIsDeprecated(true);
     }
 
-    desc.setOverlayInteractDescriptor(new CornerPinOverlayDescriptor);
+    ofxsSetOverlayInteractDescriptorV2(desc, new CornerPinOverlayDescriptor); // V2, and V1 with OpenGL (hasOpenGLDraw)
 }
 
 template<unsigned int majorVersion>
@@ -1737,7 +1756,7 @@ CornerPinMaskedPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc
         desc.setIsDeprecated(true);
     }
 
-    desc.setOverlayInteractDescriptor(new CornerPinOverlayDescriptor);
+    ofxsSetOverlayInteractDescriptorV2(desc, new CornerPinOverlayDescriptor); // V2, and V1 with OpenGL (hasOpenGLDraw)
 }
 
 template<unsigned int majorVersion>
