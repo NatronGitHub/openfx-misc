@@ -42,8 +42,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // 1.0 initial version
 // 1.1 add boundary param
+// 1.2 a NULL Source image (disconnected, or fetchImage failed) renders black instead of crashing;
+//     with Nearest border conditions, ask for the Source edge pixels even where the render window
+//     is out of the Source RoD (it got no Source image there)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 2 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -167,6 +170,14 @@ AdjustRoDPlugin::setupAndCopy(PixelProcessorFilterBase & processor,
     }
 # endif
 
+    if ( !src.get() ) {
+        // no Source image (disconnected, or the host could not fetch it, e.g. because the
+        // render window is out of the Source RoD): black and transparent
+        fillBlack( *this, args.renderWindow, args.renderScale, dst.get() );
+
+        return;
+    }
+
     // set the images
     processor.setDstImg( dst.get() );
     processor.setSrcImg( src.get(), _boundary->getValueAtTime(time) );
@@ -176,6 +187,34 @@ AdjustRoDPlugin::setupAndCopy(PixelProcessorFilterBase & processor,
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
+}
+
+// Along one axis: the part of the Source range [s1,s2) that Nearest border conditions need to
+// render the range [r1,r2): [r1,r2) clamped to [s1,s2), and at least the edge pixel of the Source
+// (of size pixelSize) on the side where [r1,r2) is out of [s1,s2).
+static void
+nearestRoI(double r1,
+           double r2,
+           double s1,
+           double s2,
+           double pixelSize,
+           double* o1,
+           double* o2)
+{
+    double a = (std::max)( s1, (std::min)(r1, s2) );
+    double b = (std::max)( s1, (std::min)(r2, s2) );
+
+    if (b <= a) {
+        if (r1 >= s2) {
+            a = (std::max)(s1, s2 - pixelSize);
+            b = s2;
+        } else {
+            a = s1;
+            b = (std::min)(s2, s1 + pixelSize);
+        }
+    }
+    *o1 = a;
+    *o2 = b;
 }
 
 // override the roi call
@@ -200,6 +239,21 @@ AdjustRoDPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
     paddedRoD.x2 += w;
     paddedRoD.y1 -= h;
     paddedRoD.y2 += h;
+
+    if (_boundary->getValueAtTime(args.time) == eBoundaryNeumann) {
+        // Out of the Source RoD, the output pixels are those of the nearest Source pixel: they
+        // need the Source edge pixels even where args.regionOfInterest is out of the Source RoD.
+        const double par = _srcClip->getPixelAspectRatio();
+        // the size of a pixel in canonical coordinates (renderScale and the PAR are > 0 per the spec)
+        const double pixelW = (args.renderScale.x > 0. && par > 0.) ? par / args.renderScale.x : 1.;
+        const double pixelH = (args.renderScale.y > 0.) ? 1. / args.renderScale.y : 1.;
+        OfxRectD roi;
+        nearestRoI(args.regionOfInterest.x1, args.regionOfInterest.x2, srcRod.x1, srcRod.x2, pixelW, &roi.x1, &roi.x2);
+        nearestRoI(args.regionOfInterest.y1, args.regionOfInterest.y2, srcRod.y1, srcRod.y2, pixelH, &roi.y1, &roi.y2);
+        rois.setRegionOfInterest(*_srcClip, roi);
+
+        return;
+    }
 
     // intersect the crop rectangle with args.regionOfInterest
     Coords::rectIntersection(paddedRoD, args.regionOfInterest, &paddedRoD);
