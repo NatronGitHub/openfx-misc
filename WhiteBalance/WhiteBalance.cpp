@@ -69,7 +69,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "Each white is given by:\n" \
     "- a correlated color temperature in Kelvin: a point on the CIE daylight locus (CIE 15:2004) above 4000 K, " \
     "and on the Planckian (black body) locus (Krystek 1985 approximation) below 4000 K, or on the locus selected by " \
-    "the Locus parameter. The daylight locus is above the Planckian locus, so that the Auto locus jumps by about " \
+    "the Locus parameter (the daylight locus is defined from 4000 K to 25000 K, and the Planckian approximation from " \
+    "1000 K to 15000 K: the temperature is clamped to these domains). The daylight locus is above the Planckian locus, so that the Auto locus jumps by about " \
     "0.003 Duv (0.0028) at 4000 K. 6504 K with no tint on the daylight locus is exactly the D65 white of the " \
     "working spaces (x=0.3127, y=0.3290);\n" \
     "- a tint: a signed distance from the locus (Duv, in the CIE 1960 uv diagram), perpendicular to it. " \
@@ -172,8 +173,8 @@ enum AdaptationEnum
 #define kParamLocusLabel "Locus"
 #define kParamLocusHint "The locus of the color temperatures. Note that the daylight locus is above the Planckian locus (by about 0.003 Duv: 0.0028 at 4000 K, 0.0033 at 6504 K), so that the white given by a temperature and tint jumps by about 0.003 Duv at 4000 K with Auto. Choose Planckian or Daylight for a continuous locus."
 #define kParamLocusOptionAuto "Auto", "The Planckian locus below 4000 K, the CIE daylight locus above (as in most white balance tools).", "auto"
-#define kParamLocusOptionPlanckian "Planckian", "The Planckian (black body) locus, with the approximation of Krystek (1985), valid from 1000 K to 15000 K.", "planckian"
-#define kParamLocusOptionDaylight "Daylight", "The CIE daylight locus (CIE 15:2004), defined from 4000 K to 25000 K (extrapolated below 4000 K).", "daylight"
+#define kParamLocusOptionPlanckian "Planckian", "The Planckian (black body) locus, with the approximation of Krystek (1985), valid from 1000 K to 15000 K: higher temperatures give the 15000 K white.", "planckian"
+#define kParamLocusOptionDaylight "Daylight", "The CIE daylight locus (CIE 15:2004), defined from 4000 K to 25000 K: lower temperatures give the 4000 K white.", "daylight"
 
 enum LocusEnum
 {
@@ -196,7 +197,7 @@ enum SourceWhiteEnum
 
 #define kParamSourceTemperature "sourceTemperature"
 #define kParamSourceTemperatureLabel "Source Temperature"
-#define kParamSourceTemperatureHint "The correlated color temperature of the scene illuminant, in Kelvin (e.g. 2700 K for incandescent light, 3200 K for tungsten studio light, 5003 K for D50, 6504 K for D65 daylight, 7500 K for shade)."
+#define kParamSourceTemperatureHint "The correlated color temperature of the scene illuminant, in Kelvin (e.g. 2700 K for incandescent light, 3200 K for tungsten studio light, 5003 K for D50, 6504 K for D65 daylight, 7500 K for shade). The temperature is limited to the domain of the locus: 4000-25000 K for Daylight, 1000-15000 K for Planckian."
 
 #define kParamSourceTint "sourceTint"
 #define kParamSourceTintLabel "Source Tint"
@@ -220,7 +221,7 @@ enum TargetWhiteEnum
 
 #define kParamTargetTemperature "targetTemperature"
 #define kParamTargetTemperatureLabel "Target Temperature"
-#define kParamTargetTemperatureHint "The correlated color temperature of the target white, in Kelvin, used when Target White is Temperature/Tint. Lower than Source Temperature makes the image warmer (more orange), higher makes it cooler (bluer)."
+#define kParamTargetTemperatureHint "The correlated color temperature of the target white, in Kelvin, used when Target White is Temperature/Tint. Lower than Source Temperature makes the image warmer (more orange), higher makes it cooler (bluer). The temperature is limited to the domain of the locus: 4000-25000 K for Daylight, 1000-15000 K for Planckian."
 
 #define kParamTargetTint "targetTint"
 #define kParamTargetTintLabel "Target Tint"
@@ -239,9 +240,12 @@ enum TargetWhiteEnum
 #define kTemperatureMin 1000.
 #define kTemperatureMax 25000.
 #define kTintMax 0.1
+// The domain of the Planckian locus approximation (Krystek 1985)
+#define kPlanckianMaxTemperature 15000.
 
-// The Auto locus switches from Planckian to daylight at this temperature (CIE 15:2004 defines
-// the daylight illuminants from 4000 K).
+// The Auto locus switches from Planckian to daylight at this temperature. CIE 15:2004 defines
+// the daylight illuminants from 4000 K, which is also the lower bound of the Daylight locus:
+// below about 2244 K, the cubic x_D(T) decreases (x is -1.3 at 1000 K).
 #define kDaylightMinTemperature 4000.
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -261,7 +265,8 @@ xyToUV(double x,
 }
 
 // CIE 1960 UCS uv -> CIE 1931 xy. Returns false if the denominator 2u-8v+4 (that is,
-// 12(X+Y+Z)/(X+15Y+3Z)) is not positive, which the temperature and tint ranges exclude.
+// 12(X+Y+Z)/(X+15Y+3Z)) is not positive, which the clamped temperature and tint exclude
+// (it is above 0.88 on both loci, with tints of +-0.1).
 static bool
 uvToXY(double u,
        double v,
@@ -294,8 +299,8 @@ planckianUV(double T,
          (1. - 2.89741816e-5 * T + 1.61456053e-7 * T * T);
 }
 
-// CIE daylight locus, CIE 15:2004 "Colorimetry", section 3.1, eq. 3.3 and 3.4
-// (defined from 4000 K to 25000 K; the formula is extrapolated outside).
+// CIE daylight locus, CIE 15:2004 "Colorimetry", section 3.1, eq. 3.3 and 3.4, defined from
+// 4000 K to 25000 K (see clampWhite()).
 static void
 daylightUV(double T,
            double *u,
@@ -331,26 +336,44 @@ isD65(double T,
     return (T == kTemperatureDefault) && (tint == 0.) && (locus != eLocusPlanckian);
 }
 
-// The XYZ (with Y=1) of the white of temperature T and tint (Duv) on the given locus.
-static Point3D
+// Clamp the temperature and tint to the domain of the locus: 1000-25000 K for Auto
+// (Planckian below 4000 K, daylight above), 1000-15000 K for Planckian (Krystek 1985),
+// 4000-25000 K for Daylight (CIE 15:2004), and +-kTintMax for the tint (a host may not clamp
+// the parameter values). These clamps also give finite values for non-finite parameters,
+// without testing for NaN: std::min(a, x) and std::max(a, x) return a if x is NaN.
+static void
+clampWhite(double *T,
+           double *tint,
+           LocusEnum locus)
+{
+    double tMin = (locus == eLocusDaylight) ? kDaylightMinTemperature : kTemperatureMin;
+    double tMax = (locus == eLocusPlanckian) ? kPlanckianMaxTemperature : kTemperatureMax;
+
+    *T = (std::max)(tMin, (std::min)(tMax, *T));
+    *tint = (std::max)(-kTintMax, (std::min)(kTintMax, *tint));
+}
+
+// The XYZ (with Y=1) of the white of temperature T and tint (Duv) on the given locus. T and
+// tint must have been clamped by clampWhite(). Returns false if it is not a white, which is
+// impossible on the clamped domains (the caller then does no correction).
+static bool
 temperatureToXYZ(double T,
                  double tint,
-                 LocusEnum locus)
+                 LocusEnum locus,
+                 Point3D *xyz)
 {
     if ( isD65(T, tint, locus) ) {
-        return xyToXYZ(kD65x, kD65y);
+        *xyz = xyToXYZ(kD65x, kD65y);
+
+        return true;
     }
-    // the parameter ranges (a host may not clamp the values). These clamps also give finite
-    // values for non-finite parameters, without testing for NaN.
-    T = (std::max)(kTemperatureMin, (std::min)(kTemperatureMax, T));
-    tint = (std::max)(-kTintMax, (std::min)(kTintMax, tint));
     bool daylight = (locus == eLocusDaylight) || (locus == eLocusAuto && T >= kDaylightMinTemperature);
     void (*locusUV)(double, double*, double*) = daylight ? daylightUV : planckianUV;
     double u, v;
     locusUV(T, &u, &v);
     if (tint != 0.) {
         // the tangent of the locus, by a central difference (on the same locus, even near the
-        // 4000 K switch of the Auto locus)
+        // 4000 K switch of the Auto locus, and slightly outside the domain at its ends)
         double h = T * 1e-4;
         double u1, v1, u2, v2;
         locusUV(T - h, &u1, &v1);
@@ -358,20 +381,23 @@ temperatureToXYZ(double T,
         double du = u2 - u1;
         double dv = v2 - v1;
         double norm = std::sqrt(du * du + dv * dv);
-        if (norm > 0.) {
-            // u decreases with T on both loci (du < 0), so the normal (dv, -du) points
-            // towards +v, i.e. above the locus (towards green), as a positive Duv.
-            u += tint * dv / norm;
-            v += tint * -du / norm;
+        if ( !(norm > 0.) ) {
+            return false;
         }
+        // On the clamped domains, u decreases with T on both loci (du/norm < -0.31), so the
+        // normal (dv, -du) points towards +v, i.e. above the locus (towards green), as a
+        // positive Duv.
+        u += tint * dv / norm;
+        v += tint * -du / norm;
     }
     double x, y;
     if ( !uvToXY(u, v, &x, &y) || (y <= 1e-6) ) {
-        // impossible with the parameter ranges, but don't divide by zero: D65
-        return xyToXYZ(kD65x, kD65y);
+        // impossible on the clamped domains (y > 0.17), but don't divide by zero
+        return false;
     }
+    *xyz = Point3D(x / y, 1., (1. - x - y) / y);
 
-    return Point3D(x / y, 1., (1. - x - y) / y);
+    return true;
 }
 
 // The working spaces whose white is D65 (kD65x, kD65y).
@@ -726,11 +752,16 @@ WhiteBalancePlugin::computeMatrix(double time,
             srcIsWorking = true;
             src = working;
         } else {
+            // Components out of the finite range (the param range is +-DBL_MAX): not a
+            // white, no correction. This domain check is done on each component, since
+            // std::max may drop a NaN.
+            if ( !( (std::abs(r) <= DBL_MAX) && (std::abs(g) <= DBL_MAX) && (std::abs(b) <= DBL_MAX) ) ) {
+                return true;
+            }
             // Only the chromaticity is used: divide by the largest absolute component, so
-            // that the XYZ conversion can neither overflow nor underflow. Zero or out of the
-            // finite range (the param range is +-DBL_MAX): not a white, no correction.
+            // that the XYZ conversion can neither overflow nor underflow. Zero: not a white.
             double s = (std::max)( std::abs(r), (std::max)( std::abs(g), std::abs(b) ) );
-            if ( !( (s > 1e-30) && (s <= DBL_MAX) ) ) {
+            if ( !(s > 1e-30) ) {
                 return true;
             }
             src = toXYZ * Point3D(r / s, g / s, b / s);
@@ -745,7 +776,7 @@ WhiteBalancePlugin::computeMatrix(double time,
     } else {
         srcTemperature = _sourceTemperature->getValueAtTime(time);
         srcTint = _sourceTint->getValueAtTime(time);
-        src = temperatureToXYZ(srcTemperature, srcTint, locus);
+        clampWhite(&srcTemperature, &srcTint, locus);
     }
     if (targetWhite == eTargetWhiteWorking) {
         if ( srcIsWorking ||
@@ -757,10 +788,17 @@ WhiteBalancePlugin::computeMatrix(double time,
     } else {
         double dstTemperature = _targetTemperature->getValueAtTime(time);
         double dstTint = _targetTint->getValueAtTime(time);
+        clampWhite(&dstTemperature, &dstTint, locus);
+        // compared after clamping, so that values that clamp to the same white are an identity
         if ( (sourceWhite == eSourceWhiteTemperature) && (dstTemperature == srcTemperature) && (dstTint == srcTint) ) {
             return true;
         }
-        dst = temperatureToXYZ(dstTemperature, dstTint, locus);
+        if ( !temperatureToXYZ(dstTemperature, dstTint, locus, &dst) ) {
+            return true;
+        }
+    }
+    if ( (sourceWhite == eSourceWhiteTemperature) && !temperatureToXYZ(srcTemperature, srcTint, locus, &src) ) {
+        return true;
     }
 
     Matrix3x3 cat = catMatrix(adaptation);

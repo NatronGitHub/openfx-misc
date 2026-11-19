@@ -452,6 +452,14 @@ tests=(
     # a neutral color (the 3200 K white in Rec. 2020) becomes gray (the working space white,
     # the default target), keeping the luminance
     "WhiteBalance neutral|net.sf.openfx.WhiteBalance|filter|float|tol=1e-5+mean=0.5,0.5,0.5,1||-i Source=solid:0.6764015,0.458127,0.1972952,1 -i Mask=none workingSpace=1 sourceWhite=1 neutral=1.3528031,0.916254,0.3945904"
+    # the temperatures are clamped to the domain of the locus (Daylight: 4000-25000 K, the
+    # CIE x_D(T) cubic falls below about 2244 K; Planckian: 1000-15000 K, Krystek 1985), and
+    # whites that clamp to the same values are an identity. The 4000 K daylight white (Rec. 709,
+    # Y=1, computed independently) becomes (1,1,1) with a 1000 K source on the Daylight locus.
+    "WhiteBalance Daylight 1000K|net.sf.openfx.WhiteBalance|filter|float|tol=1e-5+mean=1,1,1,1||-i Source=solid:1.3876891,0.935643,0.4956286,1 -i Mask=none locus=2 sourceTemperature=1000"
+    "WhiteBalance Daylight clamp|net.sf.openfx.WhiteBalance|filter|float|identity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none locus=2 sourceTemperature=1000 targetWhite=0 targetTemperature=3000"
+    "WhiteBalance Planckian clamp|net.sf.openfx.WhiteBalance|filter|float|identity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none locus=1 sourceTemperature=25000 targetWhite=0 targetTemperature=15000"
+    # (hostDemo only accepts finite param values, so a NaN Neutral Color can't be tested here)
     # degenerate neutral colors give the identity, not NaN: a negative luminance, and values
     # whose XYZ would overflow the double range without normalization
     "WhiteBalance neutral Y<0|net.sf.openfx.WhiteBalance|filter|float|identity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none sourceWhite=1 neutral=-1,-1,0.5"
