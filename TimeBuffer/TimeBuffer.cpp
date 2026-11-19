@@ -76,7 +76,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 1.1: the kOfxActionUnload of one of TimeBufferRead and TimeBufferWrite no longer frees the buffer map
-//              that the other one, still loaded, uses (it is freed when both are unloaded)
+//              that the other one, still loaded, uses (it is freed when both are unloaded); the mutex of the
+//              buffer map is created at load (the first instance created it, without a lock)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -250,28 +251,34 @@ static auto_ptr<TimeBufferMap> gTimeBufferMap;
 static auto_ptr<Mutex> gTimeBufferMapMutex;
 
 // kOfxActionLoad and kOfxActionUnload are per plug-in: TimeBufferRead and TimeBufferWrite share
-// gTimeBufferMap, so it may only be freed when both are unloaded. The host sends these actions on
-// its main thread, never concurrently with other actions of the same plug-in.
-static int gTimeBufferLoadCount = 0;
+// gTimeBufferMap and its mutex, so they are created at the first Load and freed only when both
+// plug-ins are unloaded. One flag per plug-in (not a count), so that an Unload of a plug-in that
+// was not loaded doesn't free the map of the other one. The host sends these actions on its main
+// thread, before and after all the other actions of the plug-in.
+static bool gTimeBufferLoaded[2] = { false, false }; // [isRead]
 
 static void
-timeBufferLoad()
+timeBufferLoad(bool isRead)
 {
     ofxsThreadSuiteCheck();
-    ++gTimeBufferLoadCount;
+    gTimeBufferLoaded[isRead ? 1 : 0] = true;
+    if ( !gTimeBufferMapMutex.get() ) {
+        gTimeBufferMapMutex.reset(new Mutex);
+    }
 }
 
 static void
-timeBufferUnload()
+timeBufferUnload(bool isRead)
 {
-    if (gTimeBufferLoadCount > 0) {
-        --gTimeBufferLoadCount;
+    if (!gTimeBufferLoaded[isRead ? 1 : 0]) {
+        return; // not loaded
     }
-    if (gTimeBufferLoadCount == 0) {
-        // the last of the two plug-ins was unloaded: no instance is left (the binary may be
-        // unloaded, or loaded again, after this)
-        gTimeBufferMapMutex.reset(NULL);
+    gTimeBufferLoaded[isRead ? 1 : 0] = false;
+    if (!gTimeBufferLoaded[0] && !gTimeBufferLoaded[1]) {
+        // both plug-ins are unloaded: no instance is left (the binary may be unloaded, or loaded
+        // again, after this)
         gTimeBufferMap.reset(NULL);
+        gTimeBufferMapMutex.reset(NULL);
     }
 }
 
@@ -299,8 +306,10 @@ protected:
         , _name()
         , _isRead(isRead)
     {
+        // created by timeBufferLoad(): kOfxActionLoad comes before any instance
+        assert( gTimeBufferMapMutex.get() );
         if ( !gTimeBufferMapMutex.get() ) {
-            gTimeBufferMapMutex.reset(new Mutex);
+            throwSuiteStatusException(kOfxStatFailed);
         }
         {
             AutoMutex guard( gTimeBufferMapMutex.get() );
@@ -816,7 +825,7 @@ TimeBufferReadPlugin::changedParam(const InstanceChangedArgs & /*args*/,
     }
 }
 
-mDeclarePluginFactory(TimeBufferReadPluginFactory, { timeBufferLoad(); }, { timeBufferUnload(); });
+mDeclarePluginFactory(TimeBufferReadPluginFactory, { timeBufferLoad(true); }, { timeBufferUnload(true); });
 void
 TimeBufferReadPluginFactory::describe(ImageEffectDescriptor &desc)
 {
@@ -1167,7 +1176,7 @@ TimeBufferWritePlugin::changedParam(const InstanceChangedArgs & /*args*/,
     }
 }
 
-mDeclarePluginFactory(TimeBufferWritePluginFactory, { timeBufferLoad(); }, { timeBufferUnload(); });
+mDeclarePluginFactory(TimeBufferWritePluginFactory, { timeBufferLoad(false); }, { timeBufferUnload(false); });
 void
 TimeBufferWritePluginFactory::describe(ImageEffectDescriptor &desc)
 {

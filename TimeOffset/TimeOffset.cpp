@@ -41,8 +41,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginIdentifier "net.sf.openfx.timeOffset"
 // History:
 // version 1.0: initial version
-// version 1.1: render copies the Source at the source time (it wrote nothing), for hosts that render
-//              although isIdentity is true (the spec allows it)
+// version 1.1: render copies the Source at the source time (it wrote nothing): the spec says that the
+//              host should not call render after isIdentity returns true, but some hosts (e.g. hostDemo) do
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -186,8 +186,9 @@ TimeOffsetPlugin::getFramesNeeded(const FramesNeededArguments &args,
 void
 TimeOffsetPlugin::render(const RenderArguments &args)
 {
-    // isIdentity is always true, but the host may render anyway (the spec doesn't forbid it,
-    // and hostDemo does): copy the Source at the source time, as the identity would
+    // isIdentity is always true, and the spec says that the host should not call render after
+    // isIdentity returns true, but some hosts (e.g. hostDemo) do: copy the identity result (the
+    // Source at the source time), for robustness
     auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
