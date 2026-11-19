@@ -80,9 +80,10 @@ static bool gParametricPeriodic = false;
 // History:
 // version 1.0 (deprecated): initial version
 // version 1.1 (deprecated): curve values above kCurveValueMax are replaced by 0, without detecting non-finite values
+// version 1.2 (deprecated): premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73)
 // version 2.0 (in HueCorrect.cpp): add Hue vs Hue support
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 2 // Increment this when you have fixed a bug or made it faster.
 
 // curve values above this (or infinite) are invalid, and replaced by 0
 #define kCurveValueMax 1e6

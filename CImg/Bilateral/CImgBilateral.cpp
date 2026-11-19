@@ -60,8 +60,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
+// version 2.1: premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73)
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kPluginGuidedName          "SmoothBilateralGuidedCImg"
 #define kPluginGuidedIdentifier    "net.sf.cimg.CImgBilateralGuided"
@@ -69,8 +70,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
 // version 3.0: the Mix parameter is applied (it was ignored before)
+// version 2.1 and 3.1: premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73)
 #define kPluginGuidedVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginGuidedVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginGuidedVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 #define kPluginGuidedDescription \
     "Apply joint/cross bilateral filtering on image A, guided by the intensity differences of image B. " \
     "Uses the 'blur_bilateral' function from the CImg library.\n" \
@@ -462,7 +464,7 @@ CImgBilateralGuidedPluginFactory<majorVersion>::createInstance(OfxImageEffectHan
 
 static CImgBilateralPluginFactory p1(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 // BilateralGuided version 2 is kept for backward compatibility (Mix is ignored)
-static CImgBilateralGuidedPluginFactory<2> p2old(kPluginGuidedIdentifier, 0);
+static CImgBilateralGuidedPluginFactory<2> p2old(kPluginGuidedIdentifier, 1);
 static CImgBilateralGuidedPluginFactory<kPluginGuidedVersionMajor> p2(kPluginGuidedIdentifier, kPluginGuidedVersionMinor);
 mRegisterPluginFactoryInstance(p1)
 mRegisterPluginFactoryInstance(p2old)
