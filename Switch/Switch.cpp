@@ -59,8 +59,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "See also: https://web.archive.org/web/20220120145727/http://opticalenquiry.com/nuke/index.php?title=Switch"
 
 #define kPluginIdentifier "net.sf.openfx.switchPlugin"
+// version 1.1: works on hosts other than Natron (it fetched 16 clips but defined only 2)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -79,7 +80,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamAutomaticHint \
     "When checked, automatically switch to the first connected input with a non-empty region of definition. This can be used to recompose a single clip from effects applied to different frame ranges."
 
-#define kClipSourceCount 16
+#define kClipSourceCount 2 // the clips defined on hosts other than Natron >= 2 ("0" or Source, and "1")
 #define kClipSourceCountNumerous 128
 
 static

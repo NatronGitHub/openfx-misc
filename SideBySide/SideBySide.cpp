@@ -37,8 +37,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Views/Stereo"
 #define kPluginDescription "Put the left and right view of the input next to each other."
 #define kPluginIdentifier "net.sf.openfx.sideBySidePlugin"
+// version 1.1: works on hosts without the multiview suites (OFX 1.4): it then has one view
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -59,6 +60,21 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamView2Hint "Second view"
 #define kParamViewOptionLeft "Left", "Left view.", "left"
 #define kParamViewOptionRight "Right", "Right view.", "right"
+
+// OFX 1.4 hosts have neither the multiview plane suite (kFnOfxImageEffectPlaneSuite v2)
+// nor the Vegas stereoscopic suite: they have a single view, which is then every view.
+static Image*
+fetchViewImage(Clip* clip,
+               double time,
+               int view)
+{
+    if ( fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true) ||
+         fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true) ) {
+        return clip->fetchStereoscopicImage(time, view);
+    }
+
+    return clip->fetchImage(time);
+}
 
 // Base class for the RGBA and the Alpha processor
 class SideBySideBase
@@ -247,9 +263,9 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor,
         return;
     }
     auto_ptr<const Image> src1( ( _srcClip && _srcClip->isConnected() ) ?
-                                     _srcClip->fetchImagePlane(args.time, view1, kFnOfxImagePlaneColour) : 0 );
+                                     fetchViewImage(_srcClip, args.time, view1) : 0 );
     auto_ptr<const Image> src2( ( _srcClip && _srcClip->isConnected() ) ?
-                                     _srcClip->fetchImagePlane(args.time, view2, kFnOfxImagePlaneColour) : 0 );
+                                     fetchViewImage(_srcClip, args.time, view2) : 0 );
 
 # ifndef NDEBUG
     // make sure bit depths are sane
@@ -405,10 +421,6 @@ SideBySidePlugin::renderInternal(const RenderArguments &args,
 void
 SideBySidePlugin::render(const RenderArguments &args)
 {
-    if ( !fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true) ) {
-        throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
-    }
-
     assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // instantiate the render code based on the pixel depth of the dst clip
@@ -490,9 +502,6 @@ void
 SideBySidePluginFactory::describeInContext(ImageEffectDescriptor &desc,
                                            ContextEnum /*context*/)
 {
-    if ( !fetchSuite(kFnOfxImageEffectPlaneSuite, 1, true) ) {
-        throwHostMissingSuiteException(kFnOfxImageEffectPlaneSuite);
-    }
 
     // Source clip only in the filter context
     // create the mandated source clip

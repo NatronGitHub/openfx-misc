@@ -63,10 +63,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginUnpremultIdentifier "net.sf.openfx.Unpremult"
 // History:
 // version 1.0: initial version
-// version 2.0: use kNatronOfxParamProcess* parameters
-// version 2.1: do not guess checkbox values from input premult, leave kParamPremultChanged for backward compatibility
+// version 2.0: use kNatronOfxParamProcess* parameters;
+//              do not guess checkbox values from input premult, leave kParamPremultChanged for backward compatibility
+//              (this line said 2.1, but the minor version was not incremented)
+// version 2.1: describes on hosts that are not multi-planar (e.g. OFX 1.4 hosts), with a fixed channel menu
+//              (R, G, B, A, 0, 1); describeInContext failed there (issue #166)
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -995,13 +998,17 @@ PremultPluginFactory<isPremult>::describe(ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
-#ifndef OFX_EXTENSIONS_NATRON
-    gIsMultiplanar = false;
+#if !defined(OFX_EXTENSIONS_NATRON) || !defined(OFX_EXTENSIONS_NUKE)
+    gIsMultiplanar = false; // isMultiPlanar and the plane suite are Nuke extensions
 #else
     desc.setChannelSelector(ePixelComponentNone); // we have our own channel selector
     desc.setPassThroughForNotProcessedPlanes(ePassThroughLevelPassThroughNonRenderedPlanes);
-    // optional=true: fetchSuite() throws instead of returning NULL when the host lacks the suite
-    gIsMultiplanar = getImageEffectHostDescription()->supportsDynamicChoices && fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true);
+    // optional=true: fetchSuite() returns NULL instead of throwing when the host lacks the suite.
+    // The host must also be multi-planar (kFnOfxImageEffectPropMultiPlanar), as Shuffle checks:
+    // SupportExt's MultiPlane parameters need it.
+    gIsMultiplanar = ( getImageEffectHostDescription()->isMultiPlanar &&
+                       getImageEffectHostDescription()->supportsDynamicChoices &&
+                       fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true) );
     desc.setIsMultiPlanar(gIsMultiplanar);
 #endif
 }
@@ -1084,7 +1091,26 @@ PremultPluginFactory<isPremult>::describeInContext(ImageEffectDescriptor &desc,
 
     std::vector<std::string> clips(1);
     clips[0] = kOfxImageEffectSimpleSourceClipName;
-    ChoiceParamDescriptor* param = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clips, kParamPremultChannel, kParamPremultChannelLabel, kParamPremultChannelHint);
+    ChoiceParamDescriptor* param;
+#ifdef OFX_EXTENSIONS_NUKE
+    if ( gIsMultiplanar ||
+         ( getImageEffectHostDescription()->isMultiPlanar && fetchSuite(kFnOfxImageEffectPlaneSuite, 1, true) ) ) {
+        param = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clips, kParamPremultChannel, kParamPremultChannelLabel, kParamPremultChannelHint);
+    } else
+#endif
+    {
+        // not a multi-plane host (e.g. OFX 1.4): describeInContextAddPlaneChannelChoice()
+        // throws, so define the same menu with the colour plane channels (R, G, B, A, 0, 1)
+        param = desc.defineChoiceParam(kParamPremultChannel);
+        param->setLabel(kParamPremultChannelLabel);
+        desc.addClipPreferencesSlaveParam(*param);
+        param->setHint(kParamPremultChannelHint);
+        param->setAnimates(false);
+        MultiPlane::Factory::addInputChannelOptionsRGBA(param, clips, true /*addConstants*/, true /*onlyColorPlane*/);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
     param->setDefault(3);
 
     if (gIsMultiplanar) {

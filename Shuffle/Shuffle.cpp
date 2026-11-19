@@ -1898,7 +1898,7 @@ ShufflePluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 #endif
 #ifdef OFX_EXTENSIONS_NUKE
     gIsMultiPlanarV1 = kEnableMultiPlanar && getImageEffectHostDescription()->isMultiPlanar;
-    // optional=true: fetchSuite() throws instead of returning NULL when the host lacks the suite
+    // optional=true: fetchSuite() returns NULL instead of throwing when the host lacks the suite
     gIsMultiPlanarV2 = gIsMultiPlanarV1 && supportsDynamicChoices && fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true);
     if (gIsMultiPlanarV1 || gIsMultiPlanarV2) {
         // This enables fetching different planes from the input.

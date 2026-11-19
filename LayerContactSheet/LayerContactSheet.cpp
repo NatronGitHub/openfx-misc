@@ -70,7 +70,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginIdentifier "net.sf.openfx.LayerContactSheetOFX"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
-// 1.1: an empty source format no longer gives NaN cell sizes and image areas (NaN audit)
+// 1.1: an empty source format no longer gives NaN cell sizes and image areas (NaN audit);
+//      renders on hosts without the plane suite (e.g. OFX 1.4 hosts), with the colour plane only
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -273,6 +274,13 @@ LayerContactSheetPlugin::render(const OFX::RenderArguments &args)
     std::vector<std::string> planes;
     if (_srcClip) {
         _srcClip->getPlanesPresent(&planes);
+    }
+    if ( !fetchSuite(kFnOfxImageEffectPlaneSuite, 1, true) ) {
+        // no plane suite (e.g. OFX 1.4 hosts): fetchImagePlane() can only fetch the colour plane
+        planes.clear();
+        if ( _srcClip && _srcClip->isConnected() ) {
+            planes.push_back(kFnOfxImagePlaneColour);
+        }
     }
 
     // now, for each clip, compute the required region of interest, which is the union of the intersection of each cell with the renderWindow
@@ -523,6 +531,13 @@ LayerContactSheetInteract::draw(const OFX::DrawArgs &args)
 
     std::vector<std::string> planes;
     _srcClip->getPlanesPresent(&planes);
+    if ( !fetchSuite(kFnOfxImageEffectPlaneSuite, 1, true) ) {
+        // no plane suite (e.g. OFX 1.4 hosts): fetchImagePlane() can only fetch the colour plane
+        planes.clear();
+        if ( _srcClip && _srcClip->isConnected() ) {
+            planes.push_back(kFnOfxImagePlaneColour);
+        }
+    }
 
     // now, for each clip, compute the required region of interest, which is the union of the intersection of each cell with the renderWindow
     int rows, columns;

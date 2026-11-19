@@ -34,8 +34,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Views"
 #define kPluginDescription "Takes one view from the input."
 #define kPluginIdentifier "net.sf.openfx.oneViewPlugin"
+// version 2.1: works on hosts without the multiview suites (OFX 1.4): it then has one view
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -52,6 +53,21 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 
 static bool gHostSupportsDynamicChoices = false;
+
+// OFX 1.4 hosts have neither the multiview plane suite (kFnOfxImageEffectPlaneSuite v2)
+// nor the Vegas stereoscopic suite: they have a single view, which is then every view.
+static Image*
+fetchViewImage(Clip* clip,
+               double time,
+               int view)
+{
+    if ( fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true) ||
+         fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true) ) {
+        return clip->fetchStereoscopicImage(time, view);
+    }
+
+    return clip->fetchImage(time);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -108,6 +124,10 @@ private:
 void
 OneViewPlugin::getClipPreferences(ClipPreferencesSetter & /*clipPreferences*/)
 {
+    if ( !fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true) ) {
+        // getViewCount() and getViewName() need it: keep the Left and Right options
+        return;
+    }
     //Rebuild view choice
     int nViews = getViewCount();
 
@@ -185,7 +205,7 @@ OneViewPlugin::setupAndProcess(PixelProcessorFilterBase &processor,
     _view->getValueAtTime(args.time, view);
     // fetch main input image
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                    _srcClip->fetchImagePlane(args.time, view, kFnOfxImagePlaneColour) : 0 );
+                                    fetchViewImage(_srcClip, args.time, view) : 0 );
 
     // make sure bit depths are sane
     if ( src.get() ) {
@@ -248,10 +268,6 @@ OneViewPlugin::renderInternal(const RenderArguments &args,
 void
 OneViewPlugin::render(const RenderArguments &args)
 {
-    if ( !fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true) ) {
-        throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
-    }
-
     assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // instantiate the render code based on the pixel depth of the dst clip
@@ -339,10 +355,6 @@ void
 OneViewPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                                         ContextEnum /*context*/)
 {
-    if ( !fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true) &&
-         !fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true) ) {
-        throwHostMissingSuiteException(kFnOfxImageEffectPlaneSuite);
-    }
 #ifdef OFX_EXTENSIONS_NATRON
     gHostSupportsDynamicChoices = getImageEffectHostDescription()->supportsDynamicChoices;
 #endif
