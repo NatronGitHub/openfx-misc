@@ -427,13 +427,46 @@ jobs:
           .github/tools/loadtest.sh install
           .github/tools/loadtest.sh install-denoisesharpen
           [ -z "$OSMESA_RELEASE" ] || .github/tools/loadtest.sh install-shadertoy
+      - name: Licenses of the MinGW-w64 runtime
+        # -static links into every bundle winpthreads (MIT/BSD-style) and the MinGW-w64 CRT (ZPL
+        # 2.1, parts public domain), whose licenses ask for the notice in binaries: their license
+        # files (pacman -Ql of the packages that own the static libraries) go into every Windows
+        # archive's LICENSES/. Missing ones fail. (libstdc++ and libgcc, also static, fall under the
+        # GCC Runtime Library Exception: no notice needed. Nothing else is linked statically: the
+        # bundles only need OpenGL and system DLLs, and osmesa-install's OSMesa and LLVM, whose
+        # licenses are in Shadertoy, are built without zlib, zstd and expat.)
+        run: |
+          set -eo pipefail
+          collect() { # NAME PACKAGE_OR_FILE...: the license files of these packages (or of the owners of these files)
+            local name=$1 pkgs='' a files
+            shift
+            for a in "$@"; do
+              case "$a" in
+                /*) pkgs="$pkgs $(pacman -Qqo "$a")" ;;
+                *) if pacman -Qq "$a" > /dev/null 2>&1; then pkgs="$pkgs $a"; fi ;;
+              esac
+            done
+            pkgs=$(printf '%s\n' $pkgs | sort -u)
+            echo "$name: packages $(echo $pkgs)"
+            for a in $pkgs; do pacman -Ql "$a" | grep -i -e licen -e copying || true; done
+            files=$(for a in $pkgs; do pacman -Ql "$a"; done | awk '$2 ~ /\/share\/licenses\/.*[^\/]$/ { print $2 }')
+            if [ -z "$files" ]; then
+              echo "ERROR: no license file (share/licenses) in the packages of $name: $(echo $pkgs)"
+              exit 1
+            fi
+            mkdir -p "windows-licenses/$name"
+            for a in $files; do cp "$a" "windows-licenses/$name/"; done
+            ls -l "windows-licenses/$name"
+          }
+          collect winpthreads mingw-w64-ucrt-x86_64-libwinpthread "$MINGW_PREFIX/lib/libwinpthread.a"
+          collect mingw-w64-crt "$MINGW_PREFIX/lib/libmingw32.a" "$MINGW_PREFIX/lib/crt2.o"
       - name: Package
         run: |
           set -eo pipefail
           .github/tools/package-release.sh \
               --platform windows-x86_64 --out dist \
               --full install/OFX/Plugins --shadertoy-gl install-shadertoy/OFX/Plugins ${SHADERTOY_OSMESA:-} \
-              --denoisesharpen install-denoisesharpen/OFX/Plugins
+              --denoisesharpen install-denoisesharpen/OFX/Plugins --licenses windows-licenses
       - name: Upload artifacts
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:

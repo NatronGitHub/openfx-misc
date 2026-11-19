@@ -18,7 +18,10 @@
 #
 # Usage (from the top of the source tree):
 #   .github/tools/package-release.sh [--version VERSION] --platform PLATFORM --out DIR \
-#       --full DIR --shadertoy-gl DIR [--shadertoy-osmesa DIR] --denoisesharpen DIR
+#       --full DIR --shadertoy-gl DIR [--shadertoy-osmesa DIR] --denoisesharpen DIR [--licenses DIR]
+# --licenses DIR: license files of code linked into every bundle of this platform, copied into
+#   every archive's LICENSES/ (Windows: the MinGW-w64 runtime and winpthreads that -static links;
+#   required for windows-*).
 # VERSION: by default, $RELEASE_TAG without its Natron- or openfx-misc- prefix (Natron-2.6.0:
 #   2.6.0), else <date>-<commit> (from $GITHUB_SHA, or git).
 # Each input DIR holds the *.ofx.bundle directories (e.g. an install prefix's OFX/Plugins):
@@ -34,7 +37,7 @@ usage() {
     exit 2
 }
 
-version='' platform='' out='' full='' stgl='' stmesa='' ds=''
+version='' platform='' out='' full='' stgl='' stmesa='' ds='' extra=''
 while [ $# -gt 0 ]; do
     case "$1" in
         --version) version=$2; shift 2 ;;
@@ -44,6 +47,7 @@ while [ $# -gt 0 ]; do
         --shadertoy-gl) stgl=$2; shift 2 ;;
         --shadertoy-osmesa) stmesa=$2; shift 2 ;;
         --denoisesharpen) ds=$2; shift 2 ;;
+        --licenses) extra=$2; shift 2 ;;
         *) usage ;;
     esac
 done
@@ -71,6 +75,8 @@ case "$platform" in
         os=Windows; ext=zip
         sysdir='C:\Program Files\Common Files\OFX\Plugins'; pathsep=';'
         command -v zip > /dev/null || { echo "zip not found"; exit 1; }
+        # -static: every bundle contains the MinGW-w64 runtime and winpthreads
+        [ -n "$(ls -A "$extra" 2> /dev/null)" ] || { echo "ERROR: $platform needs --licenses DIR (MinGW-w64 runtime, winpthreads)"; exit 1; }
         ;;
     *) echo "unknown platform $platform (linux-*, macos-*, windows-*)"; exit 2 ;;
 esac
@@ -131,7 +137,8 @@ EOF
         Windows) cat << 'EOF'
 
 The bundles are 64-bit, for Windows 10 or later, with the MinGW runtime linked
-statically (no extra DLL is needed).
+statically (no extra DLL is needed): the licenses of the MinGW-w64 runtime and
+winpthreads are in LICENSES/.
 EOF
             ;;
     esac
@@ -212,6 +219,7 @@ licenses() {
     cp "$src/LICENSE" "$dir/LICENSE.txt"
     mkdir "$dir/LICENSES"
     cp "$src/openfx/LICENSE" "$dir/LICENSES/openfx-Support-BSD-3-Clause.txt"
+    [ -z "$extra" ] || cp -R "$extra"/. "$dir/LICENSES/"
     for b in "$@"; do
         bn=$(basename "$b" .ofx.bundle)
         if [ "$bn" = CImg ]; then
