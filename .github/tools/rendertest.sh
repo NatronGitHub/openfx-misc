@@ -602,6 +602,11 @@ tests=(
     # GodRays with gamma 0 computed pow(x, 1/0) of x = 1 up to rounding: the colors were 1 (or
     # infinite); they are now interpolated geometrically from fromColor to toColor
     "GodRays gamma 0|net.sf.openfx.GodRays|filter|float|mean=0.209,0.264,0.310,0.351||-i Source=checker:16 scale=0.7,0.7 fromColor=1,1,1,1 toColor=0.2,0.3,0.4,0.5 gamma=0,0,0,0"
+    # GodRays with scale 0 clamped it to 1e-4 and interpolated it geometrically (scales down to 1.3e-4,
+    # each supersampled over up to 81x81 pixels per output pixel: minutes per frame, Natron#1005, and a
+    # mean of 0.926 here, mostly the edge of the ramp). It is now interpolated linearly from 1 to 0, like
+    # a negative scale: the mean of ramp(center + (p - center) * 32 / k) over k = 1..32 is 0.641
+    "GodRays scale 0|net.sf.openfx.GodRays|filter|float|mean=0.641,0.641,0.641,0.641||-i Source=ramp center=200,150 scale=0,0 --window 280,200,312,232"
     # Rand with density 0 computed 0/0 for its noise level
     "Rand density 0|net.sf.openfx.Noise|general|*|mean=0,0,0,0||-i Source=none density=0"
     "ImageStatistics auto crop seq|net.sf.openfx.ImageStatistics|filter|float|value:autoCropSize=34.133333,16+keys:autoCropBottomLeft=26+keys:autoCropSize=26+keyrange:autoCropSize=0,25||-i Source=file:autocrop.pfm@100,50 -s analyzeSequenceAutoCrop"

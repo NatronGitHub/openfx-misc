@@ -49,7 +49,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 // 1.1: a Gamma of magnitude below 1e-8 (e.g. 0) interpolates the colors geometrically, the limit of the "gamma"
 //      interpolation (it computed pow(x, 1/gamma) of x = 1 up to rounding: the colors were 1, or infinite
-//      if x rounded above 1, NaN audit); the inverse of a transform matrix with huge entries (e.g. a concatenated source transform) no longer overflows to NaN or 0 (SupportExt #81)
+//      if x rounded above 1, NaN audit); the inverse of a transform matrix with huge entries (e.g. a concatenated source transform) no longer overflows to NaN or 0 (SupportExt #81);
+//      a Scale of 0 interpolates the scale linearly from 1 to 0 (the rays go to the center), like a negative
+//      Scale: it was clamped to 1e-4 and interpolated geometrically, 50-1000x slower than other scales (Natron#1005)
 
 #define kSupportsMultipleClipPARs false
 #define kSupportsMultipleClipDepths false
@@ -690,6 +692,17 @@ GodRaysPlugin::getInverseTransformCanonical(double time,
     }
     OfxPointD scale = { 1., 1. };
     ofxsTransformGetScale(scaleParam, scaleUniform, &scale);
+    // A scale of exactly 0 (the rays go all the way to the center) is interpolated linearly, like
+    // the negative scales: the intermediate scales are 1 - amount, never 0 in the render (amount < 1),
+    // and this is the limit of the linear interpolation for a scale tending to 0 from below. The full
+    // transform (amount = 1, only used for the RoD and RoI) keeps the scale clamped to 1e-4 by
+    // ofxsTransformGetScale, so that it stays invertible. That clamp used to select the geometric
+    // interpolation pow(1e-4, amount), with scales down to 1.3e-4, each one supersampled over up to
+    // 81x81 source pixels at each output pixel (Natron#1005: 50-1000x slower than other scales);
+    // that interpolation has no usable limit for a scale tending to 0 from above, since every
+    // intermediate scale except the identity tends to 0.
+    const bool scaleXZero = (scaleParam.x == 0.);
+    const bool scaleYZero = ( (scaleUniform ? scaleParam.x : scaleParam.y) == 0. );
     double rotate = 0.;
     if (_rotate) {
         _rotate->getValueAtTime(time, rotate);
@@ -710,14 +723,20 @@ GodRaysPlugin::getInverseTransformCanonical(double time,
     if (amount != 1.) {
         translate.x *= amount;
         translate.y *= amount;
-        if (scale.x <= 0. || amount <= 0.) {
+        if (scaleXZero) {
+            // linear interpolation from 1 to 0
+            scale.x = 1. - amount;
+        } else if (scale.x <= 0. || amount <= 0.) {
             // linear interpolation
             scale.x = 1. + (scale.x - 1.) * amount;
         } else {
             // geometric interpolation
             scale.x = std::pow(scale.x, amount);
         }
-        if (scale.y <= 0 || amount <= 0.) {
+        if (scaleYZero) {
+            // linear interpolation from 1 to 0
+            scale.y = 1. - amount;
+        } else if (scale.y <= 0 || amount <= 0.) {
             // linear interpolation
             scale.y = 1. + (scale.y - 1.) * amount;
         } else {
