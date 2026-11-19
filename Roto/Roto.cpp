@@ -41,7 +41,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginIdentifier "net.sf.openfx.RotoPlugin"
 // History:
 // version 1.0: initial version
-// version 1.1: the over of the shape on the source beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #80)
+// version 1.1: the over of the shape on the source beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #80),
+//              and infinite inputs of the over are made finite (+-FLT_MAX) instead of giving NaN (SupportExt #82)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
