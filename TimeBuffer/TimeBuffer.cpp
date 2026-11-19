@@ -366,14 +366,25 @@ protected:
         if (!_buffer) {
             return;
         }
+        // clear this side, check the other side and free the buffer under one lock, so that the
+        // Read and the Write instances, destroyed on different threads, cannot both free it
+        // (no lock if the mutex was already freed)
+        if ( gTimeBufferMapMutex.get() ) {
+            AutoMutex guard( gTimeBufferMapMutex.get() );
+            releaseBufferLocked();
+        } else {
+            releaseBufferLocked();
+        }
+    }
+
+    // releaseBuffer(), with gTimeBufferMapMutex locked (if it exists)
+    void releaseBufferLocked()
+    {
         thisInstance(_buffer) = 0; // remove reference to this instance
         if ( !otherInstance(_buffer) ) {
             // we may free this buffer
-            if ( gTimeBufferMapMutex.get() ) {
-                AutoMutex guard( gTimeBufferMapMutex.get() );
-                if ( gTimeBufferMap.get() ) {
-                    gTimeBufferMap->erase(getTimeBufferKey(_projectId, _groupId, _name));
-                }
+            if ( gTimeBufferMap.get() ) {
+                gTimeBufferMap->erase(getTimeBufferKey(_projectId, _groupId, _name));
             }
             delete _buffer;
             _buffer = 0;

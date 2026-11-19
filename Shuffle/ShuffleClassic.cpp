@@ -453,12 +453,13 @@ public:
     {
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert( _dstClip && (1 <= _dstClip->getPixelComponentCount() && _dstClip->getPixelComponentCount() <= 4) );
+        // an unconnected clip has no components (kOfxImageComponentNone)
+        assert( _dstClip && (!_dstClip->isConnected() || (1 <= _dstClip->getPixelComponentCount() && _dstClip->getPixelComponentCount() <= 4)) );
         _srcClipA = fetchClip(context == eContextGeneral ? kClipA : kOfxImageEffectSimpleSourceClipName);
-        assert( _srcClipA && (1 <= _srcClipA->getPixelComponentCount() && _srcClipA->getPixelComponentCount() <= 4) );
+        assert( _srcClipA && (!_srcClipA->isConnected() || (1 <= _srcClipA->getPixelComponentCount() && _srcClipA->getPixelComponentCount() <= 4)) );
         if (context == eContextGeneral) {
-            _srcClipB = fetchClip(kClipB);
-            assert( _srcClipB && (1 <= _srcClipB->getPixelComponentCount() && _srcClipB->getPixelComponentCount() <= 4) );
+            _srcClipB = fetchClip(kClipB); // optional
+            assert( _srcClipB && (!_srcClipB->isConnected() || (1 <= _srcClipB->getPixelComponentCount() && _srcClipB->getPixelComponentCount() <= 4)) );
         }
         if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
             _outputBitDepth = fetchChoiceParam(kParamOutputBitDepth);
