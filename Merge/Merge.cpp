@@ -137,6 +137,7 @@ enum MergePluginEnum
 #define kPluginIdentifierSub "net.sf.openfx.Merge"
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinorRoto 1 // MergeRoto: renders on hosts without the plane suite v2 (OFX 1.4)
 // History:
 // 1.0: Original version
 // 2.0: After fixing https://github.com/NatronGitHub/Natron/issues/647
@@ -902,6 +903,25 @@ struct OptionalImagesHolder_RAII
 ////////////////////////////////////////////////////////////////////////////////
 // basic plugin render function, just a skelington to instantiate templates from
 
+// MergeRoto: fetch the RotoMask plane of a clip. Hosts without the plane suite v2 (e.g. OFX 1.4
+// hosts) have no RotoMask plane: there is then no roto mask (NULL), as for an input without it.
+static Image*
+fetchRotoMaskPlane(Clip* clip,
+                   double time,
+                   int view,
+                   const std::string& plane)
+{
+#ifdef OFX_EXTENSIONS_NUKE
+    if ( fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true) ) {
+        return clip->fetchImagePlane( time, view, plane.c_str() );
+    }
+#else
+    (void)clip; (void)time; (void)view; (void)plane;
+#endif
+
+    return NULL;
+}
+
 /* set up and run a processor */
 void
 MergePlugin::setupAndProcess(MergeProcessorBase &processor,
@@ -946,7 +966,7 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
         if ( _srcClipAs[i] && _srcClipAs[i]->isConnected() ) {
             if (renderRotoMask) {
 #ifdef OFX_EXTENSIONS_NUKE
-                const Image* rotoMaskA = _srcClipAs[i]->fetchImagePlane(time, args.renderView, rotoMaskOfxPlaneStr.c_str());
+                const Image* rotoMaskA = fetchRotoMaskPlane(_srcClipAs[i], time, args.renderView, rotoMaskOfxPlaneStr);
                 // Since version 3, keep NULL images, so that a connected A input is merged
                 // as transparent black even if it has no image here.
                 if ( rotoMaskA || (getMajorVersion() >= 3) ) {
@@ -972,7 +992,7 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
 #                 endif
 #ifdef OFX_EXTENSIONS_NUKE
                     if (_pluginType == eMergePluginRoto) {
-                        const Image* rotoMaskA = _srcClipAs[i]->fetchImagePlane(time, args.renderView, rotoMaskOfxPlaneStr.c_str());
+                        const Image* rotoMaskA = fetchRotoMaskPlane(_srcClipAs[i], time, args.renderView, rotoMaskOfxPlaneStr);
                         // always push the rotoMask, even if NULL, so that indexes in srcAs.images and srcAs.rotoMaskImg correspond
                         srcAs.rotoMaskImg.push_back(rotoMaskA);
 
@@ -1000,7 +1020,14 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
     const Image* maskImage = 0;
     if (doMasking) {
         if (_pluginType == eMergePluginRoto) {
-            maskImage = _maskClip->fetchImagePlane(time, args.renderView, rotoMaskOfxPlaneStr.c_str());
+            maskImage = fetchRotoMaskPlane(_maskClip, time, args.renderView, rotoMaskOfxPlaneStr);
+#ifdef OFX_EXTENSIONS_NUKE
+            if ( !fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true) )
+#endif
+            {
+                // no plane suite (e.g. OFX 1.4 hosts): the mask is the image of the Mask clip
+                maskImage = _maskClip->fetchImage(time);
+            }
         } else {
             maskImage = _maskClip->fetchImage(time);
         }
@@ -1024,7 +1051,7 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
     const Image* rotoMaskImgB = 0;
     if (_pluginType == eMergePluginRoto && _srcClipB) {
 #ifdef OFX_EXTENSIONS_NUKE
-        rotoMaskImgB = _srcClipB->fetchImagePlane(time, args.renderView, rotoMaskOfxPlaneStr.c_str());
+        rotoMaskImgB = fetchRotoMaskPlane(_srcClipB, time, args.renderView, rotoMaskOfxPlaneStr);
 #endif
     }
 
@@ -1960,7 +1987,7 @@ static MergePluginFactory<kPluginVersionMajor,eMergePluginScreen>      p7(kPlugi
 static MergePluginFactory<kPluginVersionMajor,eMergePluginMax>         p8(kPluginIdentifierSub "Max", kPluginVersionMajor, kPluginVersionMinor);
 static MergePluginFactory<kPluginVersionMajor,eMergePluginMin>         p9(kPluginIdentifierSub "Min", kPluginVersionMajor, kPluginVersionMinor);
 static MergePluginFactory<kPluginVersionMajor,eMergePluginAbsMinus>   p10(kPluginIdentifierSub "Difference", kPluginVersionMajor, kPluginVersionMinor);
-static MergePluginFactory<kPluginVersionMajor,eMergePluginRoto>       p11(kPluginIdentifierSub "Roto", kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<kPluginVersionMajor,eMergePluginRoto>       p11(kPluginIdentifierSub "Roto", kPluginVersionMajor, kPluginVersionMinorRoto);
 mRegisterPluginFactoryInstance(p1)
 mRegisterPluginFactoryInstance(p2)
 mRegisterPluginFactoryInstance(p3)
@@ -1985,7 +2012,7 @@ static MergePluginFactory<2,eMergePluginScreen>      r7(kPluginIdentifierSub "Sc
 static MergePluginFactory<2,eMergePluginMax>         r8(kPluginIdentifierSub "Max", 2, 0);
 static MergePluginFactory<2,eMergePluginMin>         r9(kPluginIdentifierSub "Min", 2, 0);
 static MergePluginFactory<2,eMergePluginAbsMinus>   r10(kPluginIdentifierSub "Difference", 2, 0);
-static MergePluginFactory<2,eMergePluginRoto>       r11(kPluginIdentifierSub "Roto", 2, 0);
+static MergePluginFactory<2,eMergePluginRoto>       r11(kPluginIdentifierSub "Roto", 2, 1); // minor 1: renders on hosts without the plane suite v2
 mRegisterPluginFactoryInstance(r1)
 mRegisterPluginFactoryInstance(r2)
 mRegisterPluginFactoryInstance(r3)
@@ -2010,7 +2037,7 @@ static MergePluginFactory<1,eMergePluginScreen>      q7(kPluginIdentifierSub "Sc
 static MergePluginFactory<1,eMergePluginMax>         q8(kPluginIdentifierSub "Max", 1, 0);
 static MergePluginFactory<1,eMergePluginMin>         q9(kPluginIdentifierSub "Min", 1, 0);
 static MergePluginFactory<1,eMergePluginAbsMinus>   q10(kPluginIdentifierSub "Difference", 1, 0);
-static MergePluginFactory<1,eMergePluginRoto>       q11(kPluginIdentifierSub "Roto", 1, 0);
+static MergePluginFactory<1,eMergePluginRoto>       q11(kPluginIdentifierSub "Roto", 1, 1); // minor 1: renders on hosts without the plane suite v2
 mRegisterPluginFactoryInstance(q1)
 mRegisterPluginFactoryInstance(q2)
 mRegisterPluginFactoryInstance(q3)

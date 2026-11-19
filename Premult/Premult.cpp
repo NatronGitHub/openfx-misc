@@ -66,7 +66,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 2.0: use kNatronOfxParamProcess* parameters
 // version 2.1: do not guess checkbox values from input premult, leave kParamPremultChanged for backward compatibility
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -1088,7 +1088,26 @@ PremultPluginFactory<isPremult>::describeInContext(ImageEffectDescriptor &desc,
 
     std::vector<std::string> clips(1);
     clips[0] = kOfxImageEffectSimpleSourceClipName;
-    ChoiceParamDescriptor* param = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clips, kParamPremultChannel, kParamPremultChannelLabel, kParamPremultChannelHint);
+    ChoiceParamDescriptor* param;
+#ifdef OFX_EXTENSIONS_NUKE
+    if ( gIsMultiplanar ||
+         ( getImageEffectHostDescription()->isMultiPlanar && fetchSuite(kFnOfxImageEffectPlaneSuite, 1, true) ) ) {
+        param = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clips, kParamPremultChannel, kParamPremultChannelLabel, kParamPremultChannelHint);
+    } else
+#endif
+    {
+        // not a multi-plane host (e.g. OFX 1.4): describeInContextAddPlaneChannelChoice()
+        // throws, so define the same menu with the colour plane channels (R, G, B, A, 0, 1)
+        param = desc.defineChoiceParam(kParamPremultChannel);
+        param->setLabel(kParamPremultChannelLabel);
+        desc.addClipPreferencesSlaveParam(*param);
+        param->setHint(kParamPremultChannelHint);
+        param->setAnimates(false);
+        MultiPlane::Factory::addInputChannelOptionsRGBA(param, clips, true /*addConstants*/, true /*onlyColorPlane*/);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
     param->setDefault(3);
 
     if (gIsMultiplanar) {

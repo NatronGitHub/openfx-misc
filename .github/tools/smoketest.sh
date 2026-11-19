@@ -100,7 +100,7 @@ SKIP=(
 IDENTITY=(
     "net.sf.openfx.FrameHold|always an identity: the Source at another time"
     "net.sf.openfx.timeOffset|always an identity: the Source at another time"
-    "net.sf.openfx.TrackerPM@general|trackers are identity effects (SupportExt's GenericTrackerPlugin)"
+    "net.sf.openfx.TrackerPM|trackers are identity effects (SupportExt's GenericTrackerPlugin)"
     "net.sf.openfx.ShufflePlugin:1@filter|the default channels are those of A, which is the Source in the filter context"
     # debug builds: render posts "OFX Host should not render" and fails (kOfxStatFailed) when
     # it is called for an identity (release builds copy the input)
@@ -149,8 +149,6 @@ PARAMS=(
 # to describe failures: the entries without a context to hostDemo --describe failures,
 # those with a context to the describeInContext failures of that context.
 XFAIL=(
-    # issue #164
-    "net.sf.openfx.TrackerPM@filter|create instance action failed \(status 9\)|the instance fetches the Mask clip, which describeInContext only defines in the general, paint and tracker contexts"
     # issue #165 (PIK supports short and float only)
     "net.sf.openfx.PIK@filter|get region of definition action failed|the filter context has no Source clip (the spec mandates one), so HostSupport's default region of definition fails"
     # issue #167: debug builds, failed assertions (an unconnected clip has the components

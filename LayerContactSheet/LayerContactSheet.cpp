@@ -274,6 +274,13 @@ LayerContactSheetPlugin::render(const OFX::RenderArguments &args)
     if (_srcClip) {
         _srcClip->getPlanesPresent(&planes);
     }
+    if ( !fetchSuite(kFnOfxImageEffectPlaneSuite, 1, true) ) {
+        // no plane suite (e.g. OFX 1.4 hosts): fetchImagePlane() can only fetch the colour plane
+        planes.clear();
+        if ( _srcClip && _srcClip->isConnected() ) {
+            planes.push_back(kFnOfxImagePlaneColour);
+        }
+    }
 
     // now, for each clip, compute the required region of interest, which is the union of the intersection of each cell with the renderWindow
     int rows, columns;
@@ -523,6 +530,13 @@ LayerContactSheetInteract::draw(const OFX::DrawArgs &args)
 
     std::vector<std::string> planes;
     _srcClip->getPlanesPresent(&planes);
+    if ( !fetchSuite(kFnOfxImageEffectPlaneSuite, 1, true) ) {
+        // no plane suite (e.g. OFX 1.4 hosts): fetchImagePlane() can only fetch the colour plane
+        planes.clear();
+        if ( _srcClip && _srcClip->isConnected() ) {
+            planes.push_back(kFnOfxImagePlaneColour);
+        }
+    }
 
     // now, for each clip, compute the required region of interest, which is the union of the intersection of each cell with the renderWindow
     int rows, columns;

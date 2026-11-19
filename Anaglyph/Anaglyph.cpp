@@ -41,7 +41,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDescription "Make an anaglyph image out of the two views of the input."
 #define kPluginIdentifier "net.sf.openfx.anaglyphPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -63,6 +63,21 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamOffsetHint "Horizontal offset. " \
     "The red view is shifted to the left by half this amount, " \
     "and the cyan view is shifted to the right by half this amount (in pixels)." // rounded up // rounded down
+
+// OFX 1.4 hosts have neither the multiview plane suite (kFnOfxImageEffectPlaneSuite v2)
+// nor the Vegas stereoscopic suite: they have a single view, which is then every view.
+static Image*
+fetchViewImage(Clip* clip,
+               double time,
+               int view)
+{
+    if ( fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true) ||
+         fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true) ) {
+        return clip->fetchStereoscopicImage(time, view);
+    }
+
+    return clip->fetchImage(time);
+}
 
 // Base class for the RGBA and the Alpha processor
 class AnaglyphBase
@@ -263,12 +278,12 @@ AnaglyphPlugin::setupAndProcess(AnaglyphBase &processor,
 
     // fetch main input image
     auto_ptr<const Image> srcLeft( ( _srcClip && _srcClip->isConnected() ) ?
-                                        _srcClip->fetchImagePlane(args.time, 0, kFnOfxImagePlaneColour) : 0 );
+                                        fetchViewImage(_srcClip, args.time, 0) : 0 );
     if ( srcLeft.get() ) {
         checkBadRenderScaleOrField(srcLeft, args);
     }
     auto_ptr<const Image> srcRight( ( _srcClip && _srcClip->isConnected() ) ?
-                                         _srcClip->fetchImagePlane(args.time, 1, kFnOfxImagePlaneColour) : 0 );
+                                         fetchViewImage(_srcClip, args.time, 1) : 0 );
     if ( srcRight.get() ) {
         checkBadRenderScaleOrField(srcRight, args);
     }
@@ -442,9 +457,6 @@ void
 AnaglyphPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                                          ContextEnum /*context*/)
 {
-    if ( !fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true) ) {
-        throwHostMissingSuiteException(kFnOfxImageEffectPlaneSuite);
-    }
 
     // Source clip only in the filter context
     // create the mandated source clip
