@@ -440,7 +440,7 @@ DiscBladesPluginFactory::describe(ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
 
-    generatorDescribe(desc);
+    generatorDescribe(desc, eGeneratorOverlayDrawSuite); // V2 (DrawSuite) and V1 (OpenGL)
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(ePixelComponentNone);
 #endif

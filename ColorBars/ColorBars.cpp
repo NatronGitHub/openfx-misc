@@ -434,7 +434,7 @@ ColorBarsPluginFactory::describe(ImageEffectDescriptor &desc)
     desc.setChannelSelector(ePixelComponentRGBA);
 #endif
 
-    generatorDescribe(desc);
+    generatorDescribe(desc, eGeneratorOverlayDrawSuite); // V2 (DrawSuite) and V1 (OpenGL)
 }
 
 void
