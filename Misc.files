@@ -98,6 +98,8 @@ openfx/Support/include/ofxsMessage.h
 openfx/Support/include/ofxsMultiThread.h
 openfx/Support/include/ofxsParam.h
 openfx/Support/Library/ofxsCore.cpp
+openfx/Support/Library/ofxsDrawContextOpenGL.cpp
+openfx/Support/Library/ofxsFont5x7.h
 openfx/Support/Library/ofxsHWNDInteract.cpp
 openfx/Support/Library/ofxsImageEffect.cpp
 openfx/Support/Library/ofxsInteract.cpp
