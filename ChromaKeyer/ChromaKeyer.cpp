@@ -458,7 +458,7 @@ private:
                     } else {
                         Kfg = _tan__acceptanceAngle2 > 0 ? (fgx - std::abs(fgz) / _tan__acceptanceAngle2) : 0.;
                     }
-                    assert(Kfg >= 0.);
+                    // Kfg >= 0, except for a NaN source pixel (Kfg is NaN): no assert on it
                     double fgx_scaled = fgx;
                     ///////////////
                     // STEP B: Nonadditive Mix
@@ -572,7 +572,7 @@ private:
                 // set the alpha channel to the complement of Kbg
                 double fga = 1. - Kbg;
                 //double fga = Kbg;
-                assert(fga >= 0. && fga <= 1.);
+                // fga is in [0,1], except for a NaN source pixel: no assert on it
                 double compAlpha = (_outputMode == eOutputModeComposite &&
                                     _sourceAlpha == eSourceAlphaNormal &&
                                     srcPix) ? sampleToFloat<PIX, maxValue>(srcPix[3]) : 1.;

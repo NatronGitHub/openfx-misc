@@ -2454,8 +2454,9 @@ public:
                     Inc = I(x,  y+1,0,c);
                     Inn = I(x+1,y+1,0,c);
                 }
-                // in [-1,1] for finite gradients; NaN for NaN or infinite ones (from the pixels), which
-                // fails the local-maximum test below, so that the pixel is suppressed (no int conversion)
+                // in [-1,1] for finite gradients, and +-0 if only gradx (the larger one) is infinite; NaN if a
+                // gradient (from the pixels) is NaN, or if both are infinite: then the local-maximum test
+                // below fails, so that the pixel is suppressed (no int conversion)
                 double alpha = grady / gradx;
                 // parabolic interpolation of the image values
                 double Ip = parabola(Ipp, Ipc, Ipn, -alpha);

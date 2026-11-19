@@ -257,6 +257,11 @@ normalizeAngle(double a)
     // no int conversion (undefined beyond the int range); the same result inside it
     // (+ 0.: subtract +0, not -0, when the floor is -0, so that -0 stays -0 as before)
     a -= 360. * std::floor(a / 360) + 0.;
+    // beyond about 1e15, the result may be outside [0,360] (and NaN gives NaN): fold it, with
+    // comparisons only (unchanged in the normal range, -0 included)
+    if ( !( (a >= 0.) && (a <= 360.) ) ) {
+        a = 0.;
+    }
 
     return a;
 }

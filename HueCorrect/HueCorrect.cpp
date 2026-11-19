@@ -84,7 +84,7 @@ static bool gParametricPeriodic = false;
 // version 2.1: curve values above kCurveValueMax are replaced by 0, without detecting non-finite values;
 //              HueKeyer: a zero sat_thrsh no longer divides by zero;
 //              HueCorrect: premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79);
-//              the hue of a NaN pixel no longer converts NaN to int for the curve lookup (undefined behaviour) (#178)
+//              HueCorrect, HueKeyer: the hue of a NaN pixel no longer converts NaN to int for the curve lookup (undefined behaviour) (#178)
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
