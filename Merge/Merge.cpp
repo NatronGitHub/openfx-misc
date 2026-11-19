@@ -137,12 +137,14 @@ enum MergePluginEnum
 #define kPluginIdentifierSub "net.sf.openfx.Merge"
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
-#define kPluginVersionMinorRoto 1 // MergeRoto: renders on hosts without the plane suite v2 (OFX 1.4)
 // History:
 // 1.0: Original version
 // 2.0: After fixing https://github.com/NatronGitHub/Natron/issues/647
+// 1.1 and 2.1 (MergeRoto only, kept for backward compatibility): renders on hosts without the plane suite v2
+//      (e.g. OFX 1.4 hosts), with no roto mask and the Mask clip image as the mask (render failed before).
 // 3.0: With Alpha-only images, the A checkboxes (instead of the R checkboxes) of A and B control the alpha channel.
 //      A inputs after the first one are merged as transparent black outside of their image (instead of being skipped).
+//      MergeRoto renders on hosts without the plane suite v2, as in 2.1.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -1020,9 +1022,10 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
     const Image* maskImage = 0;
     if (doMasking) {
         if (_pluginType == eMergePluginRoto) {
-            maskImage = fetchRotoMaskPlane(_maskClip, time, args.renderView, rotoMaskOfxPlaneStr);
 #ifdef OFX_EXTENSIONS_NUKE
-            if ( !fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true) )
+            if ( fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true) ) {
+                maskImage = _maskClip->fetchImagePlane( time, args.renderView, rotoMaskOfxPlaneStr.c_str() );
+            } else
 #endif
             {
                 // no plane suite (e.g. OFX 1.4 hosts): the mask is the image of the Mask clip
@@ -1987,7 +1990,7 @@ static MergePluginFactory<kPluginVersionMajor,eMergePluginScreen>      p7(kPlugi
 static MergePluginFactory<kPluginVersionMajor,eMergePluginMax>         p8(kPluginIdentifierSub "Max", kPluginVersionMajor, kPluginVersionMinor);
 static MergePluginFactory<kPluginVersionMajor,eMergePluginMin>         p9(kPluginIdentifierSub "Min", kPluginVersionMajor, kPluginVersionMinor);
 static MergePluginFactory<kPluginVersionMajor,eMergePluginAbsMinus>   p10(kPluginIdentifierSub "Difference", kPluginVersionMajor, kPluginVersionMinor);
-static MergePluginFactory<kPluginVersionMajor,eMergePluginRoto>       p11(kPluginIdentifierSub "Roto", kPluginVersionMajor, kPluginVersionMinorRoto);
+static MergePluginFactory<kPluginVersionMajor,eMergePluginRoto>       p11(kPluginIdentifierSub "Roto", kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p1)
 mRegisterPluginFactoryInstance(p2)
 mRegisterPluginFactoryInstance(p3)

@@ -37,7 +37,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "The first view from each input is copied to the left and right views of the output."
 #define kPluginIdentifier "net.sf.openfx.joinViewsPlugin"
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1

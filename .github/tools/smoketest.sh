@@ -32,8 +32,8 @@
 # SMOKETEST_XPASS_OK=1 (accept the known bugs that were fixed: an XFAIL entry that passes
 # (XPASS) is reported but does not fail, and stale entries are only a warning; an XFAIL
 # render whose failure does not show the expected message still fails; for SupportExt's CI, so that a SupportExt pull request that fixes a bug of the XFAIL list
-# (e.g. Premult:2 and Unpremult:2, issue #166) passes, while the CI of openfx-misc, which
-# still has the old SupportExt submodule, keeps the entry; the default is strict).
+# passes, while the CI of openfx-misc, which still has the old SupportExt submodule, keeps
+# the entry; the default is strict).
 # Linux and macOS (needs python3 and perl).
 #
 # Each render is one hostDemo run (--no-std-paths --no-cache: only the bundle of

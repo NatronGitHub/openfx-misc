@@ -70,7 +70,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginIdentifier "net.sf.openfx.LayerContactSheetOFX"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
-// 1.1: an empty source format no longer gives NaN cell sizes and image areas (NaN audit)
+// 1.1: an empty source format no longer gives NaN cell sizes and image areas (NaN audit);
+//      renders on hosts without the plane suite (e.g. OFX 1.4 hosts), with the colour plane only
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1

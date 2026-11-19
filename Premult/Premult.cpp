@@ -63,8 +63,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginUnpremultIdentifier "net.sf.openfx.Unpremult"
 // History:
 // version 1.0: initial version
-// version 2.0: use kNatronOfxParamProcess* parameters
-// version 2.1: do not guess checkbox values from input premult, leave kParamPremultChanged for backward compatibility
+// version 2.0: use kNatronOfxParamProcess* parameters;
+//              do not guess checkbox values from input premult, leave kParamPremultChanged for backward compatibility
+//              (this line said 2.1, but the minor version was not incremented)
+// version 2.1: describes on hosts that are not multi-planar (e.g. OFX 1.4 hosts), with a fixed channel menu
+//              (R, G, B, A, 0, 1); describeInContext failed there (issue #166)
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
