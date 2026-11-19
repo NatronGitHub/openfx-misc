@@ -102,7 +102,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // 1.0 initial version
 // 1.1 (10/2017) add display/computation of histogram and master curve modes
-// 1.2 premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79)
+// 1.2 premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79);
+//     a NaN value no longer converts NaN to int for the curve lookup (undefined behaviour) (#178)
 #define kPluginIdentifier "net.sf.openfx.ColorLookupPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 2 // Increment this when you have fixed a bug or made it faster.
@@ -628,8 +629,10 @@ private:
             } else if (x >= 1.) {
                 return _lookupTable[component][nbValues];
             }
-            int i = (int)(x * nbValues);
-            assert(0 <= i && i < nbValues);
+            // a NaN value fails the tests above: convert to int only inside the LUT range (converting
+            // NaN is undefined behaviour), with comparisons only
+            const double xn = x * nbValues;
+            int i = (xn > 0.) ? ( (xn < nbValues) ? (int)xn : nbValues - 1 ) : 0;
             i = (std::max)( 0, (std::min)(i, nbValues - 1) );
             double alpha = (std::max)( 0., (std::min)(x * nbValues - i, 1.) );
             float a = _lookupTable[component][i];

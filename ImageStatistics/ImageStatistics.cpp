@@ -770,8 +770,8 @@ public:
             for (int c = 0; c < nValues; ++c) {
                 skewness[c] = skewfac * _sum_p3[c] / count;
             }
+            // NaN for NaN pixels (the sums come from the pixels): no assert on it
             toRGBA<double, nValues, 1>(skewness, &results->skewness);
-            assert( hsvl || ( !OFX::IsNaN(results->skewness.r) && !OFX::IsNaN(results->skewness.g) && !OFX::IsNaN(results->skewness.b) && !OFX::IsNaN(results->skewness.a) ) );
         }
         if (count > 3) {
             double kurtosis[nValues];
@@ -781,8 +781,8 @@ public:
             for (int c = 0; c < nValues; ++c) {
                 kurtosis[c] = kurtfac * _sum_p4[c] + kurtshift;
             }
+            // NaN for NaN pixels (the sums come from the pixels): no assert on it
             toRGBA<double, nValues, 1>(kurtosis, &results->kurtosis);
-            assert( hsvl || ( !OFX::IsNaN(results->kurtosis.r) && !OFX::IsNaN(results->kurtosis.g) && !OFX::IsNaN(results->kurtosis.b) && !OFX::IsNaN(results->kurtosis.a) ) );
         }
     }
 
