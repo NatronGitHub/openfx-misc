@@ -45,11 +45,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "KeyMixOFX"
 #define kPluginGrouping "Merge"
 #define kPluginDescription \
-    "KeyMix takes two images and layers them together according to a third input. It can be used to lay a foreground over a background using the output of a keyer. The only disadvantage to this method is that it outputs an image with no alpha.\n" \
+    "KeyMix combines two images, A and B, using a third input, the Mask, to choose between them. A typical use is to put a keyed foreground over a background, with the keyer's output as the Mask. Note that the output alpha is a mix of the A and B alphas, not the Mask itself.\n" \
     "\n" \
     "It copies the pixel from A to B only where the Mask is non-zero. It is the same as the Matte operation, but alpha for input A is taken from an external mask, and the output alpha is mixed between A and B. The output bounding box is the union of A and B.\n" \
     "\n" \
-    "As well as functioning as a layering node, it can also be used to integrate two color operations with one mask. This guards against 'recycled masks', where two consecutive color filters are masked using the same mask, which may generate strange artifacts.\n" \
+    "KeyMix can also apply two successive color corrections through a single mask: correct the image twice, then use KeyMix with the uncorrected image as B and the corrected one as A. Masking each color correction separately with the same mask would apply the mask twice at soft edges, which gives artifacts.\n" \
     "\n" \
     "See also: https://web.archive.org/web/20220120144948/opticalenquiry.com/nuke/index.php?title=KeyMix"
 
