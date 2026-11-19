@@ -48,8 +48,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "See also https://web.archive.org/web/20220627033151/http://www.opticalenquiry.com/nuke/index.php?title=TimeDissolve"
 
 #define kPluginIdentifier "net.sf.openfx.TimeDissolvePlugin"
+// History:
+// version 1.0: initial version
+// version 1.1: a NULL Source image (disconnected input; render is called although isIdentity returned true,
+//              e.g. by hostDemo) renders black instead of crashing (SupportExt copyPixels)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1

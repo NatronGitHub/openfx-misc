@@ -62,7 +62,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.1: works on hosts other than Natron (it fetched 16 clips but defined only 2);
 //              render and getRegionsOfInterest no longer assert in debug builds: the spec says that the
 //              host should not call render after isIdentity returns true, but some hosts (e.g. hostDemo)
-//              do; render copies the selected input, and checks the image formats in debug builds too
+//              do; render copies the selected input, and checks the image formats in debug builds too;
+//              a disconnected selected input renders black instead of crashing (SupportExt copyPixels)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 

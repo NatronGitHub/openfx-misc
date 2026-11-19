@@ -20,8 +20,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Time"
 #define kPluginDescription "Rounds fractional frame numbers to integers. This can be used to avoid computing non-integer frame numbers, and to discretize motion (useful for animated objects). This plug-in is usually inserted upstream from TimeBlur."
 #define kPluginIdentifier "net.sf.openfx.NoTimeBlurPlugin"
+// History:
+// version 1.0: initial version
+// version 1.1: a NULL Source image (disconnected input; render is called although isIdentity returned true,
+//              e.g. by hostDemo) renders black instead of crashing (SupportExt copyPixels)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1

@@ -42,7 +42,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 1.1: render copies the Source at the source time (it wrote nothing): the spec says that the
-//              host should not call render after isIdentity returns true, but some hosts (e.g. hostDemo) do
+//              host should not call render after isIdentity returns true, but some hosts (e.g. hostDemo) do;
+//              a NULL Source image (disconnected input) renders black instead of crashing (SupportExt copyPixels)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
