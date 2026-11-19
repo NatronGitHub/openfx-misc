@@ -55,9 +55,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 1.1: fix https://github.com/MrKepzie/Natron/issues/1397
-// version 1.2: add useRoD parameter for Natron
+// version 1.1: add useRoD parameter for Natron (this line said 1.2, but the minor version was not
+//              incremented: it shipped as 1.1, e.g. in Natron 2.5.0)
 // version 2.0: add eReformatTypeToProjectFormat
-// version 2.1: the inverse of a transform matrix with huge entries (e.g. a concatenated source transform) no longer overflows to NaN or 0 (SupportExt #81)
+// versions 1.2 and 2.1: the inverse of a transform matrix with huge entries (e.g. a concatenated source transform) no longer overflows to NaN or 0 (SupportExt #81)
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -1103,7 +1104,7 @@ ReformatPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
 
 static ReformatPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
-static ReformatPluginFactory<1> p_old(kPluginIdentifier, 1);
+static ReformatPluginFactory<1> p_old(kPluginIdentifier, 2); // 1.2: see the history at the top
 mRegisterPluginFactoryInstance(p_old)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

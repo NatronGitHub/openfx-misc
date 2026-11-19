@@ -61,7 +61,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              (version 2 aligned them on the last frame and dropped the lower bound, e.g. only frame 2 for range 0..2 with interval 2)
 // version 3.1: Min and Max give 0 where no frame has a source pixel (they gave an infinite value, and NaN
 //              with a mask or Mix), and Decay is clamped to [0,1], its range, on hosts that do not enforce it
-//              (NaN audit); a merge result beyond the float range gives +-FLT_MAX, not +-inf, and a huge masked alpha no longer gives NaN (SupportExt #80)
+//              (NaN audit); a merge result (Product, Over...) beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #80)
+// version 2.1 (kept for backward compatibility, frames aligned on the last frame of the range): the fixes of 3.1
+//              (the NaN audit ones also applied to version 2, which was still registered as 2.0, and SupportExt #80)
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -1383,7 +1385,7 @@ FrameBlendPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handl
 
 static FrameBlendPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 // version 2: the blended frames are aligned on the last frame of the range
-static FrameBlendPluginFactory<2> pv2(kPluginIdentifier, 0);
+static FrameBlendPluginFactory<2> pv2(kPluginIdentifier, 1); // 2.1: see the history at the top
 mRegisterPluginFactoryInstance(p)
 mRegisterPluginFactoryInstance(pv2)
 

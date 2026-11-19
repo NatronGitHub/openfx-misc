@@ -93,8 +93,9 @@ BUNDLES=(Misc:168 CImg:40 Shadertoy:1 Test:6)
 # shellcheck disable=SC2206
 [ -z "$SMOKETEST_BUNDLES" ] || BUNDLES=($SMOKETEST_BUNDLES)
 # The plug-ins that are not tested: "identifier regex|reason" (the whole identifier; a
-# "debug:" reason is only used in debug builds, an "ofx14:" one only with --ofx14, and in
-# all the lists below).
+# "debug:" reason is only used in debug builds, an "ofx14:" one only with --ofx14; these
+# prefixes, which can be combined, only work at the start of the reason or description
+# field of the SKIP, IDENTITY and XFAIL lists).
 SKIP=(
     "net.sf.openfx.Shadertoy|OpenGL only: hostDemo has no OpenGL render suite (describe fails)"
     "net.sf.openfx.TestOpenGL|OpenGL only (Test bundle): hostDemo has no OpenGL render suite (describe fails)"
