@@ -1,0 +1,13 @@
+# SHA256 of the prebuilt OSMesa + LLVM release assets of https://github.com/devernay/osmesa-install
+# that release.yml may download (.github/tools/fetch-osmesa.sh), in sha256sum format:
+#   <sha256>  osmesa-install-<TAG>-<PLATFORM>.tar.xz
+# PLATFORM: macos-arm64 and macos-x86_64 (preferred; or macos-universal), windows-ucrt64-x86_64.
+# An asset that is not listed here is never used. Add the lines of a new osmesa-install
+# release here (from its own checksums, checked) before setting its tag in release.yml's
+# osmesa_release input or the OSMESA_INSTALL_RELEASE repository variable.
+# osmesa-mesa-25.0.7-llvm-19.1.7 (checked against the release's SHA256SUMS, 2026-11-19)
+9817b776f30d12cabc5a07bc7ba264d25d6164e3c33f0c64fd0012742d0b21da  osmesa-install-osmesa-mesa-25.0.7-llvm-19.1.7-linux-aarch64.tar.xz
+95c9350c9732cfbe9a3b45af07c3061d25ad4551cc863ff53c532eee2e150592  osmesa-install-osmesa-mesa-25.0.7-llvm-19.1.7-linux-x86_64.tar.xz
+1e94b87c3f19b44b27a46294992fcf32916e363c76ac2c0a029b994c1ce6df56  osmesa-install-osmesa-mesa-25.0.7-llvm-19.1.7-macos-arm64.tar.xz
+3d08bbc7ab56f37733175b41e4bbd2fa1bda0868d65b250414d38fb37abf1bf1  osmesa-install-osmesa-mesa-25.0.7-llvm-19.1.7-macos-x86_64.tar.xz
+2f0b4ae619e3fae14c191a6f83921a80292f307b5bd55dda50605045bf1e3ae8  osmesa-install-osmesa-mesa-25.0.7-llvm-19.1.7-windows-ucrt64-x86_64.tar.xz

@@ -25,7 +25,8 @@
 # <build>/Plugins and installed by "cmake --install" into ${CMAKE_INSTALL_PREFIX}/OFX/Plugins
 # (openfx's PLUGIN_INSTALLDIR): use --prefix /usr (Linux) or /Library (macOS) to get the
 # directories of "make install".
-# The "make nomulti" bundles (one per plug-in directory) are only built by make.
+# The "make nomulti" bundles (one per plug-in directory) are only built by make, except those of
+# OFXMISC_STANDALONE_BUNDLES (below).
 #
 # Options:
 #   -DCMAKE_BUILD_TYPE=Release|Debug|RelWithDebInfo (default: Release)
@@ -34,7 +35,12 @@
 #      ("make OPENMP=1"). Apple clang uses MacPorts' libomp (port install libomp).
 #   -DOFX_DEPLOY_BUNDLES=ON: at install, copy the non-system libraries into the bundles
 #      (macOS: osxDeploy.sh, as "make CONFIG=release" does; needs gsed)
-#   -DBUILD_CIMG_PLUGINS=OFF ("make HAVE_CIMG=0"), -DBUILD_SHADERTOY=OFF
+#   -DBUILD_CIMG_PLUGINS=OFF ("make HAVE_CIMG=0"), -DBUILD_SHADERTOY=OFF, -DBUILD_MISC=OFF (e.g.
+#      -DBUILD_MISC=OFF -DBUILD_CIMG_PLUGINS=OFF builds only Shadertoy.ofx.bundle)
+#   -DOFXMISC_STANDALONE_BUNDLES="DenoiseSharpen": also build these plug-in directories of Misc as
+#      standalone bundles (<Dir>.ofx.bundle, with <Dir>/Info.plist, as "make nomulti"), for the
+#      binary releases. Their plug-ins are also in Misc.ofx.bundle, with the same identifiers and
+#      versions: a host must not load both (install one or the other).
 #   -DOFX_LICENSE=GPL (default) or COMMERCIAL ("make LICENSE=...", Natron's NATRON_LICENSE, as in
 #      openfx-gmic): COMMERCIAL builds refuse FFT=fftw3 (FFTW is GPL)
 #   -DFFT=pocketfft|pow2|fftw3 ("make FFT=..."): the FFT of the CImg plugins: pocketfft
@@ -43,6 +49,14 @@
 #   -DBUILD_TESTING=ON|OFF, -DBUILD_DEBUGPROXY=ON|OFF (default: ON in Debug builds)
 #   -DUSE_OSMESA=ON ("make -C Shadertoy OSMESA=1"): Shadertoy CPU rendering with a mangled
 #      OSMesa in OSMESA_PATH (default /opt/osmesa) and LLVM in LLVM_PATH (default /opt/llvm)
+#   -DOSMESA_PKGCONFIG_STATIC=ON (default OFF): with USE_OSMESA and OSMESA_PATH's osmesa.pc, link
+#      the static libMangledOSMesa32.a with all the flags of "pkg-config --static" (its
+#      Libs.private, e.g. -lsynchronization -lws2_32 on Windows), as the binary releases
+#      (release.yml) do with osmesa-install's OSMesa. Off: the flags of "pkg-config --libs" (the
+#      osmesa.pc of a Natron SDK may have Libs.private with paths of the machine that built it).
+#   -DOSMESA_LICENSES_DIR=<dir> (default empty): with USE_OSMESA, the license texts of the OSMesa
+#      and LLVM linked statically into Shadertoy (e.g. osmesa-install's licenses/), installed into
+#      Shadertoy.ofx.bundle/Contents/Resources/licenses (the binary releases need them)
 #   --prefix /usr (Linux) or /Library (macOS) at install: the bundles go to <prefix>/OFX/Plugins
 #   -DPLUGIN_INSTALLDIR=<dir>: where the bundles go, relative to CMAKE_INSTALL_PREFIX (OFX/Plugins)
 #   -DOFX_BUILD_HOSTDEMO=ON (default OFF): also build openfx's test host hostDemo (openfx's
@@ -119,6 +133,7 @@ endif()
 
 # ========================== options ==========================
 
+option(BUILD_MISC "Build the Misc plugins (Misc.ofx.bundle)" ON)
 option(BUILD_CIMG_PLUGINS "Build the CImg plugins (CImg.ofx.bundle)" ON)
 option(BUILD_SHADERTOY "Build the Shadertoy plugin (Shadertoy.ofx.bundle, needs OpenGL)" ON)
 # Debug-only bundles, as "make CONFIG=debug" (Test also with "make TESTS=1"). The defaults
@@ -135,6 +150,8 @@ option(BUILD_DEBUGPROXY "Build the DebugProxy bundle (wraps the plugin given by 
 option(USE_OSMESA "Shadertoy: CPU rendering with OSMesa (OSMESA_PATH) and LLVM (LLVM_PATH)" OFF)
 set(OSMESA_PATH "/opt/osmesa" CACHE PATH "USE_OSMESA: OSMesa prefix (mangled OSMesa, libMangledOSMesa32)")
 set(LLVM_PATH "/opt/llvm" CACHE PATH "USE_OSMESA: LLVM prefix (bin/llvm-config)")
+set(OSMESA_LICENSES_DIR "" CACHE PATH "USE_OSMESA: license texts of OSMesa and LLVM, installed into Shadertoy.ofx.bundle/Contents/Resources/licenses")
+option(OSMESA_PKGCONFIG_STATIC "USE_OSMESA: link the static OSMesa with the flags of pkg-config --static (osmesa.pc's Libs.private)" OFF)
 option(OFX_BUILD_HOSTDEMO "Build openfx's hostDemo test host and install it into <prefix>/bin (CI render tests)" OFF)
 
 # C++ standard: openfx's OFX_CXX_STANDARD (cmake/OpenFX.cmake), 17 by default (Natron RB-2.6,
@@ -191,8 +208,10 @@ elseif(OFX_BUILD_HOSTDEMO)
   # views of a stereo frame), and is installed next to the bundles' OFX directory
   add_custom_target(ofxmisc_hostdemo ALL)
   add_dependencies(ofxmisc_hostdemo hostDemo)
-  # openfx's install rules are not used (EXCLUDE_FROM_ALL, and openfx's OFX_INSTALL is OFF)
-  install(PROGRAMS $<TARGET_FILE:hostDemo> DESTINATION bin)
+  # openfx's install rules are not used (EXCLUDE_FROM_ALL, and openfx's OFX_INSTALL is OFF).
+  # Component hostDemo (each bundle is the component named after its target, e.g. Misc), so
+  # that "cmake --install --component" can install it with the bundles (release.yml).
+  install(PROGRAMS $<TARGET_FILE:hostDemo> DESTINATION bin COMPONENT hostDemo)
 endif()
 # add_ofx_plugin, ofx_plugin_resources, ofx_target_openmp, ofx_deploy_bundle and ARCHDIR
 # come from openfx/cmake/OpenFX.cmake (included by openfx's CMakeLists.txt).
@@ -235,6 +254,7 @@ set(MISC_PLUGIN_DIRS
   Premult Quantize Radial Ramp Rand ReConverge Rectangle Reformat Retime Roto Saturation
   Shuffle SideBySide SlitScan SpriteSheet Switch Threshold TimeBlur TimeBuffer
   TimeDissolve TimeOffset TrackerPM Transform VectorToColor WhiteBalance)
+if(BUILD_MISC)
 set(MISC_SOURCES Misc/randomGenerator.cpp Test/TestRender.cpp)
 foreach(_dir IN LISTS MISC_PLUGIN_DIRS)
   file(GLOB _srcs "${_dir}/*.cpp")
@@ -400,6 +420,37 @@ ofx_plugin_resources(Misc
   "WhiteBalance/net.sf.openfx.WhiteBalance.svg"
 )
 ofx_deploy_bundle(Misc)
+endif(BUILD_MISC)
+
+########################################################################
+# Standalone bundles of Misc plug-ins (OFXMISC_STANDALONE_BUNDLES; make nomulti's <Dir>/Makefile)
+########################################################################
+# One bundle per listed plug-in directory, <Dir>.ofx.bundle, with the sources of <Dir> (the same
+# sources, hence the same identifiers and versions, as in Misc.ofx.bundle), <Dir>/Info.plist, and
+# the SupportExt components of <Dir>/Makefile. The supported directories, with their SupportExt
+# components (and OPENMP if it uses OpenMP) and resources:
+set(_ofxmisc_standalone_DenoiseSharpen COMPONENTS THREADS LUT RECTANGLE_INTERACT OPENMP) # no icon
+set(OFXMISC_STANDALONE_BUNDLES "" CACHE STRING
+  "Misc plug-in directories also built as standalone bundles (supported: DenoiseSharpen)")
+foreach(_dir IN LISTS OFXMISC_STANDALONE_BUNDLES)
+  if(NOT DEFINED _ofxmisc_standalone_${_dir})
+    message(FATAL_ERROR "OFXMISC_STANDALONE_BUNDLES: ${_dir} is not supported (supported: DenoiseSharpen; "
+      "to add one, define _ofxmisc_standalone_${_dir} in ${CMAKE_CURRENT_LIST_FILE})")
+  endif()
+  cmake_parse_arguments(_sb "OPENMP" "" "COMPONENTS;RESOURCES" ${_ofxmisc_standalone_${_dir}})
+  file(GLOB _srcs "${_dir}/*.cpp")
+  add_ofx_plugin(${_dir} INFO_PLIST ${_dir}/Info.plist SOURCES ${_srcs})
+  supportext_add_sources(${_dir} COMPONENTS ${_sb_COMPONENTS})
+  target_include_directories(${_dir} PRIVATE ${_dir})
+  if(_sb_OPENMP AND NOT MSVC) # as Misc: MSVC has OpenMP 2.0 only
+    ofx_target_openmp(${_dir})
+  endif()
+  if(_sb_RESOURCES)
+    ofx_plugin_resources(${_dir} ${_sb_RESOURCES})
+  endif()
+  ofx_deploy_bundle(${_dir})
+  message(STATUS "    Standalone bundle: ${_dir}.ofx.bundle")
+endforeach()
 
 ########################################################################
 # Shadertoy.ofx.bundle (Shadertoy/Makefile)
@@ -435,7 +486,11 @@ if(BUILD_SHADERTOY)
         set(_pkg_config_path "$ENV{PKG_CONFIG_PATH}")
         set(_pkg_config_libdir "$ENV{PKG_CONFIG_LIBDIR}")
         set(ENV{PKG_CONFIG_PATH} "")
-        set(ENV{PKG_CONFIG_LIBDIR} "${OSMESA_PATH}/lib/pkgconfig:${OSMESA_PATH}/lib64/pkgconfig")
+        if(WIN32) # MSYS2's pkgconf is a native program: ';' separator (the paths have drive letters)
+          set(ENV{PKG_CONFIG_LIBDIR} "${OSMESA_PATH}/lib/pkgconfig;${OSMESA_PATH}/lib64/pkgconfig")
+        else()
+          set(ENV{PKG_CONFIG_LIBDIR} "${OSMESA_PATH}/lib/pkgconfig:${OSMESA_PATH}/lib64/pkgconfig")
+        endif()
         pkg_check_modules(PC_OSMESA IMPORTED_TARGET osmesa) # not OSMESA_: OSMESA_LIBRARIES is an input
         set(ENV{PKG_CONFIG_PATH} "${_pkg_config_path}")
         set(ENV{PKG_CONFIG_LIBDIR} "${_pkg_config_libdir}")
@@ -447,6 +502,20 @@ if(BUILD_SHADERTOY)
         if(_osmesa_opts)
           list(PREPEND _osmesa_libs ${_osmesa_opts})
         endif()
+        if(OSMESA_PKGCONFIG_STATIC)
+          # the static library (osmesa-install's default): also its Libs.private (pkg-config
+          # --static), e.g. -lsynchronization -lws2_32 on Windows. Only with OSMESA_PKGCONFIG_STATIC
+          # (release.yml): a Natron SDK's osmesa.pc may have build-machine paths there.
+          if(NOT EXISTS "${OSMESA_PATH}/lib/libMangledOSMesa32.a")
+            message(FATAL_ERROR "OSMESA_PKGCONFIG_STATIC: ${OSMESA_PATH}/lib/libMangledOSMesa32.a not found (a static OSMesa is needed)")
+          endif()
+          if(NOT PC_OSMESA_STATIC_LDFLAGS)
+            message(FATAL_ERROR "OSMESA_PKGCONFIG_STATIC: pkg-config --static gave no link flags for ${OSMESA_PATH}'s osmesa.pc")
+          endif()
+          set(_osmesa_libs ${PC_OSMESA_STATIC_LDFLAGS})
+        endif()
+      elseif(OSMESA_PKGCONFIG_STATIC)
+        message(FATAL_ERROR "OSMESA_PKGCONFIG_STATIC: pkg-config (${PKG_CONFIG_EXECUTABLE}) or a usable osmesa.pc in ${OSMESA_PATH}/lib/pkgconfig was not found (only that prefix is searched, so its Requires must be there too)")
       else()
         message(STATUS "osmesa.pc not found or unusable in ${OSMESA_PATH} (only that prefix is searched, so its Requires must be there too): using ${OSMESA_PATH}/include and -lMangledOSMesa32")
         set(_osmesa_includes "${OSMESA_PATH}/include")
@@ -457,6 +526,9 @@ if(BUILD_SHADERTOY)
       endif()
       # LLVM, as in Shadertoy/Makefile
       set(_llvm_config "${LLVM_PATH}/bin/llvm-config")
+      if(WIN32 AND NOT EXISTS "${_llvm_config}" AND EXISTS "${_llvm_config}.exe")
+        set(_llvm_config "${_llvm_config}.exe")
+      endif()
       if(NOT EXISTS "${_llvm_config}")
         message(FATAL_ERROR "USE_OSMESA: ${_llvm_config} not found (set LLVM_PATH)")
       endif()
@@ -487,6 +559,14 @@ if(BUILD_SHADERTOY)
   endif()
   ofx_plugin_resources(Shadertoy Shadertoy/net.sf.openfx.Shadertoy.png Shadertoy/net.sf.openfx.Shadertoy.svg)
   ofx_plugin_resources(Shadertoy Shadertoy/presets) # with its contents, as "cp -r presets"
+  if(USE_OSMESA AND OSMESA_LICENSES_DIR)
+    # the licenses of the statically linked OSMesa and LLVM (before ofx_deploy_bundle, which signs)
+    file(GLOB _osmesa_licenses LIST_DIRECTORIES true "${OSMESA_LICENSES_DIR}/*")
+    if(NOT _osmesa_licenses)
+      message(FATAL_ERROR "OSMESA_LICENSES_DIR: no file in ${OSMESA_LICENSES_DIR}")
+    endif()
+    ofx_plugin_resources(Shadertoy DESTINATION licenses ${_osmesa_licenses})
+  endif()
   ofx_deploy_bundle(Shadertoy)
 endif()
 

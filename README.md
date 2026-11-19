@@ -24,8 +24,52 @@ The easiest way to get these plugins is to install
 [Natron](https://natrongithub.github.io/): they are included in all Natron binary
 distributions, so there is nothing else to install.
 
-To use the plugins with another OpenFX host, download binaries built by the
-continuous integration. They are not kept for every change, only for pre-release
+### Binary downloads
+
+To use the plugins with another OpenFX host, download them from the
+[GitHub releases](https://github.com/NatronGitHub/openfx-misc/releases) (built by
+`.github/workflows/release.yml` from the release tags). There are four downloads for
+each platform (Linux x86_64, built on Rocky Linux 9; Windows x86_64; macOS 14 or later,
+universal):
+
+- `openfx-misc-<version>-<platform>`: the full set, the same bundles as in Natron:
+  `Misc.ofx.bundle`, `CImg.ofx.bundle` and `Shadertoy.ofx.bundle`. Shadertoy is the
+  OSMesa variant (it can also render on the CPU, when the host has no OpenGL rendering),
+  linked with a prebuilt static OSMesa and LLVM from
+  [osmesa-install](https://github.com/devernay/osmesa-install).
+- `openfx-misc-Shadertoy-OpenGL-<version>-<platform>`: `Shadertoy.ofx.bundle` alone,
+  OpenGL only.
+- `openfx-misc-Shadertoy-OSMesa-<version>-<platform>`:
+  `Shadertoy.ofx.bundle` alone, OpenGL + OSMesa: the bundle of the full set.
+- `openfx-misc-DenoiseSharpen-<version>-<platform>`: `DenoiseSharpen.ofx.bundle`, with
+  only the DenoiseSharpen plugin.
+
+The Linux bundles are built on Rocky Linux 9 (Natron 2.6's baseline), and need glibc 2.34
+or later, the system's libstdc++ (GCC 11 or later), `libGL.so.1` (OpenGL) and `libgomp.so.1`
+(GCC's OpenMP runtime, needed by `Misc.ofx` (DenoiseSharpen), `CImg.ofx` and the standalone
+`DenoiseSharpen.ofx`): these system libraries are never bundled. Any other library is
+inside the bundle (`<bundle>.ofx.bundle/Libraries`).
+
+**Install either the full set or standalone bundles, not both**: the standalone
+bundles contain the same plugins, with the same identifiers and versions, as the full
+set (DenoiseSharpen is also in `Misc.ofx.bundle`), and a host must not find a plugin
+twice. The two Shadertoy downloads are mutually exclusive too (both are
+`Shadertoy.ofx.bundle`). Each archive has a `README.txt` that tells where to install
+it; the steps are the same as steps 3 to 6 below. Its `LICENSE.txt` is openfx-misc's license
+(GPLv2 or later), and `LICENSES/` has the licenses of the third-party code in the bundles
+(openfx's Support library; freeglut's text renderer and pixman's blend modes, from SupportExt,
+in Misc; CImg, with the CeCILL-C text, and pocketfft; and Mesa and LLVM in the OSMesa Shadertoy, which
+also carries them in `Shadertoy.ofx.bundle/Contents/Resources/licenses`), and TinyThread++
+(zlib) in every bundle. Misc also contains `Misc/randomGenerator.cpp` (MT19937, GNU Library
+GPL v2 or later) and the Yadif code of `Deinterlace/Deinterlace.cpp` (from FFmpeg, LGPL 2.1
+or later), distributed under the GPL as part of Misc. Distortion's PFBarrel (`.pfb`) file
+reader contains code "Copyright (C) 2011 The Pixel Farm Ltd", distributed under the GPL as part
+of Misc.
+
+### Development builds
+
+Binaries are also built by the continuous integration. They are not kept for every
+change, only for pre-release
 tags (tags that start with `Natron-` and contain `-rc`, `-beta` or `-alpha`, in any
 case, such as `Natron-2.6.0-RC1` or `Natron-2.6.0-beta1`; not final releases such
 as `Natron-2.5.0`) and for builds that a maintainer starts by hand:
@@ -39,7 +83,7 @@ as `Natron-2.5.0`) and for builds that a maintainer starts by hand:
    - `openfx-misc-build-ubuntu_24-release`: Linux (64-bit) plugins, built on
      Ubuntu 24.04.
    - `openfx-misc-build-macos-release`: macOS plugins for Apple silicon (arm64),
-     macOS 11 or later.
+     macOS 14 or later.
    - `openfx-misc-build-windows-release`: Windows (64-bit, MSYS2 UCRT64) plugins,
      Windows 10 or later (they use the Universal C Runtime).
 
@@ -417,8 +461,9 @@ compiling:
 
 ### Using CMake
 
-CMake builds the same bundles as the Makefiles (`make nomulti` is make-only): `Misc`,
-`CImg` and `Shadertoy`, plus `Test` and `DebugProxy` in Debug builds. Only out-of-tree
+CMake builds the same bundles as the Makefiles (`make nomulti` is make-only, except for
+`OFXMISC_STANDALONE_BUNDLES` below): `Misc`, `CImg` and `Shadertoy`, plus `Test` and
+`DebugProxy` in Debug builds. Only out-of-tree
 builds are allowed. `CImg/CImg.h` and `CImg/Inpaint/inpaint.h` are downloaded (and
 `CImg.h` patched as openfx-gmic's, see above) at configure time if missing (at the
 version given in `CImg/CImgVersion.mk`, again when it, the patches or `FFT` change).
@@ -452,7 +497,11 @@ to the prefix (or absolute). The main options are:
   (on macOS, `osxDeploy.sh`, which needs GNU sed (`sudo port install gsed`), as
   `make CONFIG=release` does). The bundles then also need these libraries' minimum
   macOS version (e.g. MacPorts' libomp is built for the build machine's macOS).
-- `-DBUILD_CIMG_PLUGINS=OFF` (`make HAVE_CIMG=0`), `-DBUILD_SHADERTOY=OFF`.
+- `-DBUILD_CIMG_PLUGINS=OFF` (`make HAVE_CIMG=0`), `-DBUILD_SHADERTOY=OFF`,
+  `-DBUILD_MISC=OFF` (with `-DBUILD_CIMG_PLUGINS=OFF`: only `Shadertoy.ofx.bundle`).
+- `-DOFXMISC_STANDALONE_BUNDLES="DenoiseSharpen"`: also build these Misc plugins as
+  standalone bundles (`DenoiseSharpen.ofx.bundle`, as `make nomulti`), for the binary
+  releases. They have the same plugins as `Misc.ofx.bundle`: install one or the other.
 - `-DFFT=pocketfft|pow2|fftw3` (`make FFT=...`): the FFT of the CImg plugins, see above
   (default `pocketfft`; `fftw3` is opt-in), and `-DOFX_LICENSE=GPL` (default) or
   `COMMERCIAL` (`make LICENSE=...`, as openfx-gmic's option), which refuses `fftw3`.
@@ -465,7 +514,10 @@ to the prefix (or absolute). The main options are:
   libgcc, winpthread) statically, as the CI does, for hosts that do not ship it.
 - `-DUSE_OSMESA=ON` (`make -C Shadertoy OSMESA=1`): Shadertoy CPU rendering with a
   mangled OSMesa in `OSMESA_PATH` (default `/opt/osmesa`) and LLVM in `LLVM_PATH`
-  (default `/opt/llvm`).
+  (default `/opt/llvm`). With `-DOSMESA_PKGCONFIG_STATIC=ON` (as the binary releases),
+  the static `libMangledOSMesa32.a` is linked with the flags of `pkg-config --static`
+  (the `Libs.private` of `OSMESA_PATH`'s `osmesa.pc`); by default, those of
+  `pkg-config --libs`.
 - `-DOFX_BUILD_HOSTDEMO=ON`: also build openfx's test host `hostDemo` and install it into
   `<prefix>/bin`, for the render tests: `.github/tools/rendertest.sh <prefix>` (checks
   the outputs of a few plugins) and `.github/tools/smoketest.sh <prefix>` (renders every

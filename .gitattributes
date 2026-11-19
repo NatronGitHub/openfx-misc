@@ -61,4 +61,9 @@ CImg/patches/*.sh text eol=lf
 *.S text
 
 *.xml -text
+# parameter files read by the release scripts, also on Windows (Git for Windows' autocrlf=true
+# would give them CRLF: e.g. fetch-osmesa.sh's lookup in osmesa-install.sha256)
+.github/parameters/* text eol=lf
+# vendored licence text, verified by SHA256 (.github/tools/package-release.sh): no EOL conversion
+CImg/Licence_CeCILL-C_V1-en.txt -text
 *.yml -text
