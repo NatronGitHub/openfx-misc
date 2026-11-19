@@ -998,8 +998,8 @@ PremultPluginFactory<isPremult>::describe(ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
-#ifndef OFX_EXTENSIONS_NATRON
-    gIsMultiplanar = false;
+#if !defined(OFX_EXTENSIONS_NATRON) || !defined(OFX_EXTENSIONS_NUKE)
+    gIsMultiplanar = false; // isMultiPlanar and the plane suite are Nuke extensions
 #else
     desc.setChannelSelector(ePixelComponentNone); // we have our own channel selector
     desc.setPassThroughForNotProcessedPlanes(ePassThroughLevelPassThroughNonRenderedPlanes);

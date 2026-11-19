@@ -37,6 +37,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Views/Stereo"
 #define kPluginDescription "Put the left and right view of the input next to each other."
 #define kPluginIdentifier "net.sf.openfx.sideBySidePlugin"
+// version 1.1: works on hosts without the multiview suites (OFX 1.4): it then has one view
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 

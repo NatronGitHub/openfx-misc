@@ -61,6 +61,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "Canceling a tracking operation will not wipe all the data analysed so far. If you resume a previously canceled tracking, " \
     "the tracker will continue tracking, picking up the previous/next frame as reference. "
 #define kPluginIdentifier "net.sf.openfx.TrackerPM"
+// version 1.1: works in the filter context (it fetched the Mask clip that is not defined there)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 

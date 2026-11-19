@@ -421,7 +421,8 @@ JoinViewsPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle
 // Each major version needs its own factory class: FactoryMainEntryHelper stores
 // the plugin UID in a static shared by all objects of the same class.
 static JoinViewsPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
-// version 1: isIdentity returns the rendered view of the input (deprecated, kept so old projects render the same)
+// version 1: isIdentity returns the rendered view of the input (deprecated, kept so old projects render the same);
+// 1.1: works on hosts without the multiview suites (OFX 1.4)
 static JoinViewsPluginFactory<1> p1(kPluginIdentifier, 1);
 mRegisterPluginFactoryInstance(p)
 mRegisterPluginFactoryInstance(p1)

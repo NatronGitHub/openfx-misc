@@ -59,6 +59,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "See also: https://web.archive.org/web/20220120145727/http://opticalenquiry.com/nuke/index.php?title=Switch"
 
 #define kPluginIdentifier "net.sf.openfx.switchPlugin"
+// version 1.1: works on hosts other than Natron (it fetched 16 clips but defined only 2)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
