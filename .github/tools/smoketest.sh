@@ -158,8 +158,6 @@ PARAMS=(
 # to describe failures: the entries without a context to hostDemo --describe failures,
 # those with a context to the describeInContext failures of that context.
 XFAIL=(
-    # issue #165 (PIK supports short and float only)
-    "net.sf.openfx.PIK@filter|get region of definition action failed|the filter context has no Source clip (the spec mandates one), so HostSupport's default region of definition fails"
     # issue #167: debug builds, failed assertions (an unconnected clip has the components
     # kOfxImageComponentNone)
     "net.sf.openfx.DenoiseSharpen@filter|_maskClip->getPixelComponents\(\) == ePixelComponentAlpha|debug:the constructor asserts that the Mask clip is Alpha, also when it is not connected (filter context)"

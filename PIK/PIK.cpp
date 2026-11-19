@@ -163,6 +163,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              replace colors (with a Rec. 709 fallback for colors with a tiny or negative luminance, e.g. bluish
 //              colors in ACES AP0) and to the conversion of Bg for "Use Bg Luminance/Chroma". Version 1 always used
 //              Rec. 709 there, whatever the Colorspace, and is kept (deprecated) so that old projects render the same.
+// versions 1.1 and 2.0: in the filter context, the Fg input is the Source clip (labelled Fg), as the OpenFX spec
+//              mandates (the filter context had no Source clip, so hosts failed, e.g. HostSupport's default RoD;
+//              issue #165); the general context still has the Fg clip, so existing projects are unchanged
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -1475,7 +1478,8 @@ public:
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGBA) );
-        _fgClip = fetchClip(kClipFg);
+        // the filter context has a Source clip (mandated by the spec), which is the Fg input
+        _fgClip = fetchClip(getContext() == eContextFilter ? kOfxImageEffectSimpleSourceClipName : kClipFg);
         assert( ( _fgClip && (!_fgClip->isConnected() || _fgClip->getPixelComponents() ==  ePixelComponentRGB ||
                               _fgClip->getPixelComponents() == ePixelComponentRGBA) ) );
         _pfgClip = fetchClip(kClipPFg);
@@ -2180,10 +2184,20 @@ PIKPlugin::getFramesNeeded(const FramesNeededArguments &args,
 template<unsigned int majorVersion>
 void
 PIKPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
-                                    ContextEnum /*context*/)
+                                    ContextEnum context)
 {
     {
-        ClipDescriptor* clip = desc.defineClip(kClipFg);
+        // The filter context mandates an input clip named Source, and all the other inputs must be
+        // optional (they are, except Fg): there, the Fg input is the Source clip, labelled Fg. The
+        // general context keeps the Fg clip, so that the existing projects (e.g. Natron's, which uses
+        // the general context) still connect it.
+        ClipDescriptor* clip;
+        if (context == eContextFilter) {
+            clip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
+            clip->setLabel(kClipFg);
+        } else {
+            clip = desc.defineClip(kClipFg);
+        }
         clip->setHint(kClipFgHint);
         clip->addSupportedComponent( ePixelComponentRGBA );
         clip->addSupportedComponent( ePixelComponentRGB );
