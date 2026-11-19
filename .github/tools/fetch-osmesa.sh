@@ -36,7 +36,8 @@ platform=$2
 asset=osmesa-install-$tag-$platform.tar.xz
 # (OSMESA_INSTALL_DOWNLOAD_URL: another base URL, for local tests, e.g. file:///tmp/assets)
 url=${OSMESA_INSTALL_DOWNLOAD_URL:-https://github.com/devernay/osmesa-install/releases/download}/$tag/$asset
-expected=$(awk -v a="$asset" '$1 !~ /^#/ && ($2 == a || $2 == "*" a) { print $1 }' "$sums")
+# (a CR at the end of a line is ignored: a CRLF checkout on Windows)
+expected=$(awk -v a="$asset" '{ sub(/\r$/, "") } $1 !~ /^#/ && ($2 == a || $2 == "*" a) { print $1 }' "$sums")
 if [ -z "$expected" ]; then
     [ $check = 1 ] || echo "ERROR: $asset is not listed in $sums"
     exit 1

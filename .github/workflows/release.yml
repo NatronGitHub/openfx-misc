@@ -115,7 +115,7 @@ jobs:
   preflight:
     name: Check the inputs
     # Before any build: a manual run with "publish" needs a tag (the "tag" input or a tag ref),
-    # and a "tag" input is only accepted on a branch
+    # and a "tag" input must be an existing tag, and is only accepted on a branch
     timeout-minutes: 5
     runs-on: ubuntu-24.04
     steps:
@@ -130,6 +130,12 @@ jobs:
           if [ "$REF_TYPE" = tag ] && [ -n "$TAG_INPUT" ]; then
             echo "ERROR: the \"tag\" input ($TAG_INPUT) on a tag ref ($REF_NAME): run on a branch with the \"tag\" input, or on the tag ref without it"
             exit 1
+          fi
+          if [ -n "$TAG_INPUT" ]; then
+            if ! git ls-remote --exit-code --tags "https://github.com/$GITHUB_REPOSITORY.git" "refs/tags/$TAG_INPUT" > /dev/null; then
+              echo "ERROR: the \"tag\" input $TAG_INPUT is not a tag of $GITHUB_REPOSITORY"
+              exit 1
+            fi
           fi
           if [ "$PUBLISH" = true ] && [ -z "$RELEASE_TAG" ]; then
             echo "ERROR: publish needs a tag: the \"tag\" input, or a run on a tag ref"
@@ -190,8 +196,13 @@ jobs:
           sparse-checkout-cone-mode: false
           persist-credentials: false
       - name: Check the source
+        # The container runs as root, and the workspace belongs to the runner's user: let git
+        # use the checkouts (and their submodules), else "detected dubious ownership"
         run: |
           set -eo pipefail
+          find "$GITHUB_WORKSPACE" -maxdepth 4 -name .git | while IFS= read -r g; do
+            git config --global --add safe.directory "$(dirname "$g")"
+          done
           git log -1 --format='source: %H %s'
           git -C .release-tools log -1 --format='release tools: %H %s'
           "$TOOLS"/check-release-source.sh
@@ -472,12 +483,6 @@ jobs:
             /CImg/Licence_CeCILL-C_V1-en.txt
           sparse-checkout-cone-mode: false
           persist-credentials: false
-      - name: Check the source
-        run: |
-          set -eo pipefail
-          git log -1 --format='source: %H %s'
-          git -C .release-tools log -1 --format='release tools: %H %s'
-          "$TOOLS"/check-release-source.sh
       - name: Setup MSYS2 UCRT64 environment (cached)
         uses: msys2/setup-msys2@ec48f7c5447b3140e2b088413ae3a55687bccb6e # v2.33.0
         with:
@@ -488,6 +493,13 @@ jobs:
           install: git base-devel zip
           # pkgconf: Shadertoy's USE_OSMESA reads osmesa.pc (OSMESA_PKGCONFIG_STATIC)
           pacboy: cc:p cmake:p ninja:p pkgconf:p
+      - name: Check the source
+        # (after Setup MSYS2: the job's msys2 shell and its git)
+        run: |
+          set -eo pipefail
+          git log -1 --format='source: %H %s'
+          git -C .release-tools log -1 --format='release tools: %H %s'
+          "$TOOLS"/check-release-source.sh
       - name: Download the prebuilt OSMesa
         if: env.OSMESA_RELEASE != ''
         # The UCRT64 build (a MINGW64 one would not link: another C runtime). Native
@@ -592,6 +604,7 @@ jobs:
       - name: Create or update the draft release
         # A new release is a draft (published by hand); --verify-tag: never create a tag.
         # If the release exists (a re-run), it must still be a draft (else the run fails): its
+        # SHA256SUMS.txt is removed first, then
         # archives are replaced, the stale assets that this run did not produce are deleted,
         # and its notes are left as they are. SHA256SUMS.txt is then made from the archives
         # actually attached to the release (downloaded again), which must be this run's.
@@ -608,18 +621,30 @@ jobs:
               echo "ERROR: the release $tag exists and is not a draft (isDraft: $draft): it is never changed"
               exit 1
             fi
+            # no SHA256SUMS.txt while the archives change: it is uploaded last, only when it
+            # matches the attached archives (a failed re-run leaves none rather than a stale one)
+            if gh release view "$tag" --json assets --jq '.assets[].name' | grep -qx SHA256SUMS.txt; then
+              gh release delete-asset "$tag" SHA256SUMS.txt --yes
+            fi
             gh release upload "$tag" dist/*.tar.gz dist/*.zip --clobber
           else
             prerelease=
             case "$tag" in *-[rR][cC]*|*-[bB][eE][tT][aA]*|*-[aA][lL][pP][hH][aA]*) prerelease=--prerelease ;; esac
             osmesa=$(cd dist && { ls openfx-misc-Shadertoy-OSMesa-* 2> /dev/null || true; } | sed -e 's/^openfx-misc-Shadertoy-OSMesa-.*-\(linux\|macos\|windows\)-.*/\1/' | sort -u | paste -sd, - | sed 's/,/, /g')
+            if [ -n "$osmesa" ]; then
+              full_osmesa=" (with OSMesa CPU rendering where it is built: $osmesa; OpenGL only elsewhere)"
+              osmesa_item="- \`openfx-misc-Shadertoy-OSMesa-<version>-<platform>\` ($osmesa): \`Shadertoy.ofx.bundle\` alone, OpenGL + OSMesa, the one of the full set."
+            else
+              full_osmesa=" (OpenGL only)"
+              osmesa_item=
+            fi
             cat > notes.md << EOF
           openfx-misc binaries of \`$tag\`, for Linux x86_64 (Rocky Linux 9, glibc 2.34, and later), Windows x86_64 and macOS 14 or later (universal).
 
           Downloads, per platform:
-          - \`openfx-misc-<version>-<platform>\`: the full set, as shipped with Natron: \`Misc.ofx.bundle\`, \`CImg.ofx.bundle\` and \`Shadertoy.ofx.bundle\` (with OSMesa CPU rendering where it is built: $osmesa; OpenGL only elsewhere).
+          - \`openfx-misc-<version>-<platform>\`: the full set, as shipped with Natron: \`Misc.ofx.bundle\`, \`CImg.ofx.bundle\` and \`Shadertoy.ofx.bundle\`$full_osmesa.
           - \`openfx-misc-Shadertoy-OpenGL-<version>-<platform>\`: \`Shadertoy.ofx.bundle\` alone, OpenGL only.
-          - \`openfx-misc-Shadertoy-OSMesa-<version>-<platform>\` ($osmesa): \`Shadertoy.ofx.bundle\` alone, OpenGL + OSMesa, the one of the full set.
+          $osmesa_item
           - \`openfx-misc-DenoiseSharpen-<version>-<platform>\`: \`DenoiseSharpen.ofx.bundle\` alone (DenoiseSharpen is also in \`Misc.ofx.bundle\`).
 
           **Install either the full set or standalone bundles, not both**: they contain the same plug-ins, with the same identifiers and versions. The two Shadertoy downloads are mutually exclusive. Each archive has a README.txt with the installation directories. Natron users don't need these: Natron includes them.
@@ -640,10 +665,18 @@ jobs:
               gh release delete-asset "$tag" "$a" --yes
             fi
           done
-          # SHA256SUMS.txt of the attached archives
+          # SHA256SUMS.txt of the attached archives of this run (downloaded again by name: not the
+          # files attached by hand), uploaded only if they are the archives built here
           mkdir attached
-          gh release download "$tag" --dir attached --pattern '*.tar.gz' --pattern '*.zip'
-          (cd attached && sha256sum -- *.tar.gz *.zip) > SHA256SUMS.txt
-          diff built.sha256 SHA256SUMS.txt
+          names=$(cd dist && ls -- *.tar.gz *.zip)
+          for a in $names; do
+            gh release download "$tag" --dir attached --pattern "$a"
+          done
+          # shellcheck disable=SC2086 # names without spaces (package-release.sh)
+          (cd attached && sha256sum -- $names) > SHA256SUMS.txt
+          if ! diff built.sha256 SHA256SUMS.txt; then
+            echo "ERROR: the attached archives differ from the built ones: SHA256SUMS.txt is not uploaded"
+            exit 1
+          fi
           cat SHA256SUMS.txt
           gh release upload "$tag" SHA256SUMS.txt --clobber

@@ -21,7 +21,10 @@
 # sources give the license texts; the script itself, its CeCILL-C text and its parameters may come
 # from another checkout, e.g. release.yml's .release-tools):
 #   .github/tools/package-release.sh [--version VERSION] --platform PLATFORM --out DIR \
-#       --full DIR --shadertoy-gl DIR [--shadertoy-osmesa DIR] --denoisesharpen DIR [--licenses DIR]
+#       --full DIR --shadertoy-gl DIR [--shadertoy-osmesa DIR] --denoisesharpen DIR [--licenses DIR] \
+#       [--fft pocketfft|pow2|fftw3]
+# --fft: the FFT of the CImg plug-ins (CMake's FFT; default pocketfft, whose
+#   CImg/pocketfft_hdronly.h, downloaded at configure, is then required for its license).
 # --licenses DIR: license files of code linked into every bundle of this platform, copied into
 #   every archive's LICENSES/ (Windows: the MinGW-w64 runtime and winpthreads that -static links;
 #   required for windows-*).
@@ -40,7 +43,7 @@ usage() {
     exit 2
 }
 
-version='' platform='' out='' full='' stgl='' stmesa='' ds='' extra=''
+version='' platform='' out='' full='' stgl='' stmesa='' ds='' extra='' fft=pocketfft
 while [ $# -gt 0 ]; do
     case "$1" in
         --version) version=$2; shift 2 ;;
@@ -51,6 +54,7 @@ while [ $# -gt 0 ]; do
         --shadertoy-osmesa) stmesa=$2; shift 2 ;;
         --denoisesharpen) ds=$2; shift 2 ;;
         --licenses) extra=$2; shift 2 ;;
+        --fft) fft=$2; shift 2 ;;
         *) usage ;;
     esac
 done
@@ -171,12 +175,19 @@ Licenses
 --------
 openfx-misc is free software, under the GNU General Public License, version 2
 or later: see LICENSE.txt. The bundles also contain third-party code, whose
-licenses are in LICENSES/: openfx's Support library (BSD 3-clause) in every
-bundle, freeglut's text renderer and pixman's blend modes (MIT) in Misc.ofx,
-CImg (CeCILL-C) and pocketfft (BSD 3-clause) in CImg.ofx, and, in
-LICENSES/<bundle>/, those of the libraries linked statically into a bundle or
-bundled with it (e.g. Mesa and LLVM in the OSMesa Shadertoy), which are also in
-<bundle>.ofx.bundle/Contents/Resources/licenses/.
+licenses are in LICENSES/: openfx's Support library (BSD 3-clause) and
+TinyThread++ (zlib) in every bundle, freeglut's text renderer and pixman's blend
+modes (MIT) in Misc.ofx, CImg (CeCILL-C) and pocketfft (BSD 3-clause) in
+CImg.ofx, and, in LICENSES/<bundle>/, those of the libraries linked statically
+into a bundle or bundled with it (e.g. Mesa and LLVM in the OSMesa Shadertoy),
+which are also in <bundle>.ofx.bundle/Contents/Resources/licenses/.
+Misc.ofx also contains code first published under other licences, compatible
+with the GPL and distributed under the GPL as part of Misc.ofx (see the
+sources): Misc/randomGenerator.cpp (the MT19937 generator of Makoto Matsumoto
+and Takuji Nishimura, GNU Library General Public License, version 2 or later)
+and the Yadif mode of Deinterlace/Deinterlace.cpp (from FFmpeg's
+libavfilter/vf_yadif.c, Michael Niedermayer, GNU Lesser General Public License,
+version 2.1 or later).
 EOF
 }
 
@@ -242,6 +253,8 @@ licenses() {
     # (openfx's current LICENSE.md, then the original LICENSE of the older files)
     { [ ! -f "$src/openfx/LICENSE.md" ] || { cat "$src/openfx/LICENSE.md"; echo; }; cat "$src/openfx/LICENSE"; } \
         > "$dir/LICENSES/openfx-Support-BSD-3-Clause.txt"
+    # (SupportExt's THREADS component, in every bundle)
+    notice_block "$src/SupportExt/tinythread.cpp" "Marcus Geelnard" > "$dir/LICENSES/TinyThread++-zlib.txt"
     [ -z "$extra" ] || cp -R "$extra"/. "$dir/LICENSES/"
     for b in "$@"; do
         bn=$(basename "$b" .ofx.bundle)
@@ -259,7 +272,8 @@ licenses() {
             [ -f "$src/CImg/CImg.h" ] || { echo "ERROR: $src/CImg/CImg.h not found (its license)"; exit 1; }
             header_block "$src/CImg/CImg.h" > "$dir/LICENSES/CImg-notice.txt"
             cp "$cecill_c" "$dir/LICENSES/CImg-Licence_CeCILL-C_V1-en.txt"
-            if [ -f "$src/CImg/pocketfft_hdronly.h" ]; then
+            if [ "$fft" = pocketfft ]; then
+                [ -f "$src/CImg/pocketfft_hdronly.h" ] || { echo "ERROR: $src/CImg/pocketfft_hdronly.h not found (FFT=pocketfft: its license)"; exit 1; }
                 notice_block "$src/CImg/pocketfft_hdronly.h" "Redistribution and use" > "$dir/LICENSES/pocketfft-BSD-3-Clause.txt"
             fi
         fi
@@ -274,7 +288,8 @@ licenses() {
 }
 
 src=$PWD
-for f in LICENSE openfx/LICENSE SupportExt/ofxsMerging.h; do
+case "$fft" in pocketfft|pow2|fftw3) ;; *) echo "ERROR: --fft $fft (pocketfft, pow2 or fftw3)"; exit 2 ;; esac
+for f in LICENSE openfx/LICENSE SupportExt/ofxsMerging.h SupportExt/tinythread.cpp; do
     [ -f "$src/$f" ] || { echo "ERROR: $src/$f not found: run from the top of the source tree"; exit 1; }
 done
 if command -v sha256sum > /dev/null; then
