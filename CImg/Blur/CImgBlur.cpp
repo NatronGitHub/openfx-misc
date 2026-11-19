@@ -224,10 +224,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 3.0: use kNatronOfxParamProcess* parameters
 // version 4.0: the default is to blur all channels including alpha (see processAlpha in describeInContext)
 // version 4.0: added cropToFormat parameter on Natron (this line said 4.1, but the minor version was not incremented)
-// versions 3.1 (kept for Blur, Laplacian, ChromaBlur, Bloom) and 4.1: premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73);
+// versions 3.1 (kept for Blur, Laplacian, ChromaBlur, Bloom) and 4.1: premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79);
 //              EdgeExtend has no premult parameter and stays 4.0
 // EdgeDetect version 5.0: fix the gradient direction in RMS multichannel mode (only EdgeDetect has version 5);
-//              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73)
+//              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79)
 #define kPluginVersionMajorEdgeDetect 5
 #define kPluginVersionMinorOld 1 // version 3, kept for backward compatibility
 #define kPluginVersionMinorEdgeExtend 0

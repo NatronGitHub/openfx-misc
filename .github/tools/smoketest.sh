@@ -23,10 +23,19 @@
 #   --quick           only the most general context of each plug-in (general if
 #                     it supports it, else filter): about half the renders (per-PR CI)
 #   -j N              run N renders at a time (default: the number of CPUs)
+#   --ofx14           run hostDemo as an OFX 1.4 host (hostDemo --ofx14: only the OFX 1.4
+#                     host properties and suites, no OfxSetHost, no StrChoice or Bytes
+#                     params, one view): every plug-in must still describe and render
+#                     there, without the OFX 1.5 features and the host extensions. One view
+#                     is rendered per frame (the outputs have no l/r suffix), the report
+#                     must say host.profile "ofx14", and the "ofx14:" entries of the lists
+#                     below are used (they are ignored otherwise; e.g. a plug-in that needs
+#                     an optional OFX 1.4 feature that hostDemo lacks in this mode)
 # Environment: HOSTDEMO (the hostDemo binary, default PREFIX/bin/hostDemo),
 # CXX (to build ofxload.cpp, default c++), CMAKE_ARGS (--supportext),
 # SMOKETEST_TIMEOUT (seconds per describe or render, default 120),
-# SMOKETEST_DEBUG=1 (a debug build: also use the "debug:" entries of the lists below),
+# SMOKETEST_DEBUG=1 (a debug build: also use the "debug:" entries of the lists below; an
+# entry can be "debug:ofx14:..."),
 # SMOKETEST_BUNDLES (the expected bundles, see BUNDLES below; e.g. "Misc:0" for a build
 # with -DBUILD_CIMG_PLUGINS=OFF -DBUILD_SHADERTOY=OFF -DBUILD_TESTING=OFF),
 # SMOKETEST_XPASS_OK=1 (accept the known bugs that were fixed: an XFAIL entry that passes
@@ -38,7 +47,7 @@
 #
 # Each render is one hostDemo run (--no-std-paths --no-cache: only the bundle of
 # the plug-in is in OFX_PLUGIN_PATH), at t=0 and 1 (both views: hostDemo is
-# built with the OFX_EXTENSIONS_* of the plug-ins), on the PAL SD project
+# built with the OFX_EXTENSIONS_* of the plug-ins; one view with --ofx14), on the PAL SD project
 # (720x576), with the outputs in float PFM files. The inputs are: ramp for the
 # first input clip, checker:16 for the second one, a solid colour for the
 # others; the optional clips of generators (plug-ins with a generator context)
@@ -84,7 +93,9 @@ BUNDLES=(Misc:168 CImg:40 Shadertoy:1 Test:6)
 # shellcheck disable=SC2206
 [ -z "$SMOKETEST_BUNDLES" ] || BUNDLES=($SMOKETEST_BUNDLES)
 # The plug-ins that are not tested: "identifier regex|reason" (the whole identifier; a
-# "debug:" reason is only used in debug builds).
+# "debug:" reason is only used in debug builds, an "ofx14:" one only with --ofx14; these
+# prefixes, which can be combined, only work at the start of the reason or description
+# field of the SKIP, IDENTITY and XFAIL lists).
 SKIP=(
     "net.sf.openfx.Shadertoy|OpenGL only: hostDemo has no OpenGL render suite (describe fails)"
     "net.sf.openfx.TestOpenGL|OpenGL only (Test bundle): hostDemo has no OpenGL render suite (describe fails)"
@@ -176,11 +187,13 @@ SMOKETEST_TIMEOUT=${SMOKETEST_TIMEOUT:-120}
 # survives exec), and set $status to its exit status. The caller sends its stderr to LOG,
 # for the shell's message about a crash.
 watchdog() {
-    local log=$1 bundle=$2
+    local log=$1 bundle=$2 host=()
     shift 2
+    # --ofx14: an OFX 1.4 host
+    [ "$SMOKETEST_OFX14" != 1 ] || host=(--ofx14)
     status=0
     ( OFX_PLUGIN_PATH=$SMOKETEST_WORK/path/$bundle exec perl -e 'alarm shift; exec @ARGV or die "$!\n"' \
-          "$SMOKETEST_TIMEOUT" "$HOSTDEMO" --no-std-paths --no-cache --quiet "$@" ) > "$log" 2>&1 || status=$?
+          "$SMOKETEST_TIMEOUT" "$HOSTDEMO" --no-std-paths --no-cache --quiet "${host[@]}" "$@" ) > "$log" 2>&1 || status=$?
     if [ "$status" = 142 ]; then
         echo "timeout: killed after ${SMOKETEST_TIMEOUT}s" >> "$log"
     elif [ "$status" -gt 128 ]; then
@@ -230,7 +243,7 @@ fi
 
 usage() { sed -n '/^# Usage/,/^# Linux and macOS/p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-1}"; }
 top=$(cd "$(dirname "$0")/../.." && pwd)
-supportext='' build='' out='' only='' quick=0 prefix='' jobs=$(getconf _NPROCESSORS_ONLN 2> /dev/null || echo 2)
+supportext='' build='' out='' only='' quick=0 ofx14=0 prefix='' jobs=$(getconf _NPROCESSORS_ONLN 2> /dev/null || echo 2)
 while [ $# -gt 0 ]; do
     case "$1" in
         --supportext) supportext=$2; shift ;;
@@ -238,6 +251,7 @@ while [ $# -gt 0 ]; do
         --out) out=$2; shift ;;
         --only) only=$2; shift ;;
         --quick) quick=1 ;;
+        --ofx14) ofx14=1 ;;
         -j) jobs=$2; shift ;;
         -h|--help) usage 0 ;;
         -*) echo "unknown option $1"; usage ;;
@@ -275,7 +289,7 @@ plugins=$prefix/OFX/Plugins
 HOSTDEMO=${HOSTDEMO:-$prefix/bin/hostDemo}
 case "$HOSTDEMO" in /*) ;; *) HOSTDEMO=$PWD/$HOSTDEMO ;; esac
 [ -x "$HOSTDEMO" ] || { echo "hostDemo not found: $HOSTDEMO (configure with -DOFX_BUILD_HOSTDEMO=ON, or set HOSTDEMO)"; exit 1; }
-echo "hostDemo: $HOSTDEMO"
+echo "hostDemo: $HOSTDEMO$([ "$ofx14" = 0 ] || echo " --ofx14 (an OFX 1.4 host)")"
 echo "bundles: $plugins"
 
 # The plug-ins: ofxload prints the identifier and version of each plug-in of a binary.
@@ -360,7 +374,7 @@ EOF
 
 # Describe each plug-in (in parallel). A worker that fails (xargs exit status 123)
 # leaves no status file: its plug-ins fail below.
-export HOSTDEMO SMOKETEST_WORK=$work SMOKETEST_TIMEOUT
+export HOSTDEMO SMOKETEST_WORK=$work SMOKETEST_TIMEOUT SMOKETEST_OFX14=$ofx14
 [ -z "$out" ] || export SMOKETEST_KEEP=1
 failed_workers=
 tr '\n' '\0' < "$work/plugins.txt" | xargs -r -0 -n 1 -P "$jobs" "$0" --describe-job ||
@@ -369,19 +383,24 @@ tr '\n' '\0' < "$work/plugins.txt" | xargs -r -0 -n 1 -P "$jobs" "$0" --describe
 # The render jobs, one per line: "name|bundle|id|major|context|depth|Clip=spec;...|
 # PARAMS entry number|hostDemo argument;...|differs:N entry number" (the last three are
 # empty for a default render)
-python3 -I - "$work" "$quick" "${SMOKETEST_DEBUG:-0}" > "$work/jobs.txt" 2> "$work/describe-results.txt" << 'EOF' ||
+python3 -I - "$work" "$quick" "${SMOKETEST_DEBUG:-0}" "$ofx14" > "$work/jobs.txt" 2> "$work/describe-results.txt" << 'EOF' ||
 import json, os, re, sys
-work, quick, debug = sys.argv[1], sys.argv[2] == "1", sys.argv[3] == "1"
+work, quick, debug, ofx14 = sys.argv[1], sys.argv[2] == "1", sys.argv[3] == "1", sys.argv[4] == "1"
 def entries(name):
     return [l.rstrip("\n") for l in open(os.path.join(work, name)) if l.strip()]
+def only_in(desc):
+    # (keep, desc): the "debug:" entries are only used in debug builds, the "ofx14:" ones with --ofx14
+    keep = True
+    while desc.startswith(("debug:", "ofx14:")):
+        keep = keep and (debug if desc.startswith("debug:") else ofx14)
+        desc = desc[6:]
+    return keep, desc
 skip = []
 for s in entries("skip.txt"):
     rx, reason = s.split("|", 1)
-    if reason.startswith("debug:"):
-        if not debug:
-            continue
-        reason = reason[6:]
-    skip.append((rx, reason))
+    keep, reason = only_in(reason)
+    if keep:
+        skip.append((rx, reason))
 overrides = []
 for s in entries("inputs.txt"):
     m = re.fullmatch(r"([^@|]*)(?:@(filter|general))?\|(.*)", s)
@@ -505,18 +524,21 @@ mode=full
 [ -z "$only" ] || mode=only
 [ -z "$SMOKETEST_BUNDLES" ] || mode=$mode-partial
 status=0
-python3 -I - "$work" "${SMOKETEST_DEBUG:-0}" "$mode" "${SMOKETEST_XPASS_OK:-0}" << 'EOF' || status=$?
+python3 -I - "$work" "${SMOKETEST_DEBUG:-0}" "$mode" "${SMOKETEST_XPASS_OK:-0}" "$ofx14" << 'EOF' || status=$?
 import json, os, re, sys
 work, debug, mode, xpass_ok = sys.argv[1], sys.argv[2] == "1", sys.argv[3], sys.argv[4] == "1"
+ofx14 = sys.argv[5] == "1"
 # stale entries are only a warning with SMOKETEST_BUNDLES (a partial build) or SMOKETEST_XPASS_OK
 lenient = mode.endswith("partial") or xpass_ok
 def entries(name):
     return [l.rstrip("\n") for l in open(os.path.join(work, name)) if l.strip()]
 def debug_only(desc):
-    # (keep, desc): the "debug:" entries are only used in debug builds
-    if desc.startswith("debug:"):
-        return debug, desc[6:]
-    return True, desc
+    # (keep, desc): the "debug:" entries are only used in debug builds, the "ofx14:" ones with --ofx14
+    keep = True
+    while desc.startswith(("debug:", "ofx14:")):
+        keep = keep and (debug if desc.startswith("debug:") else ofx14)
+        desc = desc[6:]
+    return keep, desc
 xfail = []
 for x in entries("xfail.txt"):
     m = re.fullmatch(r"([^:@/|]*)(?::([0-9]+))?(?:@(filter|general))?(?:/(byte|short|float))?\|([^|]*)\|(.*)", x)
@@ -547,8 +569,10 @@ nrender = dict((k, 0) for k in order)
 NOREF = "PARAMS renders without a default render to compare to"
 notes = {"identity": set(), "empty RoD": set(), NOREF: set()}
 # hostDemo is built with the OFX_EXTENSIONS_* of the plug-ins (-DOFX_BUILD_HOSTDEMO=ON):
-# it always renders both views of a stereo frame (the report has no view count)
-VIEWS = 2
+# it always renders both views of a stereo frame (the report has no view count), except
+# with --ofx14 (one view, outputs without the l/r suffix)
+VIEWS = 1 if ofx14 else 2
+PROFILE = "ofx14" if ofx14 else "default"
 
 
 def note(tag, res):
@@ -648,6 +672,8 @@ for line in open(os.path.join(work, "jobs.txt")):
             errors.append("hostDemo exit status %s, no report (%s)" % (status, e.__class__.__name__))
     ident_x = expected_identity(pid, major, ctx)
     if r is not None:
+        if (r.get("host") or {}).get("profile", "default") != PROFILE:
+            errors.append("report: host profile %s, expected %s" % ((r.get("host") or {}).get("profile"), PROFILE))
         for a in r.get("actions") or []:
             if not a.get("ok"):
                 errors.append("action %s failed (%s)" % (a.get("action"), a.get("status")))
@@ -739,8 +765,8 @@ for line in open(os.path.join(work, "jobs.txt")):
     if res == "FAIL" or (res == "XPASS" and not xpass_ok):
         for l in log.strip().splitlines()[-15:]:
             print("  | " + l)
-        print("  | (cd %s && OFX_PLUGIN_PATH=<%s bundle dir> hostDemo --no-std-paths --no-cache -p %s -m %s -c %s -d %s%s%s)"
-              % (name, bundle, pid, major, ctx, depth, "".join(" -i " + i for i in inputs.split(";") if i),
+        print("  | (cd %s && OFX_PLUGIN_PATH=<%s bundle dir> hostDemo --no-std-paths --no-cache%s -p %s -m %s -c %s -d %s%s%s)"
+              % (name, bundle, " --ofx14" if ofx14 else "", pid, major, ctx, depth, "".join(" -i " + i for i in inputs.split(";") if i),
                  "".join(" " + w for w in pwords.split(";") if w)))
 times.sort(reverse=True)
 print()

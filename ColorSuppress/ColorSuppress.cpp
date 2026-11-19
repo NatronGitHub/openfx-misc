@@ -48,10 +48,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 // History:
 // version 1.0: initial version
-// version 1.1 (kept for backward compatibility): premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73)
+// version 1.1 (kept for backward compatibility): premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79)
 // version 2.0: in "Alpha" and "Image and Alpha" output modes, premultiply RGB by the source alpha
 //              (version 1 premultiplied RGB by the suppress mask);
-//              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73)
+//              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79)
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 

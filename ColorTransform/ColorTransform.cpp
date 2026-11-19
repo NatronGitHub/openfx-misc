@@ -165,11 +165,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // 1.1 HSVToRGB, HSLToRGB, HSIToRGB wrap the hue into the hue circle (bug fix: HSV and HSL gave
 //     magenta for hues in [-1, -5/6) mod 1, and HSI was not periodic for out-of-range hues);
 //     all conversions released as 1.0, including version 1 of the signedOutput() conversions
-//     (kept for backward compatibility): premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73)
+//     (kept for backward compatibility): premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79)
 // 1.0 RGBToYIQ, YIQToRGB, RGBToYDbDr, YDbDrToRGB: initial version
 // 2.0 RGBToYPbPr601, RGBToYPbPr709, RGBToYUV601, RGBToYUV709, RGB709ToLab, XYZToLab only:
 //     only support float images, because their output may be negative (version 1 clamps negative
-//     values to 0 on 8-bit and 16-bit images); premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73).
+//     values to 0 on 8-bit and 16-bit images); premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79).
 //     The other conversions are still version 1.
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.

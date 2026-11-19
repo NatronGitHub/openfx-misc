@@ -39,8 +39,11 @@
 #define kPluginPositionGrouping "Other/Test"
 #define kPluginPositionDescription "DO NOT USE. Use the Position plugin instead. This is a plugin to test https://github.com/MrKepzie/Natron/issues/522 . A bug happens in Natron if you zoom, change the Translate parameter, and dezoom."
 #define kPluginPositionIdentifier "net.sf.openfx.TestPosition"
+// History:
+// version 1.0: initial version
+// version 1.1: the inverse of a transform matrix with huge entries (e.g. a concatenated source transform) no longer overflows to NaN or 0 (SupportExt #81)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 using namespace OFX;
 
