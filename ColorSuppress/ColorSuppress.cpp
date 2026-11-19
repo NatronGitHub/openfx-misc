@@ -379,7 +379,7 @@ private:
                                 outPix[c] = srcPix ? (float)srcPix[c] : 0.f;
                             } else {
                                 // premult by alpha <= 0 gives a signed zero, as in ofxsPremult():
-                                // an infinite colour (e.g. unpremultiplied by a tiny alpha) gave inf * 0 = NaN
+                                // an infinite colour (HDR overflow upstream) gave inf * 0 = NaN
                                 const float a = _premult ? (std::max)(0.f, unpPix[3]) : 1.f;
                                 outPix[c] = (a == 0.f) ? std::copysign(0.f, tmpPix[c]) : (tmpPix[c] * a * maxValue);
                             }

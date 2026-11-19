@@ -62,6 +62,14 @@ ENDIF(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
 # Project setup
 ########################################################################
 CMAKE_MINIMUM_REQUIRED(VERSION 3.16...3.31) # 3.16: openfx's CMakeLists.txt; policies up to 3.31 (CMP0177)
+# macOS: the bundles load on macOS 14 and later (Natron 2.6) by default. -DCMAKE_OSX_DEPLOYMENT_TARGET,
+# or the MACOSX_DEPLOYMENT_TARGET environment variable (which CMake reads at the first configure),
+# overrides it: the default is only set when neither is given (nor a toolchain file or a
+# cross-compiling CMAKE_SYSTEM_NAME), as openfx does. It must be set before the first project(),
+# which reads it (openfx's cmake/OpenFX.cmake is included later and can't set it).
+if(CMAKE_HOST_APPLE AND NOT CMAKE_TOOLCHAIN_FILE AND (NOT CMAKE_SYSTEM_NAME OR CMAKE_SYSTEM_NAME STREQUAL "Darwin") AND NOT DEFINED CMAKE_OSX_DEPLOYMENT_TARGET AND "$ENV{MACOSX_DEPLOYMENT_TARGET}" STREQUAL "")
+  set(CMAKE_OSX_DEPLOYMENT_TARGET 14.0 CACHE STRING "Minimum macOS version")
+endif()
 PROJECT(OpenFXMisc CXX)
 
 # ========================== build platform ==========================
