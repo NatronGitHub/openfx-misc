@@ -148,6 +148,9 @@ endif
 
 # CIMGVERSION is declared in CImgVersion.mk (also read by CMakeLists.txt)
 include $(TOP_SRCDIR)/CImg/CImgVersion.mk
+# LICENSE and FFT (license.mk), and the FFT flags
+CIMG_DIR = .
+include $(TOP_SRCDIR)/CImg/CImgFFT.mk
 
 # -f: fail on an HTTP error, instead of saving the error page as the header
 # (and remove what was written, so that the next make tries again).
@@ -155,16 +158,59 @@ include $(TOP_SRCDIR)/CImg/CImgVersion.mk
 # --retry-all-errors is not used: it needs curl >= 7.71, and older curl
 # (e.g. 7.29 on CentOS 7) rejects unknown options.
 CURL = curl -fsSL --retry 3
+SHA256SUM = $(shell command -v sha256sum >/dev/null 2>&1 && echo sha256sum || echo shasum -a 256)
 
-CImg.h: Inpaint/inpaint.h
-	$(CURL) -o $@ https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/CImg.h || { rm -f $@; exit 1; }
-#	patch -p0 -d. < CImg-2.0.0-anisotropic.patch
-#	patch -p0 -d. < CImg-1.7.1-omp.patch
+# The downloaded sources: CImg.h, Inpaint/inpaint.h, and pocketfft with FFT=pocketfft. The
+# top-level Makefile makes them once, before the "make nomulti" builds, which share them.
+.PHONY: sources
+sources: CImg.h $(FFT_HEADERS) $(FFT_RESOURCES)
+
+# CImg.h, patched with the scripts of openfx-gmic (see CImgVersion.mk): CIMG_PATCHES, then
+# CIMG_PATCHES_POCKETFFT with FFT=pocketfft, in this order. CImg.h.version (also written by
+# CMakeLists.txt, in the same format) records CIMGVERSION, CIMG_PATCHES_FROM and the applied
+# patches: CImg.h is downloaded and patched again when they change, or when a patch script changes.
+# The header is patched in a temporary directory (the scripts want a file named CImg.h), and only
+# replaces CImg.h once all the patches are applied: if the download or a patch fails, there is no
+# CImg.h, and make fails.
+CIMG_APPLIED_PATCHES = $(CIMG_PATCHES)
+ifeq ($(FFT),pocketfft)
+CIMG_APPLIED_PATCHES += $(CIMG_PATCHES_POCKETFFT)
+endif
+CIMG_STAMP = $(strip $(CIMGVERSION) $(CIMG_PATCHES_FROM) $(CIMG_APPLIED_PATCHES))
+CImg.h.version: FORCE
+	@echo '$(CIMG_STAMP)' | cmp -s - $@ || echo '$(CIMG_STAMP)' > $@
+
+CImg.h: CImg.h.version $(CIMG_APPLIED_PATCHES) Inpaint/inpaint.h
+	@rm -rf $@ $@.tmp && mkdir $@.tmp
+	$(CURL) -o $@.tmp/CImg.h https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/CImg.h || { rm -rf $@.tmp; exit 1; }
+	@for p in $(CIMG_APPLIED_PATCHES); do \
+	  sh $$p $@.tmp/CImg.h || { echo "Error: $$p failed on CImg.h $(CIMGVERSION)"; rm -rf $@.tmp; exit 1; }; \
+	done
+	mv $@.tmp/CImg.h $@ && rmdir $@.tmp
 
 # Depend on CImgVersion.mk so that the headers are downloaded again when CIMGVERSION changes.
 Inpaint/inpaint.h: $(TOP_SRCDIR)/CImg/CImgVersion.mk
 	$(CURL) -o $@ https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/plugins/inpaint.h || { rm -f $@; exit 1; }
 	patch -p0 -d. < Inpaint/inpaint.h.patch || { rm -f $@; exit 1; }
+
+# pocketfft (FFT=pocketfft), at POCKETFFTCOMMIT, checked against POCKETFFT_SHA256 (as in openfx-gmic's
+# Makefile), next to CImg.h, which includes it. Downloaded again when the file's checksum differs
+# (e.g. after a POCKETFFTCOMMIT change).
+POCKETFFT_URL = https://raw.githubusercontent.com/mreineck/pocketfft/$(POCKETFFTCOMMIT)/pocketfft_hdronly.h
+pocketfft_hdronly.h: FORCE
+	@if [ -f $@ ] && [ "`$(SHA256SUM) $@ | cut -d' ' -f1`" = "$(POCKETFFT_SHA256)" ]; then exit 0; fi; \
+	rm -f $@ $@.tmp; \
+	echo "Fetching $(POCKETFFT_URL)"; \
+	$(CURL) -o $@.tmp $(POCKETFFT_URL) || { rm -f $@.tmp; exit 1; }; \
+	sum=`$(SHA256SUM) $@.tmp | cut -d' ' -f1`; \
+	if [ "$$sum" != "$(POCKETFFT_SHA256)" ]; then rm -f $@.tmp; echo "Error: checksum mismatch for $@ (got $$sum)"; exit 1; fi; \
+	mv $@.tmp $@
+# its licence (BSD-3-Clause, with the copyright notices), from the header's first comment, for the
+# bundle's Resources (the licence asks for its notice in binary distributions)
+Licence_pocketfft.txt: pocketfft_hdronly.h
+	awk 'NR == 1 && $$0 != "/*" { exit 1 } NR > 1 && $$0 == "*/" { done = 1; exit } NR > 1 { print }  END { if (!done) exit 1 }' $< > $@.tmp
+	grep -q 'Redistributions in binary form must reproduce' $@.tmp
+	mv $@.tmp $@
 
 #nlmeans.h:
 #	$(CURL) -o $@ https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/plugins/nlmeans.h
@@ -172,7 +218,7 @@ Inpaint/inpaint.h: $(TOP_SRCDIR)/CImg/CImgVersion.mk
 .PHONY: distclean
 
 distclean: clean
-	-rm CImg.h Inpaint/inpaint.h
+	-rm -rf CImg.h CImg.h.tmp CImg.h.version Inpaint/inpaint.h pocketfft_hdronly.h Licence_pocketfft.txt
 
 #git archive --remote=git://git.code.sf.net/p/gmic/source $(CIMGVERSION):src CImg.h | tar xf -
 
@@ -194,7 +240,7 @@ $(OBJECTPATH)/CImgErode.o: CImgErode.cpp CImgErodeDilate.h CImgFilter.h CImg.h
 
 $(OBJECTPATH)/CImgErodeSmooth.o: CImgErodeSmooth.cpp CImgFilter.h CImg.h
 
-$(OBJECTPATH)/CImgExpression.o: CImgExpression.cpp CImgFilter.h CImg.h
+$(OBJECTPATH)/CImgExpression.o: CImgExpression.cpp CImgFFTConvolve.h CImgFilter.h CImg.h
 
 $(OBJECTPATH)/CImgFilter.o: CImgOperator.cpp CImgOperator.h CImgFilter.h CImg.h
 

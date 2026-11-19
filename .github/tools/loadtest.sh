@@ -27,13 +27,13 @@ if [ ${#binaries[@]} -eq 0 ]; then
 fi
 
 status=0
-# Windows: the MinGW runtime must be linked statically (LDFLAGS_ADD=-static),
+# Windows: the MinGW runtime (and FFTW) must be linked statically (LDFLAGS_ADD=-static),
 # since hosts do not ship these DLLs. ofxload would not notice, because MSYS2
 # puts them on PATH.
 if [ "$arch" = Win64 ]; then
     command -v objdump > /dev/null || { echo "objdump not found"; exit 1; }
     for f in "${binaries[@]}"; do
-        if objdump -p "$f" | grep -i -E 'DLL Name: *(libgcc_s|libstdc\+\+|libwinpthread|libgomp)'; then
+        if objdump -p "$f" | grep -i -E 'DLL Name: *(libgcc_s|libstdc\+\+|libwinpthread|libgomp|libfftw3)'; then
             echo "ERROR: $f depends on the MinGW runtime DLLs above"
             status=1
         fi

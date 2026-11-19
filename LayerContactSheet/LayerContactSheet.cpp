@@ -69,7 +69,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "Make a contact sheet from all layers."
 #define kPluginIdentifier "net.sf.openfx.LayerContactSheetOFX"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+// 1.1: an empty source format no longer gives NaN cell sizes and image areas (NaN audit)
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -224,6 +225,10 @@ LayerContactSheetPlugin::render(const OFX::RenderArguments &args)
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
+    // the output depth is the same for all the cells: check it once
+    ContactSheet::checkBitDepth(*this, *dst);
+    // clear the message of checkBitDepth() if a previous render posted it
+    clearPersistentMessage();
     //PixelComponentEnum dstComponents  = dst->getPixelComponents();
     // clear the renderWindow
     fillBlack( *this, args.renderWindow, args.renderScale, dst.get() );
@@ -280,7 +285,8 @@ LayerContactSheetPlugin::render(const OFX::RenderArguments &args)
         double h = rod.y2 - rod.y1;
         double sw = srcFormatCanonical.x2 - srcFormatCanonical.x1;
         double sh = srcFormatCanonical.y2 - srcFormatCanonical.y1;
-        columns = (int)(std::max)( 1., std::floor( std::sqrt( (n * w * sh) / (h * sw) ) ) );
+        // an empty output or source format gives one column (and not 0/0 or x/0)
+        columns = ( (h * sw > 0.) && (w * sh > 0.) ) ? (int)(std::max)( 1., std::floor( std::sqrt( (n * w * sh) / (h * sw) ) ) ) : 1;
         rows = (int)std::ceil( n / (double) columns);
     }
 
@@ -309,14 +315,10 @@ LayerContactSheetPlugin::render(const OFX::RenderArguments &args)
             } else {
 #             ifndef NDEBUG
                 checkBadRenderScaleOrField(src, args);
-                BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-                BitDepthEnum srcBitDepth      = src->getPixelDepth();
-                //PixelComponentEnum srcComponents = src->getPixelComponents();
-                if ( (srcBitDepth != dstBitDepth) /*|| (srcComponents != dstComponents)*/ ) {
-                    throwSuiteStatusException(kOfxStatErrImageFormat);
-                }
 #             endif
 
+                // dst is float (checked above), so this also checks that the depths match
+                ContactSheet::checkBitDepth(*this, *src);
                 //- draw it at the right place
                 ContactSheet::drawImage(src.get(), dst.get(), imageRoD, args.renderScale, dstPar);
             }
@@ -532,7 +534,8 @@ LayerContactSheetInteract::draw(const OFX::DrawArgs &args)
         double h = rod.y2 - rod.y1;
         double sw = srcFormatCanonical.x2 - srcFormatCanonical.x1;
         double sh = srcFormatCanonical.y2 - srcFormatCanonical.y1;
-        columns = (int)(std::max)( 1., std::floor( std::sqrt( (n * w * sh) / (h * sw) ) ) );
+        // an empty output or source format gives one column (and not 0/0 or x/0)
+        columns = ( (h * sw > 0.) && (w * sh > 0.) ) ? (int)(std::max)( 1., std::floor( std::sqrt( (n * w * sh) / (h * sw) ) ) ) : 1;
         rows = (int)std::ceil( n / (double) columns);
     }
 

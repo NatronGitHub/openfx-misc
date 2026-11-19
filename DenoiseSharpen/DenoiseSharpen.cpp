@@ -58,6 +58,8 @@
 #include <cmath>
 #include <cfloat> // DBL_MAX
 #include <algorithm> // max
+#include <sstream>
+#include <string>
 #ifdef DEBUG_STDOUT
 #include <iostream>
 #define DBG(x) (x)
@@ -132,10 +134,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "\n" \
     "The simplest way to use this plugin is to leave the noise analysis area to the whole image, and click \"Analyze Noise Levels\". Once the analysis is done, \"Lock Noise Analysis\" is checked in order to avoid modifying the essential parameters by mistake.\n" \
     "\n" \
-    "If the image has many textured areas, it may be preferable to select an analysis area with flat colors, free from any details, shadows or highlights, to avoid considering texture as noise. The AnalysisMask input can be used to mask the analysis, if the rectangular area is not appropriate. Any non-zero pixels in the mask are taken into account. A good option for the AnalysisMask would be to take the inverse of the output of an edge detector and clamp it correctly so that all pixels near the edges have a value of zero..\n" \
+    "If the image has many textured areas, it may be preferable to select an analysis area with flat colors, free from any details, shadows or highlights, to avoid considering texture as noise. The AnalysisMask input can be used to mask the analysis, if the rectangular area is not appropriate. Any non-zero pixels in the mask are taken into account. A good option for the AnalysisMask would be to take the inverse of the output of an edge detector and clamp it correctly so that all pixels near the edges have a value of zero.\n" \
+    "\n" \
+    "The analysis warns if the analysis area is likely to give wrong noise levels: a color channel has many clipped values, or the area contains details or texture rather than flat areas (only the processed channels are checked), or the AnalysisMask leaves too few pixels. The warning is shown in the \"Analysis Warning\" parameter (hidden when there is no warning), until the next analysis or a change of the color model or of B3 Spline Interpolation. The coarse wavelet levels see the image up to about 15 pixels (linear wavelet) or 30 pixels (B3 spline wavelet) outside the AnalysisMask, so masking out an edge may not clear a warning about very low frequencies: the mask should also leave out a margin of that width around the edges.\n" \
     "\n" \
     "If the sequence to be denoised does not have enough flat areas, you can also connect a reference footage with the same kind of noise to the AnalysisSource input: that source will be used for the analysis only. If no source with flat areas is available, and noise analysis can only be performed on areas which also contain details, it is often preferable to disable very low, low, and sometimes medium frequencies in the \"Frequency Tuning\" parameters group, or at least to lower their gain, since they may be misestimated by the noise analysis process.\n" \
-    "If the noise is IID (independent and identically distributed), such as digital sensor noise, only \"Denoise High Frequencies\" should be checked. If the noise has some grain (i.e. it commes from lossy compression of noisy images by a camera, or it is scanned film), then you may want to enable medium frequencies as well. If low and very low frequencies are enabled, but the analysis area is not a flat zone, the signal itself (i.e. the noise-free image) could be considered as noise, and the result may exhibit low contrast and blur.\n" \
+    "If the noise is IID (independent and identically distributed), such as digital sensor noise, only \"Denoise High Frequencies\" should be checked. If the noise has some grain (i.e. it comes from lossy compression of noisy images by a camera, or it is scanned film), then you may want to enable medium frequencies as well. If low and very low frequencies are enabled, but the analysis area is not a flat zone, the signal itself (i.e. the noise-free image) could be considered as noise, and the result may exhibit low contrast and blur.\n" \
     "\n" \
     "To check what details have been kept after denoising, you can raise the Sharpen Amount to something like 10, and then adjust the Noise Level Gain to get the desired denoising amount, until no noise is left and only image details remain in the sharpened image. You can then reset the Sharpen Amount to zero, unless you actually want to enhance the contrast of your denoised footage.\n" \
     "\n" \
@@ -150,8 +154,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginIdentifier "net.sf.openfx.DenoiseSharpen"
 // History:
 // version 1.0: initial version
+// version 1.1: warn when the noise analysis region is unsuitable (clipped values, details, too few pixels),
+//              with the analysisWarning status parameter (the analysis and the render are unchanged)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -266,7 +272,45 @@ enum ColorModelEnum
 #define kParamNoiseLevelVeryLowLabel " (Very Low)"
 #define kParamAnalyzeNoiseLevels "analyzeNoiseLevels"
 #define kParamAnalyzeNoiseLevelsLabel "Analyze Noise Levels"
-#define kParamAnalyzeNoiseLevelsHint "Computes the noise levels from the current frame and current color model. To use the same settings for the whole sequence, analyze a frame that is representative of the sequence. If a mask is set, it is used to compute the noise levels from areas where the mask is non-zero. If there are keyframes on the noise level parameters, this sets a keyframe at the current frame. The noise levels can then be fine-tuned."
+#define kParamAnalyzeNoiseLevelsHint "Computes the noise levels from the current frame and current color model. To use the same settings for the whole sequence, analyze a frame that is representative of the sequence. If a mask is set, it is used to compute the noise levels from areas where the mask is non-zero. If there are keyframes on the noise level parameters, this sets a keyframe at the current frame. The noise levels can then be fine-tuned. The \"Analysis Warning\" parameter is shown if the analysis region is likely to give wrong noise levels (clipped values, details or texture, too few pixels)."
+
+#define kParamAnalysisWarning "analysisWarning"
+#define kParamAnalysisWarningLabel "Analysis Warning"
+#define kParamAnalysisWarningHint "Set by \"Analyze Noise Levels\" if the analysis region is likely to give wrong noise levels: a channel has many clipped values, or the region contains details or texture rather than flat areas, or the AnalysisMask leaves too few pixels. Empty (and hidden) if the last analysis found no problem. The coarse wavelet levels see up to about 15 pixels (linear) or 30 pixels (B3 spline) outside the AnalysisMask, so a mask may not clear a warning about very low frequencies. The analysis results are not changed: the noise levels may still be used, but it is better to analyze a flat area, free from details, shadows, highlights and clipped values."
+
+// Noise analysis checks (issue #142). These only produce a warning: the analysis results never depend on them.
+// The thresholds below are initial values, chosen from simulations, to be tuned from user feedback.
+// NaN: the checks contain no division by a value that can be zero and no NaN test. NaN or Inf values in the
+// input image (input data) may only change the warning, never the noise levels.
+//
+// Minimum size of the analysis window, in pixels (an error, as before: the analysis is not done).
+#define kAnalysisMinSize 80
+// Minimum number of analyzed pixels when an AnalysisMask is connected (a warning): the same number of pixels as the
+// minimum window.
+#define kAnalysisMinSamples (kAnalysisMinSize * kAnalysisMinSize)
+// Clipping: a color channel is clipped in the analysis region if more than this fraction of its (unpremultiplied)
+// values are equal to the minimum value of the region, and that minimum is <= 0, or to the maximum value of the
+// region, and that maximum is >= 1. For byte and short images, these are the values 0 and 255/65535. Comparing to
+// the extremal values of the region, rather than only to 0 and 1, avoids warning about float HDR (> 1) or negative
+// noisy values, which are rarely exactly equal. Clipped values have no noise: if a fraction p of the detail
+// coefficients are zero, the MAD (median of the absolute values) is the (0.5-p)/(1-p) quantile of the noise, so the
+// noise is underestimated by 2.3% at p=2%, 6% at p=5%, 13% at p=10% (Gaussian noise). 2% is about the statistical
+// uncertainty of the estimate on the minimum window.
+#define kAnalysisClipFractionMax 0.02
+// Details or texture: for Gaussian noise (white or spatially correlated), the absolute values of the wavelet detail
+// coefficients of each level are half-normal, so the ratio of their 90th percentile to their median is
+// 1.6449/0.6745 = 2.44. Edges, details and texture give heavy tails (a larger ratio). Simulations on 80x80 regions
+// (100 trials each, with the linear wavelet) gave a maximum ratio of 2.9 for white, blurred (correlated) and 8-bit
+// quantized Gaussian noise and 2.9 for Laplacian noise, versus 3 to 30 for a region with an edge, a soft edge, flat
+// shapes, or clipped values. With the B3 spline wavelet, the coarsest level (Very Low frequencies) has fewer
+// independent coefficients: an independent simulation of pure noise on 80x80 regions gave ratios up to 3.20 there
+// (2.94 with the linear wavelet), so the margin to the threshold is smaller with B3, and a false warning about very
+// low frequencies is possible on small analysis windows with B3. The finest level (High frequencies) is not
+// checked: quantized low noise (below one code value) gives a ratio above 4 there. A level whose median is zero is
+// not checked either: its noise estimate is zero, so it cannot be overestimated. Smooth Gaussian-like textures
+// cannot be distinguished from correlated noise this way, and are not detected.
+#define kAnalysisDetailRatioMax 3.5
+#define kAnalysisDetailQuantile 0.9
 
 #define kParamNoiseLevelGain "noiseLevelGain"
 #define kParamNoiseLevelGainLabel "Noise Level Gain"
@@ -613,6 +657,59 @@ channelLabel(ColorModelEnum e,
     return std::string();
 } // channelLabel
 
+// the short name of an analysis channel, for the analysis warnings
+static
+const char*
+analysisChannelName(ColorModelEnum e,
+                    unsigned c)
+{
+    static const char* const names[3][3] = { { "Y", "Cb", "Cr" }, { "L", "a", "b" }, { "R", "G", "B" } };
+
+    if (c >= 3) {
+        return "Alpha";
+    }
+    switch (e) {
+    case eColorModelYCbCr:
+
+        return names[0][c];
+    case eColorModelLab:
+
+        return names[1][c];
+    default:
+
+        return names[2][c];
+    }
+}
+
+// append "channel (frequencies)" to os if some levels of the channel contain details, for the analysis warnings
+static
+void
+appendDetailChannel(std::ostringstream& os,
+                    const char* channel,
+                    const bool detail[4])
+{
+    static const char* const freqName[4] = { "high", "medium", "low", "very low" };
+    bool first = true;
+
+    for (unsigned f = 0; f < 4; ++f) {
+        if (!detail[f]) {
+            continue;
+        }
+        if (first) {
+            if ( !os.str().empty() ) {
+                os << ", ";
+            }
+            os << channel << " (" << freqName[f];
+            first = false;
+        } else {
+            os << ", " << freqName[f];
+        }
+    }
+    if (!first) {
+        os << " frequencies)";
+    }
+}
+
 static
 const char*
 amountLabel(ColorModelEnum e,
@@ -801,6 +898,7 @@ public:
         , _hiDPI(NULL)
         , _analysisFrame(NULL)
         , _analyze(NULL)
+        , _analysisWarning(NULL)
         , _noiseLevel()
         , _adaptiveRadius(NULL)
         , _noiseLevelGain(NULL)
@@ -863,6 +961,13 @@ public:
         _hiDPI = paramExists(kParamHiDPI) ? fetchBooleanParam(kParamHiDPI) : NULL;
         _analysisFrame = fetchIntParam(kParamAnalysisFrame);
         _analyze = fetchPushButtonParam(kParamAnalyzeNoiseLevels);
+        _analysisWarning = paramExists(kParamAnalysisWarning) ? fetchStringParam(kParamAnalysisWarning) : NULL;
+        if (_analysisWarning) {
+            // the param is hidden when empty (the secret state is not saved by all hosts)
+            std::string warning;
+            _analysisWarning->getValue(warning);
+            _analysisWarning->setIsSecret( warning.empty() );
+        }
 
         // noise levels
         for (unsigned f = 0; f < 4; ++f) {
@@ -997,8 +1102,11 @@ private:
                    unsigned int iheight, //!< height of the image
                    bool b3,
                    double noiselevels[4], //!< output: the sigma for each frequency
+                   bool detail[4], //!< output: true if the detail coefficients of this level are not Gaussian (details or texture)
                    float a, //!< progress amount at start
                    float b); //!< progress increment
+
+    void setAnalysisWarning(const std::string& warning);
 
     void analysisLock()
     {
@@ -1091,6 +1199,7 @@ private:
     BooleanParam* _hiDPI;
     IntParam* _analysisFrame;
     PushButtonParam* _analyze;
+    StringParam* _analysisWarning;
     DoubleParam* _noiseLevel[4][4];
     IntParam* _adaptiveRadius;
     DoubleParam* _noiseLevelGain;
@@ -2159,6 +2268,7 @@ DenoiseSharpenPlugin::sigma_mad(float *fimg[4], //!< fimg[0] is the channel to p
                                 unsigned int iheight, //!< height of the image
                                 bool b3,
                                 double noiselevels[4], //!< output: the sigma for each frequency
+                                bool detail[4], //!< output: true if the detail coefficients of this level are not Gaussian (details or texture)
                                 float a, // progress amount at start
                                 float b) // progress increment
 {
@@ -2241,6 +2351,20 @@ DenoiseSharpenPlugin::sigma_mad(float *fimg[4], //!< fimg[0] is the channel to p
         }
 
         double sigma_this = (n == 0) ? 0. : fimg[3][n / 2] / 0.6745;
+        // check that the detail coefficients look like Gaussian noise (see kAnalysisDetailRatioMax): this only
+        // reorders the values above the median, and does not change the result
+        detail[lev] = false;
+        if (lev > 0) {
+            const unsigned int median = n / 2;
+            const unsigned int q = (unsigned int)(n * kAnalysisDetailQuantile);
+            if ( (q > median) && (q < n) ) {
+                std::nth_element(&fimg[3][median + 1], &fimg[3][q], &fimg[3][n]);
+                const float q50 = fimg[3][median];
+                const float qq = fimg[3][q];
+                // q50 > 0: a zero noise estimate cannot be overestimated. No division (robust with -Ofast).
+                detail[lev] = (q50 > 0.f) && (qq > kAnalysisDetailRatioMax * q50);
+            }
+        }
         // compute the sigma at image resolution
         double k = b3 ? noise_b3[lev] : noise[lev];
         double sigma_fullres = sigma_this / k;
@@ -2447,7 +2571,9 @@ DenoiseSharpenPlugin::setup(const RenderArguments &args,
     // The GIMP's wavelet sharpen uses a sharpen radius parameter which is counter-intuitive
     // and points to a level number. We convert from the Sharpen Size (simililar to the size in the
     // Laplacian or Sharpen plugins) to the radius using the following heuristic formula (radius=0 seems to correspond to size=8)
-    p.sharpen_radius = std::log(sharpenSize) / OFXS_LN2 - 3.; // log(8)/log(2) = 3.
+    // Sharpen Size may be 0 (its range is [0,DBL_MAX]): log(0) = -inf would be fed to exp() in wavelet_denoise.
+    // The sharpen weight exp(-(level - radius)^2 / 1.5) is 0 for sizes up to 1e-30 (radius < -100) anyway.
+    p.sharpen_radius = std::log( (std::max)(1e-30, sharpenSize) ) / OFXS_LN2 - 3.; // log(8)/log(2) = 3.
     bool sharpenLuminance = _sharpenLuminance->getValueAtTime(time);
 
     if (!sharpenLuminance) {
@@ -2965,6 +3091,12 @@ DenoiseSharpenPlugin::changedParam(const InstanceChangedArgs &args,
         updateSecret();
     } else if ( (paramName == kParamPremult) && (args.reason == eChangeUserEdit) ) {
         _premultChanged->setValue(true);
+    } else if ( (paramName == kParamAnalysisWarning) && _analysisWarning ) {
+        // keep the visibility in sync with the value after an undo, a paste, a reset to the default, or a script
+        // (setIsSecret is a property change, so this does not call changedParam again)
+        std::string warning;
+        _analysisWarning->getValue(warning);
+        _analysisWarning->setIsSecret( warning.empty() );
     } else if ( (paramName == kParamColorModel) || (paramName == kParamB3) ) {
         updateLabels();
         if (args.reason == eChangeUserEdit) {
@@ -2974,6 +3106,8 @@ DenoiseSharpenPlugin::changedParam(const InstanceChangedArgs &args,
                     _noiseLevel[c][f]->setValue(0.);
                 }
             }
+            // the warning was about the noise levels that were reset
+            setAnalysisWarning( std::string() );
         }
     } else if (paramName == kParamAnalysisLock) {
         analysisLock();
@@ -2983,6 +3117,24 @@ DenoiseSharpenPlugin::changedParam(const InstanceChangedArgs &args,
         // if adaptiveRadius <= 0, we need to render the whole image anyway, so disable tiles support
         int adaptiveRadius = _adaptiveRadius->getValueAtTime(time);
         setSupportsTiles(adaptiveRadius > 0);
+    }
+}
+
+// Show the warning about the analysis region (issue #142) in the analysisWarning param only: no modal dialog
+// (sendMessage), which would interrupt the user at each analysis. A persistent message
+// (OfxMessageSuiteV2::setPersistentMessage) would not stay either: the render action clears the persistent
+// messages, and the analysis triggers a render (it sets the noise levels and the analysis lock).
+// An empty warning clears and hides the param.
+void
+DenoiseSharpenPlugin::setAnalysisWarning(const std::string& warning)
+{
+    if (_analysisWarning) {
+        std::string previous;
+        _analysisWarning->getValue(previous);
+        if (previous != warning) {
+            _analysisWarning->setValue(warning);
+        }
+        _analysisWarning->setIsSecret( warning.empty() );
     }
 }
 
@@ -2998,6 +3150,10 @@ DenoiseSharpenPlugin::analyzeNoiseLevels(const InstanceChangedArgs &args)
     getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
 # endif
     EditBlock eb(*this, kParamAnalyzeNoiseLevels);
+
+    // clear the previous warning first: it described another region (or other inputs), and a failed or aborted
+    // analysis (no source, window too small, out of memory, abort) must not leave it
+    setAnalysisWarning( std::string() );
 
     // instantiate the render code based on the pixel depth of the dst clip
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
@@ -3134,7 +3290,7 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const InstanceChangedArgs &a
 
     OfxRectI srcWindow;
     bool intersect = Coords::rectIntersection(src->getBounds(), cropRectI, &srcWindow);
-    if ( !intersect || ( (srcWindow.x2 - srcWindow.x1) < 80 ) || ( (srcWindow.y2 - srcWindow.y1) < 80 ) ) {
+    if ( !intersect || ( (srcWindow.x2 - srcWindow.x1) < kAnalysisMinSize ) || ( (srcWindow.y2 - srcWindow.y1) < kAnalysisMinSize ) ) {
         setPersistentMessage(Message::eMessageError, "", "The analysis window must be at least 80x80 pixels.");
         throwSuiteStatusException(kOfxStatFailed);
     }
@@ -3229,18 +3385,108 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const InstanceChangedArgs &a
 
     abort_test();
 
+    // checks of the analysis region (issue #142): they only produce a warning, and do not change the analysis
+    std::ostringstream problems; // one line per problem
+
+    // the number of analyzed pixels
+    unsigned int nSamples = isize;
+    if (doMasking) {
+        nSamples = 0;
+        for (unsigned int i = 0; i < isize; ++i) {
+            if (bimgmask[i]) {
+                ++nSamples;
+            }
+        }
+        if (nSamples < kAnalysisMinSamples) {
+            problems << "- only " << nSamples << " pixels of the analysis region are in the AnalysisMask (at least "
+                     << kAnalysisMinSamples << " are recommended)\n";
+        }
+    }
+
+    // clipped values in the color channels, before the color model conversion (see kAnalysisClipFractionMax).
+    // Alpha is not checked: a constant 0 or 1 alpha is normal.
+    if ( (nComponents != 1) && (nSamples > 0) ) {
+        float vmin[3] = { FLT_MAX, FLT_MAX, FLT_MAX };
+        float vmax[3] = { -FLT_MAX, -FLT_MAX, -FLT_MAX };
+        unsigned int nmin[3] = { 0, 0, 0 };
+        unsigned int nmax[3] = { 0, 0, 0 };
+        // two passes: the extremal values, then the number of values equal to them
+        for (int pass = 0; pass < 2; ++pass) {
+            for (int y = srcWindow.y1; y < srcWindow.y2; y++) {
+                for (int x = srcWindow.x1; x < srcWindow.x2; x++) {
+                    unsigned int pix = (x - srcWindow.x1) + (y - srcWindow.y1) * iwidth;
+                    if ( doMasking && !bimgmask[pix] ) {
+                        continue;
+                    }
+                    const PIX *srcPix = (const PIX *)src->getPixelAddress(x, y);
+                    float unpPix[4] = {0.f, 0.f, 0.f, 0.f};
+                    ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, premult, premultChannel);
+                    for (int c = 0; c < 3; ++c) {
+                        const float v = unpPix[c];
+                        if (pass == 0) {
+                            vmin[c] = (std::min)(vmin[c], v);
+                            vmax[c] = (std::max)(vmax[c], v);
+                        } else {
+                            nmin[c] += (v == vmin[c]);
+                            nmax[c] += (v == vmax[c]);
+                        }
+                    }
+                }
+            }
+            abort_test();
+        }
+        static const char* const rgbName[3] = { "R", "G", "B" };
+        for (int c = 0; c < 3; ++c) {
+            // vmin <= 0 and vmax >= 1 cannot be the same value, so no value is counted twice
+            const bool lowClipped = (vmin[c] <= 0.f) && (nmin[c] > 0);
+            const bool highClipped = (vmax[c] >= 1.f) && (nmax[c] > 0);
+            const unsigned int nclip = (lowClipped ? nmin[c] : 0) + (highClipped ? nmax[c] : 0);
+            // nSamples > 0 here, so the percentage below has no division by zero
+            if (nclip > kAnalysisClipFractionMax * nSamples) {
+                problems << "- " << (int)(100. * nclip / nSamples + 0.5) << "% of the " << rgbName[c]
+                         << " values are clipped (at ";
+                if (lowClipped) {
+                    problems << (vmin[c] == 0.f ? 0.f : vmin[c]) << (highClipped ? " and " : ""); // no "-0"
+                }
+                if (highClipped) {
+                    problems << vmax[c];
+                }
+                problems << ")";
+                if (premult && lowClipped && (vmin[c] == 0.f)) {
+                    // with Premultiplied checked, transparent pixels (alpha = 0) are unpremultiplied to 0
+                    problems << " or transparent";
+                }
+                problems << "\n";
+            }
+        }
+    }
+
     // set noise levels
 
+    // the channels that contain details or texture, at which frequencies (see kAnalysisDetailRatioMax).
+    // Only the processed channels are checked (as in updateSecret: in YCbCr and Lab, the three color channels are
+    // processed if any of R, G, B is): e.g. a soft alpha edge does not matter if alpha is not processed.
+    bool processDetail[4] = { _processR->getValueAtTime(time), _processG->getValueAtTime(time),
+                              _processB->getValueAtTime(time), _processA->getValueAtTime(time) };
+    if ( (colorModel == eColorModelYCbCr) || (colorModel == eColorModelLab) ) {
+        const bool processColor = processDetail[0] || processDetail[1] || processDetail[2];
+        processDetail[0] = processDetail[1] = processDetail[2] = processColor;
+    }
+    std::ostringstream detailChannels;
     if (nComponents != 1) {
         // process color channels
         for (int c = 0; c < 3; ++c) {
             assert(fimgcolor[c]);
             float* fimg[4] = { fimgcolor[c], fimgtmp[0], fimgtmp[1], fimgtmp[2] };
             double sigma_n[4];
-            sigma_mad(fimg, bimgmask, iwidth, iheight, b3, sigma_n, (float)c / nComponents, 1.f / nComponents);
+            bool detail[4];
+            sigma_mad(fimg, bimgmask, iwidth, iheight, b3, sigma_n, detail, (float)c / nComponents, 1.f / nComponents);
             abort_test();
             for (unsigned f = 0; f < 4; ++f) {
                 _noiseLevel[c][f]->setValue(sigma_n[f]);
+            }
+            if (processDetail[c]) {
+                appendDetailChannel(detailChannels, analysisChannelName(colorModel, c), detail);
             }
         }
     }
@@ -3249,12 +3495,26 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const InstanceChangedArgs &a
         // process alpha
         float* fimg[4] = { fimgalpha, fimgtmp[0], fimgtmp[1], fimgtmp[2] };
         double sigma_n[4];
-        sigma_mad(fimg, bimgmask, iwidth, iheight, b3, sigma_n, (float)(nComponents - 1) / nComponents, 1.f / nComponents);
+        bool detail[4];
+        sigma_mad(fimg, bimgmask, iwidth, iheight, b3, sigma_n, detail, (float)(nComponents - 1) / nComponents, 1.f / nComponents);
         abort_test();
         for (unsigned f = 0; f < 4; ++f) {
             _noiseLevel[3][f]->setValue(sigma_n[f]);
         }
+        if (processDetail[3]) {
+            appendDetailChannel(detailChannels, analysisChannelName(colorModel, 3), detail);
+        }
     }
+    if ( !detailChannels.str().empty() ) {
+        problems << "- the region contains details or texture in " << detailChannels.str() << "\n";
+    }
+
+    std::string warning;
+    if ( !problems.str().empty() ) {
+        warning = "The noise analysis region may give wrong noise levels:\n" + problems.str() +
+                  "Choose a flat area, free from details, shadows, highlights and clipped values, or use the AnalysisMask or AnalysisSource inputs.";
+    }
+    setAnalysisWarning(warning);
 } // DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth
 
 void
@@ -3633,6 +3893,26 @@ DenoiseSharpenPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamAnalyzeNoiseLevels);
             param->setLabel(kParamAnalyzeNoiseLevelsLabel);
             param->setHint(kParamAnalyzeNoiseLevelsHint);
+            if (group) {
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            // a status shown as a label: set by the analysis, saved with the project, no effect on the render
+            StringParamDescriptor* param = desc.defineStringParam(kParamAnalysisWarning);
+            param->setLabel(kParamAnalysisWarningLabel);
+            param->setHint(kParamAnalysisWarningHint);
+            param->setStringType(eStringTypeLabel);
+            param->setDefault("");
+            param->setAnimates(false);
+            param->setEvaluateOnChange(false);
+            param->setIsSecret(true); // shown when not empty
+#     ifdef kOfxParamPropPluginMayWrite // removed from OFX 1.4
+            param->getPropertySet().propSetInt(kOfxParamPropPluginMayWrite, 1, false);
+#     endif
             if (group) {
                 param->setParent(*group);
             }

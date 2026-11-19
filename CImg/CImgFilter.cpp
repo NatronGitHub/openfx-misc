@@ -147,6 +147,13 @@ CImgFilterPluginHelperBase::changedClip(const InstanceChangedArgs &args,
 }
 
 void
+CImgFilterPluginHelperBase::throwBitDepthUnsupported()
+{
+    setPersistentMessage(Message::eMessageError, "", kCImgFilterBitDepthUnsupportedMessage);
+    throwSuiteStatusException(kOfxStatFailed);
+}
+
+void
 CImgFilterPluginHelperBase::changedParam(const InstanceChangedArgs &args,
                                          const std::string &paramName)
 {
@@ -190,8 +197,9 @@ CImgFilterPluginHelperBase::describeInContextBegin(bool sourceIsOptional,
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(supportsTiles);
     srcClip->setIsMask(false);
-    if ( (context == eContextGeneral) && sourceIsOptional ) {
-        srcClip->setOptional(sourceIsOptional);
+    // "Any input clips that are specified must be optional" in the generator context (OFX spec, Generator Context)
+    if ( ( (context == eContextGeneral) && sourceIsOptional ) || (context == eContextGenerator) ) {
+        srcClip->setOptional(true);
     }
 
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);

@@ -70,7 +70,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "Make a contact sheet from several inputs or frames."
 #define kPluginIdentifier "net.sf.openfx.ContactSheetOFX"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+// 1.1: an empty source format (e.g. a disconnected input) no longer gives a NaN image area (NaN audit)
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -280,6 +281,10 @@ ContactSheetPlugin::render(const OFX::RenderArguments &args)
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
+    // the output depth is the same for all the cells: check it once
+    ContactSheet::checkBitDepth(*this, *dst);
+    // clear the message of checkBitDepth() if a previous render posted it
+    clearPersistentMessage();
     // clear the renderWindow
     fillBlack( *this, args.renderWindow, args.renderScale, dst.get() );
 
@@ -356,14 +361,9 @@ ContactSheetPlugin::render(const OFX::RenderArguments &args)
                 if ( src.get() ) {
 #                 ifndef NDEBUG
                     checkBadRenderScaleOrField(src, args);
-                    BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-                    //PixelComponentEnum dstComponents  = dst->getPixelComponents();
-                    BitDepthEnum srcBitDepth      = src->getPixelDepth();
-                    //PixelComponentEnum srcComponents = src->getPixelComponents();
-                    if ( (srcBitDepth != dstBitDepth) /*|| (srcComponents != dstComponents)*/ ) {
-                        throwSuiteStatusException(kOfxStatErrImageFormat);
-                    }
 #                 endif
+                    // dst is float (checked above), so this also checks that the depths match
+                    ContactSheet::checkBitDepth(*this, *src);
                     //- draw it at the right place
                     ContactSheet::drawImage(src.get(), dst.get(), imageRoD, args.renderScale, dstPar);
                 }

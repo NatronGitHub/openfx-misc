@@ -82,6 +82,15 @@ fitRod(const OfxRectD& srcFormatCanonical,
     OfxRectD cRoD = { cellRoD.x1 + gap / 2, cellRoD.y1 + gap/2, cellRoD.x2 - (gap + 1) / 2, cellRoD.y2 - (gap + 1) / 2};
     double cw = (std::max)(1., cRoD.x2 - cRoD.x1);
     double ch = (std::max)(1., cRoD.y2 - cRoD.y1);
+    if ( (sw <= 0.) || (sh <= 0.) ) {
+        // empty source format (e.g. a disconnected input): an empty image area, instead of
+        // *f = ch / 0 and f * sw = inf * 0 = NaN
+        *f = 1.;
+        imageRoD->x1 = imageRoD->x2 = cRoD.x1;
+        imageRoD->y1 = imageRoD->y2 = cRoD.y1;
+
+        return;
+    }
     bool fitwidth = sw * ch > sh * cw;
     *f = fitwidth ? (cw/sw) : (ch / sh);
     if (center) {
@@ -97,7 +106,28 @@ fitRod(const OfxRectD& srcFormatCanonical,
     }
 }
 
+#define kContactSheetBitDepthUnsupportedMessage \
+    "This plug-in only supports 32-bit floating-point images, but the host gave it images of another bit depth. " \
+    "Please set the pixel format (bit depth) of the host project to 32-bit floating point."
+
+// The plugins only declare eBitDepthFloat, and the pixels are accessed as float: check it in
+// release builds too, since a host that ignores kOfxImageEffectPropSupportedPixelDepths
+// (e.g. giving 8-bit images) would otherwise make drawImage() write past the end of the buffers.
+// If img is not float, post an error message that explains it and throw kOfxStatFailed (the
+// render action doc: "kOfxStatFailed, something wrong, but no error code appropriate, plugin to
+// post message"). render() clears the message once the output image is float.
+inline void
+checkBitDepth(ImageEffect& effect,
+              const Image& img)
+{
+    if (img.getPixelDepth() != eBitDepthFloat) {
+        effect.setPersistentMessage(Message::eMessageError, "", kContactSheetBitDepthUnsupportedMessage);
+        throwSuiteStatusException(kOfxStatFailed);
+    }
+}
+
 // Resize the whole (float) src image into the imageRoD area of the (float) dst image.
+// The caller must check both depths with checkBitDepth().
 inline void
 drawImage(const Image* src,
           Image* dst,
@@ -105,8 +135,8 @@ drawImage(const Image* src,
           const OfxPointD& renderScale,
           double dstPar)
 {
+    assert(dst->getPixelDepth() == eBitDepthFloat && src->getPixelDepth() == eBitDepthFloat);
     const OfxRectI& dstBounds = dst->getBounds();
-    assert(dst->getPixelDepth() == eBitDepthFloat);
     float* b = (float*)dst->getPixelData();
     const size_t bwidth = dstBounds.x2 - dstBounds.x1;
     const size_t bheight = dstBounds.y2 - dstBounds.y1;
@@ -114,7 +144,6 @@ drawImage(const Image* src,
     const size_t bystride = bwidth * bxstride;
 
     const OfxRectI& srcBounds = src->getBounds();
-    assert(src->getPixelDepth() == eBitDepthFloat);
     const float* a = (const float*)src->getPixelData();
     const size_t awidth = srcBounds.x2 - srcBounds.x1;
     const size_t aheight = srcBounds.y2 - srcBounds.y1;

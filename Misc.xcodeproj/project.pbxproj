@@ -898,6 +898,7 @@
 		1EB00C951EE0792A006CA180 /* ofxsOGLTextRenderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E9B5F4F198A51840095C8AA /* ofxsOGLTextRenderer.cpp */; };
 		1EB00C9B1EE07A53006CA180 /* LayerContactSheet.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EB00C991EE07A4A006CA180 /* LayerContactSheet.cpp */; };
 		1EB00C9C1EE07A55006CA180 /* LayerContactSheet.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EB00C991EE07A4A006CA180 /* LayerContactSheet.cpp */; };
+		1E141A010000000000000141 /* LayerRename.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E141A000000000000000141 /* LayerRename.cpp */; };
 		1EB0A4401AA1EDB100F9C93E /* TestPosition.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EB0A43E1AA1EDB100F9C93E /* TestPosition.cpp */; };
 		1EB0A4431AA1F03C00F9C93E /* TestGroups.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EB0A4411AA1F03C00F9C93E /* TestGroups.cpp */; };
 		1E17A0010000000000000017 /* TestHostBehaviour.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E17A0000000000000000017 /* TestHostBehaviour.cpp */; };
@@ -3893,6 +3894,9 @@
 		1EB00C911EE078D2006CA180 /* LayerContactSheet.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LayerContactSheet.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EB00C981EE07A4A006CA180 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1EB00C991EE07A4A006CA180 /* LayerContactSheet.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LayerContactSheet.cpp; sourceTree = "<group>"; };
+		1E141A000000000000000141 /* LayerRename.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LayerRename.cpp; sourceTree = "<group>"; };
+		1E141A030000000000000141 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		1E141A040000000000000141 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1EB00C9A1EE07A4A006CA180 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1EB0A43E1AA1EDB100F9C93E /* TestPosition.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TestPosition.cpp; sourceTree = "<group>"; };
 		1EB0A4411AA1F03C00F9C93E /* TestGroups.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TestGroups.cpp; sourceTree = "<group>"; };
@@ -5408,6 +5412,7 @@
 				1ECF2FA019F51D6700E91A38 /* Keyer */,
 				1EBEC6021D928EBB00127BC7 /* KeyMix */,
 				1EB00C971EE07A17006CA180 /* LayerContactSheet */,
+				1E141A020000000000000141 /* LayerRename */,
 				1E89B5721D81A77E00F61E6B /* Log2Lin */,
 				1E2D33D51C3FB21A004E2F03 /* MatteMonitor */,
 				D74121CA18F9C99300A81F8B /* Merge */,
@@ -5950,6 +5955,16 @@
 				1EB00C9A1EE07A4A006CA180 /* Makefile */,
 			);
 			path = LayerContactSheet;
+			sourceTree = "<group>";
+		};
+		1E141A020000000000000141 /* LayerRename */ = {
+			isa = PBXGroup;
+			children = (
+				1E141A030000000000000141 /* Info.plist */,
+				1E141A000000000000000141 /* LayerRename.cpp */,
+				1E141A040000000000000141 /* Makefile */,
+			);
+			path = LayerRename;
 			sourceTree = "<group>";
 		};
 		1EB0A45A1AA202AE00F9C93E /* Position */ = {
@@ -8634,6 +8649,7 @@
 				1EAFE3E71C5D092900F9E4E4 /* ColorSuppress.cpp in Sources */,
 				1ED537371A234D3C007966D5 /* ColorTransform.cpp in Sources */,
 				1EB00C9C1EE07A55006CA180 /* LayerContactSheet.cpp in Sources */,
+				1E141A010000000000000141 /* LayerRename.cpp in Sources */,
 				1EE7A8CB1C74B909001AE4BC /* ColorWheel.cpp in Sources */,
 				D74A80C719405A14007C3E1C /* Crop.cpp in Sources */,
 				1E92573819EC1E140018F19A /* Clamp.cpp in Sources */,
