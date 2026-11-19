@@ -56,7 +56,7 @@ on:
         required: false
         default: ''
       osmesa_release:
-        description: 'osmesa-install release tag with prebuilt OSMesa for macOS and Windows (empty: the OSMESA_INSTALL_RELEASE variable; if both are empty, no OSMesa Shadertoy on macOS and Windows)'
+        description: 'osmesa-install release tag with prebuilt OSMesa (empty: the OSMESA_INSTALL_RELEASE variable, else osmesa-mesa-25.0.7-llvm-19.1.7)'
         required: false
         default: ''
 
@@ -78,8 +78,10 @@ concurrency:
 env:
   # The tag of the release: the pushed tag, or the "tag" input of a manual run
   RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag }}
-  # The osmesa-install release of the prebuilt OSMesa (macOS, Windows); empty: none
-  OSMESA_RELEASE: ${{ inputs.osmesa_release || vars.OSMESA_INSTALL_RELEASE }}
+  # The osmesa-install release of the prebuilt OSMesa (macOS, Windows, and Linux when listed):
+  # the input of a manual run, else the OSMESA_INSTALL_RELEASE repository variable, else the
+  # default below (its assets are pinned in .github/parameters/osmesa-install.sha256)
+  OSMESA_RELEASE: ${{ inputs.osmesa_release || vars.OSMESA_INSTALL_RELEASE || 'osmesa-mesa-25.0.7-llvm-19.1.7' }}
   # Release builds (C++17, the default), without the Test bundle; the bundles are
   # deployed (OFX_DEPLOY_BUNDLES: on macOS, osxDeploy.sh copies the non-system libraries
   # into the bundles); hostDemo is built for the smoke test (installed in <prefix>/bin,
