@@ -44,6 +44,7 @@
     <ClInclude Include="..\openfx\Support\include\ofxsMessage.h" />
     <ClInclude Include="..\openfx\Support\include\ofxsMultiThread.h" />
     <ClInclude Include="..\openfx\Support\include\ofxsParam.h" />
+    <ClInclude Include="..\openfx\Support\Library\ofxsFont5x7.h" />
     <ClInclude Include="..\openfx\Support\Library\ofxsSupportPrivate.h" />
     <ClInclude Include="..\SupportExt\ofxsCopier.h" />
     <ClInclude Include="..\SupportExt\ofxsFilter.h" />
@@ -68,6 +69,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\openfx\Support\Library\ofxsCore.cpp" />
+    <ClCompile Include="..\openfx\Support\Library\ofxsDrawContextOpenGL.cpp" />
     <ClCompile Include="..\openfx\Support\Library\ofxsImageEffect.cpp" />
     <ClCompile Include="..\openfx\Support\Library\ofxsInteract.cpp" />
     <ClCompile Include="..\openfx\Support\Library\ofxsLog.cpp" />
