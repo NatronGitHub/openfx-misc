@@ -426,6 +426,13 @@ tests=(
     "CImgBlur expandRoD|net.sf.cimg.CImgBlur|filter|float|nonconst+changed:Source||-i Source=checker:8 -i Mask=none size=5,5"
     "Transform|net.sf.openfx.TransformPlugin|filter|*|nonconst+changed:Source||-i Source=checker:32 rotate=30 scale=0.8,0.8"
     "Crop|net.sf.openfx.CropPlugin|filter|*|nonconst+changed:Source||-i Source=ramp bottomLeft=100,100 size=400,300"
+    # render windows out of the Source RoD, where the host has no Source image to give
+    # (fetchImage returns NULL, issue #192): black, or the edge pixels with Nearest borders.
+    # These windows are out of the project, which the full render (tile) is clipped to.
+    "AdjustRoD out of Source|net.sf.openfx.AdjustRoDPlugin|filter|*|mean=0,0,0,0||-i Source=checker:16 addPixels=100,100 boundary=0 --frames 0 --window 100,590,300,670"
+    "AdjustRoD Nearest out|net.sf.openfx.AdjustRoDPlugin|filter|*|nonconst+mean=0.52,0.52,0.52,0.52||-i Source=checker:16 addPixels=100,100 boundary=1 --frames 0 --window 100,590,300,670"
+    "AdjustRoD Nearest corner|net.sf.openfx.AdjustRoDPlugin|filter|*|mean=1,1,1,1||-i Source=checker:16 addPixels=100,100 boundary=1 --frames 0 --window 730,590,810,670"
+    "Crop out of Source|net.sf.openfx.CropPlugin|filter|*|mean=0,0,0,0||-i Source=ramp bottomLeft=-100,-100 size=920,776 --frames 0 --window -90,-90,-10,-10"
     # saturation 0: the Rec.709 luminance
     "ColorCorrect|net.sf.openfx.ColorCorrectPlugin|filter|*|mean=0.465,0.465,0.465,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none MasterSaturation=0,0,0,0"
     "Clamp|net.sf.openfx.Clamp|filter|*|mean=1,0,0.5,1||-i Source=solid:1.5,-0.5,0.5,1 -i Mask=none"

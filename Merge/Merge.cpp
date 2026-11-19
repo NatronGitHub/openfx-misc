@@ -142,11 +142,13 @@ enum MergePluginEnum
 // 2.0: After fixing https://github.com/NatronGitHub/Natron/issues/647
 // 1.1 and 2.1 (every Merge plug-in, kept for backward compatibility): a merge result beyond the float range
 //      gives +-FLT_MAX, not +-inf, and a huge masked alpha (a + b - ab) no longer gives NaN (SupportExt #80);
+//      infinite A and B values are made finite (+-FLT_MAX) before the operator, instead of giving NaN
+//      (inf - inf, inf * 0) (SupportExt #82);
 //      MergeRoto also renders on hosts without the plane suite v2 (e.g. OFX 1.4 hosts), with no roto mask and
 //      the Mask clip image as the mask (render failed before).
 // 3.0: With Alpha-only images, the A checkboxes (instead of the R checkboxes) of A and B control the alpha channel.
 //      A inputs after the first one are merged as transparent black outside of their image (instead of being skipped).
-//      As in 1.1 and 2.1, the SupportExt #80 fix, and MergeRoto renders on hosts without the plane suite v2.
+//      As in 1.1 and 2.1, the SupportExt #80 and #82 fixes, and MergeRoto renders on hosts without the plane suite v2.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -2007,7 +2009,7 @@ mRegisterPluginFactoryInstance(p11)
 
 // Version 2: with Alpha-only images, the R checkboxes control the alpha channel,
 // and the A inputs after the first one are skipped outside of their image
-// (minor 1: SupportExt #80, see the history at the top; MergeRoto: also the plane suite v2 fallback)
+// (minor 1: SupportExt #80 and #82, see the history at the top; MergeRoto: also the plane suite v2 fallback)
 static MergePluginFactory<2,eMergePluginMerge>       r1(kPluginIdentifier, 2, 1);
 static MergePluginFactory<2,eMergePluginPlus>        r2(kPluginIdentifierSub "Plus", 2, 1);
 static MergePluginFactory<2,eMergePluginMatte>       r3(kPluginIdentifierSub "Matte", 2, 1);
@@ -2033,7 +2035,7 @@ mRegisterPluginFactoryInstance(r11)
 
 // Keep backward compatibility following the change introduced in
 // https://github.com/NatronGitHub/Natron/issues/647
-// (minor 1: SupportExt #80, see the history at the top; MergeRoto: also the plane suite v2 fallback)
+// (minor 1: SupportExt #80 and #82, see the history at the top; MergeRoto: also the plane suite v2 fallback)
 static MergePluginFactory<1,eMergePluginMerge>       q1(kPluginIdentifier, 1, 1);
 static MergePluginFactory<1,eMergePluginPlus>        q2(kPluginIdentifierSub "Plus", 1, 1);
 static MergePluginFactory<1,eMergePluginMatte>       q3(kPluginIdentifierSub "Matte", 1, 1);

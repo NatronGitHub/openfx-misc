@@ -59,7 +59,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "See also: https://web.archive.org/web/20220120145727/http://opticalenquiry.com/nuke/index.php?title=Switch"
 
 #define kPluginIdentifier "net.sf.openfx.switchPlugin"
-// version 1.1: works on hosts other than Natron (it fetched 16 clips but defined only 2)
+// version 1.1: works on hosts other than Natron (it fetched 16 clips but defined only 2);
+//              render and getRegionsOfInterest no longer assert in debug builds: the spec says that the
+//              host should not call render after isIdentity returns true, but some hosts (e.g. hostDemo)
+//              do; render copies the selected input, and checks the image formats in debug builds too
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -215,9 +218,9 @@ SwitchPlugin::SwitchPlugin(OfxImageEffectHandle handle,
 void
 SwitchPlugin::render(const RenderArguments &args)
 {
-    // do nothing as this should never be called as isIdentity should always be trapped
-    assert(false);
-
+    // Switch is always an identity, and the spec says that the host should not call render after
+    // isIdentity returns true, but some hosts (e.g. hostDemo) do: copy the identity result (the
+    // selected input), for robustness
     const double time = args.time;
 
     // copy input to output
@@ -233,7 +236,6 @@ SwitchPlugin::render(const RenderArguments &args)
     checkBadRenderScaleOrField(dst, args);
     auto_ptr<const Image> src( ( srcClip && srcClip->isConnected() ) ?
                                     srcClip->fetchImage(time) : 0 );
-# ifndef DEBUG
     if ( src.get() ) {
         checkBadRenderScaleOrField(src, args);
         BitDepthEnum dstBitDepth       = dst->getPixelDepth();
@@ -244,7 +246,6 @@ SwitchPlugin::render(const RenderArguments &args)
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-# endif
     copyPixels( *this, args.renderWindow, args.renderScale, src.get(), dst.get() );
 }
 
@@ -270,15 +271,17 @@ void
 SwitchPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
                                    RegionOfInterestSetter &rois)
 {
-    // this should never be called as isIdentity should always be trapped
-    assert(false);
+    // Switch is always an identity, but a host may ask for the RoIs before calling isIdentity, or
+    // render anyway (e.g. hostDemo): the selected input is needed on the rendered region, the
+    // others not at all
     const double time = args.time;
     int input = getInput(time);
     const OfxRectD emptyRoI = {0., 0., 0., 0.};
     for (unsigned i = 0; i < _srcClip.size(); ++i) {
-        if (i != (unsigned)input) {
-            rois.setRegionOfInterest(*_srcClip[i], emptyRoI);
+        if (!_srcClip[i]) {
+            continue;
         }
+        rois.setRegionOfInterest(*_srcClip[i], (i == (unsigned)input) ? args.regionOfInterest : emptyRoI);
     }
 }
 
@@ -330,7 +333,10 @@ void
 SwitchPlugin::getClipPreferences(ClipPreferencesSetter & clipPreferences)
 {
     updateRange();
-    // note: Switch handles correctly inputs with different components
+    // note: the inputs may have different components and depths: a host that uses the identity
+    // (isIdentity is always true) passes the selected input through as it is, but render (for the
+    // hosts that call it anyway) only copies an input with the output's components and depth, and
+    // fails with kOfxStatErrImageFormat otherwise (the clip preferences don't change them)
 
     // if which param is not animated, set the output format from the selected input, else
     // use the default.

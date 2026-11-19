@@ -97,7 +97,7 @@ jobs:
       matrix:
         include:
           # release: the macOS build of ci.yml (deployed, no OpenMP: MacPorts' libomp has
-          # minos 15, so deployed bundles with it would not load on macOS 11 to 14).
+          # minos 15, so deployed bundles with it would not load on macOS 14).
           - name: release # the macOS build of ci.yml
             config: release
             options: -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DOFX_DEPLOY_BUNDLES=ON -DOFX_USE_OPENMP=OFF -DOFX_BUILD_HOSTDEMO=ON
@@ -130,7 +130,7 @@ jobs:
       - name: Build
         # The bundles are installed in install-<config>/OFX/Plugins.
         run: |
-          cmake -S . -B build -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 ${{ matrix.options }}
+          cmake -S . -B build ${{ matrix.options }}
           cmake --build build --parallel "$(getconf _NPROCESSORS_ONLN)"
           cmake --install build --prefix "$PWD/install-${{ matrix.config }}"
       - name: Load test

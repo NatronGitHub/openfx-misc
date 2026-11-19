@@ -110,8 +110,6 @@ SKIP=(
 # (a "debug:" reason is only used in debug builds). Another identity render without an
 # output fails, so that a plug-in that becomes an identity by default is noticed.
 IDENTITY=(
-    "net.sf.openfx.FrameHold|always an identity: the Source at another time"
-    "net.sf.openfx.timeOffset|always an identity: the Source at another time"
     "net.sf.openfx.TrackerPM|trackers are identity effects (SupportExt's GenericTrackerPlugin)"
     # debug builds: render posts "OFX Host should not render" and fails (kOfxStatFailed) when
     # it is called for an identity (release builds copy the input)
@@ -160,8 +158,7 @@ PARAMS=(
 # to describe failures: the entries without a context to hostDemo --describe failures,
 # those with a context to the describeInContext failures of that context.
 XFAIL=(
-    # issue #165 (PIK supports short and float only)
-    "net.sf.openfx.PIK@filter|get region of definition action failed|the filter context has no Source clip (the spec mandates one), so HostSupport's default region of definition fails"
+    # (none: add the known bugs here, each with its GitHub issue)
 )
 # ---------------------------------------------------------------------------
 
