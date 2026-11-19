@@ -158,7 +158,6 @@ grouping).
 * Quantize: Reduce the number of color levels with posterization or dithering.
 * SaturationOFX: Modify the color saturation of an image.
 * Threshold: Threshold the selected channels to bring them within the 0-1 range.
-* WhiteBalanceOFX: Correct the white balance by a chromatic adaptation (Bradford, CAT02...) from a source white (color temperature and tint, or a picked neutral color) to a target white, in linear RGB.
 * Transform/RGBToHSV and HSVToRGB: Convert to/from HSV color representation.
 * Transform/RGBToHSL and HSLToRGB: Convert to/from HSL color representation. 
 * Transform/RGBToHSI and HSIToRGB: Convert to/from HSI color representation. 
@@ -169,6 +168,7 @@ grouping).
 * Transform/RGB709ToLab and LabToRGB709: Convert to/from Lab color representation.
 * Transform/RGB709ToXYZ and XYZToRGB709: Convert to/from XYZ color representation.
 * VectorToColor: Convert x and y vector components to a color representation.
+* WhiteBalanceOFX: Correct the white balance by a chromatic adaptation (Bradford, CAT02...) from a source white (color temperature and tint, or a picked neutral color) to a target white, in linear RGB.
 
 ### Filter
 

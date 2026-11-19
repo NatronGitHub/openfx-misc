@@ -460,10 +460,16 @@ tests=(
     "WhiteBalance Daylight clamp|net.sf.openfx.WhiteBalance|filter|float|identity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none locus=2 sourceTemperature=1000 targetWhite=0 targetTemperature=3000"
     "WhiteBalance Planckian clamp|net.sf.openfx.WhiteBalance|filter|float|identity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none locus=1 sourceTemperature=25000 targetWhite=0 targetTemperature=15000"
     # (hostDemo only accepts finite param values, so a NaN Neutral Color can't be tested here)
-    # degenerate neutral colors give the identity, not NaN: a negative luminance, and values
-    # whose XYZ would overflow the double range without normalization
+    # degenerate neutral colors give the identity, not NaN: a negative luminance
     "WhiteBalance neutral Y<0|net.sf.openfx.WhiteBalance|filter|float|identity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none sourceWhite=1 neutral=-1,-1,0.5"
-    "WhiteBalance neutral huge|net.sf.openfx.WhiteBalance|filter|float|tol=1e-5+mean=0.5,0.5,0.5,1||-i Source=solid:0.6764015,0.458127,0.1972952,1 -i Mask=none workingSpace=1 sourceWhite=1 neutral=1.3528031e308,0.916254e308,0.3945904e308"
+    # a bluish pick near DBL_MAX, whose Rec. 2020 Z (1.87e308) would overflow to inf without the
+    # division by the largest component: the pixel of the same chromaticity becomes gray with
+    # its luminance Y=0.2296509 (computed independently)
+    "WhiteBalance neutral huge|net.sf.openfx.WhiteBalance|filter|float|tol=1e-5+mean=0.2296509,0.2296509,0.2296509,1||-i Source=solid:0.2,0.2,0.7,1 -i Mask=none workingSpace=1 sourceWhite=1 neutral=0.5e308,0.5e308,1.75e308"
+    # the other working spaces, adaptations and loci (expected values computed independently)
+    "WhiteBalance AP1 CAT02|net.sf.openfx.WhiteBalance|filter|float|tol=1e-5+mean=0.1301937,0.5979903,1.1143985,1||-i Source=solid:0.3,0.5,0.7,1 -i Mask=none workingSpace=3 adaptation=1 sourceTemperature=3200 sourceTint=-0.02 targetWhite=0 targetTemperature=7500 targetTint=0.005"
+    "WhiteBalance P3 von Kries Daylight|net.sf.openfx.WhiteBalance|filter|float|tol=1e-5+mean=0.2494918,0.4910365,0.9323406,1||-i Source=solid:0.3,0.5,0.7,1 -i Mask=none workingSpace=4 adaptation=2 locus=2 sourceTemperature=5000"
+    "WhiteBalance AP0 XYZ scaling Planckian|net.sf.openfx.WhiteBalance|filter|float|tol=1e-5+mean=0.2238629,0.9481926,4.8613681,1||-i Source=solid:0.3,0.5,0.7,1 -i Mask=none workingSpace=2 adaptation=3 locus=1 sourceTemperature=2000"
     # ColorTransform on the degenerate inputs that gave NaN or inf before openfx-supportext#55
     # (hue in [0,1]): HSL with l=0 and s!=0 (0/0 in hsl_to_rgb); RGB->HSI with a subnormal
     # sum (3/sum overflows, inf*0); RGB->HSL near white (2-(max+min) rounds to 0: s=inf)

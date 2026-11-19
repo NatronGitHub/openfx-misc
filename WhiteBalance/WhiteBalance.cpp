@@ -80,7 +80,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "from the Planckian locus (Adobe DNG SDK), e.g. a Source Tint of 0.01 is about +30 on the Planckian locus.\n" \
     "The source white can also be given by picking a neutral color in the image: that color (in the working space) " \
     "is mapped to the target white, so that it becomes neutral (R=G=B) when the target is the working space white. " \
-    "Only its chromaticity is used: the luminance (Y) of the image is preserved.\n" \
+    "Only its chromaticity is used: the luminance (Y) of the neutral color is preserved (it becomes R=G=B with the " \
+    "same Y when the target is the working space white).\n" \
     "\n" \
     "The image must be in linear light (scene-linear, not gamma or log encoded), with the primaries and white point " \
     "of the Working Space. The adaptation is a 3x3 matrix, computed once per frame and applied to each pixel: " \
@@ -172,7 +173,7 @@ enum AdaptationEnum
 #define kParamLocus "locus"
 #define kParamLocusLabel "Locus"
 #define kParamLocusHint "The locus of the color temperatures. Note that the daylight locus is above the Planckian locus (by about 0.003 Duv: 0.0028 at 4000 K, 0.0033 at 6504 K), so that the white given by a temperature and tint jumps by about 0.003 Duv at 4000 K with Auto. Choose Planckian or Daylight for a continuous locus."
-#define kParamLocusOptionAuto "Auto", "The Planckian locus below 4000 K, the CIE daylight locus above (as in most white balance tools).", "auto"
+#define kParamLocusOptionAuto "Auto", "The Planckian locus below 4000 K, the CIE daylight locus above.", "auto"
 #define kParamLocusOptionPlanckian "Planckian", "The Planckian (black body) locus, with the approximation of Krystek (1985), valid from 1000 K to 15000 K: higher temperatures give the 15000 K white.", "planckian"
 #define kParamLocusOptionDaylight "Daylight", "The CIE daylight locus (CIE 15:2004), defined from 4000 K to 25000 K: lower temperatures give the 4000 K white.", "daylight"
 
@@ -754,14 +755,17 @@ WhiteBalancePlugin::computeMatrix(double time,
         } else {
             // Components out of the finite range (the param range is +-DBL_MAX): not a
             // white, no correction. This domain check is done on each component, since
-            // std::max may drop a NaN.
+            // std::max may drop a NaN. Like all the finiteness checks of this plug-in, it is
+            // only best-effort when built with -ffinite-math-only (e.g. -Ofast), where the
+            // compiler may assume that no value is NaN or infinite and remove it.
             if ( !( (std::abs(r) <= DBL_MAX) && (std::abs(g) <= DBL_MAX) && (std::abs(b) <= DBL_MAX) ) ) {
                 return true;
             }
             // Only the chromaticity is used: divide by the largest absolute component, so
-            // that the XYZ conversion can neither overflow nor underflow. Zero: not a white.
+            // that each component is in [-1,1] and the XYZ conversion can't overflow (tiny
+            // picks, even subnormal, are valid). Zero: not a white.
             double s = (std::max)( std::abs(r), (std::max)( std::abs(g), std::abs(b) ) );
-            if ( !(s > 1e-30) ) {
+            if ( !(s > 0.) ) {
                 return true;
             }
             src = toXYZ * Point3D(r / s, g / s, b / s);
