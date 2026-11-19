@@ -57,7 +57,8 @@ twice. The two Shadertoy downloads are mutually exclusive too (both are
 `Shadertoy.ofx.bundle`). Each archive has a `README.txt` that tells where to install
 it; the steps are the same as steps 3 to 6 below. Its `LICENSE.txt` is openfx-misc's license
 (GPLv2 or later), and `LICENSES/` has the licenses of the third-party code in the bundles
-(openfx's Support library, CImg, pocketfft, and Mesa and LLVM in the OSMesa Shadertoy, which
+(openfx's Support library; freeglut's text renderer and pixman's blend modes, from SupportExt,
+in Misc; CImg, with the CeCILL-C text, and pocketfft; and Mesa and LLVM in the OSMesa Shadertoy, which
 also carries them in `Shadertoy.ofx.bundle/Contents/Resources/licenses`).
 
 ### Development builds

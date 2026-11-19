@@ -10,3 +10,5 @@ ports:
   - name: libomp
   # CMake (the runner's /usr/local/bin/cmake is not on PATH: MacPorts only)
   - name: cmake
+  # pkg-config: Shadertoy's USE_OSMESA reads osmesa.pc (release.yml: OSMESA_PKGCONFIG_STATIC)
+  - name: pkgconfig

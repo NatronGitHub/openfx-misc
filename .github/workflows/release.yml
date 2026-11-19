@@ -38,7 +38,17 @@ name: Binary release
 #   "publish" input is true (default false). It builds the "tag" input (an existing tag), else
 #   the ref it is run on (a branch, or a tag: "Use workflow from"). With "publish", that tag
 #   (the input, or the tag ref) gets its draft release, as with a tag push; "publish" without a
-#   tag fails at once (the preflight job, before any build).
+#   tag fails at once (the preflight job, before any build). A "tag" input on a tag ref is
+#   rejected (ambiguous): run on a branch with "tag", or on the tag ref without it.
+# Tools. A manual run with "tag" builds that tag with the workflow and the release tools of the
+# selected ref: every job checks out the source (the tag, or the ref), and the commit of the
+# workflow (github.sha) into .release-tools (sparse: .github and CImg's CeCILL-C text), whose
+# check-release-source.sh, fetch-osmesa.sh, build-osmesa.sh, bundle-linux-libs.sh,
+# render-shadertoy-osmesa.sh, package-release.sh and .github/parameters are used ($TOOLS), so a
+# fixed workflow can rebuild an older tag. The source keeps its own CMakeLists.txt and test
+# scripts (loadtest.sh, smoketest.sh: their lists belong to its plug-ins); check-release-source.sh
+# fails at once when the source lacks the CMake options or test scripts that this workflow uses
+# (a tag older than the release tooling). On a tag push, or a run on a tag ref, both are the tag.
 # The release job is the only one with write access (contents: write). A release that is not a
 # draft anymore (published) is never changed: the run fails. This workflow never creates tags
 # (gh release create --verify-tag) and never publishes a release: a maintainer does, by hand.
@@ -77,6 +87,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
+  # The release tools of the workflow's own commit (see "Tools" above)
+  TOOLS: .release-tools/.github/tools
   # The tag of the release: the pushed tag, or the "tag" input of a manual run
   RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag }}
   # The osmesa-install release of the prebuilt OSMesa (macOS, Windows, and Linux when listed):
@@ -102,15 +114,23 @@ defaults:
 jobs:
   preflight:
     name: Check the inputs
-    # Before any build: a manual run with "publish" needs a tag (the "tag" input or a tag ref)
+    # Before any build: a manual run with "publish" needs a tag (the "tag" input or a tag ref),
+    # and a "tag" input is only accepted on a branch
     timeout-minutes: 5
     runs-on: ubuntu-24.04
     steps:
       - name: Check the tag
         env:
           PUBLISH: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish) }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          TAG_INPUT: ${{ inputs.tag }}
         run: |
           echo "release tag: ${RELEASE_TAG:-(none)}, publish: $PUBLISH"
+          if [ "$REF_TYPE" = tag ] && [ -n "$TAG_INPUT" ]; then
+            echo "ERROR: the \"tag\" input ($TAG_INPUT) on a tag ref ($REF_NAME): run on a branch with the \"tag\" input, or on the tag ref without it"
+            exit 1
+          fi
           if [ "$PUBLISH" = true ] && [ -z "$RELEASE_TAG" ]; then
             echo "ERROR: publish needs a tag: the \"tag\" input, or a run on a tag ref"
             exit 1
@@ -139,14 +159,14 @@ jobs:
       - name: Install Rocky Linux packages
         # git before the checkout (else actions/checkout downloads the sources without
         # the submodules); tar and zstd for actions/cache; python3.11 and perl for
-        # smoketest.sh; python3.11-pip (meson, below), bison,
-        # flex, the static LLVM (and the zstd and libxml2 of its llvm-config --system-libs)
-        # and zlib for OSMesa; expat-devel for hostDemo. Not the OpenGL headers yet (see below).
+        # smoketest.sh; zlib; expat-devel for hostDemo. The tools that only the OSMesa build
+        # needs are installed below, only without the prebuilt OSMesa. Not the OpenGL headers
+        # yet (see below).
         run: |
           dnf -y -q install dnf-plugins-core epel-release
           dnf config-manager --set-enabled crb
           dnf -y -q install gcc-toolset-14-gcc-c++ cmake ninja-build git patch xz bzip2 tar zstd \
-              python3.11 python3.11-pip bison flex zlib-devel libzstd-devel libxml2-devel llvm-devel llvm-static \
+              python3.11 zlib-devel \
               pkgconf-pkg-config perl file which diffutils findutils binutils expat-devel
           ln -sf /usr/bin/python3.11 /usr/local/bin/python3 # (EL9's python3 is 3.9)
           # gcc-toolset-14 in the next steps
@@ -157,33 +177,57 @@ jobs:
           ref: ${{ env.RELEASE_TAG && format('refs/tags/{0}', env.RELEASE_TAG) || github.ref }}
           submodules: recursive
           persist-credentials: false
+      - name: Checkout the release tools
+        # the workflow's own commit (see "Tools" above)
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ github.sha }}
+          path: .release-tools
+          sparse-checkout: |
+            /.gitattributes
+            /.github/
+            /CImg/Licence_CeCILL-C_V1-en.txt
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - name: Check the source
+        run: |
+          set -eo pipefail
+          git log -1 --format='source: %H %s'
+          git -C .release-tools log -1 --format='release tools: %H %s'
+          "$TOOLS"/check-release-source.sh
       - name: Show tools
-        id: tools
         run: |
           g++ --version | head -1
           cmake --version | head -1
-          echo "llvm=$(llvm-config --version)" >> "$GITHUB_OUTPUT"
-          llvm-config --version
-          # the pinned SHA256 of the Mesa archive (the OSMesa cache key)
-          echo "mesa_sha256=$(.github/tools/build-osmesa.sh --mesa-sha256)" >> "$GITHUB_OUTPUT"
       - name: Download the prebuilt OSMesa
         # The linux-x86_64 asset of the osmesa-install release (OSMESA_RELEASE), if it is
         # listed in .github/parameters/osmesa-install.sha256; else OSMesa is built below
         id: prebuilt
         if: env.OSMESA_RELEASE != ''
         run: |
-          if .github/tools/fetch-osmesa.sh --check "$OSMESA_RELEASE" linux-x86_64; then
-            .github/tools/fetch-osmesa.sh "$OSMESA_RELEASE" linux-x86_64 /opt/osmesa-prebuilt
+          if "$TOOLS"/fetch-osmesa.sh --check "$OSMESA_RELEASE" linux-x86_64; then
+            "$TOOLS"/fetch-osmesa.sh "$OSMESA_RELEASE" linux-x86_64 /opt/osmesa-prebuilt
             echo "OSMESA_LINUX_OPTIONS=-DOSMESA_PATH=/opt/osmesa-prebuilt/osmesa -DLLVM_PATH=/opt/osmesa-prebuilt/llvm -DOSMESA_LICENSES_DIR=/opt/osmesa-prebuilt/licenses" >> "$GITHUB_ENV"
             echo "done=true" >> "$GITHUB_OUTPUT"
           fi
+      - name: Install the OSMesa build tools
+        # Only without the prebuilt OSMesa: python3.11-pip (meson), bison, flex, the static LLVM
+        # (and the zstd and libxml2 of its llvm-config --system-libs)
+        if: steps.prebuilt.outputs.done != 'true'
+        id: tools
+        run: |
+          dnf -y -q install python3.11-pip bison flex libzstd-devel libxml2-devel llvm-devel llvm-static
+          echo "llvm=$(llvm-config --version)" >> "$GITHUB_OUTPUT"
+          llvm-config --version
+          # the pinned SHA256 of the Mesa archive (the OSMesa cache key)
+          echo "mesa_sha256=$("$TOOLS"/build-osmesa.sh --mesa-sha256)" >> "$GITHUB_OUTPUT"
       - name: Cache OSMesa
         if: steps.prebuilt.outputs.done != 'true'
         id: osmesa-cache
         uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: /opt/osmesa
-          key: osmesa-rocky9-llvm${{ steps.tools.outputs.llvm }}-mesa${{ steps.tools.outputs.mesa_sha256 }}-${{ hashFiles('.github/tools/build-osmesa.sh', '.github/parameters/release-python-requirements.txt') }}
+          key: osmesa-rocky9-llvm${{ steps.tools.outputs.llvm }}-mesa${{ steps.tools.outputs.mesa_sha256 }}-${{ hashFiles('.release-tools/.github/tools/build-osmesa.sh', '.release-tools/.github/parameters/release-python-requirements.txt') }}
       - name: Build OSMesa
         if: steps.prebuilt.outputs.done != 'true' && steps.osmesa-cache.outputs.cache-hit != 'true'
         env:
@@ -198,8 +242,8 @@ jobs:
             exit 1
           fi
           python3.11 -m pip install -q --require-hashes --only-binary :all: \
-              -r .github/parameters/release-python-requirements.txt
-          .github/tools/build-osmesa.sh /opt/osmesa /usr
+              -r .release-tools/.github/parameters/release-python-requirements.txt
+          "$TOOLS"/build-osmesa.sh /opt/osmesa /usr
       - name: Install the OpenGL headers
         # mesa-libGL-devel (which requires libdrm-devel), after OSMesa
         run: dnf -y -q install mesa-libGL-devel
@@ -231,7 +275,7 @@ jobs:
         # EL9 baseline: no bundled system library, every other needed library in the bundle,
         # symbol versions no newer than Rocky 9's runtime, no GLIBC_PRIVATE, GLIBC_ABI_* or DT_RELR.
         run: |
-          .github/tools/bundle-linux-libs.sh install/OFX/Plugins/Shadertoy.ofx.bundle libzstd.so.1
+          "$TOOLS"/bundle-linux-libs.sh install/OFX/Plugins/Shadertoy.ofx.bundle libzstd.so.1
           check=$(sed -n 's/^OFX_LINUX_CHECK_BUNDLE:[A-Z]*=//p' build/CMakeCache.txt)
           "$check" install/OFX/Plugins install-shadertoy/OFX/Plugins install-denoisesharpen/OFX/Plugins
       - name: Load test
@@ -244,9 +288,15 @@ jobs:
         run: |
           SMOKETEST_BUNDLES="$SMOKETEST_FULL" .github/tools/smoketest.sh --quick install
           SMOKETEST_BUNDLES="DenoiseSharpen:1" HOSTDEMO="$PWD/install/bin/hostDemo" .github/tools/smoketest.sh install-denoisesharpen
+      - name: Render test of the shipped Shadertoy (OSMesa)
+        # smoketest.sh skips Shadertoy (the OpenGL-only one doesn't describe in hostDemo); the
+        # OSMesa one of the full set renders on the CPU
+        timeout-minutes: 5
+        run: |
+          "$TOOLS"/render-shadertoy-osmesa.sh install/OFX/Plugins install/bin/hostDemo
       - name: Package
         run: |
-          .github/tools/package-release.sh \
+          "$TOOLS"/package-release.sh \
               --platform linux-x86_64 --out dist \
               --full install/OFX/Plugins --shadertoy-osmesa install/OFX/Plugins \
               --shadertoy-gl install-shadertoy/OFX/Plugins --denoisesharpen install-denoisesharpen/OFX/Plugins
@@ -259,7 +309,8 @@ jobs:
 
   build_macos:
     name: macOS universal (arm64, x86_64)
-    timeout-minutes: 60
+    # the full set, then two Shadertoy-only builds (one per architecture)
+    timeout-minutes: 120
     # GitHub-hosted arm64 runner; universal bundles (CMAKE_OSX_ARCHITECTURES), built with
     # the system Xcode clang and SDK, for macOS 14 and later (CMakeLists.txt's default
     # CMAKE_OSX_DEPLOYMENT_TARGET; OFX_DEPLOY_STRICT_MINOS). No
@@ -278,12 +329,30 @@ jobs:
           ref: ${{ env.RELEASE_TAG && format('refs/tags/{0}', env.RELEASE_TAG) || github.ref }}
           submodules: recursive
           persist-credentials: false
+      - name: Checkout the release tools
+        # the workflow's own commit (see "Tools" above)
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ github.sha }}
+          path: .release-tools
+          sparse-checkout: |
+            /.gitattributes
+            /.github/
+            /CImg/Licence_CeCILL-C_V1-en.txt
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - name: Check the source
+        run: |
+          set -eo pipefail
+          git log -1 --format='source: %H %s'
+          git -C .release-tools log -1 --format='release tools: %H %s'
+          "$TOOLS"/check-release-source.sh
       - name: Install MacPorts (cached), CMake, GNU sed and libomp
         # gsed is needed by openfx/Support/include/osxDeploy.sh. See
         # .github/parameters/setup-macports.yaml (shared with ci.yml and nightly.yml).
         uses: melusina-org/setup-macports@103eded5f10979e927bffcd6d0b86cbbdb2c3bb3 # v1.1.6
         with:
-          parameters: .github/parameters/setup-macports.yaml
+          parameters: .release-tools/.github/parameters/setup-macports.yaml
       - name: Use MacPorts, not Homebrew
         run: |
           PATH=$(printf '%s' "$PATH" | tr ':' '\n' | grep -v -e '^/opt/homebrew' -e '^/usr/local/' | paste -sd: -)
@@ -307,15 +376,15 @@ jobs:
         # x86_64 slice has undefined symbols.)
         run: |
           build() { # build ARCHS PLATFORM PREFIX
-            .github/tools/fetch-osmesa.sh "$OSMESA_RELEASE" "$2" "$PWD/osmesa-$2"
+            "$TOOLS"/fetch-osmesa.sh "$OSMESA_RELEASE" "$2" "$PWD/osmesa-$2"
             cmake -S . -B "build-osmesa-$2" $SHADERTOY_OPTIONS $MACOS_OPTIONS "-DCMAKE_OSX_ARCHITECTURES=$1" \
                 -DUSE_OSMESA=ON "-DOSMESA_PATH=$PWD/osmesa-$2/osmesa" "-DLLVM_PATH=$PWD/osmesa-$2/llvm" \
                 "-DOSMESA_LICENSES_DIR=$PWD/osmesa-$2/licenses"
             cmake --build "build-osmesa-$2" --parallel "$(getconf _NPROCESSORS_ONLN)"
             cmake --install "build-osmesa-$2" --prefix "$3"
           }
-          if ! .github/tools/fetch-osmesa.sh --check "$OSMESA_RELEASE" macos-arm64 ||
-             ! .github/tools/fetch-osmesa.sh --check "$OSMESA_RELEASE" macos-x86_64; then
+          if ! "$TOOLS"/fetch-osmesa.sh --check "$OSMESA_RELEASE" macos-arm64 ||
+             ! "$TOOLS"/fetch-osmesa.sh --check "$OSMESA_RELEASE" macos-x86_64; then
             build "arm64;x86_64" macos-universal "$PWD/install-shadertoy-osmesa"
           else
             build arm64 macos-arm64 "$PWD/install-osmesa-arm64"
@@ -347,9 +416,18 @@ jobs:
         run: |
           SMOKETEST_BUNDLES="$SMOKETEST_FULL" .github/tools/smoketest.sh --quick install
           SMOKETEST_BUNDLES="DenoiseSharpen:1" HOSTDEMO="$PWD/install/bin/hostDemo" .github/tools/smoketest.sh install-denoisesharpen
+      - name: Render test of the shipped Shadertoy (OSMesa)
+        # smoketest.sh skips Shadertoy (the OpenGL-only one doesn't describe in hostDemo); the
+        # lipo-merged OSMesa one (also in the full set) renders on the CPU: each architecture
+        # that the runner can run (x86_64 through Rosetta, if installed), with the universal
+        # hostDemo
+        if: env.SHADERTOY_OSMESA != ''
+        timeout-minutes: 5
+        run: |
+          "$TOOLS"/render-shadertoy-osmesa.sh install-shadertoy-osmesa/OFX/Plugins install/bin/hostDemo
       - name: Package
         run: |
-          .github/tools/package-release.sh \
+          "$TOOLS"/package-release.sh \
               --platform macos-universal --out dist \
               --full install/OFX/Plugins --shadertoy-gl install/OFX/Plugins ${SHADERTOY_OSMESA:-} \
               --denoisesharpen install-denoisesharpen/OFX/Plugins
@@ -363,7 +441,8 @@ jobs:
   build_windows:
     name: Windows x86_64 (MSYS2 UCRT64)
     needs: preflight
-    timeout-minutes: 60
+    # two builds: the full set, then the OpenGL-only Shadertoy
+    timeout-minutes: 90
     runs-on: windows-2022
     defaults:
       run:
@@ -381,6 +460,24 @@ jobs:
           ref: ${{ env.RELEASE_TAG && format('refs/tags/{0}', env.RELEASE_TAG) || github.ref }}
           submodules: recursive
           persist-credentials: false
+      - name: Checkout the release tools
+        # the workflow's own commit (see "Tools" above)
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ github.sha }}
+          path: .release-tools
+          sparse-checkout: |
+            /.gitattributes
+            /.github/
+            /CImg/Licence_CeCILL-C_V1-en.txt
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - name: Check the source
+        run: |
+          set -eo pipefail
+          git log -1 --format='source: %H %s'
+          git -C .release-tools log -1 --format='release tools: %H %s'
+          "$TOOLS"/check-release-source.sh
       - name: Setup MSYS2 UCRT64 environment (cached)
         uses: msys2/setup-msys2@ec48f7c5447b3140e2b088413ae3a55687bccb6e # v2.33.0
         with:
@@ -389,14 +486,15 @@ jobs:
           cache: true
           # zip: for the archives
           install: git base-devel zip
-          pacboy: cc:p cmake:p ninja:p
+          # pkgconf: Shadertoy's USE_OSMESA reads osmesa.pc (OSMESA_PKGCONFIG_STATIC)
+          pacboy: cc:p cmake:p ninja:p pkgconf:p
       - name: Download the prebuilt OSMesa
         if: env.OSMESA_RELEASE != ''
         # The UCRT64 build (a MINGW64 one would not link: another C runtime). Native
         # paths (cygpath -m) for CMake and the compiler.
         run: |
           set -eo pipefail
-          .github/tools/fetch-osmesa.sh "$OSMESA_RELEASE" windows-ucrt64-x86_64 "$PWD/osmesa"
+          "$TOOLS"/fetch-osmesa.sh "$OSMESA_RELEASE" windows-ucrt64-x86_64 "$PWD/osmesa"
           echo "OSMESA_OPTIONS=-DUSE_OSMESA=ON -DOSMESA_PATH=$(cygpath -m "$PWD/osmesa/osmesa") -DLLVM_PATH=$(cygpath -m "$PWD/osmesa/llvm") -DOSMESA_LICENSES_DIR=$(cygpath -m "$PWD/osmesa/licenses")" >> "$GITHUB_ENV"
           echo "SHADERTOY_OSMESA=--shadertoy-osmesa install/OFX/Plugins" >> "$GITHUB_ENV"
       - name: Build the full set and DenoiseSharpen
@@ -463,7 +561,7 @@ jobs:
       - name: Package
         run: |
           set -eo pipefail
-          .github/tools/package-release.sh \
+          "$TOOLS"/package-release.sh \
               --platform windows-x86_64 --out dist \
               --full install/OFX/Plugins --shadertoy-gl install-shadertoy/OFX/Plugins ${SHADERTOY_OSMESA:-} \
               --denoisesharpen install-denoisesharpen/OFX/Plugins --licenses windows-licenses
@@ -529,9 +627,15 @@ jobs:
             gh release create "$tag" dist/*.tar.gz dist/*.zip --draft --verify-tag $prerelease \
                 --title "openfx-misc $tag" --notes-file notes.md
           fi
-          # the stale assets of an earlier run (e.g. an OSMesa download that this run didn't make)
+          # the stale assets of an earlier run (e.g. an OSMesa download that this run didn't make):
+          # only the names that this workflow makes (package-release.sh's archives), never other
+          # files attached by hand
           gh release view "$tag" --json assets --jq '.assets[].name' | while IFS= read -r a; do
-            if [ "$a" != SHA256SUMS.txt ] && [ ! -e "dist/$a" ]; then
+            case "$a" in
+              openfx-misc-*-linux-*.tar.gz|openfx-misc-*-macos-*.tar.gz|openfx-misc-*-windows-*.zip) ;;
+              *) continue ;;
+            esac
+            if [ ! -e "dist/$a" ]; then
               echo "deleting the stale asset $a"
               gh release delete-asset "$tag" "$a" --yes
             fi

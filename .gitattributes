@@ -61,4 +61,6 @@ CImg/patches/*.sh text eol=lf
 *.S text
 
 *.xml -text
+# vendored licence text, verified by SHA256 (.github/tools/package-release.sh): no EOL conversion
+CImg/Licence_CeCILL-C_V1-en.txt -text
 *.yml -text

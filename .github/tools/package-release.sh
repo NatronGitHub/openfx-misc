@@ -10,13 +10,16 @@
 # Each is a .tar.gz (.zip on Windows) of a directory of the same name, with the bundles, a
 # README.txt (what it contains, where to install it, and which downloads exclude each other),
 # LICENSE.txt (openfx-misc's GPLv2) and LICENSES/: the licenses of the third-party code in the
-# bundles (openfx's Support library in every bundle; CImg and pocketfft in CImg.ofx; and a copy of
-# each bundle's Contents/Resources/licenses/, e.g. Mesa and LLVM, linked statically into the OSMesa
-# Shadertoy, or the libraries bundled on Linux). A bundle with bundled libraries (Libraries/,
+# bundles (openfx's Support library in every bundle; freeglut's text renderer and font data and
+# pixman's blend modes, from SupportExt, in Misc.ofx; CImg (the full CeCILL-C text) and pocketfft in
+# CImg.ofx; and a copy of each bundle's Contents/Resources/licenses/, e.g. Mesa and LLVM, linked
+# statically into the OSMesa Shadertoy, or the libraries bundled on Linux). A bundle with bundled libraries (Libraries/,
 # Contents/Libraries/, Contents/Frameworks/, or a DLL) but no Contents/Resources/licenses/ is an
 # error, and so is an OSMesa Shadertoy without it.
 #
-# Usage (from the top of the source tree):
+# Usage (from the top of the source tree, whose LICENSE, openfx/LICENSE, SupportExt and CImg
+# sources give the license texts; the script itself, its CeCILL-C text and its parameters may come
+# from another checkout, e.g. release.yml's .release-tools):
 #   .github/tools/package-release.sh [--version VERSION] --platform PLATFORM --out DIR \
 #       --full DIR --shadertoy-gl DIR [--shadertoy-osmesa DIR] --denoisesharpen DIR [--licenses DIR]
 # --licenses DIR: license files of code linked into every bundle of this platform, copied into
@@ -169,7 +172,8 @@ Licenses
 openfx-misc is free software, under the GNU General Public License, version 2
 or later: see LICENSE.txt. The bundles also contain third-party code, whose
 licenses are in LICENSES/: openfx's Support library (BSD 3-clause) in every
-bundle, CImg (CeCILL-C) and pocketfft (BSD 3-clause) in CImg.ofx, and, in
+bundle, freeglut's text renderer and pixman's blend modes (MIT) in Misc.ofx,
+CImg (CeCILL-C) and pocketfft (BSD 3-clause) in CImg.ofx, and, in
 LICENSES/<bundle>/, those of the libraries linked statically into a bundle or
 bundled with it (e.g. Mesa and LLVM in the OSMesa Shadertoy), which are also in
 <bundle>.ofx.bundle/Contents/Resources/licenses/.
@@ -206,6 +210,23 @@ header_block() {
     awk '{ print } /^[[:space:]]*\*\/[[:space:]]*$/ { exit }' "$1"
 }
 
+# notice_block FILE TEXT: the first /* ... */ comment block of FILE that contains TEXT (a
+# license notice in the middle of a file); fails if there is none
+notice_block() {
+    awk -v t="$2" '
+        !inb && /\/\*/ { inb = 1; b = "" }
+        inb { b = b $0 "\n" }
+        inb && /\*\// { inb = 0; if (index(b, t)) { printf "%s", b; found = 1; exit } }
+        END { exit !found }' "$1" || { echo "ERROR: no comment block with \"$2\" in $1" >&2; return 1; }
+}
+
+# The CeCILL-C licence of CImg, in English: CImg/Licence_CeCILL-C_V1-en.txt, a copy of
+# https://github.com/GreycLab/CImg/blob/81f0dd58ac6a178e8d2d20153827af76fe65357a/Licence_CeCILL-C_V1-en.txt
+# (CIMGVERSION of CImg/CImgVersion.mk on 2026-11-19; git blob 2e9ffbaca595a36d06e5f3adbf2e2bb776529494),
+# taken from the checkout of this script and checked against this SHA256.
+cecill_c=$(dirname "$0")/../../CImg/Licence_CeCILL-C_V1-en.txt
+cecill_c_sha256=e134e750de47bfa3119e74a10920774d00a87e361ec6da25463ef1fca97b9261
+
 # bundled_libs BUNDLE: the libraries that the bundle carries, besides its plug-in binary
 bundled_libs() {
     find "$1/Libraries" "$1/Contents/Libraries" "$1/Contents/Frameworks" -mindepth 1 -maxdepth 1 2> /dev/null || true
@@ -218,15 +239,28 @@ licenses() {
     shift
     cp "$src/LICENSE" "$dir/LICENSE.txt"
     mkdir "$dir/LICENSES"
-    cp "$src/openfx/LICENSE" "$dir/LICENSES/openfx-Support-BSD-3-Clause.txt"
+    # (openfx's current LICENSE.md, then the original LICENSE of the older files)
+    { [ ! -f "$src/openfx/LICENSE.md" ] || { cat "$src/openfx/LICENSE.md"; echo; }; cat "$src/openfx/LICENSE"; } \
+        > "$dir/LICENSES/openfx-Support-BSD-3-Clause.txt"
     [ -z "$extra" ] || cp -R "$extra"/. "$dir/LICENSES/"
     for b in "$@"; do
         bn=$(basename "$b" .ofx.bundle)
+        if [ "$bn" = Misc ]; then
+            # SupportExt's TEXT component (ofxsOGLTextRenderer.cpp, ofxsOGLFontData.cpp: freeglut)
+            # and ofxsMerging.h (pixman's blend modes: Merge, Roto, FrameBlend), only in Misc.ofx
+            {
+                notice_block "$src/SupportExt/ofxsOGLTextRenderer.cpp" "Permission is hereby granted"
+                echo
+                notice_block "$src/SupportExt/ofxsOGLFontData.cpp" "Permission is hereby granted"
+            } > "$dir/LICENSES/freeglut-MIT.txt"
+            notice_block "$src/SupportExt/ofxsMerging.h" "Soren Sandmann Pedersen" > "$dir/LICENSES/pixman-MIT.txt"
+        fi
         if [ "$bn" = CImg ]; then
             [ -f "$src/CImg/CImg.h" ] || { echo "ERROR: $src/CImg/CImg.h not found (its license)"; exit 1; }
-            header_block "$src/CImg/CImg.h" > "$dir/LICENSES/CImg-CeCILL-C.txt"
+            header_block "$src/CImg/CImg.h" > "$dir/LICENSES/CImg-notice.txt"
+            cp "$cecill_c" "$dir/LICENSES/CImg-Licence_CeCILL-C_V1-en.txt"
             if [ -f "$src/CImg/pocketfft_hdronly.h" ]; then
-                header_block "$src/CImg/pocketfft_hdronly.h" > "$dir/LICENSES/pocketfft-BSD-3-Clause.txt"
+                notice_block "$src/CImg/pocketfft_hdronly.h" "Redistribution and use" > "$dir/LICENSES/pocketfft-BSD-3-Clause.txt"
             fi
         fi
         if [ -n "$(ls -A "$b/Contents/Resources/licenses" 2> /dev/null)" ]; then
@@ -239,7 +273,19 @@ licenses() {
     done
 }
 
-src=$(cd "$(dirname "$0")/../.." && pwd)
+src=$PWD
+for f in LICENSE openfx/LICENSE SupportExt/ofxsMerging.h; do
+    [ -f "$src/$f" ] || { echo "ERROR: $src/$f not found: run from the top of the source tree"; exit 1; }
+done
+if command -v sha256sum > /dev/null; then
+    actual=$(sha256sum "$cecill_c" | cut -d' ' -f1)
+else
+    actual=$(shasum -a 256 "$cecill_c" | cut -d' ' -f1)
+fi
+if [ "$actual" != "$cecill_c_sha256" ]; then
+    echo "ERROR: SHA256 of $cecill_c is $actual, expected $cecill_c_sha256"
+    exit 1
+fi
 if [ -n "$stmesa" ] && [ -z "$(ls -A "$stmesa/Shadertoy.ofx.bundle/Contents/Resources/licenses" 2> /dev/null)" ]; then
     echo "ERROR: $stmesa/Shadertoy.ofx.bundle has no Contents/Resources/licenses (OSMesa and LLVM: CMake's OSMESA_LICENSES_DIR)"
     exit 1
