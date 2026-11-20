@@ -17,10 +17,13 @@
 # ***** END LICENSE BLOCK *****
 ########################################################################
 # The plug-in table: one ofxmisc_plugin() line per plug-in directory, i.e. per bundle of
-# OFX_PLUGIN_BUNDLES=SEPARATE (openfx's ofx_plugin_bundle_group). Adding a plug-in = one line.
+# OFX_PLUGIN_BUNDLES=SEPARATE (openfx's ofx_plugin_bundle_group). Adding a plug-in: one line here.
+# ofxmisc_check_makefiles() (end of this file) stops the configure if the table and the Makefiles
+# (SUBDIRS_NOMULTI, the VPATHs of Misc/Makefile and CImg/Makefile, the RESOURCES) disagree: add a
+# plug-in to both.
 #
 #   ofxmisc_plugin(<name> [DIR <dir>] ID <ofx id> [COMPONENTS <SupportExt component>...]
-#                  [SOURCES <extra source>...] [OPENMP] [DEBUG_ONLY] [FFT] [OPENGL]
+#                  [SOURCES <extra source>...] [OPENMP] [DEBUG_ONLY] [FFT] [LINK_GL]
 #                  [NO_ID_CHECK])
 #
 # - <name>: the CMake target and install component of its separate bundle (DIR defaults to it);
@@ -33,7 +36,7 @@
 # - COMPONENTS: the SupportExt components (supportext_add_sources), from <dir>/Makefile's objects;
 # - DEBUG_ONLY: only compiled in debug builds (#ifdef DEBUG): no bundle in other builds;
 # - NO_ID_CHECK: an ID (prefix + dir) that no plug-in identifier of the sources starts with;
-# - OPENGL: its own code calls OpenGL (an overlay), without a SupportExt component that links it;
+# - LINK_GL: its own code calls OpenGL (an overlay), without a SupportExt component that links it;
 # - FFT: uses CImg/CImgFFTConvolve.h (its bundle gets the FFT licence, e.g. Licence_pocketfft.txt);
 # - the CImg ones (DIR CImg/...) also get CImg/CImgFilter.cpp and OpenMP.
 # Group: the first plug-ins go to Misc.ofx.bundle, the CImg ones (DIR CImg/...) to CImg.ofx.bundle.
@@ -41,15 +44,20 @@
 # ofxmisc_plugin(): appends "PLUGIN <name> ..." to OFXMISC_<group>_PLUGINS (the arguments of
 # ofx_plugin_bundle_group) and its name to OFXMISC_<group>_NAMES
 function(ofxmisc_plugin NAME)
-  cmake_parse_arguments(PARSE_ARGV 1 _p "OPENMP;DEBUG_ONLY;FFT;OPENGL;NO_ID_CHECK" "DIR;ID" "COMPONENTS;SOURCES")
+  cmake_parse_arguments(PARSE_ARGV 1 _p "OPENMP;DEBUG_ONLY;FFT;LINK_GL;NO_ID_CHECK" "DIR;ID" "COMPONENTS;SOURCES")
   if(_p_UNPARSED_ARGUMENTS OR NOT _p_ID)
     message(FATAL_ERROR "ofxmisc_plugin(${NAME}): bad arguments (ID is required): ${_p_UNPARSED_ARGUMENTS}")
   endif()
-  if(_p_DEBUG_ONLY AND NOT _debug_build)
-    return()
-  endif()
   if(NOT _p_DIR)
     set(_p_DIR ${NAME})
+  endif()
+  # every directory of the table, for ofxmisc_check_makefiles()
+  set_property(GLOBAL APPEND PROPERTY OFXMISC_TABLE_DIRS ${_p_DIR})
+  if(_p_DEBUG_ONLY)
+    set_property(GLOBAL APPEND PROPERTY OFXMISC_TABLE_DEBUG_DIRS ${_p_DIR})
+    if(NOT _debug_build)
+      return()
+    endif()
   endif()
   if(_p_DIR MATCHES "^CImg/")
     set(_group CIMG)
@@ -79,7 +87,7 @@ function(ofxmisc_plugin NAME)
   if(_p_NO_ID_CHECK) # a prefix + dir ID that no identifier of its sources starts with
     list(APPEND _args NO_ID_CHECK)
   endif()
-  if(_p_OPENGL) # calls OpenGL itself (the SupportExt interacts and TEXT link it too)
+  if(_p_LINK_GL) # calls OpenGL itself (the SupportExt interacts and TEXT link it too)
     list(APPEND _args LINK_LIBRARIES OpenGL::GL)
   endif()
   if(_p_FFT) # its bundle gets the FFT library's licence (CMakeLists.txt)
@@ -87,6 +95,94 @@ function(ofxmisc_plugin NAME)
   endif()
   set(OFXMISC_${_group}_PLUGINS ${OFXMISC_${_group}_PLUGINS} ${_args} PARENT_SCOPE)
   set(OFXMISC_${_group}_NAMES ${OFXMISC_${_group}_NAMES} ${NAME} PARENT_SCOPE)
+endfunction()
+
+# _ofxmisc_make_var(<makefile> <var> <out>): the words assigned to <var> in <makefile> (all the
+# "<var> =" and "<var> +=" lines, with their "\" continuations), "$(TOP_SRCDIR)/" removed
+function(_ofxmisc_make_var MAKEFILE VAR OUT)
+  file(READ "${PROJECT_SOURCE_DIR}/${MAKEFILE}" _text)
+  string(REGEX REPLACE "\\\\\n" " " _text "${_text}") # join the continuation lines
+  string(REPLACE ";" "," _text "${_text}")
+  string(REPLACE "\n" ";" _lines "${_text}")
+  set(_words)
+  foreach(_l IN LISTS _lines)
+    string(REGEX REPLACE "#.*" "" _l "${_l}") # a comment, with its continuation lines (as make)
+    if(_l MATCHES "^[ \t]*${VAR}[ \t]*\\+?=(.*)$")
+      string(REPLACE "$(TOP_SRCDIR)/" "" _v "${CMAKE_MATCH_1}")
+      separate_arguments(_v UNIX_COMMAND "${_v}")
+      list(APPEND _words ${_v})
+    endif()
+  endforeach()
+  set(${OUT} ${_words} PARENT_SCOPE)
+endfunction()
+
+# _ofxmisc_check_set(<what> <table list var> <make list var> <allowed in the table only>...):
+# FATAL_ERROR if the two lists differ, except for the allowed directories
+function(_ofxmisc_check_set WHAT TABLE MAKE)
+  set(_t ${${TABLE}})
+  set(_m ${${MAKE}})
+  list(REMOVE_ITEM _t ${ARGN} "")
+  set(_only_t ${_t})
+  list(REMOVE_ITEM _only_t ${_m} "")
+  set(_only_m ${_m})
+  list(REMOVE_ITEM _only_m ${_t} ${ARGN} "")
+  if(_only_t OR _only_m)
+    message(FATAL_ERROR "cmake/OFXMiscPlugins.cmake and ${WHAT} differ: only in the table: "
+      "[${_only_t}]; only in ${WHAT}: [${_only_m}]. A plug-in directory must be in both "
+      "(or be one of the exceptions of ofxmisc_check_makefiles())")
+  endif()
+endfunction()
+
+# ofxmisc_check_makefiles(): the table must list the same plug-in directories as the Makefiles,
+# so that a plug-in can't be left out of one build: the top-level Makefile's SUBDIRS_NOMULTI
+# ("make nomulti"), Misc/Makefile's and CImg/Makefile's VPATH (the combined bundles), and, for
+# each directory, its Makefile's RESOURCES and the resources that the table globs.
+function(ofxmisc_check_makefiles)
+  get_property(_dirs GLOBAL PROPERTY OFXMISC_TABLE_DIRS)
+  get_property(_debug GLOBAL PROPERTY OFXMISC_TABLE_DEBUG_DIRS)
+  set(_misc ${_dirs})
+  list(FILTER _misc EXCLUDE REGEX "^CImg/")
+  set(_cimg ${_dirs})
+  list(FILTER _cimg INCLUDE REGEX "^CImg/")
+  # make nomulti: the DEBUG_ONLY directories are added in debug builds only
+  # (SUBDIRS_NOMULTI += ReConverge TimeBuffer); CImg/Inpaint has no Info.plist and CImg/Matrix no
+  # Makefile: they have no make nomulti bundle (only CMake's SEPARATE builds them)
+  _ofxmisc_make_var(Makefile SUBDIRS_NOMULTI _nomulti)
+  _ofxmisc_check_set("the top-level Makefile's SUBDIRS_NOMULTI" _dirs _nomulti CImg/Inpaint CImg/Matrix)
+  # Misc/Makefile's VPATH also has Misc and Test (TestRender), which are not plug-in directories
+  _ofxmisc_make_var(Misc/Makefile VPATH _vpath)
+  list(REMOVE_ITEM _vpath Misc Test)
+  _ofxmisc_check_set("Misc/Makefile's VPATH" _misc _vpath)
+  _ofxmisc_make_var(CImg/Makefile VPATH _vpath)
+  list(TRANSFORM _vpath PREPEND "CImg/")
+  _ofxmisc_check_set("CImg/Makefile's VPATH" _cimg _vpath)
+  # the resources: those of each <dir>/Makefile (except the pocketfft licence, which CMake adds
+  # with FFT=pocketfft), and the union in Misc/Makefile and CImg/Makefile
+  set(_misc_res)
+  set(_cimg_res)
+  foreach(_d IN LISTS _dirs)
+    file(GLOB _res LIST_DIRECTORIES false RELATIVE "${PROJECT_SOURCE_DIR}/${_d}"
+      "${PROJECT_SOURCE_DIR}/${_d}/*.png" "${PROJECT_SOURCE_DIR}/${_d}/*.svg"
+      "${PROJECT_SOURCE_DIR}/${_d}/*.py" "${PROJECT_SOURCE_DIR}/${_d}/*.gizmo"
+      "${PROJECT_SOURCE_DIR}/${_d}/*.nps")
+    if(EXISTS "${PROJECT_SOURCE_DIR}/${_d}/Makefile")
+      _ofxmisc_make_var(${_d}/Makefile RESOURCES _mk)
+      list(FILTER _mk EXCLUDE REGEX "Licence_pocketfft\\.txt$|^\\$")
+      _ofxmisc_check_set("${_d}/Makefile's RESOURCES" _res _mk)
+    endif()
+    if(_d MATCHES "^CImg/(.*)$")
+      list(TRANSFORM _res PREPEND "${CMAKE_MATCH_1}/")
+      list(APPEND _cimg_res ${_res})
+    else()
+      list(TRANSFORM _res PREPEND "${_d}/")
+      list(APPEND _misc_res ${_res})
+    endif()
+  endforeach()
+  _ofxmisc_make_var(Misc/Makefile RESOURCES _mk)
+  _ofxmisc_check_set("Misc/Makefile's RESOURCES" _misc_res _mk)
+  _ofxmisc_make_var(CImg/Makefile RESOURCES _mk)
+  list(FILTER _mk EXCLUDE REGEX "Licence_pocketfft\\.txt$|^\\$")
+  _ofxmisc_check_set("CImg/Makefile's RESOURCES" _cimg_res _mk)
 endfunction()
 
 # Misc.ofx.bundle
@@ -101,13 +197,13 @@ ofxmisc_plugin(Clamp ID net.sf.openfx.Clamp COMPONENTS THREADS)
 ofxmisc_plugin(ClipTest ID net.sf.openfx.ClipTestPlugin COMPONENTS THREADS)
 ofxmisc_plugin(ColorBars ID net.sf.openfx.ColorBars COMPONENTS THREADS RECTANGLE_INTERACT GENERATOR LUT)
 ofxmisc_plugin(ColorCorrect ID net.sf.openfx.ColorCorrectPlugin COMPONENTS THREADS)
-ofxmisc_plugin(ColorLookup ID net.sf.openfx.ColorLookupPlugin COMPONENTS THREADS OPENGL)
+ofxmisc_plugin(ColorLookup ID net.sf.openfx.ColorLookupPlugin COMPONENTS THREADS LINK_GL)
 ofxmisc_plugin(ColorMatrix ID net.sf.openfx.ColorMatrixPlugin COMPONENTS THREADS)
 ofxmisc_plugin(ColorSuppress ID net.sf.openfx.ColorSuppress COMPONENTS THREADS)
 ofxmisc_plugin(ColorTransform ID net.sf.openfx.ColorTransform COMPONENTS THREADS LUT NO_ID_CHECK)
 ofxmisc_plugin(ColorWheel ID net.sf.openfx.ColorWheel COMPONENTS THREADS RECTANGLE_INTERACT GENERATOR LUT)
 ofxmisc_plugin(Constant ID net.sf.openfx.Constant COMPONENTS THREADS RECTANGLE_INTERACT GENERATOR)
-ofxmisc_plugin(ContactSheet ID net.sf.openfx.ContactSheetOFX OPENGL)
+ofxmisc_plugin(ContactSheet ID net.sf.openfx.ContactSheetOFX LINK_GL)
 ofxmisc_plugin(CopyRectangle ID net.sf.openfx.CopyRectanglePlugin COMPONENTS THREADS RECTANGLE_INTERACT)
 ofxmisc_plugin(CornerPin ID net.sf.openfx.CornerPin COMPONENTS THREADS TRANSFORM3X3 TEXT SHUTTER)
 ofxmisc_plugin(Crop ID net.sf.openfx.CropPlugin COMPONENTS THREADS RECTANGLE_INTERACT GENERATOR)
@@ -125,7 +221,7 @@ ofxmisc_plugin(Gamma ID net.sf.openfx.GammaPlugin COMPONENTS THREADS)
 ofxmisc_plugin(GodRays ID net.sf.openfx.GodRays COMPONENTS THREADS TRANSFORM3X3 TRANSFORM_INTERACT SHUTTER)
 ofxmisc_plugin(Grade ID net.sf.openfx.GradePlugin COMPONENTS THREADS)
 ofxmisc_plugin(HSVTool ID net.sf.openfx.HSVToolPlugin COMPONENTS THREADS LUT RECTANGLE_INTERACT)
-ofxmisc_plugin(HueCorrect ID net.sf.openfx.HueCorrect COMPONENTS THREADS LUT OPENGL)
+ofxmisc_plugin(HueCorrect ID net.sf.openfx.HueCorrect COMPONENTS THREADS LUT LINK_GL)
 ofxmisc_plugin(ImageStatistics ID net.sf.openfx.ImageStatistics COMPONENTS THREADS LUT RECTANGLE_INTERACT)
 ofxmisc_plugin(Invert ID net.sf.openfx.Invert COMPONENTS THREADS)
 ofxmisc_plugin(JoinViews ID net.sf.openfx.joinViewsPlugin COMPONENTS THREADS)
@@ -192,3 +288,5 @@ ofxmisc_plugin(CImgSharpenInvDiff DIR CImg/SharpenInvDiff ID net.sf.cimg.CImgSha
 ofxmisc_plugin(CImgSharpenShock DIR CImg/SharpenShock ID net.sf.cimg.CImgSharpenShock COMPONENTS THREADS)
 ofxmisc_plugin(CImgSmooth DIR CImg/Smooth ID net.sf.cimg.CImgSmooth COMPONENTS THREADS)
 ofxmisc_plugin(CImgZDefocus DIR CImg/ZDefocus ID net.sf.cimg.CImgZDefocus COMPONENTS THREADS FFT)
+
+ofxmisc_check_makefiles()
