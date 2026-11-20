@@ -56,11 +56,11 @@
 // static FFTW3_static: calling it again does nothing. CImg keeps its own mutex.
 // FFTW's cleanup functions don't take the planner lock. CImg 4.0.8 no longer calls
 // fftw_cleanup_threads() after each FFT, only in ~FFTW3_static(), when the binary is unloaded
-// (GreycLab/CImg#500, still open): this frees FFTW's planner and threads, which is only safe if no
-// other plug-in of the process is planning or running an FFTW transform at that moment. The
-// planner hooks of fftw_make_planner_thread_safe() survive it, and FFTW re-initialises its threads
-// at the next plan (fftw_plan_with_nthreads()), so a reload of this binary, or another user of
-// FFTW, keeps working.
+// (GreycLab/CImg#500, still open), and also at process exit (static destructors), so at host
+// shutdown too: this frees FFTW's planner and threads, which is only safe if no other plug-in of
+// the process is planning or running an FFTW transform at that moment. The planner hooks of
+// fftw_make_planner_thread_safe() survive it, and FFTW re-initialises its threads at the next plan
+// (fftw_plan_with_nthreads()), so a reload of this binary, or another user of FFTW, keeps working.
 inline void
 cimgFFTLoad()
 {

@@ -48,8 +48,8 @@ CXXFLAGS += $(FFT_CXXFLAGS)
 LINKFLAGS += $(FFT_LINKFLAGS)
 RESOURCES += $(FFT_RESOURCES)
 
-# LICENSE and FFT change the compiled code (fftw3 and pow2 use the same CImg.h) and the bundled
-# files: when they change, rebuild the objects and the bundle.
+# LICENSE and FFT change the compiled code (pocketfft, pow2 and fftw3 all use the same CImg.h, with
+# other macros) and the bundled files: when they change, rebuild the objects and the bundle.
 FFT_BUILD_KEY = LICENSE=$(LICENSE) FFT=$(FFT)
 $(OBJECTPATH)/build.fft: FORCE
 	@mkdir -p $(OBJECTPATH)

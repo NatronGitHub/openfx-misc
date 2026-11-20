@@ -11,6 +11,9 @@ More information about OpenFX Hosts, OpenFX Plugins (commercial or
 free), and OpenFX documentation can be found at
 <http://devernay.free.fr/hacks/openfx/>.
 
+[CHANGELOG.md](CHANGELOG.md) lists the changes that users can see, in particular the output
+changes that come with library updates (e.g. CImg).
+
 Downloads
 ---------
 
