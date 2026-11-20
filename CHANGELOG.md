@@ -18,5 +18,13 @@ ExpressionCImg unless noted:
 - `vvar()` and `vstd()` with three or more arguments are now computed with CImg's `variance()`:
   last-bit differences.
 - MSVC builds only: `hypot(inf,inf)` is now NaN (it was inf).
-- Two CImg 4.0.8 regressions (`vvar(a,b)` crashes; `log(y)` with `y=1+x` overwrites `y`): fixes
-  pending openfx-gmic patches.
+
+Fixes, with openfx-gmic's patches of CImg 4.0.8 ([CImg#501], [CImg#502]):
+
+- `vvar(a,b)` no longer crashes.
+- `vargkth(a,b)` returns 0 again, as in 4.0.7.
+- `log(y)` no longer overwrites a variable `y` computed as `1+x`.
+- `abs()` no longer overwrites a variable assigned in its argument (a bug of 4.0.7 too).
+
+[CImg#501]: https://github.com/GreycLab/CImg/issues/501
+[CImg#502]: https://github.com/GreycLab/CImg/issues/502

@@ -37,14 +37,22 @@ CIMGVERSION=1a9fef439d17b73d9af8d8e59b65df9c989fde7a
 # downloads and patches CImg.h again (CImg.h.version records them).
 # - cimg-omp-rand.sh: the random numbers of rand(), noise() and the math parser in OpenMP loops
 #   do not depend on thread scheduling (NatronGitHub/openfx-gmic#44, local fix)
+# - cimg-vvar2.sh: vvar() with two arguments called a NULL function pointer (crash)
+#   (GreycLab/CImg#501)
+# - cimg-vargkth2.sh: vargkth() with two arguments gave 1 instead of the index given with more
+#   arguments and in CImg 4.0.7 (GreycLab/CImg#501)
+# - cimg-log1p-peephole.sh: the log(1 + x) -> log1p(x) optimization rewrote the code that computed
+#   a variable, e.g. 'y=1+x;log(y);y' gave log(1 + x) (GreycLab/CImg#502)
+# - cimg-abs-peephole.sh: the same for abs(maxabs()) -> absmaxabs() (and minabs), e.g.
+#   'abs(m=maxabs(a,b,c));m' gave abs(maxabs(a,b,c)) for m (GreycLab/CImg#502, also in CImg 4.0.7)
 # CImg 4.0.8 has the fixes of the other scripts that 4.0.7 needed (removed in openfx-gmic#98): the
 # math parser's macro overread (GreycLab/CImg#496), i()/j()/I()/J() out of bounds
 # (GreycLab/CImg#498), the NaN eigenvectors of symmetric_eigen() (GreycLab/gmic#221), FFTW's
 # fftw_cleanup_threads() after each FFT (now only at unload, see GreycLab/CImg#500 and
 # CImgFFTConvolve.h), and pocketfft itself (cimg_use_pocketfft, GreycLab/CImg#497).
 # CMakeLists.txt reads these variables: keep each on one line, as a plain "NAME=value" assignment.
-CIMG_PATCHES_FROM=8b83276e853f8a66b5e793f5879545536cb16a66
-CIMG_PATCHES=patches/cimg-omp-rand.sh
+CIMG_PATCHES_FROM=ea964f301dd0ba8cb8fe70a78fc00dda642b6cfe
+CIMG_PATCHES=patches/cimg-omp-rand.sh patches/cimg-vvar2.sh patches/cimg-vargkth2.sh patches/cimg-log1p-peephole.sh patches/cimg-abs-peephole.sh
 
 # pocketfft (FFT=pocketfft), C++ header-only version, at a pinned commit of its 'cpp' branch: the
 # same commit and checksum as openfx-gmic's Makefile
