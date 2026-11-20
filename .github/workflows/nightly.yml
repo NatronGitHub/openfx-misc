@@ -6,9 +6,10 @@ name: Nightly extra builds
 # without OpenMP (ci.yml uses it on Linux), and Windows MSVC, plus the macOS
 # release build of ci.yml, which there only runs after Linux and Windows pass
 # (this covers master when the push run's macOS job was skipped or cancelled).
-# CI builds with CMake only (Natron#1181). The Makefiles are kept buildable as the RB-2.6
-# fallback, but no CI job uses them. Every job passes its C++ standard explicitly
-# (OFX_CXX_STANDARD=17 or 20).
+# CI builds with CMake (Natron#1181). The Makefiles are kept as the RB-2.6 fallback: one cheap
+# nightly Linux job (make CONFIG=release, the combined bundles, as Natron's fallback builds them)
+# checks that they still build; the slow one-bundle-per-plugin "make nomulti" jobs are gone.
+# Every CMake job passes its C++ standard explicitly (OFX_CXX_STANDARD=17 or 20).
 # Each build is followed by the same plugin load test as in ci.yml.
 # The CImg plug-ins: ci.yml builds their default FFT (pocketfft); here, Linux C++20 is COMMERCIAL
 # (pocketfft), Linux FFTW builds the opt-in FFT=fftw3 (GPL) with the render tests, and macOS OpenMP
@@ -180,6 +181,9 @@ jobs:
             options: -DOFX_CXX_STANDARD=17 -DCMAKE_BUILD_TYPE=Release -DFFT=fftw3 -DBUILD_TESTING=ON -DOFX_BUILD_HOSTDEMO=ON
             rendertest: true
             packages: libfftw3-dev pkg-config
+          # the Makefiles (Natron RB-2.6's fallback): combined bundles, GCC's default (gnu++17)
+          - name: make
+            make: CONFIG=release
     steps:
       - name: Checkout branch
         uses: actions/checkout@v5
@@ -191,14 +195,19 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libglu1-mesa-dev libgl-dev libexpat1-dev cmake ninja-build ${{ matrix.packages }}
+      - name: Build (make)
+        if: matrix.make
+        run: make -j"$(nproc)" ${{ matrix.make }}
       - name: Build (CMake)
+        if: ${{ !matrix.make }}
         # The bundles are installed in install-<config>/OFX/Plugins.
         run: |
           cmake -S . -B build -G Ninja ${{ matrix.options }}
           cmake --build build
           cmake --install build --prefix "$PWD/install-${{ matrix.config }}"
       - name: Load test
-        run: .github/tools/loadtest.sh install-${{ matrix.config }}
+        # make: the source tree; CMake: the install tree
+        run: .github/tools/loadtest.sh ${{ matrix.make && ' ' || format('install-{0}', matrix.config) }}
       - name: Render test (hostDemo)
         if: matrix.rendertest
         timeout-minutes: 10
