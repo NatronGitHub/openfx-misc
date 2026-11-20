@@ -132,10 +132,14 @@ $(TOP_SRCDIR)/ColorTransform/net.sf.openfx.LabToRGB709.png \
 $(TOP_SRCDIR)/ColorTransform/net.sf.openfx.RGBToHSV.png \
 $(TOP_SRCDIR)/ColorTransform/net.sf.openfx.RGBToHSV.svg \
 $(TOP_SRCDIR)/ColorTransform/net.sf.openfx.RGB709ToLab.png \
+$(TOP_SRCDIR)/ColorTransform/net.sf.openfx.RGB709ToLab.svg \
 $(TOP_SRCDIR)/ColorTransform/net.sf.openfx.RGB709ToXYZ.png \
+$(TOP_SRCDIR)/ColorTransform/net.sf.openfx.RGB709ToXYZ.svg \
 $(TOP_SRCDIR)/ColorTransform/net.sf.openfx.XYZToRGB709.png \
+$(TOP_SRCDIR)/ColorTransform/net.sf.openfx.XYZToRGB709.svg \
 $(TOP_SRCDIR)/Constant/net.sf.openfx.ConstantPlugin.png \
 $(TOP_SRCDIR)/Constant/net.sf.openfx.ConstantPlugin.svg \
+$(TOP_SRCDIR)/Constant/net.sf.openfx.Solid.png \
 $(TOP_SRCDIR)/CornerPin/net.sf.openfx.CornerPinMaskedPlugin.png \
 $(TOP_SRCDIR)/CornerPin/net.sf.openfx.CornerPinMaskedPlugin.svg \
 $(TOP_SRCDIR)/CornerPin/net.sf.openfx.CornerPinPlugin.png \
@@ -196,6 +200,7 @@ $(TOP_SRCDIR)/Mirror/net.sf.openfx.Mirror.svg \
 $(TOP_SRCDIR)/MixViews/net.sf.openfx.mixViewsPlugin.png \
 $(TOP_SRCDIR)/MixViews/net.sf.openfx.mixViewsPlugin.svg \
 $(TOP_SRCDIR)/Multiply/net.sf.openfx.MultiplyPlugin.png \
+$(TOP_SRCDIR)/Multiply/net.sf.openfx.MultiplyPlugin.svg \
 $(TOP_SRCDIR)/NoOp/net.sf.openfx.NoOpPlugin.png \
 $(TOP_SRCDIR)/NoOp/net.sf.openfx.NoOpPlugin.svg \
 $(TOP_SRCDIR)/Rand/net.sf.openfx.Noise.png \
@@ -234,6 +239,10 @@ $(TOP_SRCDIR)/SideBySide/net.sf.openfx.sideBySidePlugin.png \
 $(TOP_SRCDIR)/SideBySide/net.sf.openfx.sideBySidePlugin.svg \
 $(TOP_SRCDIR)/SlitScan/net.sf.openfx.SlitScan.png \
 $(TOP_SRCDIR)/SlitScan/net.sf.openfx.SlitScan.svg \
+$(TOP_SRCDIR)/TimeBlur/net.sf.openfx.TimeBlur.png \
+$(TOP_SRCDIR)/TimeBlur/net.sf.openfx.TimeBlur.svg \
+$(TOP_SRCDIR)/TimeBlur/net.sf.openfx.NoTimeBlurPlugin.png \
+$(TOP_SRCDIR)/TimeBlur/net.sf.openfx.NoTimeBlurPlugin.svg \
 $(TOP_SRCDIR)/Switch/net.sf.openfx.switchPlugin.png \
 $(TOP_SRCDIR)/Switch/net.sf.openfx.switchPlugin.svg \
 $(TOP_SRCDIR)/TimeOffset/net.sf.openfx.timeOffset.png \

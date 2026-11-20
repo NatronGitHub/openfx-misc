@@ -27,6 +27,12 @@ net.sf.cimg.CImgChromaBlur.png \
 net.sf.cimg.CImgChromaBlur.svg \
 net.sf.cimg.CImgLaplacian.png \
 net.sf.cimg.CImgLaplacian.svg \
+net.sf.cimg.CImgSharpen.png \
+net.sf.cimg.CImgSharpen.svg \
+eu.cimg.EdgeDetect.png \
+eu.cimg.EdgeDetect.svg \
+eu.cimg.EdgeExtend.png \
+eu.cimg.EdgeExtend.svg \
 EdgeBlur.py \
 EdgeBlur.nps \
 EdgeBlur.gizmo
