@@ -80,7 +80,7 @@ ENDIF(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
 ########################################################################
 # Project setup
 ########################################################################
-CMAKE_MINIMUM_REQUIRED(VERSION 3.16...3.31) # 3.16: openfx's CMakeLists.txt; policies up to 3.31 (CMP0177)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.21...3.31) # 3.21: openfx's cmake/OpenFX.cmake; policies up to 3.31 (CMP0177)
 # macOS: the bundles load on macOS 14 and later (Natron 2.6) by default. -DCMAKE_OSX_DEPLOYMENT_TARGET,
 # or the MACOSX_DEPLOYMENT_TARGET environment variable (which CMake reads at the first configure),
 # overrides it: the default is only set when neither is given (nor a toolchain file or a

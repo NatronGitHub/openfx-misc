@@ -42,7 +42,8 @@ universal):
 - `openfx-misc-Shadertoy-OSMesa-<version>-<platform>`:
   `Shadertoy.ofx.bundle` alone, OpenGL + OSMesa: the bundle of the full set.
 - `openfx-misc-DenoiseSharpen-<version>-<platform>`: `net.sf.openfx.DenoiseSharpen.ofx.bundle`, with
-  only the DenoiseSharpen plugin.
+  only the DenoiseSharpen plugin. Older releases named it `DenoiseSharpen.ofx.bundle`: remove that
+  old bundle from your plugins directory.
 
 The Linux bundles are built on Rocky Linux 9 (Natron 2.6's baseline), and need glibc 2.34
 or later, the system's libstdc++ (GCC 11 or later), `libGL.so.1` (OpenGL) and `libgomp.so.1`
@@ -464,7 +465,7 @@ compiling:
 
 CMake builds the same bundles as the Makefiles (`make nomulti`: `OFX_PLUGIN_BUNDLES=SEPARATE`
 below): `Misc`, `CImg` and `Shadertoy`, plus `Test` and
-`DebugProxy` in Debug builds. Only out-of-tree
+`DebugProxy` in Debug builds. It needs CMake 3.21 or later (openfx's `cmake/OpenFX.cmake`). Only out-of-tree
 builds are allowed. `CImg/CImg.h` and `CImg/Inpaint/inpaint.h` are downloaded (and
 `CImg.h` patched as openfx-gmic's, see above) at configure time if missing (at the
 version given in `CImg/CImgVersion.mk`, again when it, the patches or `FFT` change).

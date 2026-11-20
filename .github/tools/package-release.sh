@@ -324,5 +324,6 @@ if [ -n "$stmesa" ]; then
         "$stmesa/Shadertoy.ofx.bundle"
 fi
 package "openfx-misc-DenoiseSharpen-$version-$platform" \
-"- net.sf.openfx.DenoiseSharpen.ofx.bundle: DenoiseSharpen alone (the same plug-in as in Misc.ofx.bundle)" \
+"- net.sf.openfx.DenoiseSharpen.ofx.bundle: DenoiseSharpen alone (the same plug-in as in Misc.ofx.bundle).
+  Older releases named it DenoiseSharpen.ofx.bundle: remove that old bundle." \
     "$ds/net.sf.openfx.DenoiseSharpen.ofx.bundle"
