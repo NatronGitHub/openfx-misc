@@ -189,7 +189,7 @@ jobs:
             config: separate
             options: -DOFX_CXX_STANDARD=17 -DCMAKE_BUILD_TYPE=Release -DOFX_PLUGIN_BUNDLES=SEPARATE
             # the plug-ins (identifier and version) of Misc, CImg and Shadertoy in a release build:
-            # no plug-in is lost in the split (update with smoketest.sh's BUNDLES)
+            # no plug-in is lost in the split (update when a plug-in is added or removed)
             plugins: 212
           # the Makefiles, as Natron RB-2.6's Linux fallback builds them: combined bundles, with
           # OpenMP (OPENMP=1), GCC's default standard (gnu++17)
