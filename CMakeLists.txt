@@ -428,9 +428,9 @@ if(BUILD_CIMG_PLUGINS)
 # FFT: the library of the Fourier transforms of ConvolveCImg, ZDefocusCImg and the fft() of
 # ExpressionCImg (CImgFFTConvolve.h):
 # fftw3 (FFTW, GPL, multithreaded, opt-in), pocketfft (BSD-3-Clause, header-only, downloaded at
-# POCKETFFTCOMMIT, through CImg/patches/cimg-pocketfft.sh), or pow2 (CImg's own FFT, which only
-# handles power-of-two sizes: the images are padded to the next power of two). Empty (default):
-# pocketfft. COMMERCIAL builds can't use FFTW.
+# POCKETFFTCOMMIT, through CImg's cimg_use_pocketfft, CImg >= 4.0.8), or pow2 (CImg's own FFT,
+# which only handles power-of-two sizes: the images are padded to the next power of two). Empty
+# (default): pocketfft. COMMERCIAL builds can't use FFTW.
 set(OFX_LICENSE "GPL" CACHE STRING "GPL, or COMMERCIAL (no FFTW)")
 set_property(CACHE OFX_LICENSE PROPERTY STRINGS GPL COMMERCIAL)
 if(NOT OFX_LICENSE MATCHES "^(GPL|COMMERCIAL)$")
@@ -470,9 +470,9 @@ cimg_mk_var(CIMGVERSION CIMGVERSION)
 if(NOT CIMGVERSION MATCHES "^[0-9a-fA-F]+$")
   message(FATAL_ERROR "Could not read CIMGVERSION from ${CIMG_DIR}/CImgVersion.mk")
 endif()
+cimg_mk_var(CIMG_SHA256 _cimg_sha256)
 cimg_mk_var(CIMG_PATCHES_FROM CIMG_PATCHES_FROM)
 cimg_mk_var(CIMG_PATCHES _cimg_patches)
-cimg_mk_var(CIMG_PATCHES_POCKETFFT _cimg_patches_pocketfft)
 set(CIMG_URL "https://raw.githubusercontent.com/dtschump/CImg/${CIMGVERSION}")
 
 function(cimg_download url dest)
@@ -490,15 +490,11 @@ function(cimg_download url dest)
 endfunction()
 
 # CImg.h is patched with the scripts of openfx-gmic (CImg/patches, see CImgVersion.mk): CIMG_PATCHES,
-# then CIMG_PATCHES_POCKETFFT with FFT=pocketfft, in this order, as CImg/Makefile does. Each runs as
-# "sh <script> <dir>/CImg.h", and fails if CImg.h does not have the expected code. They need a POSIX
-# sh, awk, grep and wc (Linux, macOS, MSYS2; with MSVC, e.g. Git for Windows' sh.exe in the PATH, or
-# -DCIMG_PATCH_SH=<path>).
-set(_cimg_applied_patches ${_cimg_patches})
-if(CIMG_FFT STREQUAL "pocketfft")
-  string(APPEND _cimg_applied_patches " ${_cimg_patches_pocketfft}")
-endif()
-separate_arguments(_cimg_applied_patches UNIX_COMMAND "${_cimg_applied_patches}")
+# in this order, as CImg/Makefile does, whatever the FFT (CImg.h is the same for every FFT). Each
+# runs as "sh <script> <dir>/CImg.h", and fails if CImg.h does not have the expected code. They need
+# a POSIX sh, awk and wc (Linux, macOS, MSYS2; with MSVC, e.g. Git for Windows' sh.exe in the PATH,
+# or -DCIMG_PATCH_SH=<path>).
+separate_arguments(_cimg_applied_patches UNIX_COMMAND "${_cimg_patches}")
 foreach(_script IN LISTS _cimg_applied_patches)
   if(NOT _script MATCHES "^patches/[A-Za-z0-9_.-]+\\.sh$" OR NOT EXISTS "${CIMG_DIR}/${_script}")
     message(FATAL_ERROR "${CIMG_DIR}/CImgVersion.mk lists '${_script}', not an existing patches/<name>.sh")
@@ -559,6 +555,13 @@ if(NOT EXISTS "${CIMG_DIR}/CImg.h")
   file(REMOVE_RECURSE "${_cimg_tmp}")
   file(MAKE_DIRECTORY "${_cimg_tmp}")
   cimg_download("${CIMG_URL}/CImg.h" "${_cimg_tmp}/CImg.h")
+  # the download, before the patches, is checked against CIMG_SHA256 (CImgVersion.mk)
+  file(SHA256 "${_cimg_tmp}/CImg.h" _sum)
+  if(NOT _sum STREQUAL _cimg_sha256)
+    file(REMOVE_RECURSE "${_cimg_tmp}")
+    message(FATAL_ERROR "checksum mismatch for ${CIMG_URL}/CImg.h: got ${_sum}, expected "
+      "CIMG_SHA256=${_cimg_sha256} (CImg/CImgVersion.mk)")
+  endif()
   foreach(_script IN LISTS _cimg_applied_patches)
     execute_process(COMMAND "${CIMG_PATCH_SH}" "${CIMG_DIR}/${_script}" "${_cimg_tmp}/CImg.h"
       RESULT_VARIABLE _r)
@@ -576,8 +579,9 @@ endif()
 # reconfigure if another build (e.g. make, or a build directory with another FFT) changes CImg.h
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CIMG_VERSION_STAMP}")
 
-# pocketfft (FFT=pocketfft): CImg/pocketfft_hdronly.h (next to CImg.h, which includes it), at
-# POCKETFFTCOMMIT and checked against POCKETFFT_SHA256 (CImgVersion.mk), as CImg/Makefile does, and
+# pocketfft (FFT=pocketfft): CImg/pocketfft_hdronly.h (next to CImg.h, which includes it when
+# cimg_use_pocketfft is defined and cimg_use_fftw3 is not), at POCKETFFTCOMMIT and checked against
+# POCKETFFT_SHA256 (CImgVersion.mk), as CImg/Makefile does, and
 # its licence (BSD-3-Clause, which asks for its notice in binary distributions), from the header's
 # first comment, for the bundle's Resources.
 if(CIMG_FFT STREQUAL "pocketfft")

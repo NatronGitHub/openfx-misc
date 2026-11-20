@@ -617,17 +617,18 @@ tests=(
     # Rand with density 0 computed 0/0 for its noise level
     "Rand density 0|net.sf.openfx.Noise|general|*|mean=0,0,0,0||-i Source=none density=0"
     "ImageStatistics auto crop seq|net.sf.openfx.ImageStatistics|filter|float|value:autoCropSize=34.133333,16+keys:autoCropBottomLeft=26+keys:autoCropSize=26+keyrange:autoCropSize=0,25||-i Source=file:autocrop.pfm@100,50 -s analyzeSequenceAutoCrop"
-    # The CImg.h patches (CImg/patches, from openfx-gmic). A math parser macro whose body ends
-    # with an argument (cimg-math-macro-overread.sh: read past the end of the body).
+    # CImg fixes that openfx-gmic's patches of CImg 4.0.7 backported, upstream since CImg 4.0.8.
+    # A math parser macro whose body ends with an argument (GreycLab/CImg#496: read past the end
+    # of the body).
     "CImgExpression macro|net.sf.cimg.CImgExpression|filter|float|mean=0.5,0.5,0.5,0.5||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=f(a)=0.25+a;f(0.25)"
     # J() with linear interpolation and periodic boundaries, and cubic and Neumann, 500 pixels
     # below the image: the Source values; cubic and Dirichlet, half a pixel right: zero, except in
-    # the top 76 rows (cimg-ij-boundary.sh; without it, a segmentation fault)
+    # the top 76 rows (GreycLab/CImg#498; without the fix, a segmentation fault)
     "CImgExpression J periodic|net.sf.cimg.CImgExpression|filter|float|mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=J(0,-500,0,1,2)"
     "CImgExpression J Neumann|net.sf.cimg.CImgExpression|filter|float|mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=J(0,-500,0,2,1)"
     "CImgExpression J Dirichlet|net.sf.cimg.CImgExpression|filter|float|mean=0.033,0.066,0.099,0.132||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=J(0.5,-500,0,2,0)"
     # symmetric_eigen() on the rank-deficient structure tensors of flat images and ramps
-    # (cimg-symmetric-eigen.sh: NaN eigenvectors when the compiler contracts to FMAs): no NaN
+    # (GreycLab/gmic#221: NaN eigenvectors when the compiler contracts to FMAs): no NaN
     # output pixels (the float outputs are checked for NaN)
     "CImgSmooth flat|net.sf.cimg.CImgSmooth|filter|float|mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none"
     "CImgSmooth ramp|net.sf.cimg.CImgSmooth|filter|float|mean=0.5,0.5,0.5,0.5+nonconst||-i Source=ramp -i Mask=none"

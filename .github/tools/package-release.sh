@@ -234,8 +234,9 @@ notice_block() {
 }
 
 # The CeCILL-C licence of CImg, in English: CImg/Licence_CeCILL-C_V1-en.txt, a copy of
-# https://github.com/GreycLab/CImg/blob/81f0dd58ac6a178e8d2d20153827af76fe65357a/Licence_CeCILL-C_V1-en.txt
-# (CIMGVERSION of CImg/CImgVersion.mk on 2026-11-19; git blob 2e9ffbaca595a36d06e5f3adbf2e2bb776529494),
+# https://github.com/GreycLab/CImg/blob/1a9fef439d17b73d9af8d8e59b65df9c989fde7a/Licence_CeCILL-C_V1-en.txt
+# (CIMGVERSION of CImg/CImgVersion.mk, CImg 4.0.8, the same as in 4.0.7; git blob
+# 2e9ffbaca595a36d06e5f3adbf2e2bb776529494),
 # taken from the checkout of this script and checked against this SHA256.
 cecill_c=$(dirname "$0")/../../CImg/Licence_CeCILL-C_V1-en.txt
 cecill_c_sha256=e134e750de47bfa3119e74a10920774d00a87e361ec6da25463ef1fca97b9261

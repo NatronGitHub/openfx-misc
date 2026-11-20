@@ -25,8 +25,9 @@ endif
 endif
 endif
 ifeq ($(FFT),pocketfft)
-# pocketfft (BSD-3-Clause), header-only, multithreaded (std::thread) except on Windows:
-# patches/cimg-pocketfft.sh.
+# pocketfft (BSD-3-Clause), header-only, multithreaded (std::thread) except on Windows: CImg's
+# cimg_use_pocketfft (CImg >= 4.0.8, GreycLab/CImg#497), which includes pocketfft_hdronly.h, next to
+# CImg.h. With cimg_use_fftw3 too, CImg uses FFTW.
 # Its licence asks for its notice in binary distributions: Licence_pocketfft.txt, in the bundle.
 FFT_CXXFLAGS = -Dcimg_use_pocketfft
 # Windows (MinGW): single-threaded pocketfft, as openfx-gmic (NatronGitHub/openfx-gmic#94). Its
@@ -47,8 +48,8 @@ CXXFLAGS += $(FFT_CXXFLAGS)
 LINKFLAGS += $(FFT_LINKFLAGS)
 RESOURCES += $(FFT_RESOURCES)
 
-# LICENSE and FFT change the compiled code (fftw3 and pow2 use the same CImg.h) and the bundled
-# files: when they change, rebuild the objects and the bundle.
+# LICENSE and FFT change the compiled code (pocketfft, pow2 and fftw3 all use the same CImg.h, with
+# other macros) and the bundled files: when they change, rebuild the objects and the bundle.
 FFT_BUILD_KEY = LICENSE=$(LICENSE) FFT=$(FFT)
 $(OBJECTPATH)/build.fft: FORCE
 	@mkdir -p $(OBJECTPATH)

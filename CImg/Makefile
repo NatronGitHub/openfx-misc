@@ -168,25 +168,29 @@ SHA256SUM = $(shell command -v sha256sum >/dev/null 2>&1 && echo sha256sum || ec
 .PHONY: sources
 sources: CImg.h $(FFT_HEADERS) $(FFT_RESOURCES)
 
-# CImg.h, patched with the scripts of openfx-gmic (see CImgVersion.mk): CIMG_PATCHES, then
-# CIMG_PATCHES_POCKETFFT with FFT=pocketfft, in this order. CImg.h.version (also written by
-# CMakeLists.txt, in the same format) records CIMGVERSION, CIMG_PATCHES_FROM and the applied
-# patches: CImg.h is downloaded and patched again when they change, or when a patch script changes.
+# CImg.h, patched with the scripts of openfx-gmic (see CImgVersion.mk): CIMG_PATCHES, in this
+# order. It is the same for every FFT: CImg 4.0.8 has pocketfft (cimg_use_pocketfft) itself, and
+# includes pocketfft_hdronly.h, next to it, only when FFT=pocketfft defines that macro.
+# CImg.h.version (also written by CMakeLists.txt, in the same format) records CIMGVERSION,
+# CIMG_PATCHES_FROM and the patches: CImg.h is downloaded and patched again when they change, or
+# when a patch script changes.
+# The download is checked against CIMG_SHA256 (CImgVersion.mk) before it is patched.
 # The header is patched in a temporary directory (the scripts want a file named CImg.h), and only
 # replaces CImg.h once all the patches are applied: if the download or a patch fails, there is no
 # CImg.h, and make fails.
-CIMG_APPLIED_PATCHES = $(CIMG_PATCHES)
-ifeq ($(FFT),pocketfft)
-CIMG_APPLIED_PATCHES += $(CIMG_PATCHES_POCKETFFT)
-endif
-CIMG_STAMP = $(strip $(CIMGVERSION) $(CIMG_PATCHES_FROM) $(CIMG_APPLIED_PATCHES))
+CIMG_STAMP = $(strip $(CIMGVERSION) $(CIMG_PATCHES_FROM) $(CIMG_PATCHES))
 CImg.h.version: FORCE
 	@echo '$(CIMG_STAMP)' | cmp -s - $@ || echo '$(CIMG_STAMP)' > $@
 
-CImg.h: CImg.h.version $(CIMG_APPLIED_PATCHES) Inpaint/inpaint.h
+CImg.h: CImg.h.version $(CIMG_PATCHES) Inpaint/inpaint.h
 	@rm -rf $@ $@.tmp && mkdir $@.tmp
 	$(CURL) -o $@.tmp/CImg.h https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/CImg.h || { rm -rf $@.tmp; exit 1; }
-	@for p in $(CIMG_APPLIED_PATCHES); do \
+	@sum=`$(SHA256SUM) $@.tmp/CImg.h | cut -d' ' -f1`; \
+	if [ "$$sum" != "$(CIMG_SHA256)" ]; then \
+	  echo "Error: checksum mismatch for CImg.h $(CIMGVERSION): got $$sum, expected CIMG_SHA256=$(CIMG_SHA256) (CImgVersion.mk)"; \
+	  rm -rf $@.tmp; exit 1; \
+	fi
+	@for p in $(CIMG_PATCHES); do \
 	  sh $$p $@.tmp/CImg.h || { echo "Error: $$p failed on CImg.h $(CIMGVERSION)"; rm -rf $@.tmp; exit 1; }; \
 	done
 	mv $@.tmp/CImg.h $@ && rmdir $@.tmp
@@ -197,8 +201,8 @@ Inpaint/inpaint.h: $(TOP_SRCDIR)/CImg/CImgVersion.mk
 	patch -p0 -d. < Inpaint/inpaint.h.patch || { rm -f $@; exit 1; }
 
 # pocketfft (FFT=pocketfft), at POCKETFFTCOMMIT, checked against POCKETFFT_SHA256 (as in openfx-gmic's
-# Makefile), next to CImg.h, which includes it. Downloaded again when the file's checksum differs
-# (e.g. after a POCKETFFTCOMMIT change).
+# Makefile), next to CImg.h, which includes it with cimg_use_pocketfft. Downloaded again when the
+# file's checksum differs (e.g. after a POCKETFFTCOMMIT change).
 POCKETFFT_URL = https://raw.githubusercontent.com/mreineck/pocketfft/$(POCKETFFTCOMMIT)/pocketfft_hdronly.h
 pocketfft_hdronly.h: FORCE
 	@if [ -f $@ ] && [ "`$(SHA256SUM) $@ | cut -d' ' -f1`" = "$(POCKETFFT_SHA256)" ]; then exit 0; fi; \

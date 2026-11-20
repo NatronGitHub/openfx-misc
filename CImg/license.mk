@@ -9,9 +9,9 @@
 # FFT: the library that computes the Fourier transforms of ConvolveCImg, ZDefocusCImg
 # and the fft() of ExpressionCImg:
 # - pocketfft (default): pocketfft (BSD-3-Clause, header-only, multithreaded, downloaded at
-#   POCKETFFTCOMMIT, see CImgVersion.mk), through patches/cimg-pocketfft.sh (applied only for
-#   FFT=pocketfft). Any size, no dependency, no global state shared with other plug-ins, and faster
-#   than FFTW in our benchmarks.
+#   POCKETFFTCOMMIT, see CImgVersion.mk), through CImg's cimg_use_pocketfft (CImg >= 4.0.8). Any
+#   size, no dependency, no global state shared with other plug-ins, and faster than FFTW in our
+#   benchmarks.
 # - fftw3: FFTW (GPL), multithreaded, opt-in, GPL builds only. FFTW is a shared library with a
 #   single global planner, which other plug-ins of the host (e.g. openfx-gmic) also use: see
 #   cimgFFTLoad() in CImgFFTConvolve.h.

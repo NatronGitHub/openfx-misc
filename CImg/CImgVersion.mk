@@ -23,34 +23,39 @@
 # commit c0becdf881b0f3e2445975cac01c2422170d1fd9 is CImg 2.9.7
 # commit b33dcc8f9f1acf1f276ded92c04f8231f6c23fcd is CImg 2.9.9
 # commit 81f0dd58ac6a178e8d2d20153827af76fe65357a is CImg 4.0.7 (tag v.4.0.7)
-CIMGVERSION=81f0dd58ac6a178e8d2d20153827af76fe65357a
+# commit 1a9fef439d17b73d9af8d8e59b65df9c989fde7a is CImg 4.0.8 (tag v.4.0.8; its CImg.h is the
+#   one of gmic_4.0.8.tar.gz, git blob 5230131435f958221f15d703e0dbfc9871e07965)
+CIMGVERSION=1a9fef439d17b73d9af8d8e59b65df9c989fde7a
+# sha256 of the CImg.h of CIMGVERSION, as downloaded (before the patches): CImg/Makefile and
+# CMakeLists.txt check it, and fail before patching on a mismatch. Update it with CIMGVERSION.
+CIMG_SHA256=adf13c3e991f6812c2db484ff07aa614421830117924590d3def10e8ac6a485b
 
 # CImg.h is patched with the same scripts as NatronGitHub/openfx-gmic, which uses the same CImg
 # version (the CImg.h of its GMICVER tarball), so that both get the same CImg code: the scripts in
 # CImg/patches/ are verbatim copies of openfx-gmic's patches/cimg-*.sh at the openfx-gmic commit
 # CIMG_PATCHES_FROM. openfx-gmic is the source of truth: fix or update the scripts there, then copy
 # them again and update CIMG_PATCHES_FROM (.github/tools/check-cimg-patches.sh, run nightly, reports
-# a drift). They are applied in this order, as in openfx-gmic's Makefile: CIMG_PATCHES, then
-# CIMG_PATCHES_POCKETFFT with FFT=pocketfft (see license.mk). Changing CIMGVERSION,
-# CIMG_PATCHES_FROM or FFT downloads and patches CImg.h again (CImg.h.version records them).
-# - cimg-math-macro-overread.sh: the math parser read past the end of a macro body ending with an
-#   argument, e.g. "f(a)=1+a" (GreycLab/CImg#496, fixed upstream after 4.0.7)
+# a drift). They are applied in the order of CIMG_PATCHES, as in openfx-gmic's Makefile, whatever
+# the FFT: CImg.h is the same for every FFT. Changing CIMGVERSION, CIMG_PATCHES_FROM or the patches
+# downloads and patches CImg.h again (CImg.h.version records them).
 # - cimg-omp-rand.sh: the random numbers of rand(), noise() and the math parser in OpenMP loops
 #   do not depend on thread scheduling (NatronGitHub/openfx-gmic#44, local fix)
-# - cimg-ij-boundary.sh: i(), j(), I() and J() read out of bounds with linear or cubic
-#   interpolation when an integer coordinate is outside the image (GreycLab/CImg#498, backport of
-#   GreycLab/CImg 41e121c)
-# - cimg-symmetric-eigen.sh: NaN eigenvectors of rank-deficient symmetric matrices
-#   (GreycLab/gmic#221, backport of GreycLab/CImg e3de7b0)
-# - cimg-fftw-no-cleanup.sh: with FFTW (FFT=fftw3), CImg's FFTs called fftw_cleanup_threads() after
-#   each FFT, which frees FFTW's process-wide planner while another plug-in of the host (e.g.
-#   openfx-gmic) may be using it (GreycLab/CImg#500); no effect on the pocketfft and pow2 code
-# - cimg-pocketfft.sh: FFTs of any size with pocketfft, when cimg_use_pocketfft is defined
-#   (GreycLab/CImg#497, merged upstream after 4.0.7)
+# - cimg-vvar2.sh: vvar() with two arguments called a NULL function pointer (crash)
+#   (GreycLab/CImg#501)
+# - cimg-vargkth2.sh: vargkth() with two arguments gave 1; it gives 0 again, as in CImg 4.0.7
+#   (GreycLab/CImg#501)
+# - cimg-log1p-peephole.sh: the log(1 + x) -> log1p(x) optimization rewrote the code that computed
+#   a variable, e.g. 'y=1+x;log(y);y' gave log(1 + x) (GreycLab/CImg#502)
+# - cimg-abs-peephole.sh: the same for abs(maxabs()) -> absmaxabs() (and minabs), e.g.
+#   'abs(m=maxabs(a,b,c));m' gave abs(maxabs(a,b,c)) for m (GreycLab/CImg#502, also in CImg 4.0.7)
+# CImg 4.0.8 has the fixes of the other scripts that 4.0.7 needed (removed in openfx-gmic#98): the
+# math parser's macro overread (GreycLab/CImg#496), i()/j()/I()/J() out of bounds
+# (GreycLab/CImg#498), the NaN eigenvectors of symmetric_eigen() (GreycLab/gmic#221), FFTW's
+# fftw_cleanup_threads() after each FFT (now only at unload, see GreycLab/CImg#500 and
+# CImgFFTConvolve.h), and pocketfft itself (cimg_use_pocketfft, GreycLab/CImg#497).
 # CMakeLists.txt reads these variables: keep each on one line, as a plain "NAME=value" assignment.
-CIMG_PATCHES_FROM=cbc444b41c29c4b8c283632fd303a41fe91931ed
-CIMG_PATCHES=patches/cimg-math-macro-overread.sh patches/cimg-omp-rand.sh patches/cimg-ij-boundary.sh patches/cimg-symmetric-eigen.sh patches/cimg-fftw-no-cleanup.sh
-CIMG_PATCHES_POCKETFFT=patches/cimg-pocketfft.sh
+CIMG_PATCHES_FROM=ee55673f751bc20e953109e9b9648bd533e525b1
+CIMG_PATCHES=patches/cimg-omp-rand.sh patches/cimg-vvar2.sh patches/cimg-vargkth2.sh patches/cimg-log1p-peephole.sh patches/cimg-abs-peephole.sh
 
 # pocketfft (FFT=pocketfft), C++ header-only version, at a pinned commit of its 'cpp' branch: the
 # same commit and checksum as openfx-gmic's Makefile
