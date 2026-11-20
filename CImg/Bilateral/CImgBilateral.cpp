@@ -370,7 +370,7 @@ void
 CImgBilateralGuidedPluginFactory<majorVersion>::describe(ImageEffectDescriptor& desc)
 {
     if (majorVersion < kPluginGuidedVersionMajor) {
-        desc.setIsDeprecated(true);
+        desc.setIsObsolete(true);
     }
     // basic labels
     desc.setLabel(kPluginGuidedName);

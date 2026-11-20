@@ -766,7 +766,7 @@ HueCorrectPluginFactory::describe(ImageEffectDescriptor &desc)
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
-    desc.setIsDeprecated(true); // replaced by HueCorrect 2.0
+    desc.setIsObsolete(true); // replaced by HueCorrect 2.0
 
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextPaint);

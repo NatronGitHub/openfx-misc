@@ -954,7 +954,7 @@ TrackerPMPluginFactory::describe(ImageEffectDescriptor &desc)
     const ImageEffectHostDescription& host = *getImageEffectHostDescription();
     if ( host.isNatron &&
          ( (host.versionMajor > 2) || ( (host.versionMajor == 2) && (host.versionMinor >= 1) ) ) ) {
-        desc.setIsDeprecated(true);
+        desc.setIsObsolete(true);
     }
 #endif
 }

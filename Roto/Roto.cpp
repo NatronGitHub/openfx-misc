@@ -632,7 +632,7 @@ RotoPluginFactory::describe(ImageEffectDescriptor &desc)
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(ePixelComponentNone);
     if (getImageEffectHostDescription()->isNatron) {
-        desc.setIsDeprecated(true); // prefer Natron's internal Roto
+        desc.setIsObsolete(true); // prefer Natron's internal Roto
     }
 #endif
 }

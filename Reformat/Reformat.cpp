@@ -768,7 +768,7 @@ template<unsigned int majorVersion>
 void
 ReformatPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
-    desc.setIsDeprecated(majorVersion <= 1);
+    desc.setIsObsolete(majorVersion <= 1);
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);

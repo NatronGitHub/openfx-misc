@@ -3551,7 +3551,7 @@ DistortionPluginFactory<plugin, majorVersion>::describe(ImageEffectDescriptor &d
     }
     if ( (plugin == eDistortionPluginLensDistortion && this->getMajorVersion() < kPluginVersionLensDistortionMajor) ||
          (plugin != eDistortionPluginLensDistortion && this->getMajorVersion() < kPluginVersionMajor) ) {
-        desc.setIsDeprecated(true);
+        desc.setIsObsolete(true);
     }
 #ifdef OFX_EXTENSIONS_NATRON
     if (getImageEffectHostDescription()->isNatron) {

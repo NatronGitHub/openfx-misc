@@ -1704,7 +1704,7 @@ CornerPinPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 
     Transform3x3Describe(desc, false);
     if (majorVersion < kPluginVersionMajor) {
-        desc.setIsDeprecated(true);
+        desc.setIsObsolete(true);
     }
 
     ofxsSetOverlayInteractDescriptorV2(desc, new CornerPinOverlayDescriptor); // V2, and V1 with OpenGL (hasOpenGLDraw)
@@ -1753,7 +1753,7 @@ CornerPinMaskedPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc
 
     Transform3x3Describe(desc, true);
     if (majorVersion < kPluginVersionMajor) {
-        desc.setIsDeprecated(true);
+        desc.setIsObsolete(true);
     }
 
     ofxsSetOverlayInteractDescriptorV2(desc, new CornerPinOverlayDescriptor); // V2, and V1 with OpenGL (hasOpenGLDraw)

@@ -1553,9 +1553,9 @@ MergePluginFactory<majorVersion,plugin>::describe(ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
 
-    // Deprecate old versions of this plugin.
+    // Old versions of this plugin are obsolete.
     if (this->getMajorVersion() < kPluginVersionMajor) {
-        desc.setIsDeprecated(true);
+        desc.setIsObsolete(true);
     }
 } // >::describe
 
