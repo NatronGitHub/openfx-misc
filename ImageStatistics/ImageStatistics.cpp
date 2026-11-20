@@ -92,7 +92,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 2 // Increment this when you have fixed a bug or made it faster.
 // 1.2: the S.Dev. of fewer than 2 pixels, and the skewness and kurtosis of fewer than 3 and 4 pixels,
-//      are 0 instead of infinity (an infinite parameter value gives NaN when interpolated, NaN audit)
+//      are 0 instead of infinity (an infinite parameter value gives NaN when interpolated, NaN audit);
+//      a NULL Source image (disconnected input) renders black instead of crashing (SupportExt copyPixels)
 
 // With Auto Update, render() writes the statistics params (setValueAtTime), so it must not
 // run concurrently on the same instance (on several tiles or frames): render whole images
@@ -2120,7 +2121,7 @@ private:
 };
 
 class ImageStatisticsOverlayDescriptor
-    : public DefaultEffectOverlayDescriptor<ImageStatisticsOverlayDescriptor, ImageStatisticsInteract>
+    : public DefaultEffectOverlayDescriptorV2<ImageStatisticsOverlayDescriptor, ImageStatisticsInteract>
 {
 };
 
@@ -2161,7 +2162,7 @@ ImageStatisticsPluginFactory::describe(ImageEffectDescriptor &desc)
     // and scale the transform appropriately.
     // All other functions are usually in canonical coordinates.
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
-    desc.setOverlayInteractDescriptor(new ImageStatisticsOverlayDescriptor);
+    ofxsSetOverlayInteractDescriptorV2(desc, new ImageStatisticsOverlayDescriptor);
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(ePixelComponentNone);
 #endif

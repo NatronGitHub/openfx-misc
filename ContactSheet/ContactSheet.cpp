@@ -596,6 +596,7 @@ public:
     , _selectionInput(NULL)
     , _selectionFrame(NULL)
     , _hiDPI(NULL)
+    , _drawMode( OFX::ofxsOverlayDrawModeForNewInteract() )
     {
         _dstClip = effect->fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA) );
@@ -641,6 +642,7 @@ private:
     IntParam* _selectionInput;
     IntParam* _selectionFrame;
     BooleanParam* _hiDPI;
+    OFX::OverlayDrawModeEnum _drawMode; // set by the descriptor that created the interact, see ofxsOverlayDraw.h
 };
 
 // draw the interact
@@ -685,33 +687,45 @@ ContactSheetInteract::draw(const OFX::DrawArgs &args)
     double cellw = (rod.x2 - rod.x1) / columns;
     double cellh = (rod.y2 - rod.y1) / rows;
 
+    // all drawing goes through d: OpenGL in V1 draws, the DrawSuite in V2 draws
+    OverlayDraw d(args, _drawMode);
+    if ( !d.canDraw() ) {
+        return false; // V2 draw without a draw context, or V1 draw without OpenGL
+    }
+
     bool hiDPI = _hiDPI ? _hiDPI->getValue() : false;
     double screenPixelRatio = hiDPI ? 2 : 1;
 #ifdef OFX_EXTENSIONS_NATRON
     screenPixelRatio *= OverlayDraw::hostScreenPixelRatio(args); // 1 if the host does not set it
     //hiDPI |= args.screenPixelRatio > 1;
 #endif
+    screenPixelRatio = d.overlayScreenPixelRatio(screenPixelRatio); // DrawSuite: 1
     //TextRenderer::Font font = hiDPI ? TextRenderer::FONT_TIMES_ROMAN_24 : TextRenderer::FONT_HELVETICA_12;
 
     OfxRGBColourD color = { 0.8, 0.8, 0.8 };
     getSuggestedColour(color);
     //const OfxPointD& pscale = args.pixelScale;
     GLdouble projection[16];
-    glGetDoublev( GL_PROJECTION_MATRIX, projection);
+    d.glGetDoublev( GL_PROJECTION_MATRIX, projection);
     GLint viewport[4];
-    glGetIntegerv(GL_VIEWPORT, viewport);
+    d.glGetIntegerv(GL_VIEWPORT, viewport);
     OfxPointD shadow; // how much to translate GL_PROJECTION to get exactly one pixel on screen
-    shadow.x = 2. / (projection[0] * viewport[2]);
-    shadow.y = 2. / (projection[5] * viewport[3]);
+    // 0 for a degenerate viewport or projection (inf, then inf - inf = NaN)
+    {
+        const double denx = projection[0] * viewport[2];
+        const double deny = projection[5] * viewport[3];
+        shadow.x = (denx != 0.) ? 2. / denx : 0.;
+        shadow.y = (deny != 0.) ? 2. / deny : 0.;
+    }
 
     //glPushAttrib(GL_ALL_ATTRIB_BITS); // caller is responsible for protecting attribs
-    glDisable(GL_LINE_STIPPLE);
-    glEnable(GL_LINE_SMOOTH);
-    glDisable(GL_POINT_SMOOTH);
-    glEnable(GL_BLEND);
-    glHint(GL_LINE_SMOOTH_HINT, GL_DONT_CARE);
-    glLineWidth(3.f * screenPixelRatio);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    d.glDisable(GL_LINE_STIPPLE);
+    d.glEnable(GL_LINE_SMOOTH);
+    d.glDisable(GL_POINT_SMOOTH);
+    d.glEnable(GL_BLEND);
+    d.glHint(GL_LINE_SMOOTH_HINT, GL_DONT_CARE);
+    d.glLineWidth(3.f * (float)screenPixelRatio);
+    d.glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     double x1 = rod.x1 + cellw * c;
     double x2 = rod.x1 + cellw * (c + 1);
@@ -721,22 +735,25 @@ ContactSheetInteract::draw(const OFX::DrawArgs &args)
     // Draw everything twice
     // l = 0: shadow
     // l = 1: drawing
-    for (int l = 0; l < 2; ++l) {
+    // with the DrawSuite, no shadow (the host's job): only the drawing pass
+    for (int l = d.usesDrawSuite() ? 1 : 0; l < 2; ++l) {
         // shadow (uses GL_PROJECTION)
-        glMatrixMode(GL_PROJECTION);
-        int direction = (l == 0) ? 1 : -1;
-        // translate (1,-1) pixels
-        glTranslated(direction * shadow.x, -direction * shadow.y, 0);
-        glMatrixMode(GL_MODELVIEW); // Modelview should be used on Nuke
+        if ( !d.usesDrawSuite() ) {
+            d.glMatrixMode(GL_PROJECTION);
+            int direction = (l == 0) ? 1 : -1;
+            // translate (1,-1) pixels
+            d.glTranslated(direction * shadow.x, -direction * shadow.y, 0);
+            d.glMatrixMode(GL_MODELVIEW); // Modelview should be used on Nuke
+        }
 
-        glColor3f( (float)color.r * l, (float)color.g * l, (float)color.b * l );
+        d.glColor3f( (float)color.r * l, (float)color.g * l, (float)color.b * l );
 
-        glBegin(GL_LINE_LOOP);
-        glVertex2d(x1, y1);
-        glVertex2d(x1, y2);
-        glVertex2d(x2, y2);
-        glVertex2d(x2, y1);
-        glEnd();
+        d.glBegin(GL_LINE_LOOP);
+        d.glVertex2d(x1, y1);
+        d.glVertex2d(x1, y2);
+        d.glVertex2d(x2, y2);
+        d.glVertex2d(x2, y1);
+        d.glEnd();
     }
     //glPopAttrib();
     
@@ -835,7 +852,8 @@ ContactSheetInteract::penMotion(const OFX::PenArgs &args)
 mDeclarePluginFactory(ContactSheetPluginFactory, {}, {});
 
 #ifdef SELECTION
-class ContactSheetOverlayDescriptor : public DefaultEffectOverlayDescriptor<ContactSheetOverlayDescriptor, ContactSheetInteract> {};
+// draws through OverlayDraw: the DrawSuite in V2 draws, OpenGL (with shadows) in V1 draws
+class ContactSheetOverlayDescriptor : public DefaultEffectOverlayDescriptorV2<ContactSheetOverlayDescriptor, ContactSheetInteract> {};
 #endif
 
 void
@@ -883,7 +901,7 @@ ContactSheetPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 #endif
 
 #ifdef SELECTION
-    desc.setOverlayInteractDescriptor( new ContactSheetOverlayDescriptor);
+    ofxsSetOverlayInteractDescriptorV2(desc, new ContactSheetOverlayDescriptor); // V2, and V1 with OpenGL (hasOpenGLDraw)
 #endif
 }
 

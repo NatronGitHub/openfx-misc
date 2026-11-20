@@ -46,6 +46,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Merge"
 #define kPluginDescription "Weighted average of two inputs."
 #define kPluginIdentifier "net.sf.openfx.DissolvePlugin"
+// History:
+// version 1.0: initial version
+// version 1.1: (the deprecated version 1) a NULL Source image (disconnected input; render is called
+//              although isIdentity returned true, e.g. by hostDemo) renders black instead of crashing
+//              (SupportExt copyPixels)
+// version 2.0: isIdentity returns the 'from' input outside the mask, as render does; a NULL Source
+//              image renders black instead of crashing
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -655,7 +662,7 @@ DissolvePluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
 // the plugin UID in a static shared by all objects of the same class.
 static DissolvePluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 // version 1: isIdentity returns input 0 outside the mask (deprecated, kept so old projects render the same)
-static DissolvePluginFactory<1> p1(kPluginIdentifier, 0);
+static DissolvePluginFactory<1> p1(kPluginIdentifier, 1); // 1.1: NULL Source renders black (see History)
 mRegisterPluginFactoryInstance(p)
 mRegisterPluginFactoryInstance(p1)
 

@@ -384,7 +384,7 @@ ConstantPluginFactory<solid>::describe(ImageEffectDescriptor &desc)
     desc.setChannelSelector(solid ? ePixelComponentNone : ePixelComponentRGBA);
 #endif
 
-    generatorDescribe(desc);
+    generatorDescribe(desc, eGeneratorOverlayDrawSuite); // V2 (DrawSuite) and V1 (OpenGL)
 }
 
 template<bool solid>

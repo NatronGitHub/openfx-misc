@@ -3547,7 +3547,7 @@ DistortionPluginFactory<plugin, majorVersion>::describe(ImageEffectDescriptor &d
     }
 #endif
     if (plugin == eDistortionPluginLensDistortion) {
-        desc.setOverlayInteractDescriptor(new GeneratorOverlayDescriptor);
+        ofxsSetOverlayInteractDescriptorV2(desc, new GeneratorOverlayDescriptorV2);
     }
     if ( (plugin == eDistortionPluginLensDistortion && this->getMajorVersion() < kPluginVersionLensDistortionMajor) ||
          (plugin != eDistortionPluginLensDistortion && this->getMajorVersion() < kPluginVersionMajor) ) {

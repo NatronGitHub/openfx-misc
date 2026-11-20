@@ -452,6 +452,7 @@ public:
     , _colOrder(NULL)
     , _showLayerNames(NULL)
     , _hiDPI(NULL)
+    , _drawMode( OFX::ofxsOverlayDrawModeForNewInteract() )
     {
         _srcClip = effect->fetchClip(kOfxImageEffectSimpleSourceClipName);
         _dstClip = effect->fetchClip(kOfxImageEffectOutputClipName);
@@ -487,6 +488,7 @@ private:
     ChoiceParam* _colOrder;
     BooleanParam* _showLayerNames;
     BooleanParam* _hiDPI;
+    OFX::OverlayDrawModeEnum _drawMode; // set by the descriptor that created the interact, see ofxsOverlayDraw.h
 
 };
 
@@ -554,6 +556,12 @@ LayerContactSheetInteract::draw(const OFX::DrawArgs &args)
         rows = (int)std::ceil( n / (double) columns);
     }
 
+    // all drawing goes through d: OpenGL in V1 draws, the DrawSuite in V2 draws
+    OverlayDraw d(args, _drawMode);
+    if ( !d.canDraw() ) {
+        return false; // V2 draw without a draw context, or V1 draw without OpenGL
+    }
+
     bool hiDPI = _hiDPI ? _hiDPI->getValue() : false;
     //double screenPixelRatio = hiDPI ? 2 : 1;
 #ifdef OFX_EXTENSIONS_NATRON
@@ -566,12 +574,17 @@ LayerContactSheetInteract::draw(const OFX::DrawArgs &args)
     getSuggestedColour(color);
     //const OfxPointD& pscale = args.pixelScale;
     GLdouble projection[16];
-    glGetDoublev( GL_PROJECTION_MATRIX, projection);
+    d.glGetDoublev( GL_PROJECTION_MATRIX, projection);
     GLint viewport[4];
-    glGetIntegerv(GL_VIEWPORT, viewport);
+    d.glGetIntegerv(GL_VIEWPORT, viewport);
     OfxPointD shadow; // how much to translate GL_PROJECTION to get exactly one pixel on screen
-    shadow.x = 2. / (projection[0] * viewport[2]);
-    shadow.y = 2. / (projection[5] * viewport[3]);
+    // 0 for a degenerate viewport or projection (inf, then inf - inf = NaN)
+    {
+        const double denx = projection[0] * viewport[2];
+        const double deny = projection[5] * viewport[3];
+        shadow.x = (denx != 0.) ? 2. / denx : 0.;
+        shadow.y = (deny != 0.) ? 2. / deny : 0.;
+    }
 
     for (std::size_t layer = 0; layer < planes.size(); ++layer) {
         std::string name = planes[layer];
@@ -610,17 +623,20 @@ LayerContactSheetInteract::draw(const OFX::DrawArgs &args)
         // Draw everything twice
         // l = 0: shadow
         // l = 1: drawing
-        for (int l = 0; l < 2; ++l) {
+        // with the DrawSuite, no shadow (the host's job): only the drawing pass
+        for (int l = d.usesDrawSuite() ? 1 : 0; l < 2; ++l) {
             // shadow (uses GL_PROJECTION)
-            glMatrixMode(GL_PROJECTION);
-            int direction = (l == 0) ? 1 : -1;
-            // translate (1,-1) pixels
-            glTranslated(direction * shadow.x, -direction * shadow.y, 0);
-            glMatrixMode(GL_MODELVIEW); // Modelview should be used on Nuke
+            if ( !d.usesDrawSuite() ) {
+                d.glMatrixMode(GL_PROJECTION);
+                int direction = (l == 0) ? 1 : -1;
+                // translate (1,-1) pixels
+                d.glTranslated(direction * shadow.x, -direction * shadow.y, 0);
+                d.glMatrixMode(GL_MODELVIEW); // Modelview should be used on Nuke
+            }
 
-            glColor3f(color.r * l, color.g * l, color.b * l);
+            d.glColor3f( (float)color.r * l, (float)color.g * l, (float)color.b * l );
 
-            TextRenderer::bitmapString(imageRoD.x1, imageRoD.y1, name.c_str(), font);
+            d.bitmapString(imageRoD.x1, imageRoD.y1, name.c_str(), font); // DrawSuite: the host's font
         }
     }
 
@@ -633,7 +649,8 @@ LayerContactSheetInteract::draw(const OFX::DrawArgs &args)
 
 mDeclarePluginFactory(LayerContactSheetPluginFactory, {}, {});
 
-class LayerContactSheetOverlayDescriptor : public DefaultEffectOverlayDescriptor<LayerContactSheetOverlayDescriptor, LayerContactSheetInteract> {};
+// draws through OverlayDraw: the DrawSuite in V2 draws, OpenGL (with shadows) in V1 draws
+class LayerContactSheetOverlayDescriptor : public DefaultEffectOverlayDescriptorV2<LayerContactSheetOverlayDescriptor, LayerContactSheetInteract> {};
 
 void
 LayerContactSheetPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
@@ -682,7 +699,7 @@ LayerContactSheetPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setChannelSelector(ePixelComponentNone);
 #endif
 
-    desc.setOverlayInteractDescriptor( new LayerContactSheetOverlayDescriptor);
+    ofxsSetOverlayInteractDescriptorV2(desc, new LayerContactSheetOverlayDescriptor); // V2, and V1 with OpenGL (hasOpenGLDraw)
 }
 
 void

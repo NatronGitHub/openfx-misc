@@ -21,6 +21,9 @@
   <ItemGroup>
     <ClInclude Include="..\openfx\include\ofxCore.h" />
     <ClInclude Include="..\openfx\include\ofxDialog.h" />
+    <ClInclude Include="..\openfx\include\ofxDrawSuite.h" />
+    <ClInclude Include="..\openfx\include\ofxDrawSuiteOpenGL.h" />
+    <ClInclude Include="..\openfx\include\ofxFont5x7.h" />
     <ClInclude Include="..\openfx\include\ofxImageEffect.h" />
     <ClInclude Include="..\openfx\include\ofxInteract.h" />
     <ClInclude Include="..\openfx\include\ofxKeySyms.h" />
@@ -44,7 +47,6 @@
     <ClInclude Include="..\openfx\Support\include\ofxsMessage.h" />
     <ClInclude Include="..\openfx\Support\include\ofxsMultiThread.h" />
     <ClInclude Include="..\openfx\Support\include\ofxsParam.h" />
-    <ClInclude Include="..\openfx\Support\Library\ofxsFont5x7.h" />
     <ClInclude Include="..\openfx\Support\Library\ofxsSupportPrivate.h" />
     <ClInclude Include="..\SupportExt\ofxsCopier.h" />
     <ClInclude Include="..\SupportExt\ofxsFilter.h" />
@@ -58,6 +60,7 @@
     <ClInclude Include="..\SupportExt\ofxsMerging.h" />
     <ClInclude Include="..\SupportExt\ofxsOGLFontUtils.h" />
     <ClInclude Include="..\SupportExt\ofxsOGLTextRenderer.h" />
+    <ClInclude Include="..\SupportExt\ofxsOverlayDraw.h" />
     <ClInclude Include="..\SupportExt\ofxsPixelProcessor.h" />
     <ClInclude Include="..\SupportExt\ofxsPositionInteract.h" />
     <ClInclude Include="..\SupportExt\ofxsRectangleInteract.h" />

@@ -617,7 +617,7 @@ CopyRectanglePluginFactory::describe(ImageEffectDescriptor &desc)
     // and scale the transform appropriately.
     // All other functions are usually in canonical coordinates.
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
-    desc.setOverlayInteractDescriptor(new RectangleOverlayDescriptor);
+    ofxsSetOverlayInteractDescriptorV2(desc, new RectangleOverlayDescriptorV2);
 
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(ePixelComponentNone); // we have our own channel selector

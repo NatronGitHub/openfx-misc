@@ -53,7 +53,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 2.0: during a cross-dissolve, weight the second clip by its own factor (including fade in/out),
-//              instead of 1 minus the weight of the first clip, and include its RoD in the output RoD
+//              instead of 1 minus the weight of the first clip, and include its RoD in the output RoD;
+//              a NULL Source image (disconnected input) renders black instead of crashing (SupportExt copyPixels)
+// version 1.1: (the deprecated version 1) a NULL Source image renders black instead of crashing
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -1138,7 +1140,7 @@ AppendClipPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handl
 
 static AppendClipPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 // version 1: clip1 is weighted by 1-alpha0 during a cross-dissolve
-static AppendClipPluginFactory<1> pv1(kPluginIdentifier, 0);
+static AppendClipPluginFactory<1> pv1(kPluginIdentifier, 1); // 1.1: NULL Source renders black (see History)
 mRegisterPluginFactoryInstance(p)
 mRegisterPluginFactoryInstance(pv1)
 

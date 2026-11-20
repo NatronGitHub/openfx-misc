@@ -1416,6 +1416,7 @@
 		1EEAA6C81BBD3C1F00D397F5 /* ofxsRamp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EEAA6C51BBD3C1F00D397F5 /* ofxsRamp.cpp */; };
 		1EEB29551EF91720008F40BC /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1EEB29561EF91720008F40BC /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
+		006198642620A719F392C5D9 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
 		C402AE474B8EF2C6D70E088D /* ofxsDrawContextOpenGL.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 72BFCB15100A35EF37D1C99C /* ofxsDrawContextOpenGL.cpp */; };
 		1EEB29571EF91720008F40BC /* tinythread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B701E4A3878005C4845 /* tinythread.cpp */; };
 		1EEB295B1EF91720008F40BC /* ofxsThreadSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF77B721E4A3998005C4845 /* ofxsThreadSuite.cpp */; };
@@ -3876,6 +3877,7 @@
 		1E9B5F4E198A51840095C8AA /* ofxsOGLFontUtils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxsOGLFontUtils.h; sourceTree = "<group>"; };
 		1E9B5F4F198A51840095C8AA /* ofxsOGLTextRenderer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsOGLTextRenderer.cpp; sourceTree = "<group>"; };
 		1E9B5F50198A51840095C8AA /* ofxsOGLTextRenderer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxsOGLTextRenderer.h; sourceTree = "<group>"; };
+		B97B660BB2A20787E931BBB6 /* ofxsOverlayDraw.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxsOverlayDraw.h; sourceTree = "<group>"; };
 		1E9B5F51198A51840095C8AA /* ofxsPixelProcessor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxsPixelProcessor.h; sourceTree = "<group>"; };
 		1E9B5F52198A51840095C8AA /* ofxsPositionInteract.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxsPositionInteract.h; sourceTree = "<group>"; };
 		1E9B5F53198A51840095C8AA /* ofxsRectangleInteract.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsRectangleInteract.cpp; sourceTree = "<group>"; };
@@ -4025,6 +4027,9 @@
 		1EC6BC9D1E13C36B00C68CE7 /* DistortionModel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DistortionModel.h; sourceTree = "<group>"; };
 		1EC7C7F818BF4F4C002A246F /* ofxReadWrite.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxReadWrite.h; sourceTree = "<group>"; };
 		1EC7C7F918BF4F85002A246F /* ofxDialog.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ofxDialog.h; path = openfx/include/ofxDialog.h; sourceTree = SOURCE_ROOT; };
+		B5D287E98F46EE1782F0C4F1 /* ofxDrawSuite.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ofxDrawSuite.h; path = openfx/include/ofxDrawSuite.h; sourceTree = SOURCE_ROOT; };
+		5D2C17522ADAB8900A47D746 /* ofxDrawSuiteOpenGL.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ofxDrawSuiteOpenGL.h; path = openfx/include/ofxDrawSuiteOpenGL.h; sourceTree = SOURCE_ROOT; };
+		B0542C10302B60D9BE84410A /* ofxFont5x7.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ofxFont5x7.h; path = openfx/include/ofxFont5x7.h; sourceTree = SOURCE_ROOT; };
 		1EC7C7FA18BF4F85002A246F /* ofxSonyVegas.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ofxSonyVegas.h; path = openfx/include/ofxSonyVegas.h; sourceTree = SOURCE_ROOT; };
 		1ECA4DF51A3F3A6500C5128B /* Ramp.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Ramp.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1ECA4E0E1A3F3ACD00C5128B /* Radial.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Radial.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -5259,6 +5264,9 @@
 				1E58F9321AD6740D00E00CAE /* ofxNatron.h */,
 				1E009D5F17F44D70003071CC /* ofxCore.h */,
 				1EC7C7F918BF4F85002A246F /* ofxDialog.h */,
+				B5D287E98F46EE1782F0C4F1 /* ofxDrawSuite.h */,
+				5D2C17522ADAB8900A47D746 /* ofxDrawSuiteOpenGL.h */,
+				B0542C10302B60D9BE84410A /* ofxFont5x7.h */,
 				1E009D6017F44D70003071CC /* ofxImageEffect.h */,
 				1E009D6117F44D70003071CC /* ofxInteract.h */,
 				1E009D6217F44D70003071CC /* ofxKeySyms.h */,
@@ -5927,6 +5935,7 @@
 				1E5EBA121D4B6ABF0005A5A8 /* ofxsOGLFunctions.h */,
 				1E9B5F4F198A51840095C8AA /* ofxsOGLTextRenderer.cpp */,
 				1E9B5F50198A51840095C8AA /* ofxsOGLTextRenderer.h */,
+				B97B660BB2A20787E931BBB6 /* ofxsOverlayDraw.h */,
 				1E5EBA131D4B6ABF0005A5A8 /* ofxsOGLUtilities.cpp */,
 				1E5EBA141D4B6ABF0005A5A8 /* ofxsOGLUtilities.h */,
 				1E9B5F51198A51840095C8AA /* ofxsPixelProcessor.h */,
@@ -9615,6 +9624,7 @@
 				1EEB296F1EF91774008F40BC /* SpriteSheet.cpp in Sources */,
 				1EEB29551EF91720008F40BC /* ofxsCore.cpp in Sources */,
 				1EEB29561EF91720008F40BC /* ofxsImageEffect.cpp in Sources */,
+				006198642620A719F392C5D9 /* ofxsInteract.cpp in Sources */,
 				C402AE474B8EF2C6D70E088D /* ofxsDrawContextOpenGL.cpp in Sources */,
 				1EEB29571EF91720008F40BC /* tinythread.cpp in Sources */,
 				1EEB295B1EF91720008F40BC /* ofxsThreadSuite.cpp in Sources */,

@@ -405,7 +405,7 @@ ReConvergePluginFactory::describe(ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
 
-    desc.setOverlayInteractDescriptor(new PositionOverlayDescriptor<ConvergePointParam>);
+    ofxsSetOverlayInteractDescriptorV2(desc, new PositionOverlayDescriptorV2<ConvergePointParam>);
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(ePixelComponentNone);
 #endif

@@ -335,7 +335,7 @@ PositionPluginFactory::describe(ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
 
-    desc.setOverlayInteractDescriptor(new PositionOverlayDescriptor<PositionInteractParam>);
+    ofxsSetOverlayInteractDescriptorV2(desc, new PositionOverlayDescriptorV2<PositionInteractParam>);
 #ifdef OFX_EXTENSIONS_NUKE
     // ask the host to render all planes
     desc.setPassThroughForNotProcessedPlanes(ePassThroughLevelRenderAllRequestedPlanes);

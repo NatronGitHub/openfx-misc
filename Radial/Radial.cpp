@@ -1094,7 +1094,7 @@ RadialPluginFactory::describe(ImageEffectDescriptor &desc)
     // and scale the transform appropriately.
     // All other functions are usually in canonical coordinates.
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
-    generatorDescribe(desc, true); // the overlay is rotated by the Angle parameter
+    generatorDescribe(desc, true, eGeneratorOverlayDrawSuite); // the overlay is rotated by the Angle parameter; V2 (DrawSuite) and V1 (OpenGL)
 
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(ePixelComponentNone); // we have our own channel selector
