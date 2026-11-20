@@ -1099,7 +1099,7 @@ ColorTransformPluginFactory<transform, majorVersion>::createInstance(OfxImageEff
     return new ColorTransformPlugin<transform>(handle);
 }
 
-// The signedOutput() conversions also register their version 1 (p*v1, deprecated, supports
+// The signedOutput() conversions also register their version 1 (p*v1, obsolete, supports
 // 8-bit and 16-bit images), so that old projects render the same.
 
 // RGBtoHSV
