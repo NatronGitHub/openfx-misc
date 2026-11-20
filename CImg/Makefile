@@ -171,6 +171,7 @@ sources: CImg.h $(FFT_HEADERS) $(FFT_RESOURCES)
 # CImg.h.version (also written by CMakeLists.txt, in the same format) records CIMGVERSION,
 # CIMG_PATCHES_FROM and the patches: CImg.h is downloaded and patched again when they change, or
 # when a patch script changes.
+# The download is checked against CIMG_SHA256 (CImgVersion.mk) before it is patched.
 # The header is patched in a temporary directory (the scripts want a file named CImg.h), and only
 # replaces CImg.h once all the patches are applied: if the download or a patch fails, there is no
 # CImg.h, and make fails.
@@ -181,6 +182,11 @@ CImg.h.version: FORCE
 CImg.h: CImg.h.version $(CIMG_PATCHES) Inpaint/inpaint.h
 	@rm -rf $@ $@.tmp && mkdir $@.tmp
 	$(CURL) -o $@.tmp/CImg.h https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/CImg.h || { rm -rf $@.tmp; exit 1; }
+	@sum=`$(SHA256SUM) $@.tmp/CImg.h | cut -d' ' -f1`; \
+	if [ "$$sum" != "$(CIMG_SHA256)" ]; then \
+	  echo "Error: checksum mismatch for CImg.h $(CIMGVERSION): got $$sum, expected CIMG_SHA256=$(CIMG_SHA256) (CImgVersion.mk)"; \
+	  rm -rf $@.tmp; exit 1; \
+	fi
 	@for p in $(CIMG_PATCHES); do \
 	  sh $$p $@.tmp/CImg.h || { echo "Error: $$p failed on CImg.h $(CIMGVERSION)"; rm -rf $@.tmp; exit 1; }; \
 	done

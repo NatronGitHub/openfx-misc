@@ -442,9 +442,9 @@ whatever the `FFT` of the make or CMake build that downloaded `CImg.h`.
 openfx-gmic) only matters for FFTW: COMMERCIAL builds refuse `FFT=fftw3`.
 
 `CImg/CImg.h` (and `CImg/Inpaint/inpaint.h`) are downloaded by `make -C CImg sources`
-(run by the top-level `make`) at the version given in `CImg/CImgVersion.mk`, and
-`CImg.h` is patched the same way as in
-[openfx-gmic](https://github.com/NatronGitHub/openfx-gmic), which uses the same CImg
+(run by the top-level `make`) at the version given in `CImg/CImgVersion.mk`. `CImg.h`
+is checked against `CIMG_SHA256` there (the build fails on a mismatch), then patched the
+same way as in [openfx-gmic](https://github.com/NatronGitHub/openfx-gmic), which uses the same CImg
 version: `CImg/patches/cimg-*.sh` are copies of openfx-gmic's `patches/cimg-*.sh` (the
 source of truth), at the openfx-gmic commit `CIMG_PATCHES_FROM` of
 `CImg/CImgVersion.mk`, applied in the same order, so that both get the same `CImg.h`

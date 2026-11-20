@@ -26,6 +26,9 @@
 # commit 1a9fef439d17b73d9af8d8e59b65df9c989fde7a is CImg 4.0.8 (tag v.4.0.8; its CImg.h is the
 #   one of gmic_4.0.8.tar.gz, git blob 5230131435f958221f15d703e0dbfc9871e07965)
 CIMGVERSION=1a9fef439d17b73d9af8d8e59b65df9c989fde7a
+# sha256 of the CImg.h of CIMGVERSION, as downloaded (before the patches): CImg/Makefile and
+# CMakeLists.txt check it, and fail before patching on a mismatch. Update it with CIMGVERSION.
+CIMG_SHA256=adf13c3e991f6812c2db484ff07aa614421830117924590d3def10e8ac6a485b
 
 # CImg.h is patched with the same scripts as NatronGitHub/openfx-gmic, which uses the same CImg
 # version (the CImg.h of its GMICVER tarball), so that both get the same CImg code: the scripts in
