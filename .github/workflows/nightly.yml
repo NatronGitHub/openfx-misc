@@ -181,9 +181,10 @@ jobs:
             options: -DOFX_CXX_STANDARD=17 -DCMAKE_BUILD_TYPE=Release -DFFT=fftw3 -DBUILD_TESTING=ON -DOFX_BUILD_HOSTDEMO=ON
             rendertest: true
             packages: libfftw3-dev pkg-config
-          # the Makefiles (Natron RB-2.6's fallback): combined bundles, GCC's default (gnu++17)
+          # the Makefiles, as Natron RB-2.6's Linux fallback builds them: combined bundles, with
+          # OpenMP (OPENMP=1), GCC's default standard (gnu++17)
           - name: make
-            make: CONFIG=release
+            make: CONFIG=release OPENMP=1
     steps:
       - name: Checkout branch
         uses: actions/checkout@v5
