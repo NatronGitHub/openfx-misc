@@ -62,7 +62,7 @@ env:
   # the standard of Natron RB-2.6, Qt5; C++20 is built by nightly.yml),
   # OpenMP (OFX_USE_OPENMP, the default; not on macOS, see MACOS_OPTIONS), and the Test bundle.
   # The CImg plug-ins use their default FFT, pocketfft (header-only, downloaded); nightly.yml also
-  # builds FFT=pow2 and FFT=fftw3 (opt-in). COMMERCIAL builds are not built in CI.
+  # builds FFT=pow2 and FFT=fftw3 (opt-in). No CI job builds OFX_LICENSE=COMMERCIAL.
   CMAKE_OPTIONS: -DCMAKE_BUILD_TYPE=Release -DOFX_CXX_STANDARD=17 -DBUILD_TESTING=ON
   # The release bundles are uploaded as artifacts only for manual runs
   # ("Run workflow" on the Actions page) and for pre-release tags. This repo is

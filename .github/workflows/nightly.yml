@@ -13,8 +13,7 @@ name: Nightly extra builds
 # Every CMake job passes its C++ standard explicitly (OFX_CXX_STANDARD=17 or 20).
 # Each build is followed by the same plugin load test as in ci.yml.
 # The CImg plug-ins: ci.yml builds their default FFT (pocketfft); here, Linux FFTW builds the opt-in
-# FFT=fftw3 (GPL) with the render tests, and macOS OpenMP
-# is FFT=pow2. The cimg_patches job checks that CImg.h is still patched as openfx-gmic's.
+# FFT=fftw3 (GPL) with the render tests, and macOS OpenMP is FFT=pow2. The cimg_patches job checks that CImg.h is still patched as openfx-gmic's.
 # The render and smoke tests of ci.yml (Linux release) also run after the macOS
 # release and the Linux debug builds (debug: with the plugins' assertions), with
 # hostDemo built by -DOFX_BUILD_HOSTDEMO=ON. On Windows (MSYS2 CMake builds), only the
