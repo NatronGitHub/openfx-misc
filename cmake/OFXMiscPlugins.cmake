@@ -23,9 +23,12 @@
 #                  [SOURCES <extra source>...] [OPENMP] [DEBUG_ONLY])
 #
 # - <name>: the CMake target and install component of its separate bundle (DIR defaults to it);
-# - ID: the OFX identifier that names the separate bundle (<ID>.ofx.bundle); for a directory
-#   that registers several plug-ins, the main one, or <prefix>.<dir> if there is none;
-# - sources: <dir>/*.cpp plus SOURCES; resources: <dir>/*.{png,svg,py,gizmo,nps};
+# - ID: names the separate bundle (<ID>.ofx.bundle): the plug-in's OFX identifier, as it is, if
+#   the directory registers one plug-in; otherwise the prefix of its plug-ins' identifiers plus
+#   the directory name (CImg: CImg<dir>), e.g. net.sf.openfx.Merge, net.sf.cimg.CImgBlur;
+# - sources: <dir>/*.cpp plus SOURCES; resources: <dir>/*.{png,svg,py,gizmo,nps}, i.e. the icons
+#   (<pluginIdentifier>.png/.svg) of the plug-ins of <dir> and its PyPlugs (in both modes: the
+#   combined bundle gets the union);
 # - COMPONENTS: the SupportExt components (supportext_add_sources), from <dir>/Makefile's objects;
 # - DEBUG_ONLY: only compiled in debug builds (#ifdef DEBUG): no bundle in other builds.
 # Group: the first plug-ins go to Misc.ofx.bundle, the CImg ones (DIR CImg/...) to CImg.ofx.bundle.
@@ -85,10 +88,10 @@ ofxmisc_plugin(ColorMatrix ID net.sf.openfx.ColorMatrixPlugin COMPONENTS THREADS
 ofxmisc_plugin(ColorSuppress ID net.sf.openfx.ColorSuppress COMPONENTS THREADS)
 ofxmisc_plugin(ColorTransform ID net.sf.openfx.ColorTransform COMPONENTS THREADS LUT)
 ofxmisc_plugin(ColorWheel ID net.sf.openfx.ColorWheel COMPONENTS THREADS RECTANGLE_INTERACT GENERATOR LUT)
-ofxmisc_plugin(Constant ID net.sf.openfx.ConstantPlugin COMPONENTS THREADS RECTANGLE_INTERACT GENERATOR)
+ofxmisc_plugin(Constant ID net.sf.openfx.Constant COMPONENTS THREADS RECTANGLE_INTERACT GENERATOR)
 ofxmisc_plugin(ContactSheet ID net.sf.openfx.ContactSheetOFX)
 ofxmisc_plugin(CopyRectangle ID net.sf.openfx.CopyRectanglePlugin COMPONENTS THREADS RECTANGLE_INTERACT)
-ofxmisc_plugin(CornerPin ID net.sf.openfx.CornerPinPlugin COMPONENTS THREADS TRANSFORM3X3 TEXT SHUTTER)
+ofxmisc_plugin(CornerPin ID net.sf.openfx.CornerPin COMPONENTS THREADS TRANSFORM3X3 TEXT SHUTTER)
 ofxmisc_plugin(Crop ID net.sf.openfx.CropPlugin COMPONENTS THREADS RECTANGLE_INTERACT GENERATOR)
 ofxmisc_plugin(Deinterlace ID net.sf.openfx.Deinterlace COMPONENTS THREADS)
 ofxmisc_plugin(DenoiseSharpen ID net.sf.openfx.DenoiseSharpen COMPONENTS THREADS LUT RECTANGLE_INTERACT OPENMP)
@@ -114,7 +117,7 @@ ofxmisc_plugin(LayerContactSheet ID net.sf.openfx.LayerContactSheetOFX COMPONENT
 ofxmisc_plugin(LayerRename ID net.sf.openfx.LayerRename COMPONENTS THREADS MULTIPLANE)
 ofxmisc_plugin(Log2Lin ID net.sf.openfx.Log2Lin COMPONENTS THREADS LUT)
 ofxmisc_plugin(MatteMonitor ID net.sf.openfx.MatteMonitorPlugin COMPONENTS THREADS)
-ofxmisc_plugin(Merge ID net.sf.openfx.MergePlugin COMPONENTS THREADS MULTIPLANE)
+ofxmisc_plugin(Merge ID net.sf.openfx.Merge COMPONENTS THREADS MULTIPLANE)
 ofxmisc_plugin(Mirror ID net.sf.openfx.Mirror COMPONENTS THREADS)
 ofxmisc_plugin(MixViews ID net.sf.openfx.mixViewsPlugin COMPONENTS THREADS)
 ofxmisc_plugin(Multiply ID net.sf.openfx.MultiplyPlugin COMPONENTS THREADS)
@@ -145,7 +148,7 @@ ofxmisc_plugin(TimeBuffer ID net.sf.openfx.TimeBuffer COMPONENTS THREADS DEBUG_O
 ofxmisc_plugin(TimeDissolve ID net.sf.openfx.TimeDissolvePlugin COMPONENTS THREADS)
 ofxmisc_plugin(TimeOffset ID net.sf.openfx.timeOffset COMPONENTS THREADS)
 ofxmisc_plugin(TrackerPM ID net.sf.openfx.TrackerPM COMPONENTS THREADS TRACKING TEXT)
-ofxmisc_plugin(Transform ID net.sf.openfx.TransformPlugin COMPONENTS THREADS TRANSFORM3X3 TRANSFORM_INTERACT SHUTTER)
+ofxmisc_plugin(Transform ID net.sf.openfx.Transform COMPONENTS THREADS TRANSFORM3X3 TRANSFORM_INTERACT SHUTTER)
 ofxmisc_plugin(VectorToColor ID net.sf.openfx.VectorToColorPlugin COMPONENTS THREADS LUT)
 ofxmisc_plugin(WhiteBalance ID net.sf.openfx.WhiteBalance COMPONENTS THREADS)
 
