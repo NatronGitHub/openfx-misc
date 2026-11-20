@@ -46,8 +46,8 @@
 
 // To be called by the load action (the factory's load()) of the plug-ins that use the FFT:
 // ConvolveCImg, ZDefocusCImg, and ExpressionCImg (the math parser's fft()).
-// With FFT=fftw3 (opt-in): FFTW is a shared library (Natron's SDK, MacPorts, MSYS2) with a single
-// global planner, which other plug-ins of the host process use too, e.g. openfx-gmic's GMIC.ofx,
+// With FFT=fftw3 (opt-in): FFTW is usually a shared library (Natron's SDK, MacPorts) with a single
+// global planner (MinGW builds link it statically: each binary has its own), which other plug-ins of the host process use too, e.g. openfx-gmic's GMIC.ofx,
 // whose CImg plans under another mutex than ours (cimg::mutex(12) of our cimg_library namespace).
 // fftw_make_planner_thread_safe() (FFTW >= 3.3.5, in libfftw3_threads; checked by CMakeLists.txt
 // and CImg/CImgFFT.mk) makes FFTW serialize the creation and destruction of plans process-wide,
@@ -57,8 +57,10 @@
 // CImg 4.0.8 calls fftw_cleanup_threads() only in ~FFTW3_static(), at unload; openfx-gmic's
 // cimg-fftw-no-cleanup-at-unload.sh (CImg/patches, GreycLab/CImg#500) removes that call too: at
 // dlclose, FFTW's detached workers were still exiting through the unmapped code. FFTW's idle workers
-// and planner are kept until the process exits, which is also safer for the other users of FFTW in
-// the process, since the cleanup didn't take the planner lock.
+// and planner are kept until the process exits, which is also safer for the other users of a shared
+// FFTW, since the cleanup didn't take the planner lock. With a static FFTW, or a libfftw3 unloaded
+// with the plug-in, the idle workers stay blocked in the unmapped code and a reload starts a fresh
+// FFTW: a small leak per unload.
 inline void
 cimgFFTLoad()
 {

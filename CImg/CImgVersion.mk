@@ -54,8 +54,8 @@ CIMG_SHA256=adf13c3e991f6812c2db484ff07aa614421830117924590d3def10e8ac6a485b
 # CImg 4.0.8 has the fixes of the other scripts that 4.0.7 needed (removed in openfx-gmic#98): the
 # math parser's macro overread (GreycLab/CImg#496), i()/j()/I()/J() out of bounds
 # (GreycLab/CImg#498), the NaN eigenvectors of symmetric_eigen() (GreycLab/gmic#221), FFTW's
-# fftw_cleanup_threads() after each FFT (4.0.8 moved it to unload, which
-# cimg-fftw-no-cleanup-at-unload.sh removes), and pocketfft itself (cimg_use_pocketfft, GreycLab/CImg#497).
+# fftw_cleanup_threads() after each FFT (4.0.8 moved it to unload, which the script above removes),
+# and pocketfft itself (cimg_use_pocketfft, GreycLab/CImg#497).
 # CMakeLists.txt reads these variables: keep each on one line, as a plain "NAME=value" assignment.
 CIMG_PATCHES_FROM=484d1cf698d4b5ebd329f5a07afb96ed1dd6c18f
 CIMG_PATCHES=patches/cimg-omp-rand.sh patches/cimg-vvar2.sh patches/cimg-vargkth2.sh patches/cimg-log1p-peephole.sh patches/cimg-abs-peephole.sh patches/cimg-fftw-no-cleanup-at-unload.sh
