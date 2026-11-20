@@ -54,13 +54,11 @@
 // for all its users. Done once per load of the binary (std::call_once), at load, before any render,
 // as in openfx-gmic (NatronGitHub/openfx-gmic#93). fftw_init_threads() was already called by CImg's
 // static FFTW3_static: calling it again does nothing. CImg keeps its own mutex.
-// FFTW's cleanup functions don't take the planner lock. CImg 4.0.8 no longer calls
-// fftw_cleanup_threads() after each FFT, only in ~FFTW3_static(), when the binary is unloaded
-// (GreycLab/CImg#500, still open), and also at process exit (static destructors), so at host
-// shutdown too: this frees FFTW's planner and threads, which is only safe if no other plug-in of
-// the process is planning or running an FFTW transform at that moment. The planner hooks of
-// fftw_make_planner_thread_safe() survive it, and FFTW re-initialises its threads at the next plan
-// (fftw_plan_with_nthreads()), so a reload of this binary, or another user of FFTW, keeps working.
+// CImg 4.0.8 calls fftw_cleanup_threads() only in ~FFTW3_static(), at unload; openfx-gmic's
+// cimg-fftw-no-cleanup-at-unload.sh (CImg/patches, GreycLab/CImg#500) removes that call too: at
+// dlclose, FFTW's detached workers were still exiting through the unmapped code. FFTW's idle workers
+// and planner are kept until the process exits, which is also safer for the other users of FFTW in
+// the process, since the cleanup didn't take the planner lock.
 inline void
 cimgFFTLoad()
 {
