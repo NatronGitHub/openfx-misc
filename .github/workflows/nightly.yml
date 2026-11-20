@@ -6,8 +6,10 @@ name: Nightly extra builds
 # without OpenMP (ci.yml uses it on Linux), and Windows MSVC, plus the macOS
 # release build of ci.yml, which there only runs after Linux and Windows pass
 # (this covers master when the push run's macOS job was skipped or cancelled).
-# The Makefiles are still built, with one bundle per plugin (make nomulti), on
-# Linux and Windows, as long as Natron's build-plugins.sh uses them.
+# CI builds with CMake (Natron#1181). The Makefiles are kept as the RB-2.6 fallback: one cheap
+# nightly Linux job (make CONFIG=release, the combined bundles, as Natron's fallback builds them)
+# checks that they still build; the slow one-bundle-per-plugin "make nomulti" jobs are gone.
+# Every CMake job passes its C++ standard explicitly (OFX_CXX_STANDARD=17 or 20).
 # Each build is followed by the same plugin load test as in ci.yml.
 # The CImg plug-ins: ci.yml builds their default FFT (pocketfft); here, Linux C++20 is COMMERCIAL
 # (pocketfft), Linux FFTW builds the opt-in FFT=fftw3 (GPL) with the render tests, and macOS OpenMP
@@ -100,11 +102,11 @@ jobs:
           # minos 15, so deployed bundles with it would not load on macOS 14).
           - name: release # the macOS build of ci.yml
             config: release
-            options: -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DOFX_DEPLOY_BUNDLES=ON -DOFX_USE_OPENMP=OFF -DOFX_BUILD_HOSTDEMO=ON
+            options: -DOFX_CXX_STANDARD=17 -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DOFX_DEPLOY_BUNDLES=ON -DOFX_USE_OPENMP=OFF -DOFX_BUILD_HOSTDEMO=ON
             rendertest: true
           - name: debug
             config: debug
-            options: -DCMAKE_BUILD_TYPE=Debug
+            options: -DOFX_CXX_STANDARD=17 -DCMAKE_BUILD_TYPE=Debug
           - name: C++20
             config: release
             options: -DCMAKE_BUILD_TYPE=Release -DOFX_CXX_STANDARD=20
@@ -112,7 +114,7 @@ jobs:
           # (no FFT library), the configuration of the rare builds without one.
           - name: OpenMP pow2
             config: release
-            options: -DCMAKE_BUILD_TYPE=Release -DFFT=pow2
+            options: -DOFX_CXX_STANDARD=17 -DCMAKE_BUILD_TYPE=Release -DFFT=pow2
     steps:
       - name: Checkout branch
         uses: actions/checkout@v5
@@ -161,7 +163,7 @@ jobs:
         include:
           - name: debug
             config: debug
-            options: -DCMAKE_BUILD_TYPE=Debug -DOFX_BUILD_HOSTDEMO=ON
+            options: -DOFX_CXX_STANDARD=17 -DCMAKE_BUILD_TYPE=Debug -DOFX_BUILD_HOSTDEMO=ON
             rendertest: true
           # C++20, and Natron's COMMERCIAL licence (OFX_LICENSE=COMMERCIAL), with the render tests
           - name: C++20 COMMERCIAL
@@ -171,17 +173,18 @@ jobs:
           # OpenMP (GCC's libgomp)
           - name: OpenMP
             config: release
-            options: -DCMAKE_BUILD_TYPE=Release
+            options: -DOFX_CXX_STANDARD=17 -DCMAKE_BUILD_TYPE=Release
           # the opt-in FFTW (FFT=fftw3, GPL only, Ubuntu's libfftw3-dev), with the render tests
           # (the FFT convolution test of rendertest.sh)
           - name: FFTW
             config: release
-            options: -DCMAKE_BUILD_TYPE=Release -DFFT=fftw3 -DBUILD_TESTING=ON -DOFX_BUILD_HOSTDEMO=ON
+            options: -DOFX_CXX_STANDARD=17 -DCMAKE_BUILD_TYPE=Release -DFFT=fftw3 -DBUILD_TESTING=ON -DOFX_BUILD_HOSTDEMO=ON
             rendertest: true
             packages: libfftw3-dev pkg-config
-          # the Makefiles, while Natron's build-plugins.sh uses them
-          - name: make nomulti
-            make: nomulti CONFIG=release
+          # the Makefiles, as Natron RB-2.6's Linux fallback builds them: combined bundles, with
+          # OpenMP (OPENMP=1), GCC's default standard (gnu++17)
+          - name: make
+            make: CONFIG=release OPENMP=1
     steps:
       - name: Checkout branch
         uses: actions/checkout@v5
@@ -240,13 +243,10 @@ jobs:
           # No OpenMP: -static still leaves a libgomp-1.dll dependency (see ci.yml).
           - name: debug
             config: debug
-            options: -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MODULE_LINKER_FLAGS=-static -DOFX_USE_OPENMP=OFF -DOFX_BUILD_HOSTDEMO=ON
+            options: -DOFX_CXX_STANDARD=17 -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MODULE_LINKER_FLAGS=-static -DOFX_USE_OPENMP=OFF -DOFX_BUILD_HOSTDEMO=ON
           - name: C++20
             config: release
             options: -DCMAKE_BUILD_TYPE=Release -DOFX_CXX_STANDARD=20 -DCMAKE_MODULE_LINKER_FLAGS=-static -DOFX_USE_OPENMP=OFF -DOFX_BUILD_HOSTDEMO=ON
-          # the Makefiles, while Natron's build-plugins.sh uses them (GCC's default, gnu++17)
-          - name: make nomulti
-            make: nomulti CONFIG=release LDFLAGS_ADD=-static
     steps:
       - name: Checkout branch
         uses: actions/checkout@v5
@@ -266,33 +266,25 @@ jobs:
           # pacboy: the packages of the msystem (UCRT64), without hard-coded prefixes
           install: git base-devel
           pacboy: cc:p cmake:p ninja:p expat:p python:p
-      - name: Build (make)
-        if: matrix.make
-        run: |
-          set -eo pipefail
-          make -j"$(nproc)" ${{ matrix.make }}
       - name: Build (CMake)
-        if: ${{ !matrix.make }}
         run: |
           set -eo pipefail
           cmake -S . -B build -G Ninja ${{ matrix.options }}
           cmake --build build
           cmake --install build --prefix "$PWD/install-${{ matrix.config }}"
       - name: Load test
-        # make: the source tree; CMake: the install tree
         run: |
           set -eo pipefail
-          .github/tools/loadtest.sh ${{ matrix.make && ' ' || format('install-{0}', matrix.config) }}
+          .github/tools/loadtest.sh install-${{ matrix.config }}
       - name: Render test (hostDemo, FFT convolution)
         # as ci.yml: a hang at hostDemo's exit (pocketfft's thread pool, openfx-gmic#94) fails
-        # at the step timeout. CMake only (hostDemo from -DOFX_BUILD_HOSTDEMO=ON).
-        if: ${{ !matrix.make }}
+        # at the step timeout (hostDemo from -DOFX_BUILD_HOSTDEMO=ON).
         timeout-minutes: 5
         run: |
           set -eo pipefail
           RENDERTEST_ONLY='^CImgConvolve' .github/tools/rendertest.sh install-${{ matrix.config }}
 
-  # MSVC is not used by the CI's make builds (MinGW GCC), but the CMake build and
+  # MSVC is not used by the other Windows builds (MinGW GCC), but the CMake build and
   # Misc/*.vcxproj support it: check that the sources build with Visual Studio 2022
   # (C++17, /Zc:__cplusplus from openfx::Api). The build needs nothing beyond the
   # runner image (CMake downloads CImg.h); the load test uses the cached MSYS2 UCRT64.
@@ -311,7 +303,7 @@ jobs:
       - name: Build
         # (the patches of CImg.h use Git for Windows' sh)
         run: |
-          cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+          cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DOFX_CXX_STANDARD=17
           cmake --build build --config Release --parallel
           cmake --install build --config Release --prefix "$PWD/cmake-install"
       - name: Setup MSYS2 UCRT64 environment (cached), for the load test

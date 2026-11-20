@@ -95,15 +95,15 @@ env:
   # the input of a manual run, else the OSMESA_INSTALL_RELEASE repository variable, else the
   # default below (its assets are pinned in .github/parameters/osmesa-install.sha256)
   OSMESA_RELEASE: ${{ inputs.osmesa_release || vars.OSMESA_INSTALL_RELEASE || 'osmesa-mesa-25.0.7-llvm-19.1.7' }}
-  # Release builds (C++17, the default), without the Test bundle; the bundles are
+  # Release builds (C++17, passed explicitly), without the Test bundle; the bundles are
   # deployed (OFX_DEPLOY_BUNDLES: on macOS, osxDeploy.sh copies the non-system libraries
   # into the bundles); hostDemo is built for the smoke test (installed in <prefix>/bin,
   # not packaged). DenoiseSharpen is also built as a standalone bundle.
   # OSMESA_PKGCONFIG_STATIC: the builds with USE_OSMESA link osmesa-install's static OSMesa
   # with the flags of pkg-config --static.
-  CMAKE_OPTIONS: -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DOFX_DEPLOY_BUNDLES=ON -DOFX_BUILD_HOSTDEMO=ON -DOFXMISC_STANDALONE_BUNDLES=DenoiseSharpen -DOSMESA_PKGCONFIG_STATIC=ON
+  CMAKE_OPTIONS: -DCMAKE_BUILD_TYPE=Release -DOFX_CXX_STANDARD=17 -DBUILD_TESTING=OFF -DOFX_DEPLOY_BUNDLES=ON -DOFX_BUILD_HOSTDEMO=ON -DOFXMISC_STANDALONE_BUNDLES=DenoiseSharpen -DOSMESA_PKGCONFIG_STATIC=ON
   # The Shadertoy-only builds (without Misc and CImg)
-  SHADERTOY_OPTIONS: -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DOFX_DEPLOY_BUNDLES=ON -DBUILD_MISC=OFF -DBUILD_CIMG_PLUGINS=OFF -DOSMESA_PKGCONFIG_STATIC=ON
+  SHADERTOY_OPTIONS: -DCMAKE_BUILD_TYPE=Release -DOFX_CXX_STANDARD=17 -DBUILD_TESTING=OFF -DOFX_DEPLOY_BUNDLES=ON -DBUILD_MISC=OFF -DBUILD_CIMG_PLUGINS=OFF -DOSMESA_PKGCONFIG_STATIC=ON
   # The bundles that the smoke test of the full set expects (no Test bundle)
   SMOKETEST_FULL: Misc:168 CImg:40 Shadertoy:1
 
