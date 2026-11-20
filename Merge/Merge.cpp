@@ -1555,7 +1555,7 @@ MergePluginFactory<majorVersion,plugin>::describe(ImageEffectDescriptor &desc)
 
     // Deprecate old versions of this plugin.
     if (this->getMajorVersion() < kPluginVersionMajor) {
-        desc.setIsDeprecated(true);
+        desc.setIsObsolete(true);
     }
 } // >::describe
 

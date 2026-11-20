@@ -540,7 +540,7 @@ KeyMixPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
     if (majorVersion < kPluginVersionMajor) {
-        desc.setIsDeprecated(true);
+        desc.setIsObsolete(true);
     }
 
     desc.addSupportedContext(eContextFilter);

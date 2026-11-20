@@ -2528,7 +2528,7 @@ CImgBlurPlugin::describe(ImageEffectDescriptor& desc,
                          BlurPluginEnum blurPlugin)
 {
     if ( majorVersion < ( (blurPlugin == eBlurPluginEdgeDetect) ? kPluginVersionMajorEdgeDetect : kPluginVersionMajor ) ) {
-        desc.setIsDeprecated(true);
+        desc.setIsObsolete(true);
     }
     // basic labels
     switch (blurPlugin) {

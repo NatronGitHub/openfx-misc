@@ -1003,7 +1003,7 @@ ColorTransformPluginFactory<transform, majorVersion>::describe(ImageEffectDescri
         desc.addSupportedBitDepth(eBitDepthUShort);
         desc.addSupportedBitDepth(eBitDepthFloat);
         if ( signedOutput(transform) ) {
-            desc.setIsDeprecated(true);
+            desc.setIsObsolete(true);
         }
     }
 

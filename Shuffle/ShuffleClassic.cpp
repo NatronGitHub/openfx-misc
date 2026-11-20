@@ -1063,7 +1063,7 @@ mDeclarePluginFactory(ShufflePluginFactory, {ofxsThreadSuiteCheck();}, {});
 void
 ShufflePluginFactory::describe(ImageEffectDescriptor &desc)
 {
-    desc.setIsDeprecated(true);
+    desc.setIsObsolete(true);
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);

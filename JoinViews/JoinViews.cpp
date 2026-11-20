@@ -327,7 +327,7 @@ JoinViewsPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
     if (majorVersion < kPluginVersionMajor) {
-        desc.setIsDeprecated(true);
+        desc.setIsObsolete(true);
     }
 
     // add the supported contexts, only general at the moment, because there are several inputs
@@ -367,7 +367,7 @@ JoinViewsPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(ePixelComponentNone);
     if (getImageEffectHostDescription()->isNatron) {
-        desc.setIsDeprecated(true); // prefer Natron's internal JoinViews
+        desc.setIsObsolete(true); // prefer Natron's internal JoinViews
     }
 #endif
 }
