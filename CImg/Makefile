@@ -54,6 +54,9 @@ Blur/eu.cimg.EdgeExtend.png \
 Blur/eu.cimg.EdgeExtend.svg \
 Blur/fr.inria.EdgeBlur.png \
 Blur/fr.inria.EdgeBlur.svg \
+Blur/EdgeBlur.py \
+Blur/EdgeBlur.nps \
+Blur/EdgeBlur.gizmo \
 Blur/net.sf.cimg.CImgLaplacian.png \
 Blur/net.sf.cimg.CImgLaplacian.svg \
 Blur/net.sf.cimg.CImgSharpen.png \

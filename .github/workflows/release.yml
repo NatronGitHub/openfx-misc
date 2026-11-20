@@ -11,7 +11,7 @@ name: Binary release
 #   openfx-misc-Shadertoy-OpenGL-<version>-<platform>  Shadertoy.ofx alone, OpenGL only
 #   openfx-misc-Shadertoy-OSMesa-<version>-<platform>  Shadertoy.ofx alone, OpenGL + OSMesa
 #                                                     (the bundle of the full set)
-#   openfx-misc-DenoiseSharpen-<version>-<platform>    DenoiseSharpen.ofx alone
+#   openfx-misc-DenoiseSharpen-<version>-<platform>    net.sf.openfx.DenoiseSharpen.ofx alone
 #                                                     (-DOFXMISC_STANDALONE_BUNDLES=DenoiseSharpen)
 # The standalone bundles have the same plug-ins (identifiers and versions) as the full
 # set: users install one or the other, never both, and only one Shadertoy.
@@ -266,7 +266,7 @@ jobs:
               -DUSE_OSMESA=ON ${OSMESA_LINUX_OPTIONS:--DOSMESA_PATH=/opt/osmesa -DLLVM_PATH=/usr -DOSMESA_LICENSES_DIR=/opt/osmesa/licenses} \
               -DCMAKE_MODULE_LINKER_FLAGS=-Wl,--as-needed
           cmake --build build
-          # each bundle is an install component (openfx's add_ofx_plugin): DenoiseSharpen.ofx.bundle
+          # each bundle is an install component (openfx's add_ofx_plugin): net.sf.openfx.DenoiseSharpen.ofx.bundle
           # and Misc.ofx.bundle have the same plug-in, so each is installed, tested and packaged
           # in its own prefix
           for c in Misc CImg Shadertoy hostDemo; do cmake --install build --prefix "$PWD/install" --component $c; done
@@ -298,7 +298,7 @@ jobs:
         timeout-minutes: 15
         run: |
           SMOKETEST_BUNDLES="$SMOKETEST_FULL" .github/tools/smoketest.sh --quick install
-          SMOKETEST_BUNDLES="DenoiseSharpen:1" HOSTDEMO="$PWD/install/bin/hostDemo" .github/tools/smoketest.sh install-denoisesharpen
+          SMOKETEST_BUNDLES="net.sf.openfx.DenoiseSharpen:1" HOSTDEMO="$PWD/install/bin/hostDemo" .github/tools/smoketest.sh install-denoisesharpen
       - name: Render test of the shipped Shadertoy (OSMesa)
         # smoketest.sh skips Shadertoy (the OpenGL-only one doesn't describe in hostDemo); the
         # OSMesa one of the full set renders on the CPU
@@ -426,7 +426,7 @@ jobs:
         timeout-minutes: 20
         run: |
           SMOKETEST_BUNDLES="$SMOKETEST_FULL" .github/tools/smoketest.sh --quick install
-          SMOKETEST_BUNDLES="DenoiseSharpen:1" HOSTDEMO="$PWD/install/bin/hostDemo" .github/tools/smoketest.sh install-denoisesharpen
+          SMOKETEST_BUNDLES="net.sf.openfx.DenoiseSharpen:1" HOSTDEMO="$PWD/install/bin/hostDemo" .github/tools/smoketest.sh install-denoisesharpen
       - name: Render test of the shipped Shadertoy (OSMesa)
         # smoketest.sh skips Shadertoy (the OpenGL-only one doesn't describe in hostDemo); the
         # lipo-merged OSMesa one (also in the full set) renders on the CPU: each architecture
@@ -645,7 +645,7 @@ jobs:
           - \`openfx-misc-<version>-<platform>\`: the full set, as shipped with Natron: \`Misc.ofx.bundle\`, \`CImg.ofx.bundle\` and \`Shadertoy.ofx.bundle\`$full_osmesa.
           - \`openfx-misc-Shadertoy-OpenGL-<version>-<platform>\`: \`Shadertoy.ofx.bundle\` alone, OpenGL only.
           $osmesa_item
-          - \`openfx-misc-DenoiseSharpen-<version>-<platform>\`: \`DenoiseSharpen.ofx.bundle\` alone (DenoiseSharpen is also in \`Misc.ofx.bundle\`).
+          - \`openfx-misc-DenoiseSharpen-<version>-<platform>\`: \`net.sf.openfx.DenoiseSharpen.ofx.bundle\` alone (DenoiseSharpen is also in \`Misc.ofx.bundle\`).
 
           **Install either the full set or standalone bundles, not both**: they contain the same plug-ins, with the same identifiers and versions. The two Shadertoy downloads are mutually exclusive. Each archive has a README.txt with the installation directories. Natron users don't need these: Natron includes them.
           EOF

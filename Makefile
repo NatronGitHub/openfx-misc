@@ -56,6 +56,7 @@ PIK \
 PLogLin \
 Position \
 Premult \
+Quantize \
 Radial \
 Ramp \
 Rand \
@@ -102,6 +103,7 @@ CImg/Bilateral \
 CImg/Blur \
 CImg/Convolve \
 CImg/Denoise \
+CImg/Distance \
 CImg/Equalize \
 CImg/Erode \
 CImg/ErodeSmooth \

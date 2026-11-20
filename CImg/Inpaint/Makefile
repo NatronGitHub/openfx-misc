@@ -16,8 +16,8 @@ PLUGINNAME = CImgInpaint
 
 # ls *png *.svg|sort |sed -e 's!$! \\!'
 RESOURCES = \
-#net.sf.cimg.CImgInpaint.png \
-#net.sf.cimg.CImgInpaint.svg \
+eu.cimg.Inpaint.png \
+eu.cimg.Inpaint.svg \
 
 TOP_SRCDIR = ../..
 include $(TOP_SRCDIR)/Makefile.master

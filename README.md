@@ -41,13 +41,14 @@ universal):
   OpenGL only.
 - `openfx-misc-Shadertoy-OSMesa-<version>-<platform>`:
   `Shadertoy.ofx.bundle` alone, OpenGL + OSMesa: the bundle of the full set.
-- `openfx-misc-DenoiseSharpen-<version>-<platform>`: `DenoiseSharpen.ofx.bundle`, with
-  only the DenoiseSharpen plugin.
+- `openfx-misc-DenoiseSharpen-<version>-<platform>`: `net.sf.openfx.DenoiseSharpen.ofx.bundle`, with
+  only the DenoiseSharpen plugin. Older releases named it `DenoiseSharpen.ofx.bundle`: remove that
+  old bundle from your plugins directory.
 
 The Linux bundles are built on Rocky Linux 9 (Natron 2.6's baseline), and need glibc 2.34
 or later, the system's libstdc++ (GCC 11 or later), `libGL.so.1` (OpenGL) and `libgomp.so.1`
 (GCC's OpenMP runtime, needed by `Misc.ofx` (DenoiseSharpen), `CImg.ofx` and the standalone
-`DenoiseSharpen.ofx`): these system libraries are never bundled. Any other library is
+`net.sf.openfx.DenoiseSharpen.ofx`): these system libraries are never bundled. Any other library is
 inside the bundle (`<bundle>.ofx.bundle/Libraries`).
 
 **Install either the full set or standalone bundles, not both**: the standalone
@@ -88,8 +89,9 @@ as `Natron-2.5.0`) and for builds that a maintainer starts by hand:
      Windows 10 or later (they use the Universal C Runtime).
 
    Artifacts are deleted by GitHub after 90 days. If there is none, you can
-   [compile the plugins](#installation) yourself (`make nomulti` builds one bundle
-   per plugin, if you only need a few of them).
+   [compile the plugins](#installation) yourself (`make nomulti`, or CMake's
+   `-DOFX_PLUGIN_BUNDLES=SEPARATE`, builds one bundle per plugin, if you only need a few
+   of them).
 3. Unzip the archive. It contains directories named `*.ofx.bundle` (for example
    `Misc.ofx.bundle`, `CImg.ofx.bundle`, `Shadertoy.ofx.bundle`).
 4. Copy these `*.ofx.bundle` directories into the standard OpenFX plugins
@@ -462,9 +464,9 @@ compiling:
 
 ### Using CMake
 
-CMake builds the same bundles as the Makefiles (`make nomulti` is make-only, except for
-`OFXMISC_STANDALONE_BUNDLES` below): `Misc`, `CImg` and `Shadertoy`, plus `Test` and
-`DebugProxy` in Debug builds. Only out-of-tree
+CMake builds the same bundles as the Makefiles (`make nomulti`: `OFX_PLUGIN_BUNDLES=SEPARATE`
+below): `Misc`, `CImg` and `Shadertoy`, plus `Test` and
+`DebugProxy` in Debug builds. It needs CMake 3.21 or later (openfx's `cmake/OpenFX.cmake`). Only out-of-tree
 builds are allowed. `CImg/CImg.h` and `CImg/Inpaint/inpaint.h` are downloaded (and
 `CImg.h` patched as openfx-gmic's, see above) at configure time if missing (at the
 version given in `CImg/CImgVersion.mk`, again when it, the patches or `FFT` change).
@@ -500,9 +502,17 @@ to the prefix (or absolute). The main options are:
   macOS version (e.g. MacPorts' libomp is built for the build machine's macOS).
 - `-DBUILD_CIMG_PLUGINS=OFF` (`make HAVE_CIMG=0`), `-DBUILD_SHADERTOY=OFF`,
   `-DBUILD_MISC=OFF` (with `-DBUILD_CIMG_PLUGINS=OFF`: only `Shadertoy.ofx.bundle`).
-- `-DOFXMISC_STANDALONE_BUNDLES="DenoiseSharpen"`: also build these Misc plugins as
-  standalone bundles (`DenoiseSharpen.ofx.bundle`, as `make nomulti`), for the binary
-  releases. They have the same plugins as `Misc.ofx.bundle`: install one or the other.
+- `-DOFX_PLUGIN_BUNDLES=SEPARATE` (openfx's option; default `COMBINED`): instead of
+  `Misc`, `CImg` and `Shadertoy`, one bundle per plugin directory (as `make nomulti`),
+  named after its OFX identifier (e.g. `net.sf.openfx.Invert.ofx.bundle`,
+  `net.sf.cimg.CImgBlur.ofx.bundle`), with that directory's icons only. Each is an
+  install component named after the directory, with a `CImg` prefix for the CImg plugins
+  (`cmake --install build --component Invert`, `--component CImgBlur`). The plugins are listed in `cmake/OFXMiscPlugins.cmake` (one line each). Install
+  either set, never both: they have the same plugins.
+- `-DOFXMISC_STANDALONE_BUNDLES="DenoiseSharpen"`: with the combined bundles, also build
+  these Misc plugins as their own bundle (`net.sf.openfx.DenoiseSharpen.ofx.bundle`), for
+  the binary releases. They have the same plugins as `Misc.ofx.bundle`: install one or
+  the other.
 - `-DFFT=pocketfft|pow2|fftw3` (`make FFT=...`): the FFT of the CImg plugins, see above
   (default `pocketfft`; `fftw3` is opt-in), and `-DOFX_LICENSE=GPL` (default) or
   `COMMERCIAL` (`make LICENSE=...`, as openfx-gmic's option), which refuses `fftw3`.
