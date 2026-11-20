@@ -2,9 +2,9 @@
 # Check that the CImg.h patches of openfx-misc are still those of openfx-gmic (run by nightly.yml):
 # - CImg/patches/*.sh are byte-identical to openfx-gmic's patches/cimg-*.sh at REF (default:
 #   master), and both sets have the same scripts;
-# - CIMG_PATCHES and CIMG_PATCHES_POCKETFFT (the patch order), POCKETFFTCOMMIT and
-#   POCKETFFT_SHA256 (the pocketfft pin) in CImg/CImgVersion.mk are those of openfx-gmic's Makefile
-#   at REF (whitespace around "=" and between words is normalised);
+# - CIMG_PATCHES (the patch order), POCKETFFTCOMMIT and POCKETFFT_SHA256 (the pocketfft pin) in
+#   CImg/CImgVersion.mk are those of openfx-gmic's Makefile at REF (whitespace around "=" and
+#   between words is normalised);
 # - CIMGVERSION (CImg/CImgVersion.mk) is the commit of the CImg tag v.<GMICVER>, GMICVER being
 #   the G'MIC version of openfx-gmic's Makefile at REF.
 # Every file is read from the same openfx-gmic commit: REF is resolved to a commit sha first.
@@ -60,14 +60,14 @@ for n in $names; do
     fi
 done
 # every script listed in CImgVersion.mk exists
-for p in $(sed -n -e 's/^CIMG_PATCHES *= *//p' -e 's/^CIMG_PATCHES_POCKETFFT *= *//p' CImg/CImgVersion.mk); do
+for p in $(sed -n -e 's/^CIMG_PATCHES *= *//p' CImg/CImgVersion.mk); do
     [ -f "CImg/$p" ] || { echo "ERROR: CImg/CImgVersion.mk lists $p, which does not exist"; status=1; }
 done
 
-# the patch order and the pocketfft pin: the plain "NAME = value" line of each variable (not the
-# conditional "CIMG_PATCHES += ..." of openfx-gmic), whitespace normalised
+# the patch order and the pocketfft pin: the plain "NAME = value" line of each variable,
+# whitespace normalised
 var() { sed -n "s/^$1[[:space:]]*=[[:space:]]*//p" "$2" | head -n 1 | tr -s '[:space:]' ' ' | sed 's/ $//'; }
-for v in CIMG_PATCHES CIMG_PATCHES_POCKETFFT POCKETFFTCOMMIT POCKETFFT_SHA256; do
+for v in CIMG_PATCHES POCKETFFTCOMMIT POCKETFFT_SHA256; do
     theirs=$(var $v "$work/Makefile")
     mine=$(var $v CImg/CImgVersion.mk)
     if [ -z "$theirs" ]; then
@@ -82,6 +82,23 @@ for v in CIMG_PATCHES CIMG_PATCHES_POCKETFFT POCKETFFTCOMMIT POCKETFFT_SHA256; d
         echo "ok: $v"
     fi
 done
+
+# openfx-gmic's CIMG_PATCHES must be its only CIMG_PATCHES* variable, assigned once, with a plain
+# "=": an append ("CIMG_PATCHES += ...", e.g. a conditional patch inside an ifeq), another
+# assignment, or another variable (e.g. the former CIMG_PATCHES_POCKETFFT) would be a patch that
+# CImg/CImgVersion.mk does not apply
+assigns=$(tr -d '\r' < "$work/Makefile" |
+              grep -E '^[[:space:]]*(override[[:space:]]+|export[[:space:]]+)?CIMG_PATCHES[A-Za-z0-9_]*[[:space:]]*([:+?!]|::)?=' || true)
+unhandled=$(echo "$assigns" | grep -Ev '^CIMG_PATCHES[[:space:]]*=' | grep . || true)
+nplain=$(echo "$assigns" | grep -Ec '^CIMG_PATCHES[[:space:]]*=' || true)
+if [ -n "$unhandled" ] || [ "$nplain" != 1 ]; then
+    echo "DRIFT: openfx-gmic's Makefile at $sha sets CImg patches that CImg/CImgVersion.mk does not handle"
+    echo "  (only one plain 'CIMG_PATCHES = ...' line is supported):"
+    echo "$assigns" | sed 's/^/  /'
+    status=1
+else
+    echo "ok: CIMG_PATCHES is openfx-gmic's only CImg patch list"
+fi
 
 # CIMGVERSION: the CImg tag v.<GMICVER>
 gmicver=$(sed -n 's/^GMICVER *= *\([0-9.]*\).*/\1/p' "$work/Makefile" | head -n 1)
@@ -105,7 +122,7 @@ fi
 if [ $status != 0 ]; then
     echo
     echo "CImg.h is no longer patched as openfx-gmic's ($repo $ref = $sha): update CImg/patches"
-    echo "and CImg/CImgVersion.mk (CIMG_PATCHES_FROM, CIMG_PATCHES, CIMG_PATCHES_POCKETFFT, POCKETFFTCOMMIT,"
-    echo "POCKETFFT_SHA256, CIMGVERSION), see CImg/CImgVersion.mk."
+    echo "and CImg/CImgVersion.mk (CIMG_PATCHES_FROM, CIMG_PATCHES, POCKETFFTCOMMIT, POCKETFFT_SHA256,"
+    echo "CIMGVERSION), see CImg/CImgVersion.mk."
 fi
 exit $status

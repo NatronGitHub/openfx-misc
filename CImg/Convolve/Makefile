@@ -27,8 +27,8 @@ CXXFLAGS += -I$(TOP_SRCDIR)/CImg
 
 $(OBJECTPATH)/CImgConvolve.o: CImgConvolve.cpp CImgFFTConvolve.h CImgFilter.h CImg.h
 
-# CImg.h and, with FFT=pocketfft, pocketfft_hdronly.h, made by ../Makefile with this FFT (an existing
-# CImg.h made with another FFT is not remade: CImgFFTConvolve.h then fails with an #error)
+# CImg.h and, with FFT=pocketfft, pocketfft_hdronly.h, made by ../Makefile (CImg.h is the same for
+# every FFT)
 CImg.h:
 	cd .. && $(MAKE) sources
 
