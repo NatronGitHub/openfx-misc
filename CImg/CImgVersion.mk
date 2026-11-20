@@ -42,8 +42,8 @@ CIMG_SHA256=adf13c3e991f6812c2db484ff07aa614421830117924590d3def10e8ac6a485b
 #   do not depend on thread scheduling (NatronGitHub/openfx-gmic#44, local fix)
 # - cimg-vvar2.sh: vvar() with two arguments called a NULL function pointer (crash)
 #   (GreycLab/CImg#501)
-# - cimg-vargkth2.sh: vargkth() with two arguments gave 1 instead of the index given with more
-#   arguments and in CImg 4.0.7 (GreycLab/CImg#501)
+# - cimg-vargkth2.sh: vargkth() with two arguments gave 1; it gives 0 again, as in CImg 4.0.7
+#   (GreycLab/CImg#501)
 # - cimg-log1p-peephole.sh: the log(1 + x) -> log1p(x) optimization rewrote the code that computed
 #   a variable, e.g. 'y=1+x;log(y);y' gave log(1 + x) (GreycLab/CImg#502)
 # - cimg-abs-peephole.sh: the same for abs(maxabs()) -> absmaxabs() (and minabs), e.g.
@@ -54,7 +54,7 @@ CIMG_SHA256=adf13c3e991f6812c2db484ff07aa614421830117924590d3def10e8ac6a485b
 # fftw_cleanup_threads() after each FFT (now only at unload, see GreycLab/CImg#500 and
 # CImgFFTConvolve.h), and pocketfft itself (cimg_use_pocketfft, GreycLab/CImg#497).
 # CMakeLists.txt reads these variables: keep each on one line, as a plain "NAME=value" assignment.
-CIMG_PATCHES_FROM=ea964f301dd0ba8cb8fe70a78fc00dda642b6cfe
+CIMG_PATCHES_FROM=ee55673f751bc20e953109e9b9648bd533e525b1
 CIMG_PATCHES=patches/cimg-omp-rand.sh patches/cimg-vvar2.sh patches/cimg-vargkth2.sh patches/cimg-log1p-peephole.sh patches/cimg-abs-peephole.sh
 
 # pocketfft (FFT=pocketfft), C++ header-only version, at a pinned commit of its 'cpp' branch: the
