@@ -20,7 +20,8 @@
 # OFX_PLUGIN_BUNDLES=SEPARATE (openfx's ofx_plugin_bundle_group). Adding a plug-in = one line.
 #
 #   ofxmisc_plugin(<name> [DIR <dir>] ID <ofx id> [COMPONENTS <SupportExt component>...]
-#                  [SOURCES <extra source>...] [OPENMP] [DEBUG_ONLY] [FFT] [OPENGL])
+#                  [SOURCES <extra source>...] [OPENMP] [DEBUG_ONLY] [FFT] [OPENGL]
+#                  [NO_ID_CHECK])
 #
 # - <name>: the CMake target and install component of its separate bundle (DIR defaults to it);
 # - ID: names the separate bundle (<ID>.ofx.bundle): the plug-in's OFX identifier, as it is, if
@@ -31,6 +32,7 @@
 #   combined bundle gets the union);
 # - COMPONENTS: the SupportExt components (supportext_add_sources), from <dir>/Makefile's objects;
 # - DEBUG_ONLY: only compiled in debug builds (#ifdef DEBUG): no bundle in other builds;
+# - NO_ID_CHECK: an ID (prefix + dir) that no plug-in identifier of the sources starts with;
 # - OPENGL: its own code calls OpenGL (an overlay), without a SupportExt component that links it;
 # - FFT: uses CImg/CImgFFTConvolve.h (its bundle gets the FFT licence, e.g. Licence_pocketfft.txt);
 # - the CImg ones (DIR CImg/...) also get CImg/CImgFilter.cpp and OpenMP.
@@ -39,7 +41,7 @@
 # ofxmisc_plugin(): appends "PLUGIN <name> ..." to OFXMISC_<group>_PLUGINS (the arguments of
 # ofx_plugin_bundle_group) and its name to OFXMISC_<group>_NAMES
 function(ofxmisc_plugin NAME)
-  cmake_parse_arguments(PARSE_ARGV 1 _p "OPENMP;DEBUG_ONLY;FFT;OPENGL" "DIR;ID" "COMPONENTS;SOURCES")
+  cmake_parse_arguments(PARSE_ARGV 1 _p "OPENMP;DEBUG_ONLY;FFT;OPENGL;NO_ID_CHECK" "DIR;ID" "COMPONENTS;SOURCES")
   if(_p_UNPARSED_ARGUMENTS OR NOT _p_ID)
     message(FATAL_ERROR "ofxmisc_plugin(${NAME}): bad arguments (ID is required): ${_p_UNPARSED_ARGUMENTS}")
   endif()
@@ -74,6 +76,9 @@ function(ofxmisc_plugin NAME)
     list(APPEND _args PROPERTIES OFXMISC_SUPPORTEXT_COMPONENTS ${_p_COMPONENTS})
     # (not SUPPORTEXT_COMPONENTS: supportext_add_sources records the components it added there)
   endif()
+  if(_p_NO_ID_CHECK) # a prefix + dir ID that no identifier of its sources starts with
+    list(APPEND _args NO_ID_CHECK)
+  endif()
   if(_p_OPENGL) # calls OpenGL itself (the SupportExt interacts and TEXT link it too)
     list(APPEND _args LINK_LIBRARIES OpenGL::GL)
   endif()
@@ -99,7 +104,7 @@ ofxmisc_plugin(ColorCorrect ID net.sf.openfx.ColorCorrectPlugin COMPONENTS THREA
 ofxmisc_plugin(ColorLookup ID net.sf.openfx.ColorLookupPlugin COMPONENTS THREADS OPENGL)
 ofxmisc_plugin(ColorMatrix ID net.sf.openfx.ColorMatrixPlugin COMPONENTS THREADS)
 ofxmisc_plugin(ColorSuppress ID net.sf.openfx.ColorSuppress COMPONENTS THREADS)
-ofxmisc_plugin(ColorTransform ID net.sf.openfx.ColorTransform COMPONENTS THREADS LUT)
+ofxmisc_plugin(ColorTransform ID net.sf.openfx.ColorTransform COMPONENTS THREADS LUT NO_ID_CHECK)
 ofxmisc_plugin(ColorWheel ID net.sf.openfx.ColorWheel COMPONENTS THREADS RECTANGLE_INTERACT GENERATOR LUT)
 ofxmisc_plugin(Constant ID net.sf.openfx.Constant COMPONENTS THREADS RECTANGLE_INTERACT GENERATOR)
 ofxmisc_plugin(ContactSheet ID net.sf.openfx.ContactSheetOFX OPENGL)
@@ -112,7 +117,7 @@ ofxmisc_plugin(Despill ID net.sf.openfx.Despill COMPONENTS THREADS)
 ofxmisc_plugin(Difference ID net.sf.openfx.DifferencePlugin COMPONENTS THREADS)
 ofxmisc_plugin(DiscBlades ID net.sf.openfx.DiscBlades COMPONENTS THREADS RECTANGLE_INTERACT GENERATOR)
 ofxmisc_plugin(Dissolve ID net.sf.openfx.DissolvePlugin COMPONENTS THREADS)
-ofxmisc_plugin(Distortion ID net.sf.openfx.Distortion COMPONENTS THREADS TEXT MULTIPLANE RECTANGLE_INTERACT GENERATOR)
+ofxmisc_plugin(Distortion ID net.sf.openfx.Distortion COMPONENTS THREADS TEXT MULTIPLANE RECTANGLE_INTERACT GENERATOR NO_ID_CHECK)
 ofxmisc_plugin(FrameBlend ID net.sf.openfx.FrameBlend COMPONENTS THREADS)
 ofxmisc_plugin(FrameHold ID net.sf.openfx.FrameHold COMPONENTS THREADS)
 ofxmisc_plugin(FrameRange ID net.sf.openfx.FrameRange COMPONENTS THREADS)
