@@ -433,7 +433,7 @@ transforms of ConvolveCImg, ZDefocusCImg and the `fft()` of ExpressionCImg (see
 `FFT` is an option of the Makefiles and of CMake only. The Xcode and Visual Studio
 projects (`Misc.xcodeproj`, `Misc/CImg.vcxproj`) define neither `cimg_use_pocketfft`
 nor `cimg_use_fftw3`, and do not fetch pocketfft: their CImg plugins always use `pow2`,
-whatever `CImg.h` was downloaded with.
+whatever the `FFT` of the make or CMake build that downloaded `CImg.h`.
 
 `LICENSE=GPL` (default) or `LICENSE=COMMERCIAL` (Natron's `NATRON_LICENSE`, as in
 openfx-gmic) only matters for FFTW: COMMERCIAL builds refuse `FFT=fftw3`.
@@ -444,9 +444,10 @@ openfx-gmic) only matters for FFTW: COMMERCIAL builds refuse `FFT=fftw3`.
 [openfx-gmic](https://github.com/NatronGitHub/openfx-gmic), which uses the same CImg
 version: `CImg/patches/cimg-*.sh` are copies of openfx-gmic's `patches/cimg-*.sh` (the
 source of truth), at the openfx-gmic commit `CIMG_PATCHES_FROM` of
-`CImg/CImgVersion.mk`, applied in the same order (`cimg-pocketfft.sh` only with
-`FFT=pocketfft`), so that both get the same `CImg.h`. They need a POSIX `sh`, `awk`,
-`grep` and `wc`. A nightly CI job (`.github/tools/check-cimg-patches.sh`) reports when
+`CImg/CImgVersion.mk`, applied in the same order, so that both get the same `CImg.h`
+(the same for every `FFT`: CImg 4.0.8 has pocketfft support itself, `cimg_use_pocketfft`,
+and includes `pocketfft_hdronly.h` from the `CImg` directory). They need a POSIX `sh`,
+`awk` and `wc`. A nightly CI job (`.github/tools/check-cimg-patches.sh`) reports when
 openfx-gmic's scripts or G'MIC version change.
 
 The compiled plugins are placed in subdirectories named after the

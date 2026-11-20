@@ -2,9 +2,9 @@
 # Check that the CImg.h patches of openfx-misc are still those of openfx-gmic (run by nightly.yml):
 # - CImg/patches/*.sh are byte-identical to openfx-gmic's patches/cimg-*.sh at REF (default:
 #   master), and both sets have the same scripts;
-# - CIMG_PATCHES and CIMG_PATCHES_POCKETFFT (the patch order), POCKETFFTCOMMIT and
-#   POCKETFFT_SHA256 (the pocketfft pin) in CImg/CImgVersion.mk are those of openfx-gmic's Makefile
-#   at REF (whitespace around "=" and between words is normalised);
+# - CIMG_PATCHES (the patch order), POCKETFFTCOMMIT and POCKETFFT_SHA256 (the pocketfft pin) in
+#   CImg/CImgVersion.mk are those of openfx-gmic's Makefile at REF (whitespace around "=" and
+#   between words is normalised);
 # - CIMGVERSION (CImg/CImgVersion.mk) is the commit of the CImg tag v.<GMICVER>, GMICVER being
 #   the G'MIC version of openfx-gmic's Makefile at REF.
 # Every file is read from the same openfx-gmic commit: REF is resolved to a commit sha first.
@@ -60,14 +60,14 @@ for n in $names; do
     fi
 done
 # every script listed in CImgVersion.mk exists
-for p in $(sed -n -e 's/^CIMG_PATCHES *= *//p' -e 's/^CIMG_PATCHES_POCKETFFT *= *//p' CImg/CImgVersion.mk); do
+for p in $(sed -n -e 's/^CIMG_PATCHES *= *//p' CImg/CImgVersion.mk); do
     [ -f "CImg/$p" ] || { echo "ERROR: CImg/CImgVersion.mk lists $p, which does not exist"; status=1; }
 done
 
-# the patch order and the pocketfft pin: the plain "NAME = value" line of each variable (not the
-# conditional "CIMG_PATCHES += ..." of openfx-gmic), whitespace normalised
+# the patch order and the pocketfft pin: the plain "NAME = value" line of each variable,
+# whitespace normalised
 var() { sed -n "s/^$1[[:space:]]*=[[:space:]]*//p" "$2" | head -n 1 | tr -s '[:space:]' ' ' | sed 's/ $//'; }
-for v in CIMG_PATCHES CIMG_PATCHES_POCKETFFT POCKETFFTCOMMIT POCKETFFT_SHA256; do
+for v in CIMG_PATCHES POCKETFFTCOMMIT POCKETFFT_SHA256; do
     theirs=$(var $v "$work/Makefile")
     mine=$(var $v CImg/CImgVersion.mk)
     if [ -z "$theirs" ]; then
@@ -105,7 +105,7 @@ fi
 if [ $status != 0 ]; then
     echo
     echo "CImg.h is no longer patched as openfx-gmic's ($repo $ref = $sha): update CImg/patches"
-    echo "and CImg/CImgVersion.mk (CIMG_PATCHES_FROM, CIMG_PATCHES, CIMG_PATCHES_POCKETFFT, POCKETFFTCOMMIT,"
-    echo "POCKETFFT_SHA256, CIMGVERSION), see CImg/CImgVersion.mk."
+    echo "and CImg/CImgVersion.mk (CIMG_PATCHES_FROM, CIMG_PATCHES, POCKETFFTCOMMIT, POCKETFFT_SHA256,"
+    echo "CIMGVERSION), see CImg/CImgVersion.mk."
 fi
 exit $status

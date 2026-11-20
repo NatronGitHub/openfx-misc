@@ -25,8 +25,9 @@ endif
 endif
 endif
 ifeq ($(FFT),pocketfft)
-# pocketfft (BSD-3-Clause), header-only, multithreaded (std::thread) except on Windows:
-# patches/cimg-pocketfft.sh.
+# pocketfft (BSD-3-Clause), header-only, multithreaded (std::thread) except on Windows: CImg's
+# cimg_use_pocketfft (CImg >= 4.0.8, GreycLab/CImg#497), which includes pocketfft_hdronly.h, next to
+# CImg.h. With cimg_use_fftw3 too, CImg uses FFTW.
 # Its licence asks for its notice in binary distributions: Licence_pocketfft.txt, in the bundle.
 FFT_CXXFLAGS = -Dcimg_use_pocketfft
 # Windows (MinGW): single-threaded pocketfft, as openfx-gmic (NatronGitHub/openfx-gmic#94). Its

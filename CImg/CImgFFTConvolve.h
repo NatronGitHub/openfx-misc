@@ -31,13 +31,12 @@
 
 #include "CImgFilter.h" // CImg.h, cimgpix_t
 
-// -Dcimg_use_pocketfft (CImgFFT.mk, CMakeLists.txt) only works with a CImg.h patched by
-// patches/cimg-pocketfft.sh, which then includes pocketfft_hdronly.h (include guard
-// POCKETFFT_HDRONLY_H). An unpatched CImg.h (e.g. one made with FFT=pow2 or fftw3, then used by a
-// standalone build of a subdirectory with the default FFT=pocketfft) would silently use CImg's own
-// power-of-two FFT: fail instead.
+// -Dcimg_use_pocketfft (CImgFFT.mk, CMakeLists.txt): CImg >= 4.0.8 then includes
+// pocketfft_hdronly.h (include guard POCKETFFT_HDRONLY_H), unless cimg_use_fftw3 is also defined
+// (FFTW wins). An older CImg.h (e.g. a stale 4.0.7 one, used by a standalone build of a
+// subdirectory) would silently use CImg's own power-of-two FFT: fail instead.
 #if defined(cimg_use_pocketfft) && !defined(cimg_use_fftw3) && !defined(POCKETFFT_HDRONLY_H)
-#error "CImg.h is not patched for pocketfft (run make -C CImg sources)"
+#error "CImg.h does not support cimg_use_pocketfft (CImg < 4.0.8?): run make -C CImg sources"
 #endif
 
 #if defined(cimg_use_fftw3) && !defined(cimg_use_fftw3_singlethread)
@@ -52,11 +51,16 @@
 // whose CImg plans under another mutex than ours (cimg::mutex(12) of our cimg_library namespace).
 // fftw_make_planner_thread_safe() (FFTW >= 3.3.5, in libfftw3_threads; checked by CMakeLists.txt
 // and CImg/CImgFFT.mk) makes FFTW serialize the creation and destruction of plans process-wide,
-// for all its users. Done once per process (std::call_once), at load, before any render, as in
-// openfx-gmic (NatronGitHub/openfx-gmic#93). fftw_init_threads() was already called by CImg's
-// static FFTW3_static: calling it again does nothing. CImg keeps its own mutex. FFTW's cleanup
-// functions don't take the planner lock: patches/cimg-fftw-no-cleanup.sh removes the
-// fftw_cleanup_threads() that CImg called after each FFT (GreycLab/CImg#500).
+// for all its users. Done once per load of the binary (std::call_once), at load, before any render,
+// as in openfx-gmic (NatronGitHub/openfx-gmic#93). fftw_init_threads() was already called by CImg's
+// static FFTW3_static: calling it again does nothing. CImg keeps its own mutex.
+// FFTW's cleanup functions don't take the planner lock. CImg 4.0.8 no longer calls
+// fftw_cleanup_threads() after each FFT, only in ~FFTW3_static(), when the binary is unloaded
+// (GreycLab/CImg#500, still open): this frees FFTW's planner and threads, which is only safe if no
+// other plug-in of the process is planning or running an FFTW transform at that moment. The
+// planner hooks of fftw_make_planner_thread_safe() survive it, and FFTW re-initialises its threads
+// at the next plan (fftw_plan_with_nthreads()), so a reload of this binary, or another user of
+// FFTW, keeps working.
 inline void
 cimgFFTLoad()
 {
