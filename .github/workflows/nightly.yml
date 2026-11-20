@@ -274,7 +274,7 @@ jobs:
           set -eo pipefail
           RENDERTEST_ONLY='^CImgConvolve' .github/tools/rendertest.sh install-${{ matrix.config }}
 
-  # MSVC is not used by the other CI builds (MinGW GCC), but the CMake build and
+  # MSVC is not used by the other Windows builds (MinGW GCC), but the CMake build and
   # Misc/*.vcxproj support it: check that the sources build with Visual Studio 2022
   # (C++17, /Zc:__cplusplus from openfx::Api). The build needs nothing beyond the
   # runner image (CMake downloads CImg.h); the load test uses the cached MSYS2 UCRT64.

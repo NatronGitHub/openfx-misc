@@ -10,7 +10,7 @@ name: Continous Integration tests
 # the FFT convolution test only (a pocketfft deadlock at plug-in unload, openfx-gmic#94).
 # macOS runs only after Linux and Windows pass, and is informative: a red or missing
 # macOS check does not block merging (macOS arm64 runners are scarce).
-# Other variants (debug, C++20, no OpenMP, MSVC, and make nomulti) are in nightly.yml.
+# Other variants (debug, C++20, no OpenMP, MSVC) are in nightly.yml.
 #
 # Frugal CI (NatronGitHub runners are shared by all repos): one run per change.
 # Pushes are built only on master, RB-* and tags (not the final release tags,
@@ -96,7 +96,7 @@ jobs:
     env:
       # The bundles load on macOS 14 and later (CMakeLists.txt's default
       # CMAKE_OSX_DEPLOYMENT_TARGET), as the binary releases (release.yml).
-      # No OpenMP (as the make CI): the bundles are deployed (OFX_DEPLOY_BUNDLES, osxDeploy.sh),
+      # No OpenMP: the bundles are deployed (OFX_DEPLOY_BUNDLES, osxDeploy.sh),
       # and MacPorts' libomp is built for the runner's macOS (minos 15), so bundles with it
       # would not load on macOS 14.
       MACOS_OPTIONS: -DOFX_DEPLOY_BUNDLES=ON -DOFX_USE_OPENMP=OFF
@@ -228,7 +228,7 @@ jobs:
     env:
       # The MinGW runtime (libstdc++, libgcc, winpthread) is linked statically, so
       # that the bundles also load in hosts that do not ship these DLLs (loadtest.sh
-      # checks it). No OpenMP (as the make CI): with MSYS2's libgomp, -static still
+      # checks it). No OpenMP: with MSYS2's libgomp, -static still
       # leaves a libgomp-1.dll dependency (rejected by loadtest.sh, CI run 44066372220).
       # OFX_BUILD_HOSTDEMO: openfx's hostDemo, in install/bin, for the FFT render test.
       WINDOWS_OPTIONS: -DCMAKE_MODULE_LINKER_FLAGS=-static -DOFX_USE_OPENMP=OFF -DOFX_BUILD_HOSTDEMO=ON
