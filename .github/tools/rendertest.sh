@@ -159,6 +159,8 @@ def pfm(name, w, h, val):
         f.write(b"PF\n%d %d\n-1.0\n" % (w, h) + struct.pack("<%df" % len(pix), *pix))
 pfm("convsrc.pfm", 720, 576, lambda x, y, c: ((x * 7919 + y * 104729 + c * 4099) % 1009) / 1009.)
 pfm("convk.pfm", 7, 5, lambda x, y, c: 1. + ((x * 3 + y * 5 + c * 7) % 11))
+# vramp.pfm: a 720x576 PF vertical ramp, (y + 0.5) / 576 at row y (for the Y axis of GodRays scale 0)
+pfm("vramp.pfm", 720, 576, lambda x, y, c: (y + 0.5) / 576.)
 EOF2
 
 # check REPORT DEPTH EXPECT [CLIP=CRC32...]: check the --report JSON file of a
@@ -602,6 +604,16 @@ tests=(
     # GodRays with gamma 0 computed pow(x, 1/0) of x = 1 up to rounding: the colors were 1 (or
     # infinite); they are now interpolated geometrically from fromColor to toColor
     "GodRays gamma 0|net.sf.openfx.GodRays|filter|float|mean=0.209,0.264,0.310,0.351||-i Source=checker:16 scale=0.7,0.7 fromColor=1,1,1,1 toColor=0.2,0.3,0.4,0.5 gamma=0,0,0,0"
+    # GodRays with scale 0 clamped it to 1e-4 and interpolated it geometrically (scales down to 1.3e-4,
+    # each supersampled over up to 81x81 pixels per output pixel: minutes per frame, Natron#1005, and a
+    # mean of 0.926 here, mostly the edge of the ramp). It is now interpolated linearly from 1 to 0, like
+    # a negative scale: the mean of ramp(center + (p - center) * 32 / k) over k = 1..32 is 0.641
+    "GodRays scale 0|net.sf.openfx.GodRays|filter|float|mean=0.641,0.641,0.641,0.641||-i Source=ramp center=200,150 scale=0,0 --window 280,200,312,232"
+    # The same on the Y axis, with a vertical ramp (any X scale gives the same result): scale 0 on Y
+    # only, and with uniform scaling (Y takes the X scale). The mean of
+    # vramp(center + (p - center) * 32 / k) over k = 1..32 is 0.578 (the old code gave 0.907)
+    "GodRays scale 0 Y|net.sf.openfx.GodRays|filter|float|mean=0.578,0.578,0.578,1||-i Source=file:vramp.pfm center=200,150 scale=5,0 --window 280,200,312,232"
+    "GodRays scale 0 uniform|net.sf.openfx.GodRays|filter|float|mean=0.578,0.578,0.578,1||-i Source=file:vramp.pfm center=200,150 uniform=1 scale=0,5 --window 280,200,312,232"
     # Rand with density 0 computed 0/0 for its noise level
     "Rand density 0|net.sf.openfx.Noise|general|*|mean=0,0,0,0||-i Source=none density=0"
     "ImageStatistics auto crop seq|net.sf.openfx.ImageStatistics|filter|float|value:autoCropSize=34.133333,16+keys:autoCropBottomLeft=26+keys:autoCropSize=26+keyrange:autoCropSize=0,25||-i Source=file:autocrop.pfm@100,50 -s analyzeSequenceAutoCrop"
