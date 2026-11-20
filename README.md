@@ -509,8 +509,8 @@ to the prefix (or absolute). The main options are:
   `Misc`, `CImg` and `Shadertoy`, one bundle per plugin directory (as `make nomulti`),
   named after its OFX identifier (e.g. `net.sf.openfx.Invert.ofx.bundle`,
   `net.sf.cimg.CImgBlur.ofx.bundle`), with that directory's icons only. Each is an
-  install component named after the directory (`cmake --install build --component
-  Invert`). The plugins are listed in `cmake/OFXMiscPlugins.cmake` (one line each). Install
+  install component named after the directory, with a `CImg` prefix for the CImg plugins
+  (`cmake --install build --component Invert`, `--component CImgBlur`). The plugins are listed in `cmake/OFXMiscPlugins.cmake` (one line each). Install
   either set, never both: they have the same plugins.
 - `-DOFXMISC_STANDALONE_BUNDLES="DenoiseSharpen"`: with the combined bundles, also build
   these Misc plugins as their own bundle (`net.sf.openfx.DenoiseSharpen.ofx.bundle`), for

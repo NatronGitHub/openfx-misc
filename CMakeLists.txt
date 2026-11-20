@@ -712,7 +712,7 @@ ofx_plugin_bundle_group(CImg
 foreach(_t IN LISTS _cimg_targets)
   get_target_property(_components ${_t} OFXMISC_SUPPORTEXT_COMPONENTS)
   supportext_add_sources(${_t} COMPONENTS ${_components}) # LUT: ChromaBlur, HistEQ
-  if(TARGET OpenMP::OpenMP_CXX)
+  if(NOT MSVC AND TARGET OpenMP::OpenMP_CXX) # MSVC: no OpenMP (the table's OPENMP is not passed)
     target_compile_definitions(${_t} PRIVATE cimg_use_openmp) # CImg/Makefile: OPENMP=1
   endif()
   get_target_property(_fft ${_t} OFXMISC_FFT)
