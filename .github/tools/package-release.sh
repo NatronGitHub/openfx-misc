@@ -137,7 +137,7 @@ The bundles are built on Rocky Linux 9 for x86_64. They need these system
 libraries, which are never included: glibc 2.34 or later, libstdc++ and
 libgcc_s (GCC 11 or later), the OpenGL library (libGL.so.1), and GCC's OpenMP
 runtime (libgomp.so.1, e.g. the libgomp package), which Misc.ofx (DenoiseSharpen),
-CImg.ofx and the standalone DenoiseSharpen.ofx need. Any other library is in the
+CImg.ofx and the standalone net.sf.openfx.DenoiseSharpen.ofx need. Any other library is in the
 bundle (<bundle>.ofx.bundle/Libraries).
 EOF
             ;;
@@ -324,5 +324,5 @@ if [ -n "$stmesa" ]; then
         "$stmesa/Shadertoy.ofx.bundle"
 fi
 package "openfx-misc-DenoiseSharpen-$version-$platform" \
-"- DenoiseSharpen.ofx.bundle: DenoiseSharpen alone (the same plug-in as in Misc.ofx.bundle)" \
-    "$ds/DenoiseSharpen.ofx.bundle"
+"- net.sf.openfx.DenoiseSharpen.ofx.bundle: DenoiseSharpen alone (the same plug-in as in Misc.ofx.bundle)" \
+    "$ds/net.sf.openfx.DenoiseSharpen.ofx.bundle"

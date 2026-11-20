@@ -20,7 +20,7 @@
 # OFX_PLUGIN_BUNDLES=SEPARATE (openfx's ofx_plugin_bundle_group). Adding a plug-in = one line.
 #
 #   ofxmisc_plugin(<name> [DIR <dir>] ID <ofx id> [COMPONENTS <SupportExt component>...]
-#                  [SOURCES <extra source>...] [OPENMP] [DEBUG_ONLY])
+#                  [SOURCES <extra source>...] [OPENMP] [DEBUG_ONLY] [FFT] [OPENGL])
 #
 # - <name>: the CMake target and install component of its separate bundle (DIR defaults to it);
 # - ID: names the separate bundle (<ID>.ofx.bundle): the plug-in's OFX identifier, as it is, if
@@ -30,13 +30,16 @@
 #   (<pluginIdentifier>.png/.svg) of the plug-ins of <dir> and its PyPlugs (in both modes: the
 #   combined bundle gets the union);
 # - COMPONENTS: the SupportExt components (supportext_add_sources), from <dir>/Makefile's objects;
-# - DEBUG_ONLY: only compiled in debug builds (#ifdef DEBUG): no bundle in other builds.
+# - DEBUG_ONLY: only compiled in debug builds (#ifdef DEBUG): no bundle in other builds;
+# - OPENGL: its own code calls OpenGL (an overlay), without a SupportExt component that links it;
+# - FFT: uses CImg/CImgFFTConvolve.h (its bundle gets the FFT licence, e.g. Licence_pocketfft.txt);
+# - the CImg ones (DIR CImg/...) also get CImg/CImgFilter.cpp and OpenMP.
 # Group: the first plug-ins go to Misc.ofx.bundle, the CImg ones (DIR CImg/...) to CImg.ofx.bundle.
 ########################################################################
 # ofxmisc_plugin(): appends "PLUGIN <name> ..." to OFXMISC_<group>_PLUGINS (the arguments of
-# ofx_plugin_bundle_group) and sets OFXMISC_COMPONENTS_<name> (SupportExt components, per target)
+# ofx_plugin_bundle_group) and its name to OFXMISC_<group>_NAMES
 function(ofxmisc_plugin NAME)
-  cmake_parse_arguments(PARSE_ARGV 1 _p "OPENMP;DEBUG_ONLY" "DIR;ID" "COMPONENTS;SOURCES")
+  cmake_parse_arguments(PARSE_ARGV 1 _p "OPENMP;DEBUG_ONLY;FFT;OPENGL" "DIR;ID" "COMPONENTS;SOURCES")
   if(_p_UNPARSED_ARGUMENTS OR NOT _p_ID)
     message(FATAL_ERROR "ofxmisc_plugin(${NAME}): bad arguments (ID is required): ${_p_UNPARSED_ARGUMENTS}")
   endif()
@@ -49,6 +52,7 @@ function(ofxmisc_plugin NAME)
   if(_p_DIR MATCHES "^CImg/")
     set(_group CIMG)
     set(_p_OPENMP TRUE) # CImg.ofx.bundle uses OpenMP (cimg_use_openmp)
+    list(APPEND _p_SOURCES CImg/CImgFilter.cpp) # the CImg plug-ins' base class
   else()
     set(_group MISC)
   endif()
@@ -58,17 +62,26 @@ function(ofxmisc_plugin NAME)
     "${PROJECT_SOURCE_DIR}/${_p_DIR}/*.py" "${PROJECT_SOURCE_DIR}/${_p_DIR}/*.gizmo"
     "${PROJECT_SOURCE_DIR}/${_p_DIR}/*.nps")
   list(TRANSFORM _p_SOURCES PREPEND "${PROJECT_SOURCE_DIR}/")
-  set(_args PLUGIN ${NAME} ID ${_p_ID} SOURCES ${_srcs} ${_p_SOURCES}
-    INCLUDE_DIRECTORIES "${PROJECT_SOURCE_DIR}/${_p_DIR}")
+  # no INCLUDE_DIRECTORIES: #include "..." finds the headers next to each source
+  set(_args PLUGIN ${NAME} ID ${_p_ID} SOURCES ${_srcs} ${_p_SOURCES})
   if(_res)
     list(APPEND _args RESOURCES ${_res})
   endif()
   if(_p_OPENMP AND NOT MSVC) # MSVC has OpenMP 2.0 only
     list(APPEND _args OPENMP)
   endif()
+  if(_p_COMPONENTS)
+    list(APPEND _args PROPERTIES OFXMISC_SUPPORTEXT_COMPONENTS ${_p_COMPONENTS})
+    # (not SUPPORTEXT_COMPONENTS: supportext_add_sources records the components it added there)
+  endif()
+  if(_p_OPENGL) # calls OpenGL itself (the SupportExt interacts and TEXT link it too)
+    list(APPEND _args LINK_LIBRARIES OpenGL::GL)
+  endif()
+  if(_p_FFT) # its bundle gets the FFT library's licence (CMakeLists.txt)
+    list(APPEND _args PROPERTIES OFXMISC_FFT ON)
+  endif()
   set(OFXMISC_${_group}_PLUGINS ${OFXMISC_${_group}_PLUGINS} ${_args} PARENT_SCOPE)
   set(OFXMISC_${_group}_NAMES ${OFXMISC_${_group}_NAMES} ${NAME} PARENT_SCOPE)
-  set(OFXMISC_COMPONENTS_${NAME} ${_p_COMPONENTS} PARENT_SCOPE)
 endfunction()
 
 # Misc.ofx.bundle
@@ -83,13 +96,13 @@ ofxmisc_plugin(Clamp ID net.sf.openfx.Clamp COMPONENTS THREADS)
 ofxmisc_plugin(ClipTest ID net.sf.openfx.ClipTestPlugin COMPONENTS THREADS)
 ofxmisc_plugin(ColorBars ID net.sf.openfx.ColorBars COMPONENTS THREADS RECTANGLE_INTERACT GENERATOR LUT)
 ofxmisc_plugin(ColorCorrect ID net.sf.openfx.ColorCorrectPlugin COMPONENTS THREADS)
-ofxmisc_plugin(ColorLookup ID net.sf.openfx.ColorLookupPlugin COMPONENTS THREADS)
+ofxmisc_plugin(ColorLookup ID net.sf.openfx.ColorLookupPlugin COMPONENTS THREADS OPENGL)
 ofxmisc_plugin(ColorMatrix ID net.sf.openfx.ColorMatrixPlugin COMPONENTS THREADS)
 ofxmisc_plugin(ColorSuppress ID net.sf.openfx.ColorSuppress COMPONENTS THREADS)
 ofxmisc_plugin(ColorTransform ID net.sf.openfx.ColorTransform COMPONENTS THREADS LUT)
 ofxmisc_plugin(ColorWheel ID net.sf.openfx.ColorWheel COMPONENTS THREADS RECTANGLE_INTERACT GENERATOR LUT)
 ofxmisc_plugin(Constant ID net.sf.openfx.Constant COMPONENTS THREADS RECTANGLE_INTERACT GENERATOR)
-ofxmisc_plugin(ContactSheet ID net.sf.openfx.ContactSheetOFX)
+ofxmisc_plugin(ContactSheet ID net.sf.openfx.ContactSheetOFX OPENGL)
 ofxmisc_plugin(CopyRectangle ID net.sf.openfx.CopyRectanglePlugin COMPONENTS THREADS RECTANGLE_INTERACT)
 ofxmisc_plugin(CornerPin ID net.sf.openfx.CornerPin COMPONENTS THREADS TRANSFORM3X3 TEXT SHUTTER)
 ofxmisc_plugin(Crop ID net.sf.openfx.CropPlugin COMPONENTS THREADS RECTANGLE_INTERACT GENERATOR)
@@ -107,7 +120,7 @@ ofxmisc_plugin(Gamma ID net.sf.openfx.GammaPlugin COMPONENTS THREADS)
 ofxmisc_plugin(GodRays ID net.sf.openfx.GodRays COMPONENTS THREADS TRANSFORM3X3 TRANSFORM_INTERACT SHUTTER)
 ofxmisc_plugin(Grade ID net.sf.openfx.GradePlugin COMPONENTS THREADS)
 ofxmisc_plugin(HSVTool ID net.sf.openfx.HSVToolPlugin COMPONENTS THREADS LUT RECTANGLE_INTERACT)
-ofxmisc_plugin(HueCorrect ID net.sf.openfx.HueCorrect COMPONENTS THREADS LUT)
+ofxmisc_plugin(HueCorrect ID net.sf.openfx.HueCorrect COMPONENTS THREADS LUT OPENGL)
 ofxmisc_plugin(ImageStatistics ID net.sf.openfx.ImageStatistics COMPONENTS THREADS LUT RECTANGLE_INTERACT)
 ofxmisc_plugin(Invert ID net.sf.openfx.Invert COMPONENTS THREADS)
 ofxmisc_plugin(JoinViews ID net.sf.openfx.joinViewsPlugin COMPONENTS THREADS)
@@ -155,13 +168,13 @@ ofxmisc_plugin(WhiteBalance ID net.sf.openfx.WhiteBalance COMPONENTS THREADS)
 # CImg.ofx.bundle (they all share CImg/CImgFilter.cpp)
 ofxmisc_plugin(CImgBilateral DIR CImg/Bilateral ID net.sf.cimg.CImgBilateral COMPONENTS THREADS SOURCES CImg/CImgOperator.cpp)
 ofxmisc_plugin(CImgBlur DIR CImg/Blur ID net.sf.cimg.CImgBlur COMPONENTS THREADS LUT)
-ofxmisc_plugin(CImgConvolve DIR CImg/Convolve ID net.sf.cimg.CImgConvolve COMPONENTS THREADS)
+ofxmisc_plugin(CImgConvolve DIR CImg/Convolve ID net.sf.cimg.CImgConvolve COMPONENTS THREADS FFT)
 ofxmisc_plugin(CImgDenoise DIR CImg/Denoise ID net.sf.cimg.CImgDenoise COMPONENTS THREADS)
 ofxmisc_plugin(CImgDistance DIR CImg/Distance ID eu.cimg.Distance COMPONENTS THREADS)
 ofxmisc_plugin(CImgEqualize DIR CImg/Equalize ID net.sf.cimg.CImgEqualize COMPONENTS THREADS)
 ofxmisc_plugin(CImgErode DIR CImg/Erode ID net.sf.cimg.CImgErode COMPONENTS THREADS)
 ofxmisc_plugin(CImgErodeSmooth DIR CImg/ErodeSmooth ID net.sf.cimg.CImgErodeSmooth COMPONENTS THREADS)
-ofxmisc_plugin(CImgExpression DIR CImg/Expression ID net.sf.cimg.CImgExpression COMPONENTS THREADS)
+ofxmisc_plugin(CImgExpression DIR CImg/Expression ID net.sf.cimg.CImgExpression COMPONENTS THREADS FFT)
 ofxmisc_plugin(CImgGuided DIR CImg/Guided ID net.sf.cimg.CImgGuided COMPONENTS THREADS)
 ofxmisc_plugin(CImgHistEQ DIR CImg/HistEQ ID net.sf.cimg.CImgHistEQ COMPONENTS THREADS LUT)
 ofxmisc_plugin(CImgInpaint DIR CImg/Inpaint ID eu.cimg.Inpaint COMPONENTS THREADS)
@@ -173,4 +186,4 @@ ofxmisc_plugin(CImgRollingGuidance DIR CImg/RollingGuidance ID net.sf.cimg.CImgR
 ofxmisc_plugin(CImgSharpenInvDiff DIR CImg/SharpenInvDiff ID net.sf.cimg.CImgSharpenInvDiff COMPONENTS THREADS)
 ofxmisc_plugin(CImgSharpenShock DIR CImg/SharpenShock ID net.sf.cimg.CImgSharpenShock COMPONENTS THREADS)
 ofxmisc_plugin(CImgSmooth DIR CImg/Smooth ID net.sf.cimg.CImgSmooth COMPONENTS THREADS)
-ofxmisc_plugin(CImgZDefocus DIR CImg/ZDefocus ID net.sf.cimg.CImgZDefocus COMPONENTS THREADS)
+ofxmisc_plugin(CImgZDefocus DIR CImg/ZDefocus ID net.sf.cimg.CImgZDefocus COMPONENTS THREADS FFT)

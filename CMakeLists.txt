@@ -25,8 +25,9 @@
 # <build>/Plugins and installed by "cmake --install" into ${CMAKE_INSTALL_PREFIX}/OFX/Plugins
 # (openfx's PLUGIN_INSTALLDIR): use --prefix /usr (Linux) or /Library (macOS) to get the
 # directories of "make install".
-# The "make nomulti" bundles (one per plug-in directory) are only built by make, except those of
-# OFXMISC_STANDALONE_BUNDLES (below).
+# -DOFX_PLUGIN_BUNDLES=SEPARATE (openfx's option) builds instead one bundle per plug-in directory,
+# as "make nomulti", named after its OFX identifier (e.g. net.sf.openfx.Invert.ofx.bundle): see
+# the plug-in table, cmake/OFXMiscPlugins.cmake (adding a plug-in = one line there).
 #
 # Options:
 #   -DCMAKE_BUILD_TYPE=Release|Debug|RelWithDebInfo (default: Release)
@@ -37,10 +38,14 @@
 #      (macOS: osxDeploy.sh, as "make CONFIG=release" does; needs gsed)
 #   -DBUILD_CIMG_PLUGINS=OFF ("make HAVE_CIMG=0"), -DBUILD_SHADERTOY=OFF, -DBUILD_MISC=OFF (e.g.
 #      -DBUILD_MISC=OFF -DBUILD_CIMG_PLUGINS=OFF builds only Shadertoy.ofx.bundle)
-#   -DOFXMISC_STANDALONE_BUNDLES="DenoiseSharpen": also build these plug-in directories of Misc as
-#      standalone bundles (<Dir>.ofx.bundle, with <Dir>/Info.plist, as "make nomulti"), for the
-#      binary releases. Their plug-ins are also in Misc.ofx.bundle, with the same identifiers and
-#      versions: a host must not load both (install one or the other).
+#   -DOFX_PLUGIN_BUNDLES=COMBINED (default) or SEPARATE: the combined bundles above, or one bundle
+#      per plug-in directory ("make nomulti"; cmake/OFXMiscPlugins.cmake), which replaces them (the
+#      two sets have the same plug-ins: a host must not load both). With SEPARATE, Debug builds
+#      also have Misc.ofx.bundle, with TestRender only (as Test.ofx.bundle).
+#   -DOFXMISC_STANDALONE_BUNDLES="DenoiseSharpen": with COMBINED, also build these Misc plug-ins
+#      as their own bundle (net.sf.openfx.DenoiseSharpen.ofx.bundle, install component
+#      DenoiseSharpen), for the binary releases. Their plug-ins are also in Misc.ofx.bundle, with
+#      the same identifiers and versions: a host must not load both (install one or the other).
 #   -DOFX_LICENSE=GPL (default) or COMMERCIAL ("make LICENSE=...", Natron's NATRON_LICENSE, as in
 #      openfx-gmic): COMMERCIAL builds refuse FFT=fftw3 (FFTW is GPL)
 #   -DFFT=pocketfft|pow2|fftw3 ("make FFT=..."): the FFT of the CImg plugins: pocketfft
@@ -239,226 +244,69 @@ INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/openfx/Support/Plugins/include)
 include(${OFXMISC_SUPPORTEXT_DIR}/cmake/SupportExt.cmake)
 
 ########################################################################
+# The plug-in bundles: openfx's ofx_plugin_bundle_group(), with the table cmake/OFXMiscPlugins.cmake
+########################################################################
+# OFX_PLUGIN_BUNDLES (openfx's option) chooses, for each group (Misc, CImg, Shadertoy):
+# - COMBINED (default): Misc.ofx.bundle (Misc/Makefile), CImg.ofx.bundle and Shadertoy.ofx.bundle;
+# - SEPARATE ("make nomulti"): one bundle per plug-in directory, named after its OFX identifier
+#   (net.sf.openfx.Invert.ofx.bundle, net.sf.cimg.CImgBlur.ofx.bundle, ...; see the table), with
+#   a generated Info.plist, and the icons and PyPlugs of that directory only. Its target and
+#   install component are the table's short name (Invert, CImgBlur, ...).
+# SEPARATE replaces the combined bundles (except Misc.ofx.bundle with TestRender alone in Debug
+# builds): the two sets register the same identifiers, and a host must not load both.
+include(cmake/OFXMiscPlugins.cmake)
+
+########################################################################
 # Misc.ofx.bundle (Misc/Makefile)
 ########################################################################
-# Every plug-in directory listed in Misc/Makefile (all but CImg, Shadertoy and DebugProxy).
-# Test only contributes TestRender (debug builds); ReConverge, TestRender and TimeBuffer
-# are compiled out in other builds (#ifdef DEBUG).
-set(MISC_PLUGIN_DIRS
-  Add AdjustRoD Anaglyph AppendClip Card3D CheckerBoard ChromaKeyer Clamp ClipTest
-  ColorBars ColorCorrect ColorLookup ColorMatrix ColorSuppress ColorTransform ColorWheel
-  Constant ContactSheet CopyRectangle CornerPin Crop Deinterlace DenoiseSharpen Despill
-  Difference DiscBlades Dissolve Distortion FrameBlend FrameHold FrameRange Gamma GodRays
-  Grade HSVTool HueCorrect ImageStatistics Invert JoinViews KeyMix Keyer LayerContactSheet
-  LayerRename Log2Lin MatteMonitor Merge Mirror MixViews Multiply NoOp OneView PIK PLogLin Position
-  Premult Quantize Radial Ramp Rand ReConverge Rectangle Reformat Retime Roto Saturation
-  Shuffle SideBySide SlitScan SpriteSheet Switch Threshold TimeBlur TimeBuffer
-  TimeDissolve TimeOffset TrackerPM Transform VectorToColor WhiteBalance)
-if(BUILD_MISC)
-set(MISC_SOURCES Misc/randomGenerator.cpp Test/TestRender.cpp)
-foreach(_dir IN LISTS MISC_PLUGIN_DIRS)
-  file(GLOB _srcs "${_dir}/*.cpp")
-  list(APPEND MISC_SOURCES ${_srcs})
-endforeach()
-
-add_ofx_plugin(Misc INFO_PLIST Misc/Info.plist SOURCES ${MISC_SOURCES})
-# the sources of Misc/Makefile; POSITION_INTERACT: CornerPin, Transform... (header-only)
-supportext_add_sources(Misc COMPONENTS THREADS FILEOPEN GENERATOR LUT MULTIPLANE TEXT RAMP SHUTTER
-  TRACKING TRANSFORM3X3 TRANSFORM_INTERACT RECTANGLE_INTERACT POSITION_INTERACT)
-# openfx::Support and OpenGL::GL come with supportext_add_sources
-target_include_directories(Misc PRIVATE Misc ${MISC_PLUGIN_DIRS} Test ${OFXMISC_GLEXT_INCLUDE_DIR})
-if(NOT MSVC) # MSVC has OpenMP 2.0 only
-  ofx_target_openmp(Misc) # DenoiseSharpen (Misc/Makefile: OPENMP=1)
-endif()
-ofx_plugin_resources(Misc
-  "Add/net.sf.openfx.AddPlugin.png"
-  "AdjustRoD/net.sf.openfx.AdjustRoDPlugin.png"
-  "AdjustRoD/net.sf.openfx.AdjustRoDPlugin.svg"
-  "Anaglyph/net.sf.openfx.anaglyphPlugin.png"
-  "Anaglyph/net.sf.openfx.anaglyphPlugin.svg"
-  "CheckerBoard/net.sf.openfx.CheckerBoardPlugin.png"
-  "CheckerBoard/net.sf.openfx.CheckerBoardPlugin.svg"
-  "ChromaKeyer/net.sf.openfx.ChromaKeyerPlugin.png"
-  "ChromaKeyer/net.sf.openfx.ChromaKeyerPlugin.svg"
-  "Clamp/net.sf.openfx.Clamp.png"
-  "Clamp/net.sf.openfx.Clamp.svg"
-  "ClipTest/net.sf.openfx.ClipTestPlugin.png"
-  "ClipTest/net.sf.openfx.ClipTestPlugin.svg"
-  "ColorBars/net.sf.openfx.ColorBars.png"
-  "ColorBars/net.sf.openfx.ColorBars.svg"
-  "ColorCorrect/net.sf.openfx.ColorCorrectPlugin.png"
-  "ColorCorrect/net.sf.openfx.ColorCorrectPlugin.svg"
-  "ColorLookup/net.sf.openfx.ColorLookupPlugin.png"
-  "ColorLookup/net.sf.openfx.ColorLookupPlugin.svg"
-  "ColorMatrix/net.sf.openfx.ColorMatrixPlugin.png"
-  "ColorMatrix/net.sf.openfx.ColorMatrixPlugin.svg"
-  "ColorWheel/net.sf.openfx.ColorWheel.png"
-  "ColorWheel/net.sf.openfx.ColorWheel.svg"
-  "ColorTransform/net.sf.openfx.HSVToRGB.png"
-  "ColorTransform/net.sf.openfx.HSVToRGB.svg"
-  "ColorTransform/net.sf.openfx.LabToRGB709.png"
-  "ColorTransform/net.sf.openfx.RGBToHSV.png"
-  "ColorTransform/net.sf.openfx.RGBToHSV.svg"
-  "ColorTransform/net.sf.openfx.RGB709ToLab.png"
-  "ColorTransform/net.sf.openfx.RGB709ToXYZ.png"
-  "ColorTransform/net.sf.openfx.XYZToRGB709.png"
-  "Constant/net.sf.openfx.ConstantPlugin.png"
-  "Constant/net.sf.openfx.ConstantPlugin.svg"
-  "CornerPin/net.sf.openfx.CornerPinMaskedPlugin.png"
-  "CornerPin/net.sf.openfx.CornerPinMaskedPlugin.svg"
-  "CornerPin/net.sf.openfx.CornerPinPlugin.png"
-  "CornerPin/net.sf.openfx.CornerPinPlugin.svg"
-  "Crop/net.sf.openfx.CropPlugin.png"
-  "Crop/net.sf.openfx.CropPlugin.svg"
-  "Deinterlace/net.sf.openfx.Deinterlace.png"
-  "Deinterlace/net.sf.openfx.Deinterlace.svg"
-  "Despill/net.sf.openfx.Despill.png"
-  "Despill/net.sf.openfx.Despill.svg"
-  "Difference/net.sf.openfx.DifferencePlugin.png"
-  "Difference/net.sf.openfx.DifferencePlugin.svg"
-  "Dissolve/net.sf.openfx.DissolvePlugin.png"
-  "Dissolve/net.sf.openfx.DissolvePlugin.svg"
-  "Distortion/net.sf.openfx.IDistort.png"
-  "Distortion/net.sf.openfx.IDistort.svg"
-  "Distortion/net.sf.openfx.STMap.png"
-  "Distortion/net.sf.openfx.STMap.svg"
-  "Distortion/net.sf.openfx.LensDistortion.png"
-  "Distortion/net.sf.openfx.LensDistortion.svg"
-  "FrameBlend/net.sf.openfx.FrameBlend.png"
-  "FrameBlend/net.sf.openfx.FrameBlend.svg"
-  "FrameHold/net.sf.openfx.FrameHold.png"
-  "FrameHold/net.sf.openfx.FrameHold.svg"
-  "FrameRange/net.sf.openfx.FrameRange.png"
-  "FrameRange/net.sf.openfx.FrameRange.svg"
-  "Gamma/net.sf.openfx.GammaPlugin.png"
-  "GodRays/net.sf.openfx.GodRays.png"
-  "GodRays/net.sf.openfx.GodRays.svg"
-  "Grade/net.sf.openfx.GradePlugin.png"
-  "Grade/net.sf.openfx.GradePlugin.svg"
-  "HueCorrect/net.sf.openfx.HueCorrect.png"
-  "HueCorrect/net.sf.openfx.HueCorrect.svg"
-  "HueCorrect/net.sf.openfx.HueKeyer.png"
-  "HueCorrect/net.sf.openfx.HueKeyer.svg"
-  "HSVTool/net.sf.openfx.HSVToolPlugin.png"
-  "HSVTool/net.sf.openfx.HSVToolPlugin.svg"
-  "ImageStatistics/net.sf.openfx.ImageStatistics.png"
-  "ImageStatistics/net.sf.openfx.ImageStatistics.svg"
-  "Invert/net.sf.openfx.Invert.png"
-  "Invert/net.sf.openfx.Invert.svg"
-  "JoinViews/net.sf.openfx.joinViewsPlugin.png"
-  "JoinViews/net.sf.openfx.joinViewsPlugin.svg"
-  "Keyer/net.sf.openfx.KeyerPlugin.png"
-  "Keyer/net.sf.openfx.KeyerPlugin.svg"
-  "Merge/net.sf.openfx.MergePlugin.png"
-  "Merge/net.sf.openfx.MergePlugin.svg"
-  "Merge/net.sf.openfx.MergeDifference.png"
-  "Merge/net.sf.openfx.MergeIn.png"
-  "Merge/net.sf.openfx.MergeMax.png"
-  "Merge/net.sf.openfx.MergeMin.png"
-  "Merge/net.sf.openfx.MergeMultiply.png"
-  "Merge/net.sf.openfx.MergeOut.png"
-  "Merge/net.sf.openfx.MergePlus.png"
-  "Merge/net.sf.openfx.MergeScreen.png"
-  "Mirror/net.sf.openfx.Mirror.png"
-  "Mirror/net.sf.openfx.Mirror.svg"
-  "MixViews/net.sf.openfx.mixViewsPlugin.png"
-  "MixViews/net.sf.openfx.mixViewsPlugin.svg"
-  "Multiply/net.sf.openfx.MultiplyPlugin.png"
-  "NoOp/net.sf.openfx.NoOpPlugin.png"
-  "NoOp/net.sf.openfx.NoOpPlugin.svg"
-  "Rand/net.sf.openfx.Noise.png"
-  "Rand/net.sf.openfx.Noise.svg"
-  "OneView/net.sf.openfx.oneViewPlugin.png"
-  "OneView/net.sf.openfx.oneViewPlugin.svg"
-  "PIK/net.sf.openfx.PIK.png"
-  "PIK/net.sf.openfx.PIK.svg"
-  "PIK/fr.inria.PIKColor.png"
-  "PIK/fr.inria.PIKColor.svg"
-  "PIK/PIKColor.gizmo"
-  "PIK/PIKColor.py"
-  "Position/net.sf.openfx.Position.png"
-  "Position/net.sf.openfx.Position.svg"
-  "Premult/net.sf.openfx.Premult.png"
-  "Premult/net.sf.openfx.Premult.svg"
-  "Premult/net.sf.openfx.Unpremult.png"
-  "Premult/net.sf.openfx.Unpremult.svg"
-  "Radial/net.sf.openfx.Radial.png"
-  "Radial/net.sf.openfx.Radial.svg"
-  "Ramp/net.sf.openfx.Ramp.png"
-  "Ramp/net.sf.openfx.Ramp.svg"
-  "Rectangle/net.sf.openfx.Rectangle.png"
-  "Rectangle/net.sf.openfx.Rectangle.svg"
-  "Reformat/net.sf.openfx.Reformat.png"
-  "Reformat/net.sf.openfx.Reformat.svg"
-  "Retime/net.sf.openfx.Retime.png"
-  "Retime/net.sf.openfx.Retime.svg"
-  "Roto/net.sf.openfx.RotoPlugin.png"
-  "Roto/net.sf.openfx.RotoPlugin.svg"
-  "Saturation/net.sf.openfx.SaturationPlugin.png"
-  "Saturation/net.sf.openfx.SaturationPlugin.svg"
-  "Shuffle/net.sf.openfx.ShufflePlugin.png"
-  "Shuffle/net.sf.openfx.ShufflePlugin.svg"
-  "SideBySide/net.sf.openfx.sideBySidePlugin.png"
-  "SideBySide/net.sf.openfx.sideBySidePlugin.svg"
-  "SlitScan/net.sf.openfx.SlitScan.png"
-  "SlitScan/net.sf.openfx.SlitScan.svg"
-  "Switch/net.sf.openfx.switchPlugin.png"
-  "Switch/net.sf.openfx.switchPlugin.svg"
-  "TimeOffset/net.sf.openfx.timeOffset.png"
-  "TimeOffset/net.sf.openfx.timeOffset.svg"
-  "TrackerPM/net.sf.openfx.TrackerPM.png"
-  "TrackerPM/net.sf.openfx.TrackerPM.svg"
-  "Transform/net.sf.openfx.DirBlur.png"
-  "Transform/net.sf.openfx.DirBlur.svg"
-  "Transform/net.sf.openfx.TransformMaskedPlugin.png"
-  "Transform/net.sf.openfx.TransformMaskedPlugin.svg"
-  "Transform/net.sf.openfx.TransformPlugin.png"
-  "Transform/net.sf.openfx.TransformPlugin.svg"
-  "VectorToColor/net.sf.openfx.VectorToColorPlugin.png"
-  "VectorToColor/net.sf.openfx.VectorToColorPlugin.svg"
-  "WhiteBalance/net.sf.openfx.WhiteBalance.png"
-  "WhiteBalance/net.sf.openfx.WhiteBalance.svg"
-)
-ofx_deploy_bundle(Misc)
-endif(BUILD_MISC)
-
-########################################################################
-# Standalone bundles of Misc plug-ins (OFXMISC_STANDALONE_BUNDLES; make nomulti's <Dir>/Makefile)
-########################################################################
-# One bundle per listed plug-in directory, <Dir>.ofx.bundle, with the sources of <Dir> (the same
-# sources, hence the same identifiers and versions, as in Misc.ofx.bundle), <Dir>/Info.plist, and
-# the SupportExt components of <Dir>/Makefile. The supported directories, with their SupportExt
-# components (and OPENMP if it uses OpenMP) and resources:
-set(_ofxmisc_standalone_DenoiseSharpen COMPONENTS THREADS LUT RECTANGLE_INTERACT OPENMP) # no icon
+# OFXMISC_STANDALONE_BUNDLES: with OFX_PLUGIN_BUNDLES=COMBINED, these Misc plug-ins also get their
+# own bundle (ALSO_SEPARATE), for the binary releases (release.yml: DenoiseSharpen). Their plug-ins
+# are also in Misc.ofx.bundle, with the same identifiers and versions: a host must not load both
+# (install one or the other).
 set(OFXMISC_STANDALONE_BUNDLES "" CACHE STRING
-  "Misc plug-in directories also built as standalone bundles (supported: DenoiseSharpen)")
-foreach(_dir IN LISTS OFXMISC_STANDALONE_BUNDLES)
-  if(NOT DEFINED _ofxmisc_standalone_${_dir})
-    message(FATAL_ERROR "OFXMISC_STANDALONE_BUNDLES: ${_dir} is not supported (supported: DenoiseSharpen; "
-      "to add one, define _ofxmisc_standalone_${_dir} in ${CMAKE_CURRENT_LIST_FILE})")
+  "Misc plug-ins (names of cmake/OFXMiscPlugins.cmake) also built as their own bundle, e.g. DenoiseSharpen")
+if(BUILD_MISC)
+  foreach(_name IN LISTS OFXMISC_STANDALONE_BUNDLES)
+    if(NOT _name IN_LIST OFXMISC_MISC_NAMES)
+      message(FATAL_ERROR "OFXMISC_STANDALONE_BUNDLES: ${_name} is not a Misc plug-in of cmake/OFXMiscPlugins.cmake")
+    endif()
+  endforeach()
+  # Test/TestRender.cpp (#ifdef DEBUG) is also in Misc.ofx.bundle, as in Misc/Makefile, in Debug
+  # builds (it compiles to nothing in the others); its own bundle is Test.ofx.bundle
+  set(_testrender)
+  if(_debug_build)
+    set(_testrender PLUGIN TestRender SOURCES Test/TestRender.cpp COMBINED_ONLY
+      PROPERTIES OFXMISC_SUPPORTEXT_COMPONENTS THREADS)
   endif()
-  cmake_parse_arguments(_sb "OPENMP" "" "COMPONENTS;RESOURCES" ${_ofxmisc_standalone_${_dir}})
-  file(GLOB _srcs "${_dir}/*.cpp")
-  add_ofx_plugin(${_dir} INFO_PLIST ${_dir}/Info.plist SOURCES ${_srcs})
-  supportext_add_sources(${_dir} COMPONENTS ${_sb_COMPONENTS})
-  target_include_directories(${_dir} PRIVATE ${_dir})
-  if(_sb_OPENMP AND NOT MSVC) # as Misc: MSVC has OpenMP 2.0 only
-    ofx_target_openmp(${_dir})
-  endif()
-  if(_sb_RESOURCES)
-    ofx_plugin_resources(${_dir} ${_sb_RESOURCES})
-  endif()
-  ofx_deploy_bundle(${_dir})
-  message(STATUS "    Standalone bundle: ${_dir}.ofx.bundle")
-endforeach()
+  ofx_plugin_bundle_group(Misc
+    COMBINED_INFO_PLIST Misc/Info.plist
+    ALSO_SEPARATE ${OFXMISC_STANDALONE_BUNDLES}
+    COMMON_INCLUDE_DIRECTORIES ${PROJECT_SOURCE_DIR}/Misc ${OFXMISC_GLEXT_INCLUDE_DIR} # ofxsRGBAProcessing.h...
+    OUT_TARGETS _misc_targets
+    ${OFXMISC_MISC_PLUGINS} ${_testrender})
+  foreach(_t IN LISTS _misc_targets)
+    # openfx::Support and OpenGL::GL come with supportext_add_sources
+    get_target_property(_components ${_t} OFXMISC_SUPPORTEXT_COMPONENTS)
+    if(NOT _components) # ContactSheet uses no SupportExt source
+      set(_components)
+    endif()
+    supportext_add_sources(${_t} COMPONENTS ${_components})
+  endforeach()
+endif(BUILD_MISC)
 
 ########################################################################
 # Shadertoy.ofx.bundle (Shadertoy/Makefile)
 ########################################################################
 if(BUILD_SHADERTOY)
-  add_ofx_plugin(Shadertoy INFO_PLIST Shadertoy/Info.plist SOURCES
-    Shadertoy/Shadertoy.cpp Shadertoy/ShadertoyParse.cpp
-    Shadertoy/ShadertoyRenderGL.cpp Shadertoy/ShadertoyRenderMesa.cpp)
+  # one plug-in: the target is Shadertoy in both modes (Shadertoy.ofx.bundle, or
+  # net.sf.openfx.Shadertoy.ofx.bundle with OFX_PLUGIN_BUNDLES=SEPARATE); NO_DEPLOY: the OSMesa
+  # licences are added below, before ofx_deploy_bundle
+  ofx_plugin_bundle_group(Shadertoy COMBINED_INFO_PLIST Shadertoy/Info.plist NO_DEPLOY
+    PLUGIN Shadertoy ID net.sf.openfx.Shadertoy
+      SOURCES Shadertoy/Shadertoy.cpp Shadertoy/ShadertoyParse.cpp
+              Shadertoy/ShadertoyRenderGL.cpp Shadertoy/ShadertoyRenderMesa.cpp
+      RESOURCES Shadertoy/net.sf.openfx.Shadertoy.png Shadertoy/net.sf.openfx.Shadertoy.svg
+                Shadertoy/presets) # with its contents, as "cp -r presets"
   supportext_add_sources(Shadertoy COMPONENTS THREADS) # as Shadertoy/Makefile
   target_link_libraries(Shadertoy PRIVATE OpenGL::GL ${CMAKE_DL_LIBS}) # dl: eglGetCurrentContext lookup
   # MSVC: GL/glext.h. With USE_OSMESA on MSVC, this bundled (2017) glext.h would come before
@@ -557,8 +405,6 @@ if(BUILD_SHADERTOY)
     set_property(SOURCE Shadertoy/ShadertoyRenderMesa.cpp APPEND PROPERTY INCLUDE_DIRECTORIES ${_osmesa_includes})
     target_link_libraries(Shadertoy PRIVATE OSMesa::OSMesa)
   endif()
-  ofx_plugin_resources(Shadertoy Shadertoy/net.sf.openfx.Shadertoy.png Shadertoy/net.sf.openfx.Shadertoy.svg)
-  ofx_plugin_resources(Shadertoy Shadertoy/presets) # with its contents, as "cp -r presets"
   if(USE_OSMESA AND OSMESA_LICENSES_DIR)
     # the licenses of the statically linked OSMesa and LLVM (before ofx_deploy_bundle, which signs)
     file(GLOB _osmesa_licenses LIST_DIRECTORIES true "${OSMESA_LICENSES_DIR}/*")
@@ -768,49 +614,11 @@ if(CIMG_FFT STREQUAL "pocketfft")
   file(REMOVE "${CIMG_POCKETFFT_LICENCE}.tmp")
 endif()
 
-add_ofx_plugin(CImg INFO_PLIST CImg/Info.plist SOURCES
-  "CImg/CImg.h"
-  "CImg/CImgFilter.cpp"
-  "CImg/CImgFFTConvolve.h"
-  "CImg/CImgFilter.h"
-  "CImg/CImgOperator.cpp"
-  "CImg/CImgOperator.h"
-  "CImg/Bilateral/CImgBilateral.cpp"
-  "CImg/Blur/CImgBlur.cpp"
-  "CImg/Blur/blurmaple.map"
-  "CImg/Convolve/CImgConvolve.cpp"
-  "CImg/Denoise/CImgDenoise.cpp"
-  "CImg/Distance/CImgDistance.cpp"
-  "CImg/Equalize/CImgEqualize.cpp"
-  "CImg/Erode/CImgDilate.cpp"
-  "CImg/Erode/CImgErodeDilate.h"
-  "CImg/Erode/CImgErode.cpp"
-  "CImg/ErodeSmooth/CImgErodeSmooth.cpp"
-  "CImg/Expression/CImgExpression.cpp"
-  "CImg/Guided/CImgGuided.cpp"
-  "CImg/HistEQ/CImgHistEQ.cpp"
-  "CImg/Inpaint/CImgInpaint-gpl.cpp"
-  "CImg/Inpaint/inpaint.h"
-  "CImg/Matrix/CImgMatrix.cpp"
-  "CImg/Median/CImgMedian.cpp"
-  "CImg/Noise/CImgNoise.cpp"
-  "CImg/Plasma/CImgPlasma.cpp"
-  "CImg/RollingGuidance/CImgRollingGuidance.cpp"
-  "CImg/SharpenInvDiff/CImgSharpenInvDiff.cpp"
-  "CImg/SharpenShock/CImgSharpenShock.cpp"
-  "CImg/Smooth/CImgSmooth.cpp"
-  "CImg/ZDefocus/CImgZDefocus.cpp"
-)
-supportext_add_sources(CImg COMPONENTS THREADS LUT) # as CImg/Makefile (ofxsLut: ChromaBlur)
-target_include_directories(CImg PRIVATE ${CIMG_DIR})
-if(NOT MSVC)
-  # MSVC is OpenMP 2.0 and has issues, see https://github.com/dtschump/CImg/issues/208
-  # and https://msdn.microsoft.com/fr-fr/library/ff520162.aspx
-  ofx_target_openmp(CImg)
-  if(TARGET OpenMP::OpenMP_CXX)
-    target_compile_definitions(CImg PRIVATE cimg_use_openmp) # CImg/Makefile: OPENMP=1
-  endif()
-endif()
+set(_cimg_fft_licence)
+# The settings of every CImg bundle: _cimg_defs, _cimg_libs and _cimg_incs (the group's COMMON_*)
+set(_cimg_defs)
+set(_cimg_libs)
+set(_cimg_incs ${CIMG_DIR})
 # The FFT library (FFT), as CImg/CImgFFT.mk: defined for all the sources of the bundle, since they
 # share CImg's inline code.
 if(CIMG_FFT STREQUAL "fftw3")
@@ -836,11 +644,11 @@ if(CIMG_FFT STREQUAL "fftw3")
     if(NOT FFTW3_THREADS_LIBRARY)
       message(FATAL_ERROR "fftw3_threads not found (in ${_fftw3_libdir})")
     endif()
-    target_include_directories(CImg PRIVATE ${FFTW3_INCLUDE_DIRS})
+    list(APPEND _cimg_incs ${FFTW3_INCLUDE_DIRS})
     # pkg-config --libs fftw3, with fftw3_threads first (it uses fftw3)
     set(_fftw3_libs ${FFTW3_LDFLAGS})
     list(FILTER _fftw3_libs EXCLUDE REGEX "^-l")
-    target_link_libraries(CImg PRIVATE ${_fftw3_libs} -lfftw3_threads ${FFTW3_LIBRARIES})
+    list(APPEND _cimg_libs ${_fftw3_libs} -lfftw3_threads ${FFTW3_LIBRARIES})
   else()
     # no pkg-config (e.g. MSVC): FFTW's headers and libraries (fftw.org's Windows DLLs include the
     # threads in libfftw3-3)
@@ -852,7 +660,7 @@ if(CIMG_FFT STREQUAL "fftw3")
         "(MacPorts: fftw-3, MSYS2: \${MINGW_PACKAGE_PREFIX}-fftw, Ubuntu: libfftw3-dev), or configure "
         "with -DFFT=pocketfft (or pow2)")
     endif()
-    target_include_directories(CImg PRIVATE ${FFTW3_INCLUDE_DIR})
+    list(APPEND _cimg_incs ${FFTW3_INCLUDE_DIR})
     set(_fftw3_check_libs ${FFTW3_LIBRARY})
     if(FFTW3_THREADS_LIBRARY)
       list(PREPEND _fftw3_check_libs ${FFTW3_THREADS_LIBRARY})
@@ -869,75 +677,46 @@ int main() { fftw_make_planner_thread_safe(); return 0; }" CIMG_FFTW3_HAS_PLANNE
       message(FATAL_ERROR "FFTW in ${FFTW3_INCLUDE_DIR} has no fftw_make_planner_thread_safe(): "
         "FFT=fftw3 needs FFTW >= 3.3.5 with its threads library, or use the default FFT=pocketfft")
     endif()
-    target_link_libraries(CImg PRIVATE ${_fftw3_check_libs})
+    list(APPEND _cimg_libs ${_fftw3_check_libs})
   endif()
-  target_compile_definitions(CImg PRIVATE cimg_use_fftw3)
+  list(APPEND _cimg_defs cimg_use_fftw3)
 elseif(CIMG_FFT STREQUAL "pocketfft")
   # pocketfft, header-only (CImg/pocketfft_hdronly.h), multithreaded (std::thread) except on Windows
   find_package(Threads REQUIRED)
-  target_link_libraries(CImg PRIVATE Threads::Threads)
-  target_compile_definitions(CImg PRIVATE cimg_use_pocketfft)
+  list(APPEND _cimg_libs Threads::Threads)
+  list(APPEND _cimg_defs cimg_use_pocketfft)
   # Windows (MinGW and MSVC): single-threaded pocketfft, as openfx-gmic (NatronGitHub/openfx-gmic#94).
   # Its static thread pool is destroyed when the host unloads the plug-in (FreeLibrary runs the DLL's
   # static destructors under the loader lock): ~thread_pool() joins the worker threads, which wait
   # for that lock in LdrShutdownThread (deadlock). CImg.h is unchanged; OpenMP is not involved.
   if(WIN32)
-    target_compile_definitions(CImg PRIVATE POCKETFFT_NO_MULTITHREADING)
+    list(APPEND _cimg_defs POCKETFFT_NO_MULTITHREADING)
   endif()
-  target_sources(CImg PRIVATE "${CIMG_DIR}/pocketfft_hdronly.h")
-  ofx_plugin_resources(CImg "${CIMG_POCKETFFT_LICENCE}")
+  set(_cimg_fft_licence "${CIMG_POCKETFFT_LICENCE}")
 endif()
 message(STATUS "CImg plug-ins: ${OFX_LICENSE}, FFT: ${CIMG_FFT}, CImg ${CIMGVERSION} patched as openfx-gmic ${CIMG_PATCHES_FROM}")
-ofx_plugin_resources(CImg
-  "CImg/Bilateral/net.sf.cimg.CImgBilateral.png"
-  "CImg/Bilateral/net.sf.cimg.CImgBilateral.svg"
-  "CImg/Blur/net.sf.cimg.CImgBlur.png"
-  "CImg/Blur/net.sf.cimg.CImgBlur.svg"
-  "CImg/Blur/net.sf.cimg.CImgChromaBlur.png"
-  "CImg/Blur/net.sf.cimg.CImgChromaBlur.svg"
-  "CImg/Blur/net.sf.cimg.CImgBloom.png"
-  "CImg/Blur/net.sf.cimg.CImgBloom.svg"
-  "CImg/Blur/eu.cimg.EdgeDetect.png"
-  "CImg/Blur/eu.cimg.EdgeDetect.svg"
-  "CImg/Blur/eu.cimg.EdgeExtend.png"
-  "CImg/Blur/eu.cimg.EdgeExtend.svg"
-  "CImg/Blur/fr.inria.EdgeBlur.png"
-  "CImg/Blur/fr.inria.EdgeBlur.svg"
-  "CImg/Blur/net.sf.cimg.CImgLaplacian.png"
-  "CImg/Blur/net.sf.cimg.CImgLaplacian.svg"
-  "CImg/Blur/net.sf.cimg.CImgSharpen.png"
-  "CImg/Blur/net.sf.cimg.CImgSharpen.svg"
-  "CImg/Denoise/net.sf.cimg.CImgDenoise.png"
-  "CImg/Denoise/net.sf.cimg.CImgDenoise.svg"
-  "CImg/Equalize/net.sf.cimg.CImgEqualize.png"
-  "CImg/Equalize/net.sf.cimg.CImgEqualize.svg"
-  "CImg/Erode/net.sf.cimg.CImgDilate.png"
-  "CImg/Erode/net.sf.cimg.CImgDilate.svg"
-  "CImg/Erode/net.sf.cimg.CImgErode.png"
-  "CImg/Erode/net.sf.cimg.CImgErode.svg"
-  "CImg/ErodeSmooth/net.sf.cimg.CImgErodeSmooth.png"
-  "CImg/ErodeSmooth/net.sf.cimg.CImgErodeSmooth.svg"
-  "CImg/Expression/net.sf.cimg.CImgExpression.png"
-  "CImg/Expression/net.sf.cimg.CImgExpression.svg"
-  "CImg/Guided/net.sf.cimg.CImgGuided.png"
-  "CImg/Guided/net.sf.cimg.CImgGuided.svg"
-  "CImg/HistEQ/net.sf.cimg.CImgHistEQ.png"
-  "CImg/HistEQ/net.sf.cimg.CImgHistEQ.svg"
-  "CImg/Inpaint/eu.cimg.Inpaint.png"
-  "CImg/Inpaint/eu.cimg.Inpaint.svg"
-  "CImg/Noise/net.sf.cimg.CImgNoise.png"
-  "CImg/Noise/net.sf.cimg.CImgNoise.svg"
-  "CImg/Plasma/net.sf.cimg.CImgPlasma.png"
-  "CImg/Plasma/net.sf.cimg.CImgPlasma.svg"
-  "CImg/RollingGuidance/net.sf.cimg.CImgRollingGuidance.png"
-  "CImg/RollingGuidance/net.sf.cimg.CImgRollingGuidance.svg"
-  "CImg/SharpenInvDiff/net.sf.cimg.CImgSharpenInvDiff.png"
-  "CImg/SharpenInvDiff/net.sf.cimg.CImgSharpenInvDiff.svg"
-  "CImg/SharpenShock/net.sf.cimg.CImgSharpenShock.png"
-  "CImg/Smooth/net.sf.cimg.CImgSmooth.png"
-  "CImg/Smooth/net.sf.cimg.CImgSmooth.svg"
-)
-ofx_deploy_bundle(CImg)
+# MSVC is OpenMP 2.0 and has issues (https://github.com/dtschump/CImg/issues/208): the table's
+# OPENMP is not passed with MSVC. NO_DEPLOY: the FFT licence is added below.
+ofx_plugin_bundle_group(CImg
+  COMBINED_INFO_PLIST CImg/Info.plist
+  COMMON_COMPILE_DEFINITIONS ${_cimg_defs}
+  COMMON_LINK_LIBRARIES ${_cimg_libs}
+  COMMON_INCLUDE_DIRECTORIES ${_cimg_incs}
+  NO_DEPLOY
+  OUT_TARGETS _cimg_targets
+  ${OFXMISC_CIMG_PLUGINS})
+foreach(_t IN LISTS _cimg_targets)
+  get_target_property(_components ${_t} OFXMISC_SUPPORTEXT_COMPONENTS)
+  supportext_add_sources(${_t} COMPONENTS ${_components}) # LUT: ChromaBlur, HistEQ
+  if(TARGET OpenMP::OpenMP_CXX)
+    target_compile_definitions(${_t} PRIVATE cimg_use_openmp) # CImg/Makefile: OPENMP=1
+  endif()
+  get_target_property(_fft ${_t} OFXMISC_FFT)
+  if(_fft AND _cimg_fft_licence) # the plug-ins that use CImg/CImgFFTConvolve.h
+    ofx_plugin_resources(${_t} "${_cimg_fft_licence}")
+  endif()
+  ofx_deploy_bundle(${_t})
+endforeach()
 endif(BUILD_CIMG_PLUGINS)
 
 ########################################################################

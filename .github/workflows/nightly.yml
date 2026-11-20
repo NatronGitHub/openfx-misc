@@ -8,7 +8,8 @@ name: Nightly extra builds
 # (this covers master when the push run's macOS job was skipped or cancelled).
 # CI builds with CMake (Natron#1181). The Makefiles are kept as the RB-2.6 fallback: one cheap
 # nightly Linux job (make CONFIG=release, the combined bundles, as Natron's fallback builds them)
-# checks that they still build; the slow one-bundle-per-plugin "make nomulti" jobs are gone.
+# checks that they still build; the slow one-bundle-per-plugin "make nomulti" jobs are gone: a
+# Linux CMake job builds the separate bundles (OFX_PLUGIN_BUNDLES=SEPARATE) instead.
 # Every CMake job passes its C++ standard explicitly (OFX_CXX_STANDARD=17 or 20).
 # Each build is followed by the same plugin load test as in ci.yml.
 # The CImg plug-ins: ci.yml builds their default FFT (pocketfft); here, Linux C++20 is COMMERCIAL
@@ -181,6 +182,12 @@ jobs:
             options: -DOFX_CXX_STANDARD=17 -DCMAKE_BUILD_TYPE=Release -DFFT=fftw3 -DBUILD_TESTING=ON -DOFX_BUILD_HOSTDEMO=ON
             rendertest: true
             packages: libfftw3-dev pkg-config
+          # one bundle per plug-in ("make nomulti"): OFX_PLUGIN_BUNDLES=SEPARATE, load test only
+          # (each bundle links its own SupportExt sources: a missing one is an undefined symbol,
+          # which a Linux module only shows when loaded)
+          - name: separate bundles
+            config: separate
+            options: -DOFX_CXX_STANDARD=17 -DCMAKE_BUILD_TYPE=Release -DOFX_PLUGIN_BUNDLES=SEPARATE
           # the Makefiles, as Natron RB-2.6's Linux fallback builds them: combined bundles, with
           # OpenMP (OPENMP=1), GCC's default standard (gnu++17)
           - name: make
