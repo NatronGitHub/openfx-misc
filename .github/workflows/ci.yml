@@ -10,7 +10,8 @@ name: Continous Integration tests
 # the FFT convolution test only (a pocketfft deadlock at plug-in unload, openfx-gmic#94).
 # macOS runs only after Linux and Windows pass, and is informative: a red or missing
 # macOS check does not block merging (macOS arm64 runners are scarce).
-# Other variants (debug, C++20, no OpenMP, MSVC) are in nightly.yml.
+# Windows on Arm: an MSVC Arm64X build (build_windows_msvc_arm64x), as the Windows nightlies.
+# Other variants (debug, C++20, no OpenMP, MSVC x64 and the Arm load test) are in nightly.yml.
 #
 # Frugal CI (NatronGitHub runners are shared by all repos): one run per change.
 # Pushes are built only on master, RB-* and tags (not the final release tags,
@@ -283,3 +284,30 @@ jobs:
         with:
           name: openfx-misc-build-windows-release
           path: Bundle
+
+  # Windows on Arm with MSVC, Arm64X (#203): the Windows nightlies (nightly.yml windows_msvc)
+  # include Arm64X bundles, so every change also builds them: .github/tools/msvc-build.sh arm64x,
+  # an ARM64 build then an Arm64EC build linked into Arm64X binaries (Microsoft's two-pass recipe,
+  # cmake/OFXMiscArm64X.cmake), with the ARM64 cross tools of windows-2025, and the script's
+  # dumpbin checks (machine types, static CRT). This also checks the MSVC build of the sources
+  # (twice: ARM64 and Arm64EC). Not load-tested here (an x64 runner can't load Arm binaries): the
+  # nightly load-tests them on windows-11-arm. Informative, like macOS: it does not gate the others.
+  build_windows_msvc_arm64x:
+    name: Build Windows MSVC Arm64X
+    # no CI for draft pull requests
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    timeout-minutes: 45
+    runs-on: windows-2025
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - name: Set up MSVC (ARM64 cross tools)
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+        with:
+          arch: amd64_arm64
+      - name: Build (ARM64, then Arm64X)
+        # (in Git for Windows' bash, whose sh patches CImg.h)
+        run: .github/tools/msvc-build.sh arm64x msvc

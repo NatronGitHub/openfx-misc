@@ -88,6 +88,13 @@ as `Natron-2.5.0`) and for builds that a maintainer starts by hand:
    - `openfx-misc-build-windows-release`: Windows (64-bit, MSYS2 UCRT64) plugins,
      Windows 10 or later (they use the Universal C Runtime).
 
+   Windows nightly builds, made with MSVC, are also kept for 7 days on the
+   [nightly page](https://github.com/NatronGitHub/openfx-misc/actions/workflows/nightly.yml):
+   `openfx-misc-nightly-windows-msvc-x64` (x64) and `openfx-misc-nightly-windows-msvc-arm64x`
+   (Windows on Arm: Arm64X binaries in `Contents/Win-arm64ec`, for Arm64EC hosts, and ARM64
+   ones in `Contents/Win-arm64`, for native ARM64 hosts). Each holds the zip files of a
+   release: the full set (with an OpenGL-only Shadertoy), Shadertoy and DenoiseSharpen alone.
+
    Artifacts are deleted by GitHub after 90 days. If there is none, you can
    [compile the plugins](#installation) yourself (`make nomulti`, or CMake's
    `-DOFX_PLUGIN_BUNDLES=SEPARATE`, builds one bundle per plugin, if you only need a few
@@ -521,6 +528,12 @@ to the prefix (or absolute). The main options are:
 - `-DBUILD_TESTING=ON` (`make TESTS=1`) and `-DBUILD_DEBUGPROXY=ON`: the Test and
   DebugProxy bundles. Their default is ON in Debug builds, at the first configure of a
   build directory: set them explicitly when changing `CMAKE_BUILD_TYPE` there.
+- MSVC: `-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded` links the C and C++ runtime
+  statically (no Visual C++ redistributable needed), as the nightly builds
+  (`.github/tools/msvc-build.sh`). Arm64X (one binary for Arm64EC and ARM64 hosts):
+  an ARM64 build with `-DOFXMISC_ARM64X=ARM64 -DOFXMISC_ARM64X_DIR=<dir>`, then an
+  Arm64EC build (`CFLAGS=-arm64EC CXXFLAGS=-arm64EC`) with `-DOFXMISC_ARM64X=ARM64EC` and the
+  same `<dir>` (see `cmake/OFXMiscArm64X.cmake`, and `msvc-build.sh arm64x`).
 - MinGW: `-DCMAKE_MODULE_LINKER_FLAGS=-static` links the MinGW runtime (libstdc++,
   libgcc, winpthread) statically, as the CI does, for hosts that do not ship it.
 - `-DUSE_OSMESA=ON` (`make -C Shadertoy OSMESA=1`): Shadertoy CPU rendering with a
