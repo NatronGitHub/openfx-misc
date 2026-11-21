@@ -179,7 +179,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              and when the luminance of the biases overflows, they are bounded to FLT_MAX/2; the
 //              weights are kept in [-1.3e270,1.3e270], and the colour parameters in the float
 //              range. A NaN Pick colour component is 0 (it picked Blue). The output for finite
-//              inputs is unchanged where it was finite.
+//              inputs is unchanged where its computation did not overflow.
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
