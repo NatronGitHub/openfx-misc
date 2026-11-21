@@ -25,8 +25,9 @@ name: Weekly extra builds
 # deadlock (POCKETFFT_NO_MULTITHREADING); smoketest.sh does not run on Windows.
 # Frugal CI: runs weekly (maintainer decision, 2026-11-21) and on demand; the scheduled run is
 # skipped if master did not change since the last scheduled run that succeeded or failed (a
-# cancelled run does not count), except cimg_patches, which checks a moving upstream (openfx-gmic
-# master) and always runs; jobs time out. The file and artifact names keep "nightly" so that
+# cancelled run does not count), except the jobs with a moving upstream, which always run:
+# cimg_patches (openfx-gmic master), macos (latest MacPorts ports) and windows (latest MSYS2
+# packages); jobs time out. The file and artifact names keep "nightly" so that
 # existing links (README, issues, the skip check's API path) keep working.
 on:
   schedule:
@@ -53,8 +54,9 @@ defaults:
     shell: bash -eo pipefail {0}
 
 jobs:
-  # Skip the scheduled run if it would build the same commit as the last
-  # successful scheduled run. Manual runs always build.
+  # Skip the scheduled run if it would build the same commit as the last scheduled run that
+  # succeeded or failed, except the jobs that build with a moving toolchain (output "moving").
+  # Manual runs always build.
   changes:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -64,6 +66,9 @@ jobs:
       run: ${{ steps.check.outputs.run }}
       # the Windows MSVC jobs: also with "only: windows-msvc"
       msvc: ${{ steps.check.outputs.msvc }}
+      # macos and windows (MSYS2): they install the latest MacPorts ports and MSYS2 packages
+      # (compiler, CMake), a moving upstream, so they run every week even if master did not change
+      moving: ${{ steps.check.outputs.moving }}
     steps:
       - id: check
         env:
@@ -73,7 +78,7 @@ jobs:
           last=
           if [ "$GITHUB_EVENT_NAME" = schedule ]; then
             # last scheduled run that built or failed (not cancelled): a known failure
-            # is not rebuilt every night until master changes (use workflow_dispatch to retry)
+            # is not rebuilt every week until master changes (use workflow_dispatch to retry)
             last=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/nightly.yml/runs?event=schedule&status=completed&per_page=20" \
                      --jq '[.workflow_runs[] | select(.conclusion == "success" or .conclusion == "failure")][0].head_sha // empty')
           fi
@@ -83,14 +88,16 @@ jobs:
             echo "No change since the last weekly run ($last): skipping."
           fi
           msvc=$run
-          if [ "$ONLY" = windows-msvc ]; then run=false msvc=true; fi
+          moving=true
+          if [ "$ONLY" = windows-msvc ]; then run=false msvc=true moving=false; fi
           echo "run=$run" >> "$GITHUB_OUTPUT"
           echo "msvc=$msvc" >> "$GITHUB_OUTPUT"
+          echo "moving=$moving" >> "$GITHUB_OUTPUT"
 
   # CImg.h is patched as openfx-gmic's (CImg/CImgVersion.mk): check that CImg/patches are still
   # byte-identical to openfx-gmic's patches at master, that they are applied in the same order,
   # that the pocketfft pin is the same, and that CIMGVERSION is the CImg tag of its GMICVER (a few
-  # seconds, no build). It runs every night, without needs: changes, since the drift it catches
+  # seconds, no build). It runs at every run, without needs: changes, since the drift it catches
   # comes from openfx-gmic, not from this repository.
   cimg_patches:
     name: CImg.h patches (openfx-gmic)
@@ -109,7 +116,7 @@ jobs:
   macos:
     name: macOS 15 ${{ matrix.name }}
     needs: changes
-    if: needs.changes.outputs.run == 'true'
+    if: needs.changes.outputs.moving == 'true'
     timeout-minutes: 30
     runs-on: macos-15
     strategy:
@@ -261,7 +268,7 @@ jobs:
   windows:
     name: Windows (MSYS2 UCRT64) ${{ matrix.name }}
     needs: changes
-    if: needs.changes.outputs.run == 'true'
+    if: needs.changes.outputs.moving == 'true'
     timeout-minutes: 60
     runs-on: windows-2022
     defaults:
