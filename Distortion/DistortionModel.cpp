@@ -48,17 +48,77 @@ nonZero(double x)
 #define EPSJAC 1.e-3 // epsilon for Jacobian calculation
 #define EPSCONV 1.e-4 // epsilon for convergence test
 
-void
-DistortionModelUndistort::distort(const double xu,
-                                  const double yu,
-                                  double* xd,
-                                  double *yd) const
+// A second Newton solver, only used to check convergence for the RoD estimate (distortConverged,
+// undistortConverged), when the one used by the render (below) did not converge: the full 2x2
+// Jacobian (by finite differences) instead of the column norms, and 50 iterations instead of 10.
+// The column-norm step is wrong when the Jacobian is far from diagonal (e.g. a decentered model)
+// and converges slowly near a fold, so that ordinary parameters often hit the 10 iterations.
+// Finite only: a singular Jacobian stops, and an iterate beyond 1e9 pixels is not converged
+// (its function values stay finite for every model). The result may be a root on another branch
+// of the model: the caller checks the orientation there.
+template<class Func>
+static bool
+newtonFullJacobian(const Func& f,
+                   double tx,
+                   double ty,
+                   double* xo,
+                   double* yo)
+{
+    double x = tx;
+    double y = ty;
+    for (int iter = 0; iter < 50; ++iter) {
+        double fx, fy, fx10, fy10, fx01, fy01;
+        f(x, y, &fx, &fy);
+        f(x + EPSJAC, y, &fx10, &fy10);
+        f(x, y + EPSJAC, &fx01, &fy01);
+        const double a = (fx10 - fx) / EPSJAC;
+        const double b = (fx01 - fx) / EPSJAC;
+        const double c = (fy10 - fy) / EPSJAC;
+        const double d = (fy01 - fy) / EPSJAC;
+        const double det = a * d - b * c;
+        const double rx = fx - tx;
+        const double ry = fy - ty;
+        if (std::abs(det) < 1e-12) {
+            return false;
+        }
+        const double dx = (d * rx - b * ry) / det;
+        const double dy = (a * ry - c * rx) / det;
+        x -= dx;
+        y -= dy;
+        if (std::abs(x) > 1e9 || std::abs(y) > 1e9) {
+            return false;
+        }
+        if (dx * dx + dy * dy < EPSCONV) {
+            double rx1, ry1;
+            f(x, y, &rx1, &ry1);
+            rx1 -= tx;
+            ry1 -= ty;
+            if (rx1 * rx1 + ry1 * ry1 < EPSCONV) {
+                *xo = x;
+                *yo = y;
+
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+bool
+DistortionModelUndistort::distortNewton(const double xu,
+                                        const double yu,
+                                        double* xd,
+                                        double *yd,
+                                        bool checkResidual) const
 {
     // build initial guess
     double x = xu;
     double y = yu;
+    bool converged = false;
 
-    // always converges in a couple of iterations
+    // usually converges in a couple of iterations, but not beyond a fold of the model (where it is
+    // not invertible) or from an initial guess beyond a pole: see the return value
     for (int iter= 0; iter< 10; iter++) {
         // calculate the function gradient at the current guess
 
@@ -105,6 +165,7 @@ DistortionModelUndistort::distort(const double xu,
 
         // converged?
         if (dist < EPSCONV) {
+            converged = true;
             break;
         }
     }
@@ -112,19 +173,61 @@ DistortionModelUndistort::distort(const double xu,
     // default
     *xd = x;
     *yd = y;
+
+    if (converged && checkResidual) {
+        // the last step was small, but the derivative may be huge (e.g. near a pole of the
+        // model): check that this is a solution. (x,y) is within sqrt(EPSCONV) of the last
+        // point where undistort() was evaluated, so this evaluation is as safe as those.
+        double xr, yr;
+        undistort(x, y, &xr, &yr);
+        xr -= xu;
+        yr -= yu;
+        converged = (xr * xr + yr * yr < EPSCONV);
+    }
+    if (!converged && checkResidual) {
+        // RoD only: try the full-Jacobian solver (the render never gets here)
+        struct F {
+            const DistortionModelUndistort* m;
+            void operator()(double x, double y, double* fx, double* fy) const { m->undistort(x, y, fx, fy); }
+        } f = { this };
+        converged = newtonFullJacobian(f, xu, yu, xd, yd);
+    }
+
+    return converged;
 }
 
 void
-DistortionModelDistort::undistort(const double xd,
-                                  const double yd,
-                                  double* xu,
-                                  double *yu) const
+DistortionModelUndistort::distort(const double xu,
+                                  const double yu,
+                                  double* xd,
+                                  double *yd) const
+{
+    (void)distortNewton(xu, yu, xd, yd, false);
+}
+
+bool
+DistortionModelUndistort::distortConverged(double xu,
+                                           double yu,
+                                           double* xd,
+                                           double *yd) const
+{
+    return distortNewton(xu, yu, xd, yd, true);
+}
+
+bool
+DistortionModelDistort::undistortNewton(const double xd,
+                                        const double yd,
+                                        double* xu,
+                                        double *yu,
+                                        bool checkResidual) const
 {
     // build initial guess
     double x = xd;
     double y = yd;
+    bool converged = false;
 
-    // always converges in a couple of iterations
+    // usually converges in a couple of iterations, but not beyond a fold of the model (where it is
+    // not invertible) or from an initial guess beyond a pole: see the return value
     for (int iter= 0; iter< 10; iter++) {
         // calculate the function gradient at the current guess
 
@@ -171,6 +274,7 @@ DistortionModelDistort::undistort(const double xd,
 
         // converged?
         if (dist < EPSCONV) {
+            converged = true;
             break;
         }
     }
@@ -178,6 +282,45 @@ DistortionModelDistort::undistort(const double xd,
     // default
     *xu = x;
     *yu = y;
+
+    if (converged && checkResidual) {
+        // the last step was small, but the derivative may be huge (e.g. near a pole of the
+        // model): check that this is a solution. (x,y) is within sqrt(EPSCONV) of the last
+        // point where distort() was evaluated, so this evaluation is as safe as those.
+        double xr, yr;
+        distort(x, y, &xr, &yr);
+        xr -= xd;
+        yr -= yd;
+        converged = (xr * xr + yr * yr < EPSCONV);
+    }
+    if (!converged && checkResidual) {
+        // RoD only: try the full-Jacobian solver (the render never gets here)
+        struct F {
+            const DistortionModelDistort* m;
+            void operator()(double x, double y, double* fx, double* fy) const { m->distort(x, y, fx, fy); }
+        } f = { this };
+        converged = newtonFullJacobian(f, xd, yd, xu, yu);
+    }
+
+    return converged;
+}
+
+void
+DistortionModelDistort::undistort(const double xd,
+                                  const double yd,
+                                  double* xu,
+                                  double *yu) const
+{
+    (void)undistortNewton(xd, yd, xu, yu, false);
+}
+
+bool
+DistortionModelDistort::undistortConverged(double xd,
+                                           double yd,
+                                           double* xu,
+                                           double *yu) const
+{
+    return undistortNewton(xd, yd, xu, yu, true);
 }
 
 DistortionModelNuke::DistortionModelNuke(const OfxRectD& format,

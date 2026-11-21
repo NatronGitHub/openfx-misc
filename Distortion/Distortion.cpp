@@ -151,7 +151,16 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              format less than one pixel wide or high (they were 0/0); a format PAR of 0 is taken as 1;
 //              plus the IDistort/STMap 2.1 fix; the RoD (3.1, 4.1) and the RoI (2.1, 3.1, 4.1), the bounding box
 //              of distorted sample points that can be 1e12 pixels away or more for strong or degenerate
-//              parameters (e.g. Nuke k1=-1), are clamped to the infinite region (kOfxFlagInfiniteMin/Max)
+//              parameters (e.g. Nuke k1=-1), are clamped to the infinite region (kOfxFlagInfiniteMin/Max);
+//              the RoD (3.1, 4.1) no longer uses the sample points where the numerical inverse (Newton)
+//              did not converge, which could be 1e12 pixels away even for ordinary parameters (e.g. Nuke
+//              k1=0.1 k2=0.02); convergence is checked with a more robust solver (the render's is unchanged);
+//              if a sample point does not converge, the RoD contains the format and the source RoD (a mirrored
+//              copy of the source may be visible there), and the image boundary found by casting rays with
+//              the closed-form map, up to the source RoD or a fold of the model (#189). Rendered pixels are
+//              unchanged; the RoD samples each source edge about every 32 pixels (10 to 60 intervals, it was
+//              10, and the old samples are kept), so that the RoD may be slightly larger where every sample
+//              converges
 #define kPluginVersionLensDistortionMajor 4 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionLensDistortionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -3069,6 +3078,204 @@ DistortionPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
     }
 }
 
+// LensDistortion RoD estimate (issue #189). The output is the source seen through the render map
+// G, from output to source positions (undistort for the Distort direction, distort for
+// Undistort), and the RoD is the bounding box of the source RoD boundary points mapped by its
+// inverse F (distort for Distort, undistort for Undistort). One of F and G is computed numerically
+// (Newton, see DistortionModel.cpp), and when that is F, it may not converge for some points:
+// - beyond a fold of the model, where G is not invertible: e.g. for Nuke k1=0.1 k2=0.02, the
+//   radial factor r/(1+k1*r^2+k2*r^4) has a maximum, and the source corners have no preimage;
+// - or because the initial guess, the source point itself, is beyond a pole of G: e.g. for Nuke
+//   k1=-1, G sends the unit circle to infinity, but the source corners are outside it.
+// The non-converged results can be 1e12 pixels away even for ordinary parameters. A sample is
+// converged if the render's solver converged, or else a more robust one (distortConverged), and G
+// is orientation-preserving there (not a root on a mirrored branch). If all samples converged,
+// the RoD is their bounding box, as before. Otherwise, the non-converged samples are not used:
+// - the RoD contains the format and the source RoD: beyond a fold, the render shows a mirrored
+//   copy of the source, which may be visible inside the format (e.g. Nuke k1=1), and must not be
+//   cropped (Natron clips an infinite RoD to the union of the inputs and the format, so its
+//   output there is unchanged);
+// - and the boundary of the distorted image is found by casting rays in the output from the
+//   image of the source RoD center, with G only (in closed form). Along each ray, the image ends
+//   where G maps the point outside of the source RoD, or where G stops being orientation-
+//   preserving (det(J_G) <= 0, a fold). The mirrored copy outside of the format is not in the
+//   RoD (as on master for e.g. Nuke k1=0.1, whose sample points all converge).
+//
+// G is orientation-preserving at (x,y), and maps it into the source RoD: (x,y) is in the image.
+struct LensDistortionImageTest
+{
+    const DistortionModel& model;
+    bool distort; // the direction is Distort: G = undistort
+    const OfxRectD& srcRodPixel;
+
+    bool operator()(double x, double y) const
+    {
+        double gx, gy;
+        G(x, y, &gx, &gy);
+        if (gx < srcRodPixel.x1 || srcRodPixel.x2 < gx || gy < srcRodPixel.y1 || srcRodPixel.y2 < gy) {
+            return false;
+        }
+
+        return orientationPreserving(x, y, gx, gy);
+    }
+
+    // det(J_G) > 0 at (x,y)
+    bool orientationPreserving(double x, double y) const
+    {
+        double gx, gy;
+        G(x, y, &gx, &gy);
+
+        return orientationPreserving(x, y, gx, gy);
+    }
+
+    // det(J_G) > 0 at (x,y), (gx,gy) = G(x,y)
+    bool orientationPreserving(double x, double y, double gx, double gy) const
+    {
+        const double h = 1e-3; // for finite differences, as in the Newton solvers
+        double gx10, gy10, gx01, gy01;
+        G(x + h, y, &gx10, &gy10);
+        G(x, y + h, &gx01, &gy01);
+        const double det = (gx10 - gx) * (gy01 - gy) - (gx01 - gx) * (gy10 - gy);
+
+        return det > 0.;
+    }
+
+    void G(double x, double y, double* gx, double* gy) const
+    {
+        if (distort) {
+            model.undistort(x, y, gx, gy);
+        } else {
+            model.distort(x, y, gx, gy);
+        }
+    }
+};
+
+// The end of the image along the ray from (ox,oy) at angle theta: a point outside the image,
+// found by doubling the distance from 1 pixel, then by bisection to a quarter of a pixel, and
+// such that the point a quarter of a pixel before it is in the image. The doubling may jump over
+// a gap of the image along the ray (it then returns the end of a farther part, which is still in
+// the image: the RoD can only be larger). If the image goes on for 2^32 pixels (more than
+// kOfxFlagInfiniteMax), the last point is returned (the RoD is clamped to the infinite region
+// afterwards). Every evaluated point is finite: at most 2^32 pixels from (ox,oy).
+static OfxPointD
+lensDistortionRayEnd(const LensDistortionImageTest& inImage,
+                     double ox,
+                     double oy,
+                     double theta)
+{
+    const double ux = std::cos(theta);
+    const double uy = std::sin(theta);
+    double sa = 0.; // in the image (the origin, or a point found below)
+    double sb = 1.; // outside the image, once found
+    bool found = false;
+    for (int k = 0; k <= 32; ++k, sb *= 2.) {
+        if ( !inImage(ox + sb * ux, oy + sb * uy) ) {
+            found = true;
+            break;
+        }
+        sa = sb;
+    }
+    if (found) {
+        while (sb - sa > 0.25) {
+            const double s = (sa + sb) / 2.;
+            if ( inImage(ox + s * ux, oy + s * uy) ) {
+                sa = s;
+            } else {
+                sb = s;
+            }
+        }
+    } else {
+        sb = sa;
+    }
+    OfxPointD p = { ox + sb * ux, oy + sb * uy };
+
+    return p;
+}
+
+static inline void
+lensDistortionRectAddPoint(const OfxPointD& p,
+                           OfxRectD* r)
+{
+    r->x1 = (std::min)(r->x1, p.x);
+    r->x2 = (std::max)(r->x2, p.x);
+    r->y1 = (std::min)(r->y1, p.y);
+    r->y2 = (std::max)(r->y2, p.y);
+}
+
+// Enlarge rodPixel by the image boundary, cast from (ox,oy) (the image of the source RoD center):
+// 256 rays, then, for each side of the box, around each of the (up to) 8 best local extremes of
+// the ray ends, twice 16 rays over the two neighbouring intervals. Extremes may be at a corner of
+// the image (e.g. where a fold meets the image of a source edge) or on a thin spike, which evenly
+// spaced rays miss by a few pixels, and the global coarse extreme may not be the true one.
+static void
+lensDistortionRoDRays(const LensDistortionImageTest& inImage,
+                      double ox,
+                      double oy,
+                      OfxRectD* rodPixel)
+{
+    const int n = 256;
+    const int nExtremes = 8;
+    const int nZoom = 16;
+    const double dTheta = 2. * OFXS_PI / n;
+    OfxPointD ends[n];
+    for (int i = 0; i < n; ++i) {
+        ends[i] = lensDistortionRayEnd(inImage, ox, oy, i * dTheta);
+        lensDistortionRectAddPoint(ends[i], rodPixel);
+    }
+    for (int side = 0; side < 4; ++side) {
+        // the extremal coordinate of a point for this side, to be maximized: -x, -y, x, y
+        const double sign = (side < 2) ? -1. : 1.;
+        const bool isX = (side % 2 == 0);
+        double v[n];
+        for (int i = 0; i < n; ++i) {
+            v[i] = sign * (isX ? ends[i].x : ends[i].y);
+        }
+        // the local maxima (on the circle), best first
+        int best[nExtremes];
+        int nBest = 0;
+        for (int i = 0; i < n; ++i) {
+            const double vp = v[(i + n - 1) % n];
+            const double vn = v[(i + 1) % n];
+            if ( !(v[i] >= vp && v[i] > vn) ) { // a plateau counts once
+                continue;
+            }
+            // insert i in best (sorted by decreasing v), keeping the nExtremes best
+            int k = (nBest < nExtremes) ? nBest++ : nExtremes;
+            while (k > 0 && v[best[k - 1]] < v[i]) {
+                if (k < nExtremes) {
+                    best[k] = best[k - 1];
+                }
+                --k;
+            }
+            if (k < nExtremes) {
+                best[k] = i;
+            }
+        }
+        for (int e = 0; e < nBest; ++e) {
+            double theta = best[e] * dTheta;
+            double half = dTheta; // search [theta - half, theta + half]
+            for (int level = 0; level < 2; ++level) {
+                const double step = 2. * half / nZoom;
+                double thetaBest = theta;
+                double vBest = -DBL_MAX;
+                for (int j = 0; j <= nZoom; ++j) {
+                    const double t = theta - half + j * step;
+                    const OfxPointD p = lensDistortionRayEnd(inImage, ox, oy, t);
+                    lensDistortionRectAddPoint(p, rodPixel);
+                    const double vp = sign * (isX ? p.x : p.y);
+                    if (vp > vBest) {
+                        vBest = vp;
+                        thetaBest = t;
+                    }
+                }
+                theta = thetaBest;
+                half = step;
+            }
+        }
+    }
+} // lensDistortionRoDRays
+
+
 bool
 DistortionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                         OfxRectD &rod)
@@ -3128,41 +3335,80 @@ DistortionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         if (OFX::Coords::rectIsEmpty(srcRodPixel)) {
             return false;
         }
-        const int step = 10;
+        const bool distort = (direction == eDirectionDistort);
+        // the non-converged sample points, used only if there is no reliable point to cast rays
+        // from (see below)
+        OfxRectD rodPixelNonConverged = { DBL_MAX, DBL_MAX, -DBL_MAX, -DBL_MAX };
+        bool allConverged = true;
+        // intervals on each edge: a multiple of 10 (so that the 10 intervals used before are a
+        // subset, and the RoD can only grow), about one every 32 pixels, at most 60. The bounding
+        // box of the samples misses the image of a curved edge by O(1/n^2) (e.g. 5.7 pixels with
+        // 10 intervals per edge for Nuke k1=0.69 k2=-0.19 at 4x PAL, issue #189)
         const double w= (srcRodPixel.x2 - srcRodPixel.x1);
         const double h= (srcRodPixel.y2 - srcRodPixel.y1);
-        const double xstep = w / step;
-        const double ystep= h / step;
-        for (int i = 0; i <= step; ++i) {
+        const int xSteps = 10 * (int)(std::max)( 1., (std::min)( 6., std::ceil(w / 320.) ) );
+        const int ySteps = 10 * (int)(std::max)( 1., (std::min)( 6., std::ceil(h / 320.) ) );
+        // sample i is at x1 + (w / 10) * (i / k) + (w / xSteps) * (i % k), k = xSteps / 10: the
+        // positions of the 10 intervals used before are exactly the same
+        const int xk = xSteps / 10;
+        const int yk = ySteps / 10;
+        const double xstep10 = w / 10;
+        const double ystep10 = h / 10;
+        const double xstep = w / xSteps;
+        const double ystep= h / ySteps;
+        // F, the inverse of the render map, and G are described above lensDistortionRoDRays.
+        // G is given in closed form (see lensDistortionRoDRays) only if F is computed numerically
+        const bool fNumerical = distort ? distortionModel->distortIsNumerical() : distortionModel->undistortIsNumerical();
+        const LensDistortionImageTest inImage = { *distortionModel, distort, srcRodPixel };
+        auto addSample = [&](double x, double y) {
+            double xo, yo;
+            // if F is computed numerically: converged, and not on a mirrored branch (G(xo,yo) is
+            // (x,y), on the boundary of the source RoD, up to the residual: only test the
+            // orientation). A closed-form F gives the same points as before.
+            const bool converged = ( distort ? distortionModel->distortConverged(x, y, &xo, &yo) : distortionModel->undistortConverged(x, y, &xo, &yo) ) &&
+                                   ( !fNumerical || inImage.orientationPreserving(xo, yo) );
+            OfxRectD& r = converged ? rodPixel : rodPixelNonConverged;
+            allConverged = allConverged && converged;
+            r.x1 = (std::min)(r.x1, xo);
+            r.x2 = (std::max)(r.x2, xo);
+            r.y1 = (std::min)(r.y1, yo);
+            r.y2 = (std::max)(r.y2, yo);
+        };
+        for (int i = 0; i <= xSteps; ++i) {
             for (int j = 0; j < 2; ++j) {
-                double x = srcRodPixel.x1 + xstep * i;
+                double x = srcRodPixel.x1 + xstep10 * (i / xk) + xstep * (i % xk);
                 double y = srcRodPixel.y1 + h * j;
-                double xo, yo;
-                if (direction == eDirectionDistort) {
-                    distortionModel->distort(x, y, &xo, &yo);
-                } else {
-                    distortionModel->undistort(x, y, &xo, &yo);
-                }
-                rodPixel.x1 = (std::min)(rodPixel.x1, xo);
-                rodPixel.x2 = (std::max)(rodPixel.x2, xo);
-                rodPixel.y1 = (std::min)(rodPixel.y1, yo);
-                rodPixel.y2 = (std::max)(rodPixel.y2, yo);
+                addSample(x, y);
             }
         }
         for (int i = 0; i < 2; ++i) {
-            for (int j = 1; j < step; ++j) {
+            for (int j = 1; j < ySteps; ++j) {
                 double x = srcRodPixel.x1 + w * i;
-                double y = srcRodPixel.y1 + ystep * j;
-                double xo, yo;
-                if (direction == eDirectionDistort) {
-                    distortionModel->distort(x, y, &xo, &yo);
-                } else {
-                    distortionModel->undistort(x, y, &xo, &yo);
-                }
-                rodPixel.x1 = (std::min)(rodPixel.x1, xo);
-                rodPixel.x2 = (std::max)(rodPixel.x2, xo);
-                rodPixel.y1 = (std::min)(rodPixel.y1, yo);
-                rodPixel.y2 = (std::max)(rodPixel.y2, yo);
+                double y = srcRodPixel.y1 + ystep10 * (j / yk) + ystep * (j % yk);
+                addSample(x, y);
+            }
+        }
+        if (!allConverged) {
+            // the RoD contains the format and the source RoD (a mirrored copy of the source may be
+            // visible there), and the rays cast from the image of the source RoD center
+            // (lensDistortionRoDRays), if it is in the image
+            rodPixel.x1 = (std::min)( rodPixel.x1, (std::min)(format.x1, srcRodPixel.x1) );
+            rodPixel.x2 = (std::max)( rodPixel.x2, (std::max)(format.x2, srcRodPixel.x2) );
+            rodPixel.y1 = (std::min)( rodPixel.y1, (std::min)(format.y1, srcRodPixel.y1) );
+            rodPixel.y2 = (std::max)( rodPixel.y2, (std::max)(format.y2, srcRodPixel.y2) );
+            double ox, oy;
+            const double cx = (srcRodPixel.x1 + srcRodPixel.x2) / 2.;
+            const double cy = (srcRodPixel.y1 + srcRodPixel.y2) / 2.;
+            const bool converged = distort ? distortionModel->distortConverged(cx, cy, &ox, &oy) : distortionModel->undistortConverged(cx, cy, &ox, &oy);
+            if ( converged && inImage(ox, oy) ) {
+                lensDistortionRoDRays(inImage, ox, oy, &rodPixel);
+            } else {
+                // no reliable point to cast rays from: use the non-converged points, as before
+                // (the RoD is then usually clamped to the infinite region)
+                rodPixel.x1 = (std::min)(rodPixel.x1, rodPixelNonConverged.x1);
+                rodPixel.x2 = (std::max)(rodPixel.x2, rodPixelNonConverged.x2);
+                rodPixel.y1 = (std::min)(rodPixel.y1, rodPixelNonConverged.y1);
+                rodPixel.y2 = (std::max)(rodPixel.y2, rodPixelNonConverged.y2);
             }
         }
         assert( !OFX::Coords::rectIsEmpty(rodPixel) );

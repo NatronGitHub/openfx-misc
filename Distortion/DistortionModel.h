@@ -44,6 +44,31 @@ public:
 
     // function used to undistort a point or distort an image
     virtual void undistort(double xd, double yd, double* xu, double *yu) const = 0;
+
+    // For the RoD estimate (a non-converged point may be arbitrarily far away): distort() and
+    // undistort(), plus whether the result is a solution. A function given in closed form always
+    // returns true. A function computed numerically (Newton) returns true with the same result
+    // as distort() or undistort() if their solver converged (its last step and the residual are
+    // small); otherwise, it tries a more robust solver (full Jacobian, more iterations), and
+    // returns true with its result if that one converged, or false with the result of
+    // distort() or undistort().
+    virtual bool distortConverged(double xu, double yu, double* xd, double *yd) const
+    {
+        distort(xu, yu, xd, yd);
+
+        return true;
+    }
+
+    virtual bool undistortConverged(double xd, double yd, double* xu, double *yu) const
+    {
+        undistort(xd, yd, xu, yu);
+
+        return true;
+    }
+
+    // Is distort() (undistort()) computed numerically, i.e. is undistort() (distort()) given in closed form?
+    virtual bool distortIsNumerical() const { return false; }
+    virtual bool undistortIsNumerical() const { return false; }
 };
 
 // a distortion model class where ony the undistort function is given, and distort is solved by Newton
@@ -62,8 +87,16 @@ private:
                          double* xd,
                          double *yd) const OVERRIDE FINAL;
 
+    virtual bool distortConverged(double xu, double yu, double* xd, double *yd) const OVERRIDE FINAL;
+
+    virtual bool distortIsNumerical() const OVERRIDE FINAL { return true; }
+
     // function used to undistort a point or distort an image
     virtual void undistort(double xd, double yd, double* xu, double *yu) const OVERRIDE = 0;
+
+    // Newton solver for distort(), returns true if it converged; with checkResidual (the RoD only):
+    // and the residual is small, else the full-Jacobian solver converged
+    bool distortNewton(double xu, double yu, double* xd, double *yd, bool checkResidual) const;
 };
 
 // a distortion model class where ony the distort function is given, and undistort is solved by Newton
@@ -84,6 +117,14 @@ private:
 
     // function used to undistort a point or distort an image
     virtual void undistort(double xd, double yd, double* xu, double *yu) const OVERRIDE FINAL;
+
+    virtual bool undistortConverged(double xd, double yd, double* xu, double *yu) const OVERRIDE FINAL;
+
+    virtual bool undistortIsNumerical() const OVERRIDE FINAL { return true; }
+
+    // Newton solver for undistort(), returns true if it converged; with checkResidual (the RoD only):
+    // and the residual is small, else the full-Jacobian solver converged
+    bool undistortNewton(double xd, double yd, double* xu, double *yu, bool checkResidual) const;
 };
 
 class DistortionModelNuke
