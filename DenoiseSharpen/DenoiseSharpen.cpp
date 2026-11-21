@@ -82,6 +82,7 @@
 #include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 #include "ofxsCopier.h"
+#include "ofxsNonFinite.h" // finiteSample
 #include "ofxOld.h"
 
 #ifdef OFX_USE_MULTITHREAD_MUTEX
@@ -156,7 +157,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.0: initial version
 // version 1.1: warn when the noise analysis region is unsuitable (clipped values, details, too few pixels),
 //              with the analysisWarning status parameter (the analysis and the render are unchanged);
-//              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79)
+//              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79);
+//              a NaN Mask sample is outside the analysis mask, as a 0 sample (issue #220)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -3380,7 +3382,9 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const InstanceChangedArgs &a
             if (doMasking) {
                 assert(bimgmask);
                 const PIX *maskPix = (const PIX *)  (mask.get() ? mask->getPixelAddress(x, y) : 0);
-                bool mask = maskPix ? (*maskPix != 0) : false;
+                // a non-finite float mask sample is made finite (NaN gives 0, outside the mask, +-inf gives
+                // +-FLT_MAX, as in ofxsMaskMixPix) (issue #220)
+                bool mask = maskPix ? (finiteSample<PIX, maxValue>(*maskPix) != 0) : false;
                 bimgmask[pix] = maskInvert ? !mask : mask;
             }
         }

@@ -34,6 +34,7 @@
 #include "ofxsRectangleInteract.h"
 #include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
+#include "ofxsNonFinite.h" // finiteSample
 #ifdef OFX_USE_MULTITHREAD_MUTEX
 namespace {
 typedef MultiThread::Mutex Mutex;
@@ -74,7 +75,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79);
 //              normalizing an angle no longer converts it to int (undefined beyond the int range) (#178);
 //              in the filter and paint contexts, Source is RGBA and the Output components are those of Source,
-//              as the OpenFX spec mandates (issue #190; Output Alpha remapped Source and Output to RGBA)
+//              as the OpenFX spec mandates (issue #190; Output Alpha remapped Source and Output to RGBA);
+//              with an Output Alpha other than Source, a NaN or infinite Mask sample gives a finite alpha (NaN is
+//              0, +-inf is +-FLT_MAX, as in the mask mix), instead of NaN (issue #220)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -687,7 +690,9 @@ public:
                         if (maskPix == 0) {
                             maskScale = _maskInvert ? 1.f : 0.f;
                         } else {
-                            maskScale = *maskPix / float(maxValue);
+                            // a non-finite float mask sample is made finite (NaN gives 0, +-inf gives
+                            // +-FLT_MAX, as in ofxsMaskMixPix), so that the output alpha is finite (issue #220)
+                            maskScale = finiteSample<PIX, maxValue>(*maskPix) / float(maxValue);
                             if (_maskInvert) {
                                 maskScale = 1.f - maskScale;
                             }

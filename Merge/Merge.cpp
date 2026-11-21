@@ -39,6 +39,7 @@
 #include "ofxsMaskMix.h"
 #include "ofxsMacros.h"
 #include "ofxsThreadSuite.h"
+#include "ofxsNonFinite.h" // finiteSample
 
 using namespace OFX;
 
@@ -145,10 +146,13 @@ enum MergePluginEnum
 //      infinite A and B values are made finite (+-FLT_MAX) before the operator, instead of giving NaN
 //      (inf - inf, inf * 0) (SupportExt #82);
 //      MergeRoto also renders on hosts without the plane suite v2 (e.g. OFX 1.4 hosts), with no roto mask and
-//      the Mask clip image as the mask (render failed before).
+//      the Mask clip image as the mask (render failed before);
+//      MergeRoto: a NaN or infinite RotoMask sample gives a finite result (NaN is 0, +-inf is +-FLT_MAX, as in
+//      the mask mix), instead of NaN (issue #220).
 // 3.0: With Alpha-only images, the A checkboxes (instead of the R checkboxes) of A and B control the alpha channel.
 //      A inputs after the first one are merged as transparent black outside of their image (instead of being skipped).
-//      As in 1.1 and 2.1, the SupportExt #80 and #82 fixes, and MergeRoto renders on hosts without the plane suite v2.
+//      As in 1.1 and 2.1, the SupportExt #80 and #82 fixes, MergeRoto renders on hosts without the plane suite v2,
+//      and the issue #220 fix (non-finite RotoMask samples).
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -436,7 +440,9 @@ private:
         } else {
             const PIX *rotoMaskPix = (const PIX *)_rotoMaskImgAs[i]->getPixelAddress(x, y);
             if (rotoMaskPix) {
-                a = *rotoMaskPix / (float)maxValue;
+                // a non-finite float roto mask sample is made finite (NaN gives 0, +-inf gives +-FLT_MAX,
+                // as in ofxsMaskMixPix); mergePixel keeps the overflowing products finite (issue #220)
+                a = finiteSample<PIX, maxValue>(*rotoMaskPix) / (float)maxValue;
             } else {
                 a = 0.;
             }
@@ -496,7 +502,7 @@ private:
                     if (_rotoMaskImgB) {
                         const PIX *rotoMaskPix = (const PIX *)_rotoMaskImgB->getPixelAddress(x, y);
                         if (rotoMaskPix) {
-                            b = *rotoMaskPix / (float)maxValue;
+                            b = finiteSample<PIX, maxValue>(*rotoMaskPix) / (float)maxValue; // see getAlphaA
                             if (_maskInvert) {
                                 b = 1. - b;
                             }

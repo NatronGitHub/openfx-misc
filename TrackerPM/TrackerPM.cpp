@@ -32,6 +32,7 @@
 #include "ofxsCoords.h"
 #include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
+#include "ofxsNonFinite.h" // finiteSample
 #ifdef OFX_USE_MULTITHREAD_MUTEX
 namespace {
 typedef MultiThread::Mutex Mutex;
@@ -61,7 +62,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "Canceling a tracking operation will not wipe all the data analysed so far. If you resume a previously canceled tracking, " \
     "the tracker will continue tracking, picking up the previous/next frame as reference. "
 #define kPluginIdentifier "net.sf.openfx.TrackerPM"
-// version 1.1: works in the filter context (it fetched the Mask clip that is not defined there)
+// version 1.1: works in the filter context (it fetched the Mask clip that is not defined there);
+//              a NaN or infinite Mask sample gives a finite pattern weight (NaN is 0, +-inf is +-FLT_MAX, as
+//              in the mask mix), and the weighted sums stay finite, instead of giving a NaN score (issue #220)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -69,6 +72,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // best score before any position is scored. A finite value, so that it can be tested (with
 // -ffinite-math-only, x == infinity is assumed false), and larger than any finite score.
 #define kScoreNone DBL_MAX
+// The NCC and ZNCC scores are kept within +-kScoreMax (see computeScore), so that the reported score
+// and the subpixel refinement (differences and sums of scores) stay finite.
+#define kScoreMax (DBL_MAX / 8)
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -222,6 +228,19 @@ public:
 };
 
 
+// v beyond +-vmax gives +-vmax, with comparisons only: every value within the range is unchanged, and
+// a NaN (from a NaN Source sample) falls through, as before (issue #220).
+// A float product of a pattern weight, from a huge or infinite Mask sample (up to FLT_MAX), and a sample
+// or another weight may overflow to +-inf (then inf * 0 or inf - inf would give NaN): it is kept within
+// +-FLT_MAX.
+template<typename T>
+inline T
+clampMagnitude(T v,
+               T vmax)
+{
+    return (v > vmax) ? vmax : ( (v < -vmax) ? -vmax : v );
+}
+
 // The "masked", "filter" and "clamp" template parameters allow filter-specific optimization
 // by the compiler, using the same generic code for all filters.
 template <class PIX, int nComponents, int maxValue, TrackerScoreEnum scoreType>
@@ -301,8 +320,10 @@ private:
                         *weightPtr = 1.f;
                     } else {
                         PIX *maskPix = (PIX*) mask->getPixelAddress(_refCenterI.x + j, _refCenterI.y + i);
-                        // weight is zero if there's a mask but we're outside of it
-                        *weightPtr = maskPix ? (*maskPix / (float)maxValue) : 0.f;
+                        // weight is zero if there's a mask but we're outside of it.
+                        // A non-finite float mask sample is made finite (NaN gives 0, +-inf gives +-FLT_MAX,
+                        // as in ofxsMaskMixPix), so that the weights and the score are finite (issue #220)
+                        *weightPtr = maskPix ? (finiteSample<PIX, maxValue>(*maskPix) / (float)maxValue) : 0.f;
                     }
                     for (int c = 0; c < nComponents; ++c) {
                         patternPtr[c] = refPix[c];
@@ -361,7 +382,7 @@ private:
                     othery = (std::max)( _otherImg->getBounds().y1, (std::min)(othery, _otherImg->getBounds().y2 - 1) );
                     const PIX *otherPix = (const PIX *) _otherImg->getPixelAddress(otherx, othery);
                     for (int c = 0; c < scoreComps; ++c) {
-                        otherMean[c] += *weightPtr * otherPix[c];
+                        otherMean[c] += clampMagnitude<float>(*weightPtr * otherPix[c], FLT_MAX);
                     }
                 }
             }
@@ -394,7 +415,7 @@ private:
                     switch (scoreTypeE) {
                     case eTrackerSSD:
                         // reference is squared in SSD, so is the weight
-                        score += weight * weight * aggregateSD(refPix[c], otherPix[c]);
+                        score += clampMagnitude<float>(weight * weight, FLT_MAX) * aggregateSD(refPix[c], otherPix[c]);
                         break;
                     case eTrackerSAD:
                         score += weight * aggregateAD(refPix[c], otherPix[c]);
@@ -414,7 +435,8 @@ private:
         if ( (scoreTypeE == eTrackerNCC) || (scoreTypeE == eTrackerZNCC) ) {
             double sdev = std::sqrt( (std::max)(otherSsq, 0.) );
             if (sdev != 0.) {
-                score /= sdev;
+                // the quotient may overflow to +-inf with huge weights (see clampMagnitude) and a tiny sdev
+                score = clampMagnitude<double>(score / sdev, kScoreMax);
             } else {
                 score = kScoreNone;
             }
@@ -456,7 +478,7 @@ private:
                     assert( patternIdx == ( (i - _refRectPixel.y1) * (_refRectPixel.x2 - _refRectPixel.x1) + (j - _refRectPixel.x1) ) );
                     const PIX *refPix = patternPtr;
                     for (int c = 0; c < scoreComps; ++c) {
-                        refMean[c] += *weightPtr * refPix[c];
+                        refMean[c] += clampMagnitude<float>(*weightPtr * refPix[c], FLT_MAX);
                     }
                 }
             }
