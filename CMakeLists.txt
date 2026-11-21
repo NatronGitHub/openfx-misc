@@ -42,10 +42,11 @@
 #      per plug-in directory ("make nomulti"; cmake/OFXMiscPlugins.cmake), which replaces them (the
 #      two sets have the same plug-ins: a host must not load both). With SEPARATE, Debug builds
 #      also have Misc.ofx.bundle, with TestRender only (as Test.ofx.bundle).
-#   -DOFXMISC_STANDALONE_BUNDLES="DenoiseSharpen": with COMBINED, also build these Misc plug-ins
-#      as their own bundle (net.sf.openfx.DenoiseSharpen.ofx.bundle, install component
-#      DenoiseSharpen), for the binary releases. Their plug-ins are also in Misc.ofx.bundle, with
-#      the same identifiers and versions: a host must not load both (install one or the other).
+#   -DOFXMISC_STANDALONE_BUNDLES="DenoiseSharpen;NoOp": with COMBINED, also build these Misc
+#      plug-ins as their own bundle (net.sf.openfx.DenoiseSharpen.ofx.bundle, install component
+#      DenoiseSharpen; net.sf.openfx.NoOpPlugin.ofx.bundle, component NoOp), for the binary
+#      releases. Their plug-ins are also in Misc.ofx.bundle, with the same identifiers and
+#      versions: a host must not load both (install one or the other).
 #   -DOFXMISC_ARM64X=ARM64|ARM64EC -DOFXMISC_ARM64X_DIR=<dir> (MSVC): Arm64X plug-ins, from an ARM64
 #      build then an Arm64EC build (cmake/OFXMiscArm64X.cmake; .github/tools/msvc-build.sh arm64x)
 #   -DOFX_LICENSE=GPL (default) or COMMERCIAL ("make LICENSE=...", Natron's NATRON_LICENSE, as in
@@ -262,9 +263,9 @@ include(cmake/OFXMiscPlugins.cmake)
 # Misc.ofx.bundle (Misc/Makefile)
 ########################################################################
 # OFXMISC_STANDALONE_BUNDLES: with OFX_PLUGIN_BUNDLES=COMBINED, these Misc plug-ins also get their
-# own bundle (ALSO_SEPARATE), for the binary releases (release.yml: DenoiseSharpen). Their plug-ins
-# are also in Misc.ofx.bundle, with the same identifiers and versions: a host must not load both
-# (install one or the other).
+# own bundle (ALSO_SEPARATE), for the binary releases (release.yml: DenoiseSharpen and NoOp).
+# Their plug-ins are also in Misc.ofx.bundle, with the same identifiers and versions: a host must
+# not load both (install one or the other).
 set(OFXMISC_STANDALONE_BUNDLES "" CACHE STRING
   "Misc plug-ins (names of cmake/OFXMiscPlugins.cmake) also built as their own bundle, e.g. DenoiseSharpen")
 if(BUILD_MISC)

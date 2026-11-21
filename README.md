@@ -44,6 +44,10 @@ universal):
 - `openfx-misc-DenoiseSharpen-<version>-<platform>`: `net.sf.openfx.DenoiseSharpen.ofx.bundle`, with
   only the DenoiseSharpen plugin. Older releases named it `DenoiseSharpen.ofx.bundle`: remove that
   old bundle from your plugins directory.
+- `openfx-misc-NoOp-<version>-<platform>`: `net.sf.openfx.NoOpPlugin.ofx.bundle`, with only
+  the NoOp plugin, whose "Host Info..." button shows what the OpenFX host supports (in the
+  format of [README-hosts.txt](README-hosts.txt), also saved to `OFXHostInfo-<host>.txt` in
+  the temporary directory), to paste into a bug report.
 
 The Linux bundles are built on Rocky Linux 9 (Natron 2.6's baseline), and need glibc 2.34
 or later, the system's libstdc++ (GCC 11 or later), `libGL.so.1` (OpenGL) and `libgomp.so.1`
@@ -53,7 +57,7 @@ inside the bundle (`<bundle>.ofx.bundle/Libraries`).
 
 **Install either the full set or standalone bundles, not both**: the standalone
 bundles contain the same plugins, with the same identifiers and versions, as the full
-set (DenoiseSharpen is also in `Misc.ofx.bundle`), and a host must not find a plugin
+set (DenoiseSharpen and NoOp are also in `Misc.ofx.bundle`), and a host must not find a plugin
 twice. The two Shadertoy downloads are mutually exclusive too (both are
 `Shadertoy.ofx.bundle`). Each archive has a `README.txt` that tells where to install
 it; the steps are the same as steps 3 to 6 below. Its `LICENSE.txt` is openfx-misc's license
@@ -93,7 +97,8 @@ as `Natron-2.5.0`) and for builds that a maintainer starts by hand:
    `openfx-misc-nightly-windows-msvc-x64` (x64) and `openfx-misc-nightly-windows-msvc-arm64x`
    (Windows on Arm: Arm64X binaries in `Contents/Win-arm64ec`, for Arm64EC hosts, and ARM64
    ones in `Contents/Win-arm64`, for native ARM64 hosts). Each holds the zip files of a
-   release: the full set (with an OpenGL-only Shadertoy), Shadertoy and DenoiseSharpen alone.
+   release: the full set (with an OpenGL-only Shadertoy), Shadertoy, DenoiseSharpen and NoOp
+   alone.
 
    Artifacts are deleted by GitHub after 90 days. If there is none, you can
    [compile the plugins](#installation) yourself (`make nomulti`, or CMake's
@@ -307,7 +312,7 @@ These plugins are compatible with the Sony Vegas and Nuke [multiview extensions]
 ### Other
 
 * ImageStatisticsOFX: Compute statistics over an image or a rectangular area, over a frame or a frame range, and the auto crop box: the bounding box of the pixels that are not black (by default), not zero, not transparent, or above a luminance threshold.
-* NoOpOFX: Copies the input to the output. Useful for inspecting the properties of input and output clips.
+* NoOpOFX: Copies the input to the output. Useful for inspecting the properties of input and output clips, and (Host Info button) what the host supports.
 * TestRenderOFX: Test some rendering features of the OFX host: tiles, multiresolution and render scale (Test bundle, debug builds only).
 * TestIdentityLeftHalfOFX: Test the renderWindow passed to isIdentity. The right half must always be inverted, even after zooming on the left half and panning right (Test bundle).
 * TestGarbageOutsideRenderWindowOFX: A buggy plugin that writes magenta outside its renderWindow. Magenta in the result is a host bug (Test bundle, debug builds only).
@@ -516,9 +521,9 @@ to the prefix (or absolute). The main options are:
   install component named after the directory, with a `CImg` prefix for the CImg plugins
   (`cmake --install build --component Invert`, `--component CImgBlur`). The plugins are listed in `cmake/OFXMiscPlugins.cmake` (one line each). Install
   either set, never both: they have the same plugins.
-- `-DOFXMISC_STANDALONE_BUNDLES="DenoiseSharpen"`: with the combined bundles, also build
-  these Misc plugins as their own bundle (`net.sf.openfx.DenoiseSharpen.ofx.bundle`), for
-  the binary releases. They have the same plugins as `Misc.ofx.bundle`: install one or
+- `-DOFXMISC_STANDALONE_BUNDLES="DenoiseSharpen;NoOp"`: with the combined bundles, also build
+  these Misc plugins as their own bundle (`net.sf.openfx.DenoiseSharpen.ofx.bundle`,
+  `net.sf.openfx.NoOpPlugin.ofx.bundle`), for the binary releases. They have the same plugins as `Misc.ofx.bundle`: install one or
   the other.
 - `-DFFT=pocketfft|pow2|fftw3` (`make FFT=...`): the FFT of the CImg plugins, see above
   (default `pocketfft`; `fftw3` is opt-in), and `-DOFX_LICENSE=GPL` (default) or

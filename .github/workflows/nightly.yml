@@ -319,9 +319,9 @@ jobs:
   # Windows MSVC: the downloadable Windows nightlies (#203). They are built with MSVC, since users
   # also run them in third-party hosts; only the OSMesa Shadertoy stays on MSYS2 UCRT64
   # (release.yml). .github/tools/msvc-build.sh (also run by ci.yml for arm64x) builds Misc, CImg,
-  # Shadertoy (OpenGL) and the standalone DenoiseSharpen with CMake and Ninja (C++17), with the
-  # static CRT (CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded: no vcruntime DLL to ship) and without
-  # OpenMP (if it is ever enabled, vcomp140.dll must be pinned and shipped app-local, as
+  # Shadertoy (OpenGL) and the standalone DenoiseSharpen and NoOp with CMake and Ninja (C++17),
+  # with the static CRT (CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded: no vcruntime DLL to ship) and
+  # without OpenMP (if it is ever enabled, vcomp140.dll must be pinned and shipped app-local, as
   # openfx-gmic#108: see the script), and checks each binary with dumpbin (machine type, no
   # MSVC runtime DLL). Both run on windows-2025, whose Visual Studio 2022 has the ARM64 and
   # ARM64EC cross tools:
@@ -332,7 +332,7 @@ jobs:
   #   in Contents/Win-arm64 (native ARM64 hosts; a reserved folder). Load-tested on windows-11-arm
   #   (windows_msvc_arm below).
   # The downloads are packaged as release.yml's (package-release.sh: the full set, Shadertoy
-  # (OpenGL) and DenoiseSharpen, each a zip with README.txt, LICENSE.txt and LICENSES/), and
+  # (OpenGL), DenoiseSharpen and NoOp, each a zip with README.txt, LICENSE.txt and LICENSES/), and
   # uploaded as openfx-misc-nightly-windows-msvc-<arch>, kept 30 days (a scheduled run is skipped
   # when master did not change, so the last downloads must outlive a quiet week).
   windows_msvc:
@@ -372,11 +372,12 @@ jobs:
           cl -nologo -EHsc -W3 -Iopenfx/include .github/tools/ofxload.cpp -Fe:ofxload.exe
           OFXLOAD=./ofxload.exe .github/tools/loadtest.sh msvc/install
           OFXLOAD=./ofxload.exe .github/tools/loadtest.sh msvc/install-denoisesharpen
+          OFXLOAD=./ofxload.exe .github/tools/loadtest.sh msvc/install-noop
       - name: Package
         run: |
           .github/tools/package-release.sh --platform ${{ matrix.platform }} --out dist \
               --full msvc/install/OFX/Plugins --shadertoy-gl msvc/install/OFX/Plugins \
-              --denoisesharpen msvc/install-denoisesharpen/OFX/Plugins
+              --denoisesharpen msvc/install-denoisesharpen/OFX/Plugins --noop msvc/install-noop/OFX/Plugins
       - name: Upload artifacts
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
@@ -387,7 +388,7 @@ jobs:
           compression-level: 0 # (zip files)
 
   # The Windows on Arm load test of the arm64x downloads (windows_msvc), on windows-11-arm: each
-  # download (the full set, Shadertoy, DenoiseSharpen) is loaded by an ARM64 ofxload from
+  # download (the full set, Shadertoy, DenoiseSharpen, NoOp) is loaded by an ARM64 ofxload from
   # Win-arm64 (the ARM64 binaries) and from Win-arm64ec (the Arm64X binaries, their ARM64 code),
   # and by an Arm64EC ofxload from Win-arm64ec (their Arm64EC code), with ofxload built by cl.
   # (Only when both windows_msvc builds pass.)
