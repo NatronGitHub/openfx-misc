@@ -422,8 +422,8 @@ tests=(
     "Invert checker|net.sf.openfx.Invert|filter|*|nonconst+changed:Source||-i Source=checker:16 -i Mask=none"
     "Grade solid|net.sf.openfx.GradePlugin|filter|*|mean=0.5,1,0.25,1||-i Source=solid:0.25,0.5,0.125,1 -i Mask=none multiply=2,2,2,2"
     "Grade ramp masked|net.sf.openfx.GradePlugin|filter|*|nonconst+changed:Source||-i Source=ramp -i Mask=checker:32 gamma=2,2,2,2"
-    "Merge over solid|net.sf.openfx.MergePlugin|filter|*|mean=0.5,0,0.5,1||-i A=solid:0.5,0,0,0.5 -i B=solid:0,0,1,1 -i Mask=none"
-    "Merge over checker|net.sf.openfx.MergePlugin|filter|*|nonconst+changed:A+changed:B||-i A=checker:16 -i B=ramp -i Mask=none"
+    "Merge over solid|net.sf.openfx.MergePlugin|filter|*|mean=0.5,0,0.5,1||-i A=solid:0.5,0,0,0.5 -i Source=solid:0,0,1,1 -i Mask=none"
+    "Merge over checker|net.sf.openfx.MergePlugin|filter|*|nonconst+changed:A+changed:Source||-i A=checker:16 -i Source=ramp -i Mask=none"
     "CImgBlur|net.sf.cimg.CImgBlur|filter|float|nonconst+changed:Source||-i Source=checker:8 -i Mask=none size=5,5 expandRoD=0"
     "CImgBlur expandRoD|net.sf.cimg.CImgBlur|filter|float|nonconst+changed:Source||-i Source=checker:8 -i Mask=none size=5,5"
     "Transform|net.sf.openfx.TransformPlugin|filter|*|nonconst+changed:Source||-i Source=checker:32 rotate=30 scale=0.8,0.8"
@@ -543,7 +543,7 @@ tests=(
     # filter=2: Box (FIR). The default IIR filters have an infinite support, so
     # their tiles differ slightly (up to 0.003) from the full render.
     "CImgBlur tile|net.sf.cimg.CImgBlur|filter|float|nonconst+tile||-i Source=checker:8 -i Mask=none size=5,5 expandRoD=0 filter=2 --frames 0 --window 100,100,300,250"
-    "Merge tile|net.sf.openfx.MergePlugin|filter|float|nonconst+tile||-i A=checker:16 -i B=ramp -i Mask=none --frames 0 --window 50,60,250,200"
+    "Merge tile|net.sf.openfx.MergePlugin|filter|float|nonconst+tile||-i A=checker:16 -i Source=ramp -i Mask=none --frames 0 --window 50,60,250,200"
     "Rand t=0,0.5|net.sf.openfx.Noise|general|float|nonconst+framesdiffer||-i Source=none --frames 0,0.5"
     # Shuffle (version 4 unless -m) swaps R and B (outputR=8: B.b, outputB=6:
     # B.r; 0-3: A.r-A.a, 6-9: B.r-B.a). After the first test, the A and B
