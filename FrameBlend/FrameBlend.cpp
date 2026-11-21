@@ -41,6 +41,7 @@
 #include "ofxsMacros.h"
 #include "ofxsMerging.h"
 #include "ofxsCopier.h"
+#include "ofxsNonFinite.h" // finiteSample
 
 using namespace OFX;
 
@@ -62,9 +63,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 3.1: Min and Max give 0 where no frame has a source pixel (they gave an infinite value, and NaN
 //              with a mask or Mix), and Decay is clamped to [0,1], its range, on hosts that do not enforce it
 //              (NaN audit); a merge result (Product, Over...) beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #80),
-//              and infinite inputs of the merge operators are made finite (+-FLT_MAX) instead of giving NaN (SupportExt #82)
+//              and infinite inputs of the merge operators are made finite (+-FLT_MAX) instead of giving NaN (SupportExt #82);
+//              a NaN Foreground Matte sample is 0, as in the mask mix (the frame was skipped, as under a matte) (issue #220)
 // version 2.1 (kept for backward compatibility, frames aligned on the last frame of the range): the fixes of 3.1
-//              (the NaN audit ones also applied to version 2, which was still registered as 2.0, and SupportExt #80 and #82)
+//              (the NaN audit ones also applied to version 2, which was still registered as 2.0, SupportExt #80 and #82,
+//              and issue #220)
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -395,7 +398,9 @@ private:
                 // accumulate
                 for (unsigned i = 0; i < _srcImgs.size(); ++i) {
                     const PIX *fgMPix = (const PIX *)  (_fgMImgs[i] ? _fgMImgs[i]->getPixelAddress(x, y) : 0);
-                    if ( !fgMPix || (*fgMPix <= 0) ) {
+                    // a non-finite float matte sample is made finite (NaN gives 0, so the frame is blended
+                    // as where the matte is 0, +-inf gives +-FLT_MAX, as in ofxsMaskMixPix) (issue #220)
+                    if ( !fgMPix || (finiteSample<PIX, maxValue>(*fgMPix) <= 0) ) {
                         if ( (_decay > 0.) && (!minMax || touched) ) {
                             for (int c = 0; c < nComponents; ++c) {
                                 tmpPix[c] *= (1. - _decay);
