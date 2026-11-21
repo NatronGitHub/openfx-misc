@@ -248,6 +248,8 @@ enum BBoxEnum
 #define kClipAHint "The image sequence to merge with input B."
 #define kClipB "B"
 #define kClipBHint "The main input. This input is passed through when the merge node is disabled."
+// in the filter context, B is the mandated Source clip (ofxImageEffectContexts.rst, The Filter Context)
+#define kClipBName(context) ( (context) == eContextFilter ? kOfxImageEffectSimpleSourceClipName : kClipB )
 #define kClipRotoMask "RotoMask"
 #define kClipRotoMaskHint "A roto mask, which is used as the alpha channel in the merge operations."
 
@@ -623,7 +625,7 @@ public:
             }
         }
 
-        _srcClipB = fetchClip(kClipB);
+        _srcClipB = fetchClip( kClipBName( getContext() ) );
         assert( _srcClipB && (!_srcClipB->isConnected() || _srcClipB->getPixelComponents() == ePixelComponentRGB || _srcClipB->getPixelComponents() == ePixelComponentRGBA || _srcClipB->getPixelComponents() == ePixelComponentAlpha) );
         _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
@@ -1281,8 +1283,16 @@ MergePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
         outputComps = ePixelComponentRGBA;
     }
 
-    clipPreferences.setClipComponents(*_dstClip, outputComps);
-    clipPreferences.setClipComponents(*_srcClipB, outputComps);
+    if (getContext() == eContextFilter) {
+        // "In all contexts, except for the general context, mandated input clips cannot have their
+        // component types remapped, nor can the output" (ofxClipPreferences.rst), and in the filter
+        // context the Output "will always be the same as the Source clip" (ofxImageEffectContexts.rst).
+        // Source (B) is RGBA or Alpha there (an RGB Source is mapped to RGBA by the host): remap only A.
+        outputComps = (_srcClipB->getUnmappedPixelComponents() == ePixelComponentAlpha) ? ePixelComponentAlpha : ePixelComponentRGBA;
+    } else {
+        clipPreferences.setClipComponents(*_dstClip, outputComps);
+        clipPreferences.setClipComponents(*_srcClipB, outputComps);
+    }
     for (std::size_t i = 0; i < _srcClipAs.size(); ++i) {
         clipPreferences.setClipComponents(*_srcClipAs[i], outputComps);
     }
@@ -1588,19 +1598,25 @@ MergePluginFactory<majorVersion,plugin>::describeInContext(ImageEffectDescriptor
     bool numerousInputs =  (/*plugin != eMergePluginRoto &&*/
                             getImageEffectHostDescription()->isNatron &&
                             getImageEffectHostDescription()->versionMajor >= 2);
-    ClipDescriptor* srcClipB = desc.defineClip(kClipB);
+    // the filter context mandates an input clip named Source: it is B there
+    ClipDescriptor* srcClipB = desc.defineClip( kClipBName(context) );
 
     srcClipB->setHint(kClipBHint);
     srcClipB->addSupportedComponent( ePixelComponentRGBA );
-    srcClipB->addSupportedComponent( ePixelComponentRGB );
-    srcClipB->addSupportedComponent( ePixelComponentXY );
+    if (context != eContextFilter) {
+        // filter context: Output has the components of Source, and the output of Merge has an
+        // alpha channel (see getClipPreferences), so Source is RGBA or Alpha there
+        srcClipB->addSupportedComponent( ePixelComponentRGB );
+        srcClipB->addSupportedComponent( ePixelComponentXY );
+    }
     srcClipB->addSupportedComponent( ePixelComponentAlpha );
     srcClipB->setTemporalClipAccess(false);
     srcClipB->setSupportsTiles(kSupportsTiles);
 
     //Optional: If we want a render to be triggered even if one of the inputs is not connected
     //they need to be optional.
-    srcClipB->setOptional(true); // B clip is optional
+    // (the mandated Source clip of the filter context is not optional)
+    srcClipB->setOptional(context != eContextFilter); // B clip is optional
 
     ClipDescriptor* srcClipA = desc.defineClip(kClipA);
     srcClipA->setHint(kClipAHint);

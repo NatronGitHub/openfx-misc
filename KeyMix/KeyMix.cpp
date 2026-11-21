@@ -59,6 +59,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // 1.0: Original version
 // 2.0: With Alpha-only images, the A checkbox (instead of the R checkbox) controls the alpha channel
+// 1.1 and 2.0 (2.0 is unreleased, fixed in place): in the filter context, the B input is the mandated Source
+//      clip (it had no Source clip), and Source is not remapped there (Output has the components of Source);
+//      the general context is unchanged (issue #217)
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -99,6 +102,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kClipAHint "The image sequence to mix with input B."
 #define kClipB "B"
 #define kClipBHint "The main input. This input is passed through when the KeyMix node is disabled."
+// in the filter context, B is the mandated Source clip (ofxImageEffectContexts.rst, The Filter Context)
+#define kClipBName(context) ( (context) == eContextFilter ? kOfxImageEffectSimpleSourceClipName : kClipB )
 
 
 class KeyMixProcessorBase
@@ -233,7 +238,7 @@ public:
         assert( _srcClipA && (!_srcClipA->isConnected() || _srcClipA->getPixelComponents() == ePixelComponentRGB || _srcClipA->getPixelComponents() == ePixelComponentRGBA || _srcClipA->getPixelComponents() == ePixelComponentAlpha) );
 
 
-        _srcClipB = fetchClip(kClipB);
+        _srcClipB = fetchClip( kClipBName( getContext() ) );
         assert( _srcClipB && (!_srcClipB->isConnected() || _srcClipB->getPixelComponents() == ePixelComponentRGB || _srcClipB->getPixelComponents() == ePixelComponentRGBA || _srcClipB->getPixelComponents() == ePixelComponentAlpha) );
         _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
@@ -456,8 +461,23 @@ KeyMixPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     PixelComponentEnum outputComps = getDefaultOutputClipComponents();
 
-    clipPreferences.setClipComponents(*_srcClipA, outputComps);
-    clipPreferences.setClipComponents(*_srcClipB, outputComps);
+    if (getContext() == eContextFilter) {
+        // "In all contexts, except for the general context, mandated input clips cannot have their
+        // component types remapped, nor can the output" (ofxClipPreferences.rst), and in the filter
+        // context the Output "will always be the same as the Source clip" (ofxImageEffectContexts.rst):
+        // remap only A, to the components of Source (B)
+        const PixelComponentEnum srcComps = _srcClipB->getUnmappedPixelComponents();
+        if ( (srcComps == ePixelComponentRGBA) || (srcComps == ePixelComponentRGB) ||
+             (srcComps == ePixelComponentXY) || (srcComps == ePixelComponentAlpha) ) {
+            outputComps = srcComps;
+        } else {
+            outputComps = ePixelComponentRGBA;
+        }
+        clipPreferences.setClipComponents(*_srcClipA, outputComps);
+    } else {
+        clipPreferences.setClipComponents(*_srcClipA, outputComps);
+        clipPreferences.setClipComponents(*_srcClipB, outputComps);
+    }
 #ifdef OFX_EXTENSIONS_NATRON
     // the output format is the format of the B clip if it is connected
     if ( _srcClipB && _srcClipB->isConnected() ) {
@@ -566,7 +586,8 @@ void
 KeyMixPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
                                        ContextEnum context)
 {
-    ClipDescriptor* srcClipB = desc.defineClip(kClipB);
+    // the filter context mandates an input clip named Source: it is B there
+    ClipDescriptor* srcClipB = desc.defineClip( kClipBName(context) );
 
     srcClipB->setHint(kClipBHint);
     srcClipB->addSupportedComponent( ePixelComponentRGBA );
@@ -578,7 +599,8 @@ KeyMixPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc
 
     //Optional: If we want a render to be triggered even if one of the inputs is not connected
     //they need to be optional.
-    srcClipB->setOptional(true); // B clip is optional
+    // (the mandated Source clip of the filter context is not optional)
+    srcClipB->setOptional(context != eContextFilter); // B clip is optional
 
     ClipDescriptor* srcClipA = desc.defineClip(kClipA);
     srcClipA->setHint(kClipAHint);
@@ -675,7 +697,7 @@ static KeyMixPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVers
 mRegisterPluginFactoryInstance(p)
 
 // Version 1: with Alpha-only images, the R checkbox controls the alpha channel
-static KeyMixPluginFactory<1> pv1(kPluginIdentifier, 0);
+static KeyMixPluginFactory<1> pv1(kPluginIdentifier, 1); // 1.1: filter context fix (see History)
 mRegisterPluginFactoryInstance(pv1)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
