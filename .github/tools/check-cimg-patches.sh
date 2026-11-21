@@ -1,5 +1,5 @@
 #!/bin/bash
-# Check that the CImg.h patches of openfx-misc are still those of openfx-gmic (run by nightly.yml):
+# Check that the CImg.h patches of openfx-misc are still those of openfx-gmic (run weekly by nightly.yml):
 # - CImg/patches/*.sh are byte-identical to openfx-gmic's patches/cimg-*.sh at REF (default:
 #   master), and both sets have the same scripts;
 # - CIMG_PATCHES (the patch order), POCKETFFTCOMMIT and POCKETFFT_SHA256 (the pocketfft pin) in

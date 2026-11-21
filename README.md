@@ -92,8 +92,8 @@ as `Natron-2.5.0`) and for builds that a maintainer starts by hand:
    - `openfx-misc-build-windows-release`: Windows (64-bit, MSYS2 UCRT64) plugins,
      Windows 10 or later (they use the Universal C Runtime).
 
-   Windows nightly builds, made with MSVC, are also kept for 30 days on the
-   [nightly page](https://github.com/NatronGitHub/openfx-misc/actions/workflows/nightly.yml):
+   Weekly Windows builds (every Saturday, and on demand), made with MSVC, are also kept for
+   30 days on the [weekly builds page](https://github.com/NatronGitHub/openfx-misc/actions/workflows/nightly.yml):
    `openfx-misc-nightly-windows-msvc-x64` (x64) and `openfx-misc-nightly-windows-msvc-arm64x`
    (Windows on Arm: Arm64X binaries in `Contents/Win-arm64ec`, for Arm64EC hosts, and ARM64
    ones in `Contents/Win-arm64`, for native ARM64 hosts). Each holds the zip files of a
@@ -461,7 +461,7 @@ source of truth), at the openfx-gmic commit `CIMG_PATCHES_FROM` of
 `CImg/CImgVersion.mk`, applied in the same order, so that both get the same `CImg.h`
 (the same for every `FFT`: CImg 4.0.8 has pocketfft support itself, `cimg_use_pocketfft`,
 and includes `pocketfft_hdronly.h` from the `CImg` directory). They need a POSIX `sh`,
-`awk`, `head`, `tr` and `wc`. A nightly CI job (`.github/tools/check-cimg-patches.sh`) reports when
+`awk`, `head`, `tr` and `wc`. A weekly CI job (`.github/tools/check-cimg-patches.sh`) reports when
 openfx-gmic's scripts or G'MIC version change.
 
 The compiled plugins are placed in subdirectories named after the
@@ -534,7 +534,7 @@ to the prefix (or absolute). The main options are:
   DebugProxy bundles. Their default is ON in Debug builds, at the first configure of a
   build directory: set them explicitly when changing `CMAKE_BUILD_TYPE` there.
 - MSVC: `-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded` links the C and C++ runtime
-  statically (no Visual C++ redistributable needed), as the nightly builds
+  statically (no Visual C++ redistributable needed), as the weekly builds
   (`.github/tools/msvc-build.sh`). Arm64X (one binary for Arm64EC and ARM64 hosts):
   an ARM64 build with `-DOFXMISC_ARM64X=ARM64 -DOFXMISC_ARM64X_DIR=<dir>`, then an
   Arm64EC build (`CFLAGS=-arm64EC CXXFLAGS=-arm64EC`) with `-DOFXMISC_ARM64X=ARM64EC` and the

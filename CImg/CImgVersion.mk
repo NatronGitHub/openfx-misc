@@ -34,7 +34,7 @@ CIMG_SHA256=adf13c3e991f6812c2db484ff07aa614421830117924590d3def10e8ac6a485b
 # version (the CImg.h of its GMICVER tarball), so that both get the same CImg code: the scripts in
 # CImg/patches/ are verbatim copies of openfx-gmic's patches/cimg-*.sh at the openfx-gmic commit
 # CIMG_PATCHES_FROM. openfx-gmic is the source of truth: fix or update the scripts there, then copy
-# them again and update CIMG_PATCHES_FROM (.github/tools/check-cimg-patches.sh, run nightly, reports
+# them again and update CIMG_PATCHES_FROM (.github/tools/check-cimg-patches.sh, run weekly, reports
 # a drift). They are applied in the order of CIMG_PATCHES, as in openfx-gmic's Makefile, whatever
 # the FFT: CImg.h is the same for every FFT. Changing CIMGVERSION, CIMG_PATCHES_FROM or the patches
 # downloads and patches CImg.h again (CImg.h.version records them).
