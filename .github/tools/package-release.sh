@@ -157,18 +157,18 @@ EOF
             else
                 cat << 'EOF'
 
-The bundles are built with Microsoft Visual C++, for Windows 10 or later, with
-its runtime linked statically (no extra DLL is needed). The host finds its
-binary in the folder of its architecture, in each bundle's Contents:
+The bundles are built with Microsoft Visual C++, with its runtime linked
+statically (no extra DLL is needed). The host finds its binary in the folder
+of its architecture, in each bundle's Contents:
 EOF
                 # the folders of the full set's Misc.ofx.bundle
                 for d in "$full"/Misc.ofx.bundle/Contents/Win*; do
                     case "$(basename "$d")" in
-                        Win64) echo "- Win64: x64 (Intel and AMD) hosts" ;;
-                        Win-arm64ec) echo "- Win-arm64ec: an Arm64X binary, for the Arm64EC hosts of Windows on Arm"
+                        Win64) echo "- Win64: x64 (Intel and AMD) hosts, Windows 10 or later" ;;
+                        Win-arm64ec) echo "- Win-arm64ec: an Arm64X binary, for the Arm64EC hosts of Windows 11 on Arm"
                                      echo "  (and the x64 hosts emulated there that look in this folder)" ;;
-                        Win-arm64) echo "- Win-arm64: native ARM64 hosts (a folder reserved by the OpenFX packaging"
-                                   echo "  specification, not yet normative)" ;;
+                        Win-arm64) echo "- Win-arm64: native ARM64 hosts, Windows 11 on Arm (a folder reserved by"
+                                   echo "  the OpenFX packaging specification, not yet normative)" ;;
                         *) echo "- $(basename "$d")" ;;
                     esac
                 done

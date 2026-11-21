@@ -88,7 +88,7 @@ as `Natron-2.5.0`) and for builds that a maintainer starts by hand:
    - `openfx-misc-build-windows-release`: Windows (64-bit, MSYS2 UCRT64) plugins,
      Windows 10 or later (they use the Universal C Runtime).
 
-   Windows nightly builds, made with MSVC, are also kept for 7 days on the
+   Windows nightly builds, made with MSVC, are also kept for 30 days on the
    [nightly page](https://github.com/NatronGitHub/openfx-misc/actions/workflows/nightly.yml):
    `openfx-misc-nightly-windows-msvc-x64` (x64) and `openfx-misc-nightly-windows-msvc-arm64x`
    (Windows on Arm: Arm64X binaries in `Contents/Win-arm64ec`, for Arm64EC hosts, and ARM64

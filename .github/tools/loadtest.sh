@@ -81,6 +81,20 @@ for f in "${binaries[@]}"; do
         *) installed+=("$f") ;;
     esac
 done
-[ ${#installed[@]} -eq 0 ] || "$ofxload" "${installed[@]}" || status=1
-[ ${#tests[@]} -eq 0 ] || "$ofxload" "${tests[@]}" || status=1
+# run_ofxload BINARY...: ofxload must exit with 0 and end with its summary line, with at
+# least one binary and no error (a process that dies or exits early, even with status 0,
+# prints no summary)
+run_ofxload() {
+    local log
+    log=$(mktemp "${TMPDIR:-/tmp}/loadtest.XXXXXX")
+    "$ofxload" "$@" | tee "$log" || { rm -f "$log"; return 1; }
+    if ! tail -n 1 "$log" | tr -d '\r' | grep -q -E '^[1-9][0-9]* binaries, [0-9]+ plugins, 0 errors$'; then
+        echo "ERROR: $ofxload printed no summary line with at least one binary and 0 errors"
+        rm -f "$log"
+        return 1
+    fi
+    rm -f "$log"
+}
+[ ${#installed[@]} -eq 0 ] || run_ofxload "${installed[@]}" || status=1
+[ ${#tests[@]} -eq 0 ] || run_ofxload "${tests[@]}" || status=1
 exit $status

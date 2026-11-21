@@ -2,7 +2,7 @@
 # Windows MSVC build of the downloadable bundles (nightly.yml, ci.yml): Misc, CImg, Shadertoy
 # (OpenGL only: the OSMesa Shadertoy is built with MSYS2 UCRT64) and the standalone
 # net.sf.openfx.DenoiseSharpen.ofx.bundle, with CMake and Ninja, then a check of each binary.
-#   .github/tools/msvc-build.sh x64|arm64x [OUTDIR]
+#   .github/tools/msvc-build.sh [--no-standalone] x64|arm64x [OUTDIR]
 # Run from the top of the source tree, in Git for Windows' bash (its sh patches CImg.h), in an
 # MSVC environment (cl, link and dumpbin in the PATH, e.g. ilammy/msvc-dev-cmd): x64 for x64,
 # the ARM64 tools (amd64_arm64 cross, or arm64 native) for arm64x.
@@ -12,7 +12,9 @@
 #   hosts and for the x64 hosts emulated on Windows on Arm that look there) and Contents/Win-arm64
 #   (the ARM64 binary, for native ARM64 hosts: a reserved folder of the OFX packaging spec).
 # The standalone DenoiseSharpen goes into OUTDIR/install-denoisesharpen/OFX/Plugins (a host must
-# not load it with Misc.ofx.bundle, which has the same plug-in). OUTDIR defaults to msvc-<arch>.
+# not load it with Misc.ofx.bundle, which has the same plug-in); --no-standalone skips it (ci.yml).
+# OUTDIR defaults to msvc-<arch>. Its build directories are removed first: every run is a clean
+# build (an Arm64EC build must not reuse a CMake cache, or the linker inputs, of an older one).
 # Static CRT (CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded, /MT): no vcruntime/msvcp DLL to ship; the
 # check below fails on an import of an MSVC runtime DLL.
 # No OpenMP: if it is ever enabled for MSVC, vcomp140.dll must be shipped app-local in the bundle
@@ -21,11 +23,16 @@
 # which crashes when the OpenMP worker threads are still alive).
 set -eo pipefail
 
+standalone=1
+if [ "$1" = --no-standalone ]; then
+    standalone=
+    shift
+fi
 arch=$1
 out=${2:-msvc-$arch}
 case "$arch" in
     x64|arm64x) ;;
-    *) echo "Usage: $0 x64|arm64x [OUTDIR]"; exit 2 ;;
+    *) echo "Usage: $0 [--no-standalone] x64|arm64x [OUTDIR]"; exit 2 ;;
 esac
 command -v cl > /dev/null && command -v dumpbin > /dev/null || { echo "cl or dumpbin not found: run in an MSVC environment"; exit 1; }
 mkdir -p "$out"
@@ -34,7 +41,8 @@ w() { cygpath -m "$1"; }
 
 options=(-G Ninja -DCMAKE_BUILD_TYPE=Release -DOFX_CXX_STANDARD=17
     -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
-    -DOFX_USE_OPENMP=OFF -DBUILD_TESTING=OFF -DOFXMISC_STANDALONE_BUNDLES=DenoiseSharpen)
+    -DOFX_USE_OPENMP=OFF -DBUILD_TESTING=OFF)
+[ -z "$standalone" ] || options+=(-DOFXMISC_STANDALONE_BUNDLES=DenoiseSharpen)
 
 # build BUILDDIR PREFIX [CMAKE_OPTION...]: configure, build and install the bundles into PREFIX
 build() {
@@ -44,12 +52,15 @@ build() {
     cmake -S . -B "$b" "${options[@]}" "$@"
     cmake --build "$b"
     for c in Misc CImg Shadertoy; do cmake --install "$b" --prefix "$(w "$p")" --component $c; done
-    cmake --install "$b" --prefix "$(w "$p-denoisesharpen")" --component DenoiseSharpen
+    if [ -n "$standalone" ]; then
+        cmake --install "$b" --prefix "$(w "$p-denoisesharpen")" --component DenoiseSharpen
+    fi
     echo "::endgroup::"
     echo "$b: built in $(( (SECONDS - start) / 60 )) min $(( (SECONDS - start) % 60 )) s"
 }
 
-rm -rf "$out/install" "$out/install-denoisesharpen"
+rm -rf "$out/build" "$out/build-arm64" "$out/build-arm64x" "$out/install" "$out/install-denoisesharpen"
+mkdir -p "$out/install-denoisesharpen" # (empty with --no-standalone)
 if [ "$arch" = x64 ]; then
     build "$out/build" "$out/install"
 else
@@ -61,6 +72,7 @@ else
         -DOFXMISC_ARM64X=ARM64EC -DOFXMISC_ARM64X_DIR="$(w "$out/arm64x")"
     # one bundle with both: Win-arm64ec (Arm64X) and Win-arm64 (ARM64)
     for i in install install-denoisesharpen; do
+        [ -d "$out/install-arm64${i#install}" ] || continue # (--no-standalone)
         for b in "$out/install-arm64${i#install}/OFX/Plugins"/*.ofx.bundle; do
             cp -R "$b/Contents/Win-arm64" "$out/$i/OFX/Plugins/$(basename "$b")/Contents/"
         done
@@ -89,9 +101,11 @@ while IFS= read -r f; do
         status=1
     fi
 done < <(find "$out/install" "$out/install-denoisesharpen" -path '*.ofx.bundle/Contents/Win*/*.ofx' | sort)
-# x64: 4 (Misc, CImg, Shadertoy, DenoiseSharpen); arm64x: 8 (Win-arm64ec and Win-arm64 of each)
+# x64: 4 (Misc, CImg, Shadertoy, DenoiseSharpen; 3 with --no-standalone); arm64x: twice as many
+# (Win-arm64ec and Win-arm64 of each)
 expected=4
-[ "$arch" = x64 ] || expected=8
+[ -n "$standalone" ] || expected=3
+[ "$arch" = x64 ] || expected=$((expected * 2))
 if [ "$n" != "$expected" ]; then
     echo "ERROR: $n binaries, expected $expected"
     status=1

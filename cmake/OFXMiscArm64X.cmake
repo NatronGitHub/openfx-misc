@@ -57,6 +57,11 @@ if(OFXMISC_ARM64X)
       elseif(_l MATCHES "^\"(.*\\.[lL][iI][bB])\"$")
         string(REPLACE "\\" "/" _f "${CMAKE_MATCH_1}")
         list(APPEND _libs "${_f}")
+      elseif(_l MATCHES "\\.[dD][eE][fF]\"?$")
+        # Microsoft's recipe passes the ARM64 build's .def with /defArm64Native: not done here,
+        # and it must not be dropped silently (the plug-ins export with __declspec(dllexport))
+        message(FATAL_ERROR "${_rsp}: a module-definition file (${_l}): Arm64X needs /defArm64Native "
+          "for it, which cmake/OFXMiscArm64X.cmake does not pass")
       endif()
     endforeach()
     if(NOT _objs)

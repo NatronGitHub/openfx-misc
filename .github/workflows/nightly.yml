@@ -13,8 +13,9 @@ name: Nightly extra builds
 # Every CMake job passes its C++ standard explicitly (OFX_CXX_STANDARD=17 or 20).
 # Each build is followed by the same plugin load test as in ci.yml.
 # The Windows MSVC jobs build the downloadable Windows nightlies, for x64 and for Windows on Arm
-# (Arm64X), uploaded as the openfx-misc-nightly-windows-msvc-x64 and -arm64x artifacts (7 days).
-# On demand, "only: windows-msvc" runs just them (gh workflow run nightly.yml -f only=windows-msvc).
+# (Arm64X), uploaded as the openfx-misc-nightly-windows-msvc-x64 and -arm64x artifacts (30 days).
+# On demand, "only: windows-msvc" runs just them, and cimg_patches, which always runs
+# (gh workflow run nightly.yml -f only=windows-msvc).
 # The CImg plug-ins: ci.yml builds their default FFT (pocketfft); here, Linux FFTW builds the opt-in
 # FFT=fftw3 (GPL) with the render tests, and macOS OpenMP is FFT=pow2. The cimg_patches job checks that CImg.h is still patched as openfx-gmic's.
 # The render and smoke tests of ci.yml (Linux release) also run after the macOS
@@ -31,7 +32,7 @@ on:
   workflow_dispatch:
     inputs:
       only:
-        description: "all: every job; windows-msvc: only the Windows MSVC jobs (windows_msvc, windows_msvc_arm)"
+        description: "all: every job; windows-msvc: only the Windows MSVC jobs (windows_msvc, windows_msvc_arm), and cimg_patches (a few seconds, it always runs)"
         type: choice
         options: [ all, windows-msvc ]
         default: all
@@ -332,7 +333,8 @@ jobs:
   #   (windows_msvc_arm below).
   # The downloads are packaged as release.yml's (package-release.sh: the full set, Shadertoy
   # (OpenGL) and DenoiseSharpen, each a zip with README.txt, LICENSE.txt and LICENSES/), and
-  # uploaded as openfx-misc-nightly-windows-msvc-<arch>, kept 7 days.
+  # uploaded as openfx-misc-nightly-windows-msvc-<arch>, kept 30 days (a scheduled run is skipped
+  # when master did not change, so the last downloads must outlive a quiet week).
   windows_msvc:
     name: Windows MSVC ${{ matrix.arch }}
     needs: changes
@@ -381,7 +383,7 @@ jobs:
           name: openfx-misc-nightly-windows-msvc-${{ matrix.arch }}
           path: dist
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
           compression-level: 0 # (zip files)
 
   # The Windows on Arm load test of the arm64x downloads (windows_msvc), on windows-11-arm: each
