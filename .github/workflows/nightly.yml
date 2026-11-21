@@ -1,4 +1,4 @@
-name: Nightly extra builds
+name: Weekly extra builds
 
 # Build variants that are not worth running on every push or pull request
 # (ci.yml only builds the CMake release configuration on each OS), with CMake:
@@ -7,12 +7,12 @@ name: Nightly extra builds
 # release build of ci.yml, which there only runs after Linux and Windows pass
 # (this covers master when the push run's macOS job was skipped or cancelled).
 # CI builds with CMake (Natron#1181). The Makefiles are kept as the RB-2.6 fallback: one cheap
-# nightly Linux job (make CONFIG=release, the combined bundles, as Natron's fallback builds them)
+# weekly Linux job (make CONFIG=release, the combined bundles, as Natron's fallback builds them)
 # checks that they still build; the slow one-bundle-per-plugin "make nomulti" jobs are gone: a
 # Linux CMake job builds the separate bundles (OFX_PLUGIN_BUNDLES=SEPARATE) instead.
 # Every CMake job passes its C++ standard explicitly (OFX_CXX_STANDARD=17 or 20).
 # Each build is followed by the same plugin load test as in ci.yml.
-# The Windows MSVC jobs build the downloadable Windows nightlies, for x64 and for Windows on Arm
+# The Windows MSVC jobs build the downloadable weekly Windows builds, for x64 and for Windows on Arm
 # (Arm64X), uploaded as the openfx-misc-nightly-windows-msvc-x64 and -arm64x artifacts (30 days).
 # On demand, "only: windows-msvc" runs just them, and cimg_patches, which always runs
 # (gh workflow run nightly.yml -f only=windows-msvc).
@@ -23,12 +23,14 @@ name: Nightly extra builds
 # hostDemo built by -DOFX_BUILD_HOSTDEMO=ON. On Windows (MSYS2 CMake builds), only the
 # CImgConvolve render test runs (RENDERTEST_ONLY), as a check of the pocketfft unload
 # deadlock (POCKETFFT_NO_MULTITHREADING); smoketest.sh does not run on Windows.
-# Frugal CI: the nightly run is skipped if master did not change since the last
-# nightly run that succeeded or failed (a cancelled run does not count), and jobs
-# time out.
+# Frugal CI: runs weekly (maintainer decision, 2026-11-21) and on demand; the scheduled run is
+# skipped if master did not change since the last scheduled run that succeeded or failed (a
+# cancelled run does not count), except cimg_patches, which checks a moving upstream (openfx-gmic
+# master) and always runs; jobs time out. The file and artifact names keep "nightly" so that
+# existing links (README, issues, the skip check's API path) keep working.
 on:
   schedule:
-    - cron: '17 3 * * *' # every day at 03:17 UTC
+    - cron: '17 3 * * 6' # every Saturday at 03:17 UTC (plug-ins; Natron runs on Sunday)
   workflow_dispatch:
     inputs:
       only:
@@ -78,7 +80,7 @@ jobs:
           run=true
           if [ -n "$last" ] && [ "$last" = "$GITHUB_SHA" ]; then
             run=false
-            echo "No change since the last nightly run ($last): skipping."
+            echo "No change since the last weekly run ($last): skipping."
           fi
           msvc=$run
           if [ "$ONLY" = windows-msvc ]; then run=false msvc=true; fi
@@ -290,7 +292,7 @@ jobs:
         with:
           msystem: UCRT64
           # No full system upgrade (pacman -Syuu) before installing: it makes
-          # each nightly run download and re-cache most of MSYS2. The packages
+          # each scheduled run download and re-cache most of MSYS2. The packages
           # below are still installed at their latest version, so the compiler
           # is current; only the MSYS2 base system comes from the action.
           update: false
@@ -316,7 +318,7 @@ jobs:
           set -eo pipefail
           RENDERTEST_ONLY='^CImgConvolve' .github/tools/rendertest.sh install-${{ matrix.config }}
 
-  # Windows MSVC: the downloadable Windows nightlies (#203). They are built with MSVC, since users
+  # Windows MSVC: the downloadable weekly Windows builds (#203). They are built with MSVC, since users
   # also run them in third-party hosts; only the OSMesa Shadertoy stays on MSYS2 UCRT64
   # (release.yml). .github/tools/msvc-build.sh (also run by ci.yml for arm64x) builds Misc, CImg,
   # Shadertoy (OpenGL) and the standalone DenoiseSharpen and NoOp with CMake and Ninja (C++17),
