@@ -48,17 +48,20 @@ nonZero(double x)
 #define EPSJAC 1.e-3 // epsilon for Jacobian calculation
 #define EPSCONV 1.e-4 // epsilon for convergence test
 
-void
-DistortionModelUndistort::distort(const double xu,
-                                  const double yu,
-                                  double* xd,
-                                  double *yd) const
+bool
+DistortionModelUndistort::distortNewton(const double xu,
+                                        const double yu,
+                                        double* xd,
+                                        double *yd,
+                                        bool checkResidual) const
 {
     // build initial guess
     double x = xu;
     double y = yu;
+    bool converged = false;
 
-    // always converges in a couple of iterations
+    // usually converges in a couple of iterations, but not beyond a fold of the model (where it is
+    // not invertible) or from an initial guess beyond a pole: see the return value
     for (int iter= 0; iter< 10; iter++) {
         // calculate the function gradient at the current guess
 
@@ -105,6 +108,7 @@ DistortionModelUndistort::distort(const double xu,
 
         // converged?
         if (dist < EPSCONV) {
+            converged = true;
             break;
         }
     }
@@ -112,19 +116,53 @@ DistortionModelUndistort::distort(const double xu,
     // default
     *xd = x;
     *yd = y;
+
+    if (converged && checkResidual) {
+        // the last step was small, but the derivative may be huge (e.g. near a pole of the
+        // model): check that this is a solution. (x,y) is within sqrt(EPSCONV) of the last
+        // point where undistort() was evaluated, so this evaluation is as safe as those.
+        double xr, yr;
+        undistort(x, y, &xr, &yr);
+        xr -= xu;
+        yr -= yu;
+        converged = (xr * xr + yr * yr < EPSCONV);
+    }
+
+    return converged;
 }
 
 void
-DistortionModelDistort::undistort(const double xd,
-                                  const double yd,
-                                  double* xu,
-                                  double *yu) const
+DistortionModelUndistort::distort(const double xu,
+                                  const double yu,
+                                  double* xd,
+                                  double *yd) const
+{
+    (void)distortNewton(xu, yu, xd, yd, false);
+}
+
+bool
+DistortionModelUndistort::distortConverged(double xu,
+                                           double yu,
+                                           double* xd,
+                                           double *yd) const
+{
+    return distortNewton(xu, yu, xd, yd, true);
+}
+
+bool
+DistortionModelDistort::undistortNewton(const double xd,
+                                        const double yd,
+                                        double* xu,
+                                        double *yu,
+                                        bool checkResidual) const
 {
     // build initial guess
     double x = xd;
     double y = yd;
+    bool converged = false;
 
-    // always converges in a couple of iterations
+    // usually converges in a couple of iterations, but not beyond a fold of the model (where it is
+    // not invertible) or from an initial guess beyond a pole: see the return value
     for (int iter= 0; iter< 10; iter++) {
         // calculate the function gradient at the current guess
 
@@ -171,6 +209,7 @@ DistortionModelDistort::undistort(const double xd,
 
         // converged?
         if (dist < EPSCONV) {
+            converged = true;
             break;
         }
     }
@@ -178,6 +217,37 @@ DistortionModelDistort::undistort(const double xd,
     // default
     *xu = x;
     *yu = y;
+
+    if (converged && checkResidual) {
+        // the last step was small, but the derivative may be huge (e.g. near a pole of the
+        // model): check that this is a solution. (x,y) is within sqrt(EPSCONV) of the last
+        // point where distort() was evaluated, so this evaluation is as safe as those.
+        double xr, yr;
+        distort(x, y, &xr, &yr);
+        xr -= xd;
+        yr -= yd;
+        converged = (xr * xr + yr * yr < EPSCONV);
+    }
+
+    return converged;
+}
+
+void
+DistortionModelDistort::undistort(const double xd,
+                                  const double yd,
+                                  double* xu,
+                                  double *yu) const
+{
+    (void)undistortNewton(xd, yd, xu, yu, false);
+}
+
+bool
+DistortionModelDistort::undistortConverged(double xd,
+                                           double yd,
+                                           double* xu,
+                                           double *yu) const
+{
+    return undistortNewton(xd, yd, xu, yu, true);
 }
 
 DistortionModelNuke::DistortionModelNuke(const OfxRectD& format,

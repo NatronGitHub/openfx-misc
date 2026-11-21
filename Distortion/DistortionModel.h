@@ -44,6 +44,25 @@ public:
 
     // function used to undistort a point or distort an image
     virtual void undistort(double xd, double yd, double* xu, double *yu) const = 0;
+
+    // Same results as distort() and undistort(), but they also tell whether the result is a
+    // solution: false if the function is computed numerically (Newton) and did not converge,
+    // i.e. it stopped after the maximum number of iterations or on a vanishing derivative, or
+    // the residual is not small. A function given in closed form always returns true.
+    // Used by the RoD estimate (a non-converged point may be arbitrarily far away).
+    virtual bool distortConverged(double xu, double yu, double* xd, double *yd) const
+    {
+        distort(xu, yu, xd, yd);
+
+        return true;
+    }
+
+    virtual bool undistortConverged(double xd, double yd, double* xu, double *yu) const
+    {
+        undistort(xd, yd, xu, yu);
+
+        return true;
+    }
 };
 
 // a distortion model class where ony the undistort function is given, and distort is solved by Newton
@@ -62,8 +81,13 @@ private:
                          double* xd,
                          double *yd) const OVERRIDE FINAL;
 
+    virtual bool distortConverged(double xu, double yu, double* xd, double *yd) const OVERRIDE FINAL;
+
     // function used to undistort a point or distort an image
     virtual void undistort(double xd, double yd, double* xu, double *yu) const OVERRIDE = 0;
+
+    // Newton solver for distort(), returns true if it converged (with checkResidual: and the residual is small)
+    bool distortNewton(double xu, double yu, double* xd, double *yd, bool checkResidual) const;
 };
 
 // a distortion model class where ony the distort function is given, and undistort is solved by Newton
@@ -84,6 +108,11 @@ private:
 
     // function used to undistort a point or distort an image
     virtual void undistort(double xd, double yd, double* xu, double *yu) const OVERRIDE FINAL;
+
+    virtual bool undistortConverged(double xd, double yd, double* xu, double *yu) const OVERRIDE FINAL;
+
+    // Newton solver for undistort(), returns true if it converged (with checkResidual: and the residual is small)
+    bool undistortNewton(double xd, double yd, double* xu, double *yu, bool checkResidual) const;
 };
 
 class DistortionModelNuke
