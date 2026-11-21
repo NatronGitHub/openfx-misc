@@ -158,7 +158,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              if a sample point does not converge, the RoD contains the format and the source RoD (a mirrored
 //              copy of the source may be visible there), and the image boundary found by casting rays with
 //              the closed-form map, up to the source RoD or a fold of the model (#189). Rendered pixels are
-//              unchanged
+//              unchanged; the RoD samples each source edge about every 32 pixels (10 to 60 intervals, it was
+//              10, and the old samples are kept), so that the RoD may be slightly larger where every sample
+//              converges
 #define kPluginVersionLensDistortionMajor 4 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionLensDistortionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -3338,11 +3340,22 @@ DistortionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         // from (see below)
         OfxRectD rodPixelNonConverged = { DBL_MAX, DBL_MAX, -DBL_MAX, -DBL_MAX };
         bool allConverged = true;
-        const int step = 10;
+        // intervals on each edge: a multiple of 10 (so that the 10 intervals used before are a
+        // subset, and the RoD can only grow), about one every 32 pixels, at most 60. The bounding
+        // box of the samples misses the image of a curved edge by O(1/n^2) (e.g. 5.7 pixels with
+        // 10 intervals per edge for Nuke k1=0.69 k2=-0.19 at 4x PAL, issue #189)
         const double w= (srcRodPixel.x2 - srcRodPixel.x1);
         const double h= (srcRodPixel.y2 - srcRodPixel.y1);
-        const double xstep = w / step;
-        const double ystep= h / step;
+        const int xSteps = 10 * (int)(std::max)( 1., (std::min)( 6., std::ceil(w / 320.) ) );
+        const int ySteps = 10 * (int)(std::max)( 1., (std::min)( 6., std::ceil(h / 320.) ) );
+        // sample i is at x1 + (w / 10) * (i / k) + (w / xSteps) * (i % k), k = xSteps / 10: the
+        // positions of the 10 intervals used before are exactly the same
+        const int xk = xSteps / 10;
+        const int yk = ySteps / 10;
+        const double xstep10 = w / 10;
+        const double ystep10 = h / 10;
+        const double xstep = w / xSteps;
+        const double ystep= h / ySteps;
         // F, the inverse of the render map, and G are described above lensDistortionRoDRays.
         // G is given in closed form (see lensDistortionRoDRays) only if F is computed numerically
         const bool fNumerical = distort ? distortionModel->distortIsNumerical() : distortionModel->undistortIsNumerical();
@@ -3361,17 +3374,17 @@ DistortionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
             r.y1 = (std::min)(r.y1, yo);
             r.y2 = (std::max)(r.y2, yo);
         };
-        for (int i = 0; i <= step; ++i) {
+        for (int i = 0; i <= xSteps; ++i) {
             for (int j = 0; j < 2; ++j) {
-                double x = srcRodPixel.x1 + xstep * i;
+                double x = srcRodPixel.x1 + xstep10 * (i / xk) + xstep * (i % xk);
                 double y = srcRodPixel.y1 + h * j;
                 addSample(x, y);
             }
         }
         for (int i = 0; i < 2; ++i) {
-            for (int j = 1; j < step; ++j) {
+            for (int j = 1; j < ySteps; ++j) {
                 double x = srcRodPixel.x1 + w * i;
-                double y = srcRodPixel.y1 + ystep * j;
+                double y = srcRodPixel.y1 + ystep10 * (j / yk) + ystep * (j % yk);
                 addSample(x, y);
             }
         }
