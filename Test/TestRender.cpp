@@ -711,6 +711,9 @@ TestRenderPlugin<supportsTiles, supportsMultiResolution, supportsRenderScale>::c
             range = c.getUnmappedFrameRange();
             oss << range.min << "..." << range.max;
             oss << ")";
+            // the values above are in the OFX time domain; the host shows time t as t + this offset
+            oss << "\ndisplay time offset: ";
+            oss << c.getDisplayTimeOffset();
             oss << "\nregion of definition: ";
             OfxRectD rod = c.getRegionOfDefinition(args.time);
             oss << rod.x1 << ' ' << rod.y1 << ' ' << rod.x2 << ' ' << rod.y2;
@@ -770,12 +773,21 @@ TestRenderPlugin<supportsTiles, supportsMultiResolution, supportsRenderScale>::c
             range = c.getUnmappedFrameRange();
             oss << range.min << "..." << range.max;
             oss << ")";
+            // the values above are in the OFX time domain; the host shows time t as t + this offset
+            oss << "\ndisplay time offset: ";
+            oss << c.getDisplayTimeOffset();
             oss << "\nregion of definition: ";
             OfxRectD rod = c.getRegionOfDefinition(args.time);
             oss << rod.x1 << ' ' << rod.y1 << ' ' << rod.x2 << ' ' << rod.y2;
         }
         oss << "\n\n";
-        oss << "time: " << args.time << ", renderscale: " << args.renderScale.x << 'x' << args.renderScale.y << '\n';
+        oss << "time: " << args.time;
+        if (_dstClip) {
+            // the frame the host shows the user for args.time (0 offset if the host does not set
+            // kOfxImageClipPropDisplayTimeOffset; getDisplayTimeOffset does not throw)
+            oss << " (displayed as " << args.time + _dstClip->getDisplayTimeOffset() << ')';
+        }
+        oss << ", renderscale: " << args.renderScale.x << 'x' << args.renderScale.y << '\n';
 
         sendMessage( Message::eMessageMessage, "", oss.str() );
     }

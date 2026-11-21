@@ -59,7 +59,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 1.1: a NULL Source image (disconnected input; render is called although isIdentity returned true,
-//              e.g. by hostDemo) renders black instead of crashing (SupportExt copyPixels)
+//              e.g. by hostDemo) renders black instead of crashing (SupportExt copyPixels);
+//              the sublabel shows the range as the host displays it (kOfxImageClipPropDisplayTimeOffset, display only)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -303,13 +304,23 @@ FrameRangePlugin::changedClip(const InstanceChangedArgs &args,
             _frameRange->setValue( std::floor(srcRange.min), std::ceil(srcRange.max) );
         }
     }
+    if ( (clipName == kOfxImageEffectSimpleSourceClipName) && (args.reason == eChangeUserEdit) ) {
+        // the display time offset is a clip property, which may follow the input
+        OfxPointI range = _frameRange->getValue();
+        refreshSubLabel(range.x, range.y);
+    }
 }
 
 void
 FrameRangePlugin::refreshSubLabel(int rangeMin, int rangeMax)
 {
     char label[80];
-    snprintf(label, sizeof(label), "%d - %d", rangeMin, rangeMax);
+    // Frame Range is stored in the OFX time domain (never convert it), but it is shown as the host
+    // displays it: add the display time offset of the clip the times refer to (the Output, whose
+    // frames are the ones kept). It is 0 on hosts that do not set kOfxImageClipPropDisplayTimeOffset
+    // (OFX 1.4 hosts).
+    double offset = _dstClip->getDisplayTimeOffset();
+    snprintf(label, sizeof(label), "%.10g - %.10g", rangeMin + offset, rangeMax + offset);
     _sublabel->setValue(label);
 }
 

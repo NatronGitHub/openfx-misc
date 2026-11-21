@@ -53,7 +53,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.0: initial version
 // version 1.1: render copies the Source at the source time (it wrote nothing): the spec says that the
 //              host should not call render after isIdentity returns true, but some hosts (e.g. hostDemo) do;
-//              a NULL Source image (disconnected input) renders black instead of crashing (SupportExt copyPixels)
+//              a NULL Source image (disconnected input) renders black instead of crashing (SupportExt copyPixels);
+//              the sublabel shows the frame as the host displays it (kOfxImageClipPropDisplayTimeOffset, display only)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -115,6 +116,7 @@ private:
     /* override is identity */
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
     virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+    virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
     /** @brief The sync private data action, called when the effect needs to sync any private data to persistent parameters */
@@ -168,10 +170,15 @@ FrameHoldPlugin::updateSublabel(double time)
 
     _firstFrame->getValueAtTime(time, firstFrame);
     _increment->getValueAtTime(time, increment);
+    // First Frame is stored in the OFX time domain of the Source clip (never convert it), but it is shown
+    // as the host displays it: add the display time offset of the clip the time refers to (the Source).
+    // It is 0 on hosts that do not set kOfxImageClipPropDisplayTimeOffset (OFX 1.4 hosts).
+    Clip* clip = _srcClip ? _srcClip : _dstClip;
+    double displayFirstFrame = firstFrame + clip->getDisplayTimeOffset();
     if (increment == 0) {
-        snprintf(label, sizeof(label), "frame %d", firstFrame);
+        snprintf(label, sizeof(label), "frame %.10g", displayFirstFrame);
     } else {
-        snprintf(label, sizeof(label), "frame %d+n*%d", firstFrame, increment);
+        snprintf(label, sizeof(label), "frame %.10g+n*%d", displayFirstFrame, increment);
     }
     _sublabel->setValue(label);
 }
@@ -238,6 +245,16 @@ FrameHoldPlugin::changedParam(const InstanceChangedArgs &args,
                               const std::string &paramName)
 {
     if ( ( (paramName == kParamFirstFrame) || (paramName == kParamIncrement) ) && (args.reason == eChangeUserEdit) ) {
+        updateSublabel(args.time);
+    }
+}
+
+void
+FrameHoldPlugin::changedClip(const InstanceChangedArgs &args,
+                             const std::string &clipName)
+{
+    // the display time offset is a clip property: refresh the sublabel when the Source changes
+    if ( (clipName == kOfxImageEffectSimpleSourceClipName) && (args.reason == eChangeUserEdit) ) {
         updateSublabel(args.time);
     }
 }
