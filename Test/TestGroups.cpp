@@ -50,7 +50,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 1.1: a NULL Source image (disconnected input; render is called although isIdentity returned true,
-//              e.g. by hostDemo) renders black instead of crashing (SupportExt copyPixels)
+//              e.g. by hostDemo) renders black instead of crashing (SupportExt copyPixels);
+//              Clip Info shows the display time offset and the displayed time (display only)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -461,6 +462,9 @@ TestGroupsPlugin::changedParam(const InstanceChangedArgs &args,
             range = c.getUnmappedFrameRange();
             oss << range.min << "..." << range.max;
             oss << ")";
+            // the values above are in the OFX time domain; the host shows time t as t + this offset
+            oss << "\ndisplay time offset: ";
+            oss << c.getDisplayTimeOffset();
             oss << "\nregion of definition: ";
             OfxRectD rod = c.getRegionOfDefinition(args.time);
             oss << rod.x1 << ' ' << rod.y1 << ' ' << rod.x2 << ' ' << rod.y2;
@@ -520,12 +524,21 @@ TestGroupsPlugin::changedParam(const InstanceChangedArgs &args,
             range = c.getUnmappedFrameRange();
             oss << range.min << "..." << range.max;
             oss << ")";
+            // the values above are in the OFX time domain; the host shows time t as t + this offset
+            oss << "\ndisplay time offset: ";
+            oss << c.getDisplayTimeOffset();
             oss << "\nregion of definition: ";
             OfxRectD rod = c.getRegionOfDefinition(args.time);
             oss << rod.x1 << ' ' << rod.y1 << ' ' << rod.x2 << ' ' << rod.y2;
         }
         oss << "\n\n";
-        oss << "time: " << args.time << ", renderscale: " << args.renderScale.x << 'x' << args.renderScale.y << '\n';
+        oss << "time: " << args.time;
+        if (_dstClip) {
+            // the frame the host shows the user for args.time (0 offset if the host does not set
+            // kOfxImageClipPropDisplayTimeOffset; getDisplayTimeOffset does not throw)
+            oss << " (displayed as " << args.time + _dstClip->getDisplayTimeOffset() << ')';
+        }
+        oss << ", renderscale: " << args.renderScale.x << 'x' << args.renderScale.y << '\n';
 
         sendMessage( Message::eMessageMessage, "", oss.str() );
     } else if (paramName == kParamDoubleTestLabel) {
