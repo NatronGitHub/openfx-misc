@@ -54,6 +54,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79)
 // versions 1.1 and 2.0: in the filter and paint contexts, Source is RGBA and the Output components are those of
 //              Source, as the OpenFX spec mandates (issue #190; the Alpha modes remapped Source and Output to RGBA)
+// versions 1.1 and 2.0: an XY Output (never declared, so never given by a host) is no longer rendered as 2
+//              components (it failed an assert in Debug builds), any component type other than RGBA, RGB and
+//              Alpha gives kOfxStatErrFormat (issue #218); RGBA, RGB and Alpha output is unchanged
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -110,12 +113,6 @@ enum OutputModeEnum
 #define kParamLuminanceMathHint "Formula used to compute luminance from RGB values."
 
 #define kParamPremultChanged "premultChanged"
-
-#ifdef OFX_EXTENSIONS_NATRON
-#define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentXY || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
-#else
-#define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
-#endif
 
 
 class ColorSuppressProcessorBase
@@ -648,19 +645,18 @@ ColorSuppressPlugin::render(const RenderArguments &args)
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
-    assert(OFX_COMPONENTS_OK(dstComponents));
     // do the rendering
+    // XY (kNatronOfxImageComponentXY) is not a supported component of Source or Output (see
+    // describeInContext), so a host never gives XY images: the hue suppression needs R, G and B
+    // (issue #218). Anything other than RGBA, RGB and Alpha is refused.
     if (dstComponents == ePixelComponentRGBA) {
         renderInternal<4>(args, dstBitDepth);
     } else if (dstComponents == ePixelComponentRGB) {
         renderInternal<3>(args, dstBitDepth);
-#ifdef OFX_EXTENSIONS_NATRON
-    } else if (dstComponents == ePixelComponentXY) {
-        renderInternal<2>(args, dstBitDepth);
-#endif
-    } else {
-        assert(dstComponents == ePixelComponentAlpha);
+    } else if (dstComponents == ePixelComponentAlpha) {
         renderInternal<1>(args, dstBitDepth);
+    } else {
+        throwSuiteStatusException(kOfxStatErrFormat);
     }
 }
 
@@ -851,9 +847,7 @@ ColorSuppressPluginFactory<majorVersion>::describeInContext(ImageEffectDescripto
         // plugin", ofxClipPreferences.rst).
         srcClip->addSupportedComponent(ePixelComponentRGB);
     }
-#ifdef OFX_EXTENSIONS_NATRON
-    //srcClip->addSupportedComponent(ePixelComponentXY);
-#endif
+    // not XY: the suppression needs R, G and B (render() refuses XY, issue #218)
     //srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
@@ -863,9 +857,6 @@ ColorSuppressPluginFactory<majorVersion>::describeInContext(ImageEffectDescripto
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
-#ifdef OFX_EXTENSIONS_NATRON
-    //dstClip->addSupportedComponent(ePixelComponentXY);
-#endif
     //dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
 
