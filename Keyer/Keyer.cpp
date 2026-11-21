@@ -22,6 +22,7 @@
  */
 
 #include <cmath>
+#include <cfloat> // FLT_MAX
 #include <limits>
 #include <algorithm>
 
@@ -60,8 +61,14 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "- https://web.archive.org/web/20211023071843/http://opticalenquiry.com/nuke/index.php?title=Keying_Tips"
 
 #define kPluginIdentifier "net.sf.openfx.KeyerPlugin"
+// history:
+// 1.0 initial version
+// 1.1 non-finite input samples give a finite output and a matte in [0,1] (issue #195): a NaN
+//     sample is keyed as 0, +-inf as +-FLT_MAX (an infinite pixel gave inf * 0 = NaN in the despill,
+//     e.g. Screen mode with keyColor (0,0,1) and pixel (0,0,inf)); the Composite output is clamped
+//     to the float range. The output for finite inputs is unchanged.
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -379,6 +386,27 @@ floatToSample(double value)
     return PIX(value * maxValue + 0.5);
 }
 
+// NaN rule (issue #195): non-finite values are handled by comparisons only, never by an isnan()
+// test, and every finite value is unchanged.
+// A value in the float range: +-inf (or a double beyond the float range) gives +-FLT_MAX, and NaN
+// gives 0 (every comparison with NaN is false). Used on the input samples, so that the key and
+// despill computations (in double) never see inf * 0 or inf - inf, and on the double results
+// converted to float (converting a double beyond the float range to float is undefined).
+template<typename T>
+static inline T
+clampToFloatRange(T v)
+{
+    return (v > -FLT_MAX) ? ( (v < FLT_MAX) ? v : T(FLT_MAX) ) : ( (v < 0) ? T(-FLT_MAX) : T(0) );
+}
+
+// clamp to [0,1], NaN gives 0
+template<typename T>
+static inline T
+clampToUnit(T v)
+{
+    return (v >= 0) ? ( (v < 1) ? v : T(1) ) : T(0);
+}
+
 template <class PIX, int nComponents, int maxValue>
 class KeyerProcessor
     : public KeyerProcessorBase
@@ -418,22 +446,23 @@ private:
                 float inMask = inMaskPix ? sampleToFloat<PIX, maxValue>(*inMaskPix) : 0.f;
                 if ( (_sourceAlpha == eSourceAlphaAddToInsideMask) && (nComponents == 4) && srcPix ) {
                     // take the max of inMask and the source Alpha
-                    inMask = (std::max)( inMask, sampleToFloat<PIX, maxValue>(srcPix[3]) );
+                    inMask = (std::max)( inMask, clampToFloatRange( sampleToFloat<PIX, maxValue>(srcPix[3]) ) );
                 }
                 float outMask = outMaskPix ? sampleToFloat<PIX, maxValue>(*outMaskPix) : 0.f;
                 double Kbg = 0.;
 
-                // clamp inMask and outMask in the [0,1] range
-                inMask = (std::max)( 0.f, (std::min)(inMask, 1.f) );
-                outMask = (std::max)( 0.f, (std::min)(outMask, 1.f) );
+                // clamp inMask and outMask in the [0,1] range (NaN gives 0)
+                inMask = clampToUnit(inMask);
+                outMask = clampToUnit(outMask);
 
                 // output of the foreground suppressor
-                double fgr = srcPix ? sampleToFloat<PIX, maxValue>(srcPix[0]) : 0.;
-                double fgg = srcPix ? sampleToFloat<PIX, maxValue>(srcPix[1]) : 0.;
-                double fgb = srcPix ? sampleToFloat<PIX, maxValue>(srcPix[2]) : 0.;
-                double bgr = bgPix ? sampleToFloat<PIX, maxValue>(bgPix[0]) : 0.;
-                double bgg = bgPix ? sampleToFloat<PIX, maxValue>(bgPix[1]) : 0.;
-                double bgb = bgPix ? sampleToFloat<PIX, maxValue>(bgPix[2]) : 0.;
+                // non-finite samples: NaN gives 0, +-inf gives +-FLT_MAX (see clampToFloatRange)
+                double fgr = srcPix ? clampToFloatRange( sampleToFloat<PIX, maxValue>(srcPix[0]) ) : 0.;
+                double fgg = srcPix ? clampToFloatRange( sampleToFloat<PIX, maxValue>(srcPix[1]) ) : 0.;
+                double fgb = srcPix ? clampToFloatRange( sampleToFloat<PIX, maxValue>(srcPix[2]) ) : 0.;
+                double bgr = bgPix ? clampToFloatRange( sampleToFloat<PIX, maxValue>(bgPix[0]) ) : 0.;
+                double bgg = bgPix ? clampToFloatRange( sampleToFloat<PIX, maxValue>(bgPix[1]) ) : 0.;
+                double bgb = bgPix ? clampToFloatRange( sampleToFloat<PIX, maxValue>(bgPix[2]) ) : 0.;
 
                 // we want to be able to play with the matte even if the background is not connected
                 if (!srcPix) {
@@ -483,7 +512,8 @@ private:
                     if (_keyerMode == eKeyerModeNone) {
                         Kbg = 1.;
                     } else {
-                        Kbg = key_bg(Kfg);
+                        // in [0,1] (NaN would give 0, but Kfg is finite: the samples are)
+                        Kbg = clampToUnit( key_bg(Kfg) );
                     }
                     // nonadditive mix between the key generator and the garbage matte (outMask)
                     // note that in Chromakeyer this is done before on Kfg instead of Kbg.
@@ -544,11 +574,12 @@ private:
                 assert(fga >= 0. && fga <= 1.);
                 double compAlpha = (_outputMode == eOutputModeComposite &&
                                     _sourceAlpha == eSourceAlphaNormal &&
-                                    srcPix) ? sampleToFloat<PIX, maxValue>(srcPix[3]) : 1.;
+                                    srcPix) ? clampToFloatRange( sampleToFloat<PIX, maxValue>(srcPix[3]) ) : 1.;
                 switch (_outputMode) {
                 case eOutputModeIntermediate:
                     for (int c = 0; c < 3; ++c) {
-                        dstPix[c] = srcPix ? srcPix[c] : 0;
+                        // the source, with non-finite float samples made finite (integer samples are copied)
+                        dstPix[c] = srcPix ? ( (maxValue == 1) ? PIX( clampToFloatRange<float>(srcPix[c]) ) : srcPix[c] ) : 0;
                     }
                     break;
                 case eOutputModePremultiplied:
@@ -559,9 +590,10 @@ private:
                     break;
                 case eOutputModeComposite:
                     // [FD] not sure if this is the expected way to use compAlpha
-                    dstPix[0] = (float)floatToSample<PIX, maxValue>(compAlpha * (fgr + bgr * Kbg) + (1. - compAlpha) * bgr);
-                    dstPix[1] = (float)floatToSample<PIX, maxValue>(compAlpha * (fgg + bgg * Kbg) + (1. - compAlpha) * bgg);
-                    dstPix[2] = (float)floatToSample<PIX, maxValue>(compAlpha * (fgb + bgb * Kbg) + (1. - compAlpha) * bgb);
+                    // (clamped to the float range: a huge Bg or source alpha may overflow it)
+                    dstPix[0] = (float)floatToSample<PIX, maxValue>( clampToFloatRange(compAlpha * (fgr + bgr * Kbg) + (1. - compAlpha) * bgr) );
+                    dstPix[1] = (float)floatToSample<PIX, maxValue>( clampToFloatRange(compAlpha * (fgg + bgg * Kbg) + (1. - compAlpha) * bgg) );
+                    dstPix[2] = (float)floatToSample<PIX, maxValue>( clampToFloatRange(compAlpha * (fgb + bgb * Kbg) + (1. - compAlpha) * bgb) );
                     break;
                 }
                 if (nComponents == 4) {
