@@ -62,6 +62,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //     +-inf as +-FLT_MAX (std::max(NaN, 0.) gave a NaN spill map, and a NaN alpha with Output
 //     Spill Map; Mix and the mask also mixed with the non-finite source), and the results computed
 //     in double are kept in the float range. The output for finite inputs is unchanged.
+//     XY and Alpha Output images (never declared, so never given by a conforming host) are refused
+//     with kOfxStatErrFormat (issue #226): they were processed as if they had 3 or 4
+//     components (a Debug assert; in Release, a read past the source pixel). RGBA and RGB output
+//     is unchanged.
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -545,18 +549,15 @@ DespillPlugin::render(const RenderArguments &args)
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     // do the rendering
+    // Output only supports RGBA and RGB (see describeInContext), and the despill needs R, G and B
+    // (issue #226): anything else is refused.
     if (dstComponents == ePixelComponentRGBA) {
         renderForComponents<4>(args);
     } else if (dstComponents == ePixelComponentRGB) {
         renderForComponents<3>(args);
-#ifdef OFX_EXTENSIONS_NATRON
-    } else if (dstComponents == ePixelComponentXY) {
-        renderForComponents<2>(args);
-#endif
-    }  else {
-        assert(dstComponents == ePixelComponentAlpha);
-        renderForComponents<1>(args);
-    } // switch
+    } else {
+        throwSuiteStatusException(kOfxStatErrFormat);
+    }
 } // render
 
 template<int nComponents>
