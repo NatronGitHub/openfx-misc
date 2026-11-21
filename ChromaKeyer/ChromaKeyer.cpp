@@ -67,6 +67,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //     gave inf - inf = NaN in the Cb/Cr rotation); a Y'PbPr value beyond the float range (from a
 //     huge linear sample) is clamped to +-FLT_MAX; the Composite output is clamped to the float
 //     range. The output is unchanged for finite inputs whose Y'PbPr values are in the float range.
+//     In the filter context, Source is RGBA and the Output components are those of Source, as the
+//     OpenFX spec mandates (issue #190; the Output was forced to RGBA). With an RGB Source (general
+//     context), "Add to Inside Mask" and "Normal" source alpha treat it as opaque (they read the
+//     next pixel's red as alpha).
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 2 // Increment this when you have fixed a bug or made it faster.
 
@@ -395,6 +399,8 @@ private:
     void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
         unused(rs);
+        // the Source may be RGB (in the general context) while the Output is RGBA
+        const bool srcHasAlpha = _srcImg && (_srcImg->getPixelComponentCount() == 4);
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if ( _effect.abort() ) {
                 break;
@@ -409,9 +415,10 @@ private:
                 const PIX *inMaskPix = (const PIX *)  (_inMaskImg ? _inMaskImg->getPixelAddress(x, y) : 0);
                 const PIX *outMaskPix = (const PIX *)  (_outMaskImg ? _outMaskImg->getPixelAddress(x, y) : 0);
                 float inMask = inMaskPix ? sampleToFloat<PIX, maxValue>(*inMaskPix) : 0.f;
-                if ( (_sourceAlpha == eSourceAlphaAddToInsideMask) && (nComponents == 4) && srcPix ) {
-                    // take the max of inMask and the source Alpha
-                    inMask = (std::max)( inMask, clampToFloatRange( sampleToFloat<PIX, maxValue>(srcPix[3]) ) );
+                if ( (_sourceAlpha == eSourceAlphaAddToInsideMask) && srcPix ) {
+                    // take the max of inMask and the source Alpha (an RGB Source is opaque, as when the
+                    // host maps it to RGBA: srcPix[3] would be the next pixel's red)
+                    inMask = (std::max)( inMask, srcHasAlpha ? clampToFloatRange( sampleToFloat<PIX, maxValue>(srcPix[3]) ) : 1.f );
                 }
                 float outMask = outMaskPix ? sampleToFloat<PIX, maxValue>(*outMaskPix) : 0.f;
                 float Kbg = 0.f;
@@ -608,7 +615,7 @@ private:
                 assert(fga >= 0. && fga <= 1.);
                 double compAlpha = (_outputMode == eOutputModeComposite &&
                                     _sourceAlpha == eSourceAlphaNormal &&
-                                    srcPix) ? clampToFloatRange( sampleToFloat<PIX, maxValue>(srcPix[3]) ) : 1.;
+                                    srcHasAlpha && srcPix) ? clampToFloatRange( sampleToFloat<PIX, maxValue>(srcPix[3]) ) : 1.;
                 switch (_outputMode) {
                 case eOutputModeIntermediate:
                     for (int c = 0; c < 3; ++c) {
@@ -872,9 +879,13 @@ ChromaKeyerPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
         break;
     }
 
-    // Output is RGBA
-    clipPreferences.setClipComponents(*_dstClip, ePixelComponentRGBA);
-    // note: ChromaKeyer handles correctly inputs with different components: it only uses RGB components from both clips
+    // Output is RGBA. Only the general context may set it: in the filter context, "a plugin cannot
+    // change the component type of the Output clip, it will always be the same as the Source clip"
+    // (ofxImageEffectContexts.rst, The Filter Context), and Source is RGBA there (see describeInContext).
+    // note: the processor handles inputs with different components (an RGB input is opaque)
+    if (getContext() == eContextGeneral) {
+        clipPreferences.setClipComponents(*_dstClip, ePixelComponentRGBA);
+    }
 }
 
 mDeclarePluginFactory(ChromaKeyerPluginFactory, { gLutManager = new Color::LutManager<Mutex>; ofxsThreadSuiteCheck(); }, { delete gLutManager; });
@@ -909,13 +920,20 @@ ChromaKeyerPluginFactory::describe(ImageEffectDescriptor &desc)
 
 void
 ChromaKeyerPluginFactory::describeInContext(ImageEffectDescriptor &desc,
-                                            ContextEnum /*context*/)
+                                            ContextEnum context)
 {
     ClipDescriptor* srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
 
     srcClip->setHint(kClipSourceHint);
     srcClip->addSupportedComponent( ePixelComponentRGBA );
-    srcClip->addSupportedComponent( ePixelComponentRGB );
+    if (context == eContextGeneral) {
+        // The Output is RGBA (it holds the matte). In the other contexts (filter), "a plugin cannot
+        // change the component type of the Output clip, it will always be the same as the Source
+        // clip" (ofxImageEffectContexts.rst, The Filter Context): Source is RGBA there, and the host
+        // maps an RGB input to RGBA ("it must map the clip to RGBA in a manner that is transparent
+        // to the plugin", ofxClipPreferences.rst).
+        srcClip->addSupportedComponent( ePixelComponentRGB );
+    }
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setOptional(false);

@@ -71,7 +71,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginIdentifier "net.sf.openfx.ContactSheetOFX"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
-// 1.1: an empty source format (e.g. a disconnected input) no longer gives a NaN image area (NaN audit)
+// 1.1: an empty source format (e.g. a disconnected input) no longer gives a NaN image area (NaN audit);
+//      in the filter context, Source is RGBA, so that the RGBA Output has the components of Source, as the
+//      OpenFX spec mandates (issue #190)
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -925,12 +927,19 @@ ContactSheetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             srcClip = desc.defineClip("0");
             srcClip->setOptional(true);
         }
-#ifdef OFX_EXTENSIONS_NATRON
-        srcClip->addSupportedComponent(ePixelComponentXY);
-#endif
-        srcClip->addSupportedComponent(ePixelComponentRGB);
         srcClip->addSupportedComponent(ePixelComponentRGBA);
-        srcClip->addSupportedComponent(ePixelComponentAlpha);
+        if (context != eContextFilter) {
+            // The Output is RGBA. In the filter context, "a plugin cannot change the component
+            // type of the Output clip, it will always be the same as the Source clip"
+            // (ofxImageEffectContexts.rst, The Filter Context): Source is RGBA there, and the host
+            // maps the other components to RGBA ("it must map the clip to RGBA in a manner that is
+            // transparent to the plugin", ofxClipPreferences.rst).
+#ifdef OFX_EXTENSIONS_NATRON
+            srcClip->addSupportedComponent(ePixelComponentXY);
+#endif
+            srcClip->addSupportedComponent(ePixelComponentRGB);
+            srcClip->addSupportedComponent(ePixelComponentAlpha);
+        }
         srcClip->setTemporalClipAccess(false);
         srcClip->setSupportsTiles(kSupportsTiles);
         srcClip->setIsMask(false);

@@ -165,7 +165,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              Rec. 709 there, whatever the Colorspace, and is kept (deprecated) so that old projects render the same.
 // versions 1.1 and 2.0: in the filter context, the Fg input is the Source clip (labelled Fg), as the OpenFX spec
 //              mandates (the filter context had no Source clip, so hosts failed, e.g. HostSupport's default RoD;
-//              issue #165); the general context still has the Fg clip, so existing projects are unchanged
+//              issue #165); the general context still has the Fg clip, so existing projects are unchanged.
+//              In the filter context, Source is RGBA and the Output components are those of Source, as
+//              the spec mandates (issue #190; the Output was forced to RGBA). With an RGB Fg (general
+//              context), "Add to Inside Mask" source alpha treats it as opaque (it read the next
+//              pixel's red as alpha).
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -983,9 +987,10 @@ private:
                 const PIX *inMaskPix = (const PIX *)  (_inMaskImg ? _inMaskImg->getPixelAddress(x, y) : 0);
                 const PIX *outMaskPix = (const PIX *)  (_outMaskImg ? _outMaskImg->getPixelAddress(x, y) : 0);
                 float inMask = inMaskPix ? sampleToFloat<PIX, maxValue>(*inMaskPix) : 0.f;
-                if ( (_sourceAlpha == eSourceAlphaAddToInsideMask) && (nComponents == 4) && fgPix ) {
-                    // take the max of inMask and the source Alpha
-                    inMask = (std::max)( inMask, sampleToFloat<PIX, maxValue>(fgPix[3]) );
+                if ( (_sourceAlpha == eSourceAlphaAddToInsideMask) && fgPix ) {
+                    // take the max of inMask and the source Alpha (an RGB Fg is opaque, as when the host
+                    // maps it to RGBA: fgPix[3] would be the next pixel's red)
+                    inMask = (std::max)( inMask, (fgComponents == 4) ? sampleToFloat<PIX, maxValue>(fgPix[3]) : 1.f );
                 }
                 float outMask = outMaskPix ? sampleToFloat<PIX, maxValue>(*outMaskPix) : 0.f;
 
@@ -1986,9 +1991,13 @@ PIKPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     OutputModeEnum outputMode = (OutputModeEnum)_outputMode->getValue();
     clipPreferences.setOutputPremultiplication(outputMode == eOutputModeUnpremultiplied ? eImageUnPreMultiplied : eImagePreMultiplied);
 
-    // Output is RGBA
-    clipPreferences.setClipComponents(*_dstClip, ePixelComponentRGBA);
-    // note: Keyer handles correctly inputs with different components: it only uses RGB components from both clips
+    // Output is RGBA. Only the general context may set it: in the filter context, "a plugin cannot
+    // change the component type of the Output clip, it will always be the same as the Source clip"
+    // (ofxImageEffectContexts.rst, The Filter Context), and Source is RGBA there (see describeInContext).
+    // note: the processor handles inputs with different components (an RGB input is opaque)
+    if (getContext() == eContextGeneral) {
+        clipPreferences.setClipComponents(*_dstClip, ePixelComponentRGBA);
+    }
 }
 
 bool
@@ -2200,7 +2209,14 @@ PIKPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
         }
         clip->setHint(kClipFgHint);
         clip->addSupportedComponent( ePixelComponentRGBA );
-        clip->addSupportedComponent( ePixelComponentRGB );
+        if (context == eContextGeneral) {
+            // The Output is RGBA (it holds the matte). In the filter context, "a plugin cannot change
+            // the component type of the Output clip, it will always be the same as the Source clip"
+            // (ofxImageEffectContexts.rst, The Filter Context): Source is RGBA there, and the host maps
+            // an RGB input to RGBA ("it must map the clip to RGBA in a manner that is transparent to
+            // the plugin", ofxClipPreferences.rst).
+            clip->addSupportedComponent( ePixelComponentRGB );
+        }
         clip->setTemporalClipAccess(false);
         clip->setSupportsTiles(kSupportsTiles);
         clip->setOptional(false);

@@ -52,8 +52,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "This effect is based on the unspill operations described in section 4.5 of \"Digital Compositing for Film and Video\" by Steve Wright (Focal Press)."
 
 #define kPluginIdentifier "net.sf.openfx.Despill"
+// history:
+// 1.0 initial version
+// 1.1 in the filter context, Source is RGBA and the Output components are those of Source, as the OpenFX
+//     spec mandates (issue #190; "Spillmap to Alpha" remapped Source and Output to RGBA). The general
+//     context, which Natron uses, is unchanged.
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -586,6 +591,11 @@ DespillPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     bool createAlpha;
 
     _outputToAlpha->getValue(createAlpha);
+    if (getContext() != eContextGeneral) {
+        // filter context: the clip components cannot be changed, Output has the components of
+        // Source, which is RGBA (see describeInContext)
+        return;
+    }
     // Set input and output to the same components
     if (createAlpha) {
         clipPreferences.setClipComponents(*_dstClip, ePixelComponentRGBA);
@@ -638,7 +648,14 @@ DespillPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
 
     srcClip->addSupportedComponent(ePixelComponentRGBA);
-    srcClip->addSupportedComponent(ePixelComponentRGB);
+    if (context == eContextGeneral) {
+        // The "Spillmap to Alpha" option needs an RGBA Output. In the filter context, "a plugin
+        // cannot change the component type of the Output clip, it will always be the same as the
+        // Source clip" (ofxImageEffectContexts.rst): Source is RGBA there, and the host maps an RGB
+        // input to RGBA ("it must map the clip to RGBA in a manner that is transparent to the
+        // plugin", ofxClipPreferences.rst).
+        srcClip->addSupportedComponent(ePixelComponentRGB);
+    }
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
