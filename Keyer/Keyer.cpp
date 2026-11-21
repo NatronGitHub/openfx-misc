@@ -29,6 +29,7 @@
 #include "ofxsProcessing.H"
 #include "ofxsLut.h"
 #include "ofxsMacros.h"
+#include "ofxsNonFinite.h" // clampToFloatRange, clampToUnit, finiteSample
 
 using namespace OFX;
 
@@ -71,6 +72,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //     OpenFX spec mandates (issue #190; the Output was forced to RGBA). With an RGB Source (general
 //     context), "Add to Inside Mask" and "Normal" source alpha treat it as opaque (they read the
 //     next pixel's red as alpha).
+//     With a key colour component beyond about 1.8e19, the squared norm of the key colour, computed
+//     in float, overflowed to inf (issue #213): in Screen mode, the matte was wrong (the distance to
+//     the key colour axis was |fg|), and the despill of the Screen and None modes was skipped. It is
+//     now computed in double when the float one overflows. A key colour beyond the float range is
+//     clamped to it. The output is unchanged for the key colours whose float squared norm is finite.
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -390,26 +396,9 @@ floatToSample(double value)
     return PIX(value * maxValue + 0.5);
 }
 
-// NaN rule (issue #195): non-finite values are handled by comparisons only, never by an isnan()
-// test, and every finite value is unchanged.
-// A value in the float range: +-inf (or a double beyond the float range) gives +-FLT_MAX, and NaN
-// gives 0 (every comparison with NaN is false). Used on the input samples, so that the key and
-// despill computations (in double) never see inf * 0 or inf - inf, and on the double results
-// converted to float (converting a double beyond the float range to float is undefined).
-template<typename T>
-static inline T
-clampToFloatRange(T v)
-{
-    return (v > -FLT_MAX) ? ( (v < FLT_MAX) ? v : T(FLT_MAX) ) : ( (v < 0) ? T(-FLT_MAX) : T(0) );
-}
-
-// clamp to [0,1], NaN gives 0
-template<typename T>
-static inline T
-clampToUnit(T v)
-{
-    return (v >= 0) ? ( (v < 1) ? v : T(1) ) : T(0);
-}
+// NaN rule (issues #195, #213): see ofxsNonFinite.h. clampToFloatRange is used on the input
+// samples, so that the key and despill computations (in double) never see inf * 0 or inf - inf,
+// and on the double results converted to float.
 
 template <class PIX, int nComponents, int maxValue>
 class KeyerProcessor
@@ -433,8 +422,15 @@ private:
         // Kfg = 1 = colorKeyFactor * (1,1,1)._keyColor (where "." is the scalar product)
         const float keyColor111 = _keyColor.r + _keyColor.g + _keyColor.b;
         // const double keyColorFactor = (keyColor111 == 0.) ? 1. : 1./keyColor111;
-        // squared norm of keyColor, used for Screen mode
-        const float keyColorNorm2 = (_keyColor.r * _keyColor.r) + (_keyColor.g * _keyColor.g) + (_keyColor.b * _keyColor.b);
+        // squared norm of keyColor, and norm, used for Screen mode.
+        // They are computed in float, unless the float squared norm overflows to inf (a key colour
+        // component beyond about 1.8e19, issue #213: d was then |fg| in Screen mode, and the despill
+        // was skipped): then in double, where it can't (the key colour is in the float range).
+        const float keyColorNorm2F = (_keyColor.r * _keyColor.r) + (_keyColor.g * _keyColor.g) + (_keyColor.b * _keyColor.b);
+        const bool keyColorNorm2InFloat = (keyColorNorm2F <= FLT_MAX);
+        const double keyColorNorm2 = keyColorNorm2InFloat ? (double)keyColorNorm2F :
+                                     ( (double)_keyColor.r * _keyColor.r + (double)_keyColor.g * _keyColor.g + (double)_keyColor.b * _keyColor.b );
+        const double keyColorNorm = keyColorNorm2InFloat ? (double)std::sqrt(keyColorNorm2F) : std::sqrt(keyColorNorm2);
 
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if ( _effect.abort() ) {
@@ -534,7 +530,6 @@ private:
 
                     // despill fgr, fgg, fgb
                     if ( (_despill > 0.) && ( (_keyerMode == eKeyerModeNone) || (_keyerMode == eKeyerModeScreen) ) && (_outputMode != eOutputModeIntermediate) && (keyColorNorm2 > 0.) ) {
-                        double keyColorNorm = std::sqrt(keyColorNorm2);
                         // color in the direction of keyColor
                         if (scalarProd / keyColorNorm > d * _despillClosing) {
                             // maxdespill is between 0 and 1:
@@ -586,7 +581,7 @@ private:
                 case eOutputModeIntermediate:
                     for (int c = 0; c < 3; ++c) {
                         // the source, with non-finite float samples made finite (integer samples are copied)
-                        dstPix[c] = srcPix ? ( (maxValue == 1) ? PIX( clampToFloatRange<float>(srcPix[c]) ) : srcPix[c] ) : 0;
+                        dstPix[c] = srcPix ? finiteSample<PIX, maxValue>(srcPix[c]) : 0;
                     }
                     break;
                 case eOutputModePremultiplied:
@@ -800,9 +795,10 @@ KeyerPlugin::setupAndProcess(KeyerProcessorBase &processor,
     double keyColorr, keyColorg, keyColorb;
     _keyColor->getValueAtTime(time, keyColorr, keyColorg, keyColorb);
     OfxRGBColourF keyColorF;
-    keyColorF.r = static_cast<float>(keyColorr);
-    keyColorF.g = static_cast<float>(keyColorg);
-    keyColorF.b = static_cast<float>(keyColorb);
+    // in the float range (converting a double beyond it to float is undefined; NaN gives 0)
+    keyColorF.r = static_cast<float>( clampToFloatRange(keyColorr) );
+    keyColorF.g = static_cast<float>( clampToFloatRange(keyColorg) );
+    keyColorF.b = static_cast<float>( clampToFloatRange(keyColorb) );
     KeyerModeEnum keyerMode = (KeyerModeEnum)_keyerMode->getValueAtTime(time);
     LuminanceMathEnum luminanceMath = (LuminanceMathEnum)_luminanceMath->getValueAtTime(time);
     double softnessLower = _softnessLower->getValueAtTime(time);

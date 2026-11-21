@@ -28,6 +28,7 @@
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
 #include "ofxsLut.h"
+#include "ofxsNonFinite.h" // clampToFloatRange, clampToUnit, finiteSample
 #include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 #ifdef OFX_USE_MULTITHREAD_MUTEX
@@ -71,6 +72,14 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //     OpenFX spec mandates (issue #190; the Output was forced to RGBA). With an RGB Source (general
 //     context), "Add to Inside Mask" and "Normal" source alpha treat it as opaque (they read the
 //     next pixel's red as alpha).
+//     Extreme key colours (issue #213): the squared norm of the key chrominance, computed in float,
+//     underflowed to 0 for a tiny chrominance, e.g. key colour (1e-30,1e-30,0): cos/sin were +-inf,
+//     and the key was inf - inf or inf * 0 = NaN, which the matte clamp turned into 0; it overflowed
+//     to inf for a chrominance beyond about 1.8e19 (e.g. key colour (1e20,0,0) with Linear
+//     Processing), where cos/sin were 0 and nothing was keyed. In these two cases, the norm
+//     is now computed in double. The key colour and its Y'PbPr values are clamped to the float range,
+//     and when the product of Key Gain and the key chrominance underflows to 0, its limit is used
+//     (0 / 0 gave NaN). The output for other key colours is unchanged.
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 2 // Increment this when you have fixed a bug or made it faster.
 
@@ -304,15 +313,31 @@ public:
 
         // convert to YPbPr
         _to_ypbpr(r, g, b, &y, &cb, &cr);
+        // the key colour is in the float range (and the Rec. 709 LUT gives a finite value for a
+        // finite one), so these are finite or +-inf (an overflow, never NaN): make them finite
+        y = clampToFloatRange(y);
+        cb = clampToFloatRange(cb);
+        cr = clampToFloatRange(cr);
         if ( (cb == 0.) && (cr == 0.) ) {
             // no chrominance in the key is an error - default to blue screen
             cb = 1.;
         }
         // xKey is the norm of normalized chrominance (Cb',Cr') = 2 * (Cb,Cr)
         // 0 <= xKey <= 1
-        _xKey = 2 * std::sqrt(cb * cb + cr * cr);
-        _cosKey = 2 * cb / _xKey;
-        _sinKey = 2 * cr / _xKey;
+        const float cbcr2 = cb * cb + cr * cr;
+        if ( (cbcr2 > 0.f) && (cbcr2 <= FLT_MAX) ) {
+            _xKey = 2 * std::sqrt(cbcr2);
+            _cosKey = 2 * cb / _xKey;
+            _sinKey = 2 * cr / _xKey;
+        } else {
+            // the float squared norm underflowed to 0 (a tiny chrominance, e.g. key colour
+            // (1e-30,1e-30,0)) or overflowed (a huge one): compute it in double, where it can't
+            // (issue #213: _cosKey, _sinKey were +-inf, giving inf - inf)
+            const double norm = std::sqrt( (double)cb * cb + (double)cr * cr ); // > 0: cb or cr is nonzero
+            _xKey = 2 * norm;
+            _cosKey = cb / norm;
+            _sinKey = cr / norm;
+        }
         _ys = _xKey == 0. ? 0. : y / _xKey;
         if (_acceptanceAngle < 180.) {
             _tan__acceptanceAngle2 = std::tan( (_acceptanceAngle / 2) * OFXS_PI / 180 );
@@ -363,27 +388,9 @@ floatToSample(double value)
     return PIX(value * maxValue + 0.5);
 }
 
-// NaN rule (issue #195): non-finite values are handled by comparisons only, never by an isnan()
-// test, and every finite value is unchanged.
-// A value in the float range: +-inf (or a double beyond the float range) gives +-FLT_MAX, and NaN
-// gives 0 (every comparison with NaN is false). Used on the input samples, on the Y'PbPr values
-// (a sum of huge finite samples may overflow to +-inf, and the Cb/Cr rotation would then compute
-// inf - inf), and on the double results converted to float (converting a double beyond the float
-// range to float is undefined).
-template<typename T>
-static inline T
-clampToFloatRange(T v)
-{
-    return (v > -FLT_MAX) ? ( (v < FLT_MAX) ? v : T(FLT_MAX) ) : ( (v < 0) ? T(-FLT_MAX) : T(0) );
-}
-
-// clamp to [0,1], NaN gives 0
-template<typename T>
-static inline T
-clampToUnit(T v)
-{
-    return (v >= 0) ? ( (v < 1) ? v : T(1) ) : T(0);
-}
+// NaN rule (issues #195, #213): see ofxsNonFinite.h. clampToFloatRange is used on the input
+// samples, on the Y'PbPr values (a sum of huge finite samples may overflow to +-inf, and the Cb/Cr
+// rotation would then compute inf - inf), and on the double results converted to float.
 
 template <class PIX, int nComponents, int maxValue>
 class ChromaKeyerProcessor
@@ -594,6 +601,14 @@ private:
                         } else {
                             Kbg = 0.f;
                         }
+                    } else if (_keyGain * _xKey <= 0.) {
+                        // the product underflowed to 0 (a tiny Key Gain or key chrominance): the
+                        // division below would give 0 / 0 for Kfg = 0. This is its limit.
+                        if (Kfg > 0.) {
+                            Kbg = 1.f;
+                        } else {
+                            Kbg = 0.f;
+                        }
                     } else {
                         assert(_keyGain > 0. && 0. <= _keyLift && _keyLift < 1.);
                         // (in the float range before the conversion: Kfg may be huge)
@@ -620,7 +635,7 @@ private:
                 case eOutputModeIntermediate:
                     for (int c = 0; c < 3; ++c) {
                         // the source, with non-finite float samples made finite (integer samples are copied)
-                        dstPix[c] = srcPix ? ( (maxValue == 1) ? PIX( clampToFloatRange<float>(srcPix[c]) ) : srcPix[c] ) : 0;
+                        dstPix[c] = srcPix ? finiteSample<PIX, maxValue>(srcPix[c]) : 0;
                     }
                     break;
                 case eOutputModePremultiplied:
@@ -801,9 +816,10 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor,
     double keyColorr, keyColorg, keyColorb;
     _keyColor->getValueAtTime(time, keyColorr, keyColorg, keyColorb);
     OfxRGBColourF keyColorF;
-    keyColorF.r = static_cast<float>(keyColorr);
-    keyColorF.g = static_cast<float>(keyColorg);
-    keyColorF.b = static_cast<float>(keyColorb);
+    // in the float range (converting a double beyond it to float is undefined; NaN gives 0)
+    keyColorF.r = static_cast<float>( clampToFloatRange(keyColorr) );
+    keyColorF.g = static_cast<float>( clampToFloatRange(keyColorg) );
+    keyColorF.b = static_cast<float>( clampToFloatRange(keyColorb) );
     double acceptanceAngle = _acceptanceAngle->getValueAtTime(time);
     double suppressionAngle = _suppressionAngle->getValueAtTime(time);
     double keyLift = _keyLift->getValueAtTime(time);

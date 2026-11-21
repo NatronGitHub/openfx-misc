@@ -103,7 +103,7 @@
  */
 
 #include <cmath>
-#include <cfloat> // DBL_MAX
+#include <cfloat> // DBL_MAX, FLT_MAX
 #include <limits>
 #include <algorithm>
 
@@ -112,6 +112,7 @@
 #include "ofxsMaskMix.h"
 #include "ofxsLut.h"
 #include "ofxsCoords.h"
+#include "ofxsNonFinite.h" // clampToFloatRange, clampToUnit, finiteSample
 
 #define DISABLE_LM // define to disable luminance match (not yet implemented)
 #define DISABLE_AL // define to disable autolevels (not yet implemented)
@@ -170,6 +171,15 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              the spec mandates (issue #190; the Output was forced to RGBA). With an RGB Fg (general
 //              context), "Add to Inside Mask" source alpha treats it as opaque (it read the next
 //              pixel's red as alpha).
+// versions 1.1 and 2.0: non-finite input samples give a finite output (issue #213): a NaN sample is
+//              keyed as 0, +-inf as +-FLT_MAX (a NaN gave a NaN alpha, which the Clamp option let
+//              through, and an infinite one gave inf - inf); with Clamp, the matte is in [0,1]. Sums
+//              and products that may overflow are clamped to the float range; when a colour
+//              conversion could overflow, its inputs are bounded to FLT_MAX/2 (FLT_MAX/8 in XYZ),
+//              and when the luminance of the biases overflows, they are bounded to FLT_MAX/2; the
+//              weights are kept in [-1.3e270,1.3e270], and the colour parameters in the float
+//              range. A NaN Pick colour component is 0 (it picked Blue). The output for finite
+//              inputs is unchanged where it was finite.
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -415,6 +425,116 @@ enum OutputModeEnum
     eOutputModeComposite,
 };
 
+// NaN rule (issue #213): see ofxsNonFinite.h.
+// The colour conversions of ofxsLut.h (luminance, RGB to XYZ and back) are linear, and are
+// computed as before unless the float computation could overflow (giving inf, or inf - inf = NaN):
+// the sum of the absolute values of the terms of each row bounds its partial sums. Only then are
+// the inputs bounded to kRGBConversionMax (RGB to XYZ, luminance) or kXYZConversionMax (XYZ to
+// RGB), where the sums of the absolute values of the coefficients of each row (below 2 and 8)
+// make an overflow impossible, and the double results are in the float range.
+#define kRGBConversionMax (FLT_MAX / 2)
+#define kXYZConversionMax (FLT_MAX / 8)
+// the bound of these sums below which the float computation can't overflow (with a margin for the
+// float rounding of each operation)
+#define kConversionSafeMax (FLT_MAX * (1. - 1e-6))
+// the weights are in [-kWeightMax,kWeightMax], so that the keys computed in double from samples in
+// the float range (three terms, each below DBL_MAX/4) are finite
+#define kWeightMax ( DBL_MAX / (4. * FLT_MAX) )
+
+// clamp to [-m,m], NaN gives 0
+template<typename T>
+static inline T
+clampToMagnitude(T v,
+                 T m)
+{
+    return (v > -m) ? ( (v < m) ? v : m ) : ( (v < 0) ? -m : T(0) );
+}
+
+// the absolute values of the coefficients of a linear colour conversion (row i, column j),
+// from its double version applied to the unit vectors
+template<void (*convert)(double, double, double, double*, double*, double*)>
+static void
+absCoefficients(double m[3][3])
+{
+    for (int j = 0; j < 3; ++j) {
+        double e[3] = {0., 0., 0.};
+        double o[3];
+        e[j] = 1.;
+        convert(e[0], e[1], e[2], &o[0], &o[1], &o[2]);
+        for (int i = 0; i < 3; ++i) {
+            m[i][j] = std::abs(o[i]);
+        }
+    }
+}
+
+// true if the float computation of a linear conversion with these absolute coefficients can't
+// overflow for v (finite)
+static inline bool
+conversionCantOverflow(const double m[3][3],
+                       const float v[3])
+{
+    for (int i = 0; i < 3; ++i) {
+        if ( !( m[i][0] * std::abs(v[0]) + m[i][1] * std::abs(v[1]) + m[i][2] * std::abs(v[2]) < kConversionSafeMax ) ) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+// v, or v bounded to [-m,m] if the conversion could overflow
+static inline void
+conversionInput(const double coefs[3][3],
+                const float v[3],
+                float m,
+                float out[3])
+{
+    const bool asIs = conversionCantOverflow(coefs, v);
+    for (int i = 0; i < 3; ++i) {
+        out[i] = asIs ? v[i] : clampToMagnitude(v[i], m);
+    }
+}
+
+static void
+rgbToXYZ(ColorspaceEnum colorspace, double m[3][3])
+{
+    switch (colorspace) {
+    case eColorspaceRec709:
+    default:
+        absCoefficients<Color::rgb709_to_xyz<double> >(m);
+        break;
+    case eColorspaceRec2020:
+        absCoefficients<Color::rgb2020_to_xyz<double> >(m);
+        break;
+    case eColorspaceACESAP0:
+        absCoefficients<Color::rgbACESAP0_to_xyz<double> >(m);
+        break;
+    case eColorspaceACESAP1:
+        absCoefficients<Color::rgbACESAP1_to_xyz<double> >(m);
+        break;
+    }
+}
+
+static void
+xyzToRGB(ColorspaceEnum colorspace, double m[3][3])
+{
+    switch (colorspace) {
+    case eColorspaceRec709:
+    default:
+        absCoefficients<Color::xyz_to_rgb709<double> >(m);
+        break;
+    case eColorspaceRec2020:
+        absCoefficients<Color::xyz_to_rgb2020<double> >(m);
+        break;
+    case eColorspaceACESAP0:
+        absCoefficients<Color::xyz_to_rgbACESAP0<double> >(m);
+        break;
+    case eColorspaceACESAP1:
+        absCoefficients<Color::xyz_to_rgbACESAP1<double> >(m);
+        break;
+    }
+}
+
 static float
 luminance(ColorspaceEnum colorspace,
           float const rgb[3])
@@ -441,6 +561,26 @@ luminance(ColorspaceEnum colorspace,
         return Color::rgbACESAP1_to_y(rgb[0], rgb[1], rgb[2]);
         break;
     }
+}
+
+// the luminance of rgb (finite), with its inputs bounded if the computation could overflow. The Y
+// row of the RGB to XYZ conversion (rgbToXYZ) gives the coefficients of the luminance.
+static float
+luminanceFinite(ColorspaceEnum colorspace,
+                const double rgbToXYZAbs[3][3],
+                float const rgb[3])
+{
+    const double s = rgbToXYZAbs[1][0] * std::abs(rgb[0]) + rgbToXYZAbs[1][1] * std::abs(rgb[1]) + rgbToXYZAbs[1][2] * std::abs(rgb[2]);
+    if (s < kConversionSafeMax) {
+        return luminance(colorspace, rgb);
+    }
+    const float bounded[3] = {
+        clampToMagnitude(rgb[0], kRGBConversionMax),
+        clampToMagnitude(rgb[1], kRGBConversionMax),
+        clampToMagnitude(rgb[2], kRGBConversionMax)
+    };
+
+    return luminance(colorspace, bounded);
 }
 
 class PIKProcessorBase
@@ -483,6 +623,10 @@ protected:
     ColorspaceEnum _colorspace;
     OutputModeEnum _outputMode;
     bool _legacyColorspace; // PIK 1.x: Rec. 709 for the Soft Color replace colors and the Bg conversion
+    // the absolute values of the coefficients of the colour conversions (see conversionCantOverflow)
+    double _toXYZAbs[3][3];
+    double _bgToXYZAbs[3][3];
+    double _toRGBAbs[3][3];
 
 public:
 
@@ -578,31 +722,49 @@ public:
         // The biases are always normalized with the Rec. 709 luminance, whatever the Colorspace (as in
         // PIK 1.x, where the Colorspace parameter was only set after the normalization): this cancels out
         // in the key and the despill, but not in the Clean Plate output with a Pick screen (C = color / alpha bias).
-        _alphaBias[0] = (float)(std::max)(0.0001, alphaBias.r);
-        _alphaBias[1] = (float)(std::max)(0.0001, alphaBias.g);
-        _alphaBias[2] = (float)(std::max)(0.0001, alphaBias.b);
+        // (a NaN bias gives 0.0001; a bias beyond the float range gives FLT_MAX)
+        _alphaBias[0] = (float)clampToFloatRange( (std::max)(0.0001, alphaBias.r) );
+        _alphaBias[1] = (float)clampToFloatRange( (std::max)(0.0001, alphaBias.g) );
+        _alphaBias[2] = (float)clampToFloatRange( (std::max)(0.0001, alphaBias.b) );
         float l = luminance(eColorspaceRec709, _alphaBias);
+        const bool biasesBounded = !(l <= FLT_MAX); // l is positive, finite or +inf
+        if (biasesBounded) {
+            // the luminance overflowed (issue #213: it gave alpha biases inf / inf = NaN): bound the
+            // biases to [0.0001,FLT_MAX/2], so that l is finite and the normalized biases positive
+            _alphaBias[0] = (float)biasInRange(alphaBias.r);
+            _alphaBias[1] = (float)biasInRange(alphaBias.g);
+            _alphaBias[2] = (float)biasInRange(alphaBias.b);
+            l = luminance(eColorspaceRec709, _alphaBias);
+        }
         _alphaBias[0] /= l;
         _alphaBias[1] /= l;
         _alphaBias[2] /= l;
-        _despillBias[0] = (float)(std::max)(0.0001, despillBias.r);
-        _despillBias[1] = (float)(std::max)(0.0001, despillBias.g);
-        _despillBias[2] = (float)(std::max)(0.0001, despillBias.b);
-        _despillBias[0] /= l;
-        _despillBias[1] /= l;
-        _despillBias[2] /= l;
+        _despillBias[0] = (float)clampToFloatRange( (std::max)(0.0001, despillBias.r) );
+        _despillBias[1] = (float)clampToFloatRange( (std::max)(0.0001, despillBias.g) );
+        _despillBias[2] = (float)clampToFloatRange( (std::max)(0.0001, despillBias.b) );
+        // (in the float range: a huge despill bias divided by a small l may overflow)
+        _despillBias[0] = clampToFloatRange(_despillBias[0] / l);
+        _despillBias[1] = clampToFloatRange(_despillBias[1] / l);
+        _despillBias[2] = clampToFloatRange(_despillBias[2] / l);
         if (screenType == eScreenTypePick) {
-            _screenType = (color.g / _alphaBias[1] > color.b / _alphaBias[2]) ? eScreenTypeGreen : eScreenTypeBlue;
-            _color[0] = (float)(color.r / _alphaBias[0]);
-            _color[1] = (float)(color.g / _alphaBias[1]);
-            _color[2] = (float)(color.b / _alphaBias[2]);
+            // (with the colour in the float range: a NaN component is 0)
+            _screenType = (clampToFloatRange(color.g) / _alphaBias[1] > clampToFloatRange(color.b) / _alphaBias[2]) ? eScreenTypeGreen : eScreenTypeBlue;
+            // (in the float range: the division may overflow it)
+            _color[0] = (float)clampToFloatRange( clampToFloatRange(color.r) / _alphaBias[0] );
+            _color[1] = (float)clampToFloatRange( clampToFloatRange(color.g) / _alphaBias[1] );
+            _color[2] = (float)clampToFloatRange( clampToFloatRange(color.b) / _alphaBias[2] );
             _useColor = true;
         } else {
             _screenType = screenType;
             _useColor = false;
         }
-        _redWeight = redWeight;
-        _blueGreenWeight = blueGreenWeight;
+        // in [-kWeightMax,kWeightMax] (about 1.3e270), so that the keys computed in double from samples
+        // in the float range are finite (issue #213)
+        _redWeight = clampToMagnitude<double>(redWeight, kWeightMax);
+        _blueGreenWeight = clampToMagnitude<double>(blueGreenWeight, kWeightMax);
+        rgbToXYZ(_colorspace, _toXYZAbs);
+        rgbToXYZ(_legacyColorspace ? eColorspaceRec709 : _colorspace, _bgToXYZAbs);
+        xyzToRGB(_colorspace, _toRGBAbs);
         _lmEnable = lmEnable;
         _level = level;
         _luma = luma;
@@ -617,9 +779,9 @@ public:
         _screenClipMax = (std::max)(screenClipMin + 0.0001, screenClipMax); // avoid divisions by zero
         _screenReplace = screenReplace;
         if ( (screenReplace == eReplaceHardColor) || (screenReplace == eReplaceSoftColor) ) {
-            _screenReplaceColor[0] = screenReplaceColor.r;
-            _screenReplaceColor[1] = screenReplaceColor.g;
-            _screenReplaceColor[2] = screenReplaceColor.b;
+            _screenReplaceColor[0] = (float)clampToFloatRange(screenReplaceColor.r);
+            _screenReplaceColor[1] = (float)clampToFloatRange(screenReplaceColor.g);
+            _screenReplaceColor[2] = (float)clampToFloatRange(screenReplaceColor.b);
             // only normalize if the replace method is soft color
             if (screenReplace == eReplaceSoftColor) {
                 normalizeReplaceColor(_screenReplaceColor);
@@ -628,9 +790,9 @@ public:
         _sourceAlpha = sourceAlpha;
         _insideReplace = insideReplace;
         if ( (insideReplace == eReplaceHardColor) || (insideReplace == eReplaceSoftColor) ) {
-            _insideReplaceColor[0] = insideReplaceColor.r;
-            _insideReplaceColor[1] = insideReplaceColor.g;
-            _insideReplaceColor[2] = insideReplaceColor.b;
+            _insideReplaceColor[0] = (float)clampToFloatRange(insideReplaceColor.r);
+            _insideReplaceColor[1] = (float)clampToFloatRange(insideReplaceColor.g);
+            _insideReplaceColor[2] = (float)clampToFloatRange(insideReplaceColor.b);
             // only normalize if the replace method is soft color
             if (insideReplace == eReplaceSoftColor) {
                 normalizeReplaceColor(_insideReplaceColor);
@@ -643,6 +805,12 @@ public:
     } // setValues
 
 private:
+    // a bias in [0.0001,FLT_MAX/2], NaN gives 0.0001 (only used if the luminance of the biases overflows)
+    static double biasInRange(double bias)
+    {
+        return (bias > 0.0001) ? ( (bias < kRGBConversionMax) ? bias : kRGBConversionMax ) : 0.0001;
+    }
+
     // normalize a Soft Color replace color to unit luminance
     void normalizeReplaceColor(float color[3]) const
     {
@@ -665,9 +833,10 @@ private:
             // which can't be normalized (0/0 is NaN, or a huge color): use white, as for black
             color[0] = color[1] = color[2] = 1.;
         } else {
-            color[0] /= l;
-            color[1] /= l;
-            color[2] /= l;
+            // (in the float range: the division may overflow it)
+            color[0] = clampToFloatRange(color[0] / l);
+            color[1] = clampToFloatRange(color[1] / l);
+            color[2] = clampToFloatRange(color[2] / l);
         }
     }
 };
@@ -758,12 +927,13 @@ private:
                             dstPix[i] = PIX();
                         }
                     } else {
+                        // non-finite float samples are made finite (see finiteSample)
                         for (int i = 0; i < 3; ++i) {
-                            dstPix[i] = pix[i];
+                            dstPix[i] = finiteSample<PIX, maxValue>(pix[i]);
                         }
                         if (nComponents == 4) {
                             if (comps == 4) {
-                                dstPix[3] = pix[3];
+                                dstPix[3] = finiteSample<PIX, maxValue>(pix[3]);
                             } else {
                                 dstPix[3] = 1.;
                             }
@@ -812,7 +982,7 @@ private:
                             }
                         } else {
                             for (int i = 0; i < 3; ++i) {
-                                dstPix[i] = pix[3];
+                                dstPix[i] = finiteSample<PIX, maxValue>(pix[3]);
                             }
                             if (nComponents == 4) {
                                 dstPix[3] = 1.;
@@ -859,11 +1029,11 @@ private:
                             }
                         } else {
                             for (int i = 0; i < 3; ++i) {
-                                dstPix[i] = pix[i];
+                                dstPix[i] = finiteSample<PIX, maxValue>(pix[i]);
                             }
                             if (nComponents == 4) {
                                 if (comps == 4) {
-                                    dstPix[3] = pix[3];
+                                    dstPix[3] = finiteSample<PIX, maxValue>(pix[3]);
                                 } else {
                                     dstPix[3] = 1.;
                                 }
@@ -910,7 +1080,7 @@ private:
                             }
                         } else {
                             for (int i = 0; i < 3; ++i) {
-                                dstPix[i] = pix[0];
+                                dstPix[i] = finiteSample<PIX, maxValue>(pix[0]);
                             }
                             if (nComponents == 4) {
                                 dstPix[3] = 1.;
@@ -957,7 +1127,7 @@ private:
                             }
                         } else {
                             for (int i = 0; i < 3; ++i) {
-                                dstPix[i] = pix[0];
+                                dstPix[i] = finiteSample<PIX, maxValue>(pix[0]);
                             }
                             if (nComponents == 4) {
                                 dstPix[3] = 1.;
@@ -990,44 +1160,46 @@ private:
                 if ( (_sourceAlpha == eSourceAlphaAddToInsideMask) && fgPix ) {
                     // take the max of inMask and the source Alpha (an RGB Fg is opaque, as when the host
                     // maps it to RGBA: fgPix[3] would be the next pixel's red)
-                    inMask = (std::max)( inMask, (fgComponents == 4) ? sampleToFloat<PIX, maxValue>(fgPix[3]) : 1.f );
+                    inMask = (std::max)( inMask, (fgComponents == 4) ? clampToFloatRange( sampleToFloat<PIX, maxValue>(fgPix[3]) ) : 1.f );
                 }
                 float outMask = outMaskPix ? sampleToFloat<PIX, maxValue>(*outMaskPix) : 0.f;
 
-                // clamp inMask and outMask in the [0,1] range
-                inMask = (std::max)( 0.f, (std::min)(inMask, 1.f) );
-                outMask = (std::max)( 0.f, (std::min)(outMask, 1.f) );
+                // clamp inMask and outMask in the [0,1] range (NaN gives 0)
+                inMask = clampToUnit(inMask);
+                outMask = clampToUnit(outMask);
 
                 float fg[4] = {0., 0., 0., 1.};
                 float pfg[4] = {0., 0., 0., 1.};
                 float bg[4] = {0., 0., 0., 1.};
                 float out[4] = {0., 0., 0., 1.};
 
+                // non-finite samples: NaN gives 0, +-inf gives +-FLT_MAX (see clampToFloatRange), and
+                // the divisions by the (positive) alpha bias are kept in the float range
                 if (fgPix) {
                     for (int i = 0; i < fgComponents; ++i) {
-                        fg[i] = sampleToFloat<PIX, maxValue>(fgPix[i]);
+                        fg[i] = clampToFloatRange( sampleToFloat<PIX, maxValue>(fgPix[i]) );
                     }
                 }
                 if (pfgPix) {
                     for (int i = 0; i < pfgComponents; ++i) {
-                        pfg[i] = sampleToFloat<PIX, maxValue>(pfgPix[i]);
+                        pfg[i] = clampToFloatRange( sampleToFloat<PIX, maxValue>(pfgPix[i]) );
                         if (i < 3) {
-                            pfg[i] /= _alphaBias[i];
+                            pfg[i] = clampToFloatRange(pfg[i] / _alphaBias[i]);
                         }
                     }
                 }
                 if (cPix && !_useColor) {
                     for (int i = 0; i < cComponents; ++i) {
-                        c[i] = sampleToFloat<PIX, maxValue>(cPix[i]);
+                        c[i] = clampToFloatRange( sampleToFloat<PIX, maxValue>(cPix[i]) );
                         if (i < 3) {
-                            c[i] /= _alphaBias[i];
+                            c[i] = clampToFloatRange(c[i] / _alphaBias[i]);
                         }
                     }
                 }
 
                 if ( bgPix && (_ubc || _ubl) ) {
                     for (int i = 0; i < bgComponents; ++i) {
-                        bg[i] = sampleToFloat<PIX, maxValue>(bgPix[i]);
+                        bg[i] = clampToFloatRange( sampleToFloat<PIX, maxValue>(bgPix[i]) );
                     }
                 }
 
@@ -1051,7 +1223,9 @@ private:
                                 if (cKey <= 0) {
                                     alpha = 1.;
                                 } else {
-                                    alpha = 1. - pfgKey / cKey;
+                                    // pfgKey and cKey are finite and positive, so this is finite or -inf (an
+                                    // overflow): in the float range
+                                    alpha = clampToFloatRange(1. - pfgKey / cKey);
                                 }
                             }
                         }
@@ -1069,7 +1243,9 @@ private:
                                 if (cKey <= 0) {
                                     alpha = 1.;
                                 } else {
-                                    alpha = 1. - pfgKey / cKey;
+                                    // pfgKey and cKey are finite and positive, so this is finite or -inf (an
+                                    // overflow): in the float range
+                                    alpha = clampToFloatRange(1. - pfgKey / cKey);
                                 }
                             }
                         }
@@ -1100,7 +1276,8 @@ private:
                 } else {
                     // screen subtraction / despill
                     for (int i = 0; i < 3; ++i) {
-                        float v = fg[i] + c[i] * _despillBias[i] * (alpha - 1.);
+                        // (alpha - 1 is finite and nonzero, so this is finite or +-inf: in the float range)
+                        float v = clampToFloatRange(fg[i] + c[i] * _despillBias[i] * (alpha - 1.));
                         out[i] = v < 0. ? 0 : v;
                     }
                 }
@@ -1146,21 +1323,23 @@ private:
                                 break;
 
                             case eReplaceSource:
+                                // (all finite: the sum is finite or +-inf, kept in the float range)
                                 for (int i = 0; i < 3; ++i) {
-                                    out[i] = out[i] + fg[i] * diff;
+                                    out[i] = clampToFloatRange(out[i] + fg[i] * diff);
                                 }
                                 break;
 
                             case eReplaceHardColor:
                                 for (int i = 0; i < 3; ++i) {
-                                    out[i] = out[i] + _screenReplaceColor[i] * diff;
+                                    out[i] = clampToFloatRange(out[i] + _screenReplaceColor[i] * diff);
                                 }
                                 break;
 
                             case eReplaceSoftColor: {
                                 // match the luminance of fg
+                                // (the factors are kept in the float range: inf * 0 would give NaN)
                                 for (int i = 0; i < 3; ++i) {
-                                    out[i] = out[i] + _screenReplaceColor[i] * diff * luminance(_colorspace, fg);
+                                    out[i] = clampToFloatRange( out[i] + clampToFloatRange(_screenReplaceColor[i] * diff) * luminanceFinite(_colorspace, _toXYZAbs, fg) );
                                 }
                                 break;
                             }
@@ -1180,7 +1359,7 @@ private:
                     }
                     // re-premultiply output
                     for (int i = 0; i < 3; ++i) {
-                        out[i] = out[i] * alphaClipped / alpha; // no division by zero: alpha > 0
+                        out[i] = clampToFloatRange(out[i] * alphaClipped / alpha); // no division by zero: alpha > 0
                     }
                     alpha = alphaClipped;
                 }
@@ -1205,21 +1384,23 @@ private:
                                 break;
 
                             case eReplaceSource:
+                                // (all finite: the sum is finite or +-inf, kept in the float range)
                                 for (int i = 0; i < 3; ++i) {
-                                    out[i] = out[i] + fg[i] * diff;
+                                    out[i] = clampToFloatRange(out[i] + fg[i] * diff);
                                 }
                                 break;
 
                             case eReplaceHardColor:
                                 for (int i = 0; i < 3; ++i) {
-                                    out[i] = out[i] + _insideReplaceColor[i] * diff;
+                                    out[i] = clampToFloatRange(out[i] + _insideReplaceColor[i] * diff);
                                 }
                                 break;
 
                             case eReplaceSoftColor: {
                                 // match the luminance of fg
+                                // (the factors are kept in the float range: inf * 0 would give NaN)
                                 for (int i = 0; i < 3; ++i) {
-                                    out[i] = out[i] + _insideReplaceColor[i] * diff * luminance(_colorspace, fg);
+                                    out[i] = clampToFloatRange( out[i] + clampToFloatRange(_insideReplaceColor[i] * diff) * luminanceFinite(_colorspace, _toXYZAbs, fg) );
                                 }
                                 break;
                             }
@@ -1270,7 +1451,7 @@ private:
 
                 if (!_ss) { // if no screen subtraction, just premult
                     for (int i = 0; i < 3; ++i) {
-                        out[i] = out[i] * alpha;
+                        out[i] = clampToFloatRange(out[i] * alpha);
                     }
                 }
                 out[3] = alpha;
@@ -1282,29 +1463,34 @@ private:
                     // Convert to XYZ
                     {
                         float X, Y, Z, x, y, XYZ, invXYZ;
+                        // (bounded if the conversion could overflow, see conversionCantOverflow)
+                        float rgb[3];
+                        conversionInput(_toXYZAbs, out, kRGBConversionMax, rgb);
+                        const float r = rgb[0], g = rgb[1], b = rgb[2];
                         switch (_colorspace) {
                         case eColorspaceRec709:
                         default:
-                            Color::rgb709_to_xyz(out[0], out[1], out[2], &X, &Y, &Z);
+                            Color::rgb709_to_xyz(r, g, b, &X, &Y, &Z);
                             break;
 
                         case eColorspaceRec2020:
-                            Color::rgb2020_to_xyz(out[0], out[1], out[2], &X, &Y, &Z);
+                            Color::rgb2020_to_xyz(r, g, b, &X, &Y, &Z);
                             break;
 
                         case eColorspaceACESAP0:
-                            Color::rgbACESAP0_to_xyz(out[0], out[1], out[2], &X, &Y, &Z);
+                            Color::rgbACESAP0_to_xyz(r, g, b, &X, &Y, &Z);
                             break;
 
                         case eColorspaceACESAP1:
-                            Color::rgbACESAP1_to_xyz(out[0], out[1], out[2], &X, &Y, &Z);
+                            Color::rgbACESAP1_to_xyz(r, g, b, &X, &Y, &Z);
                             break;
                         }
+                        // (X, Y and Z are finite: the sum is finite or +-inf, and 1/XYZ may overflow)
                         XYZ = X + Y + Z;
-                        invXYZ = XYZ <= 0 ? 0. : (1. / XYZ);
+                        invXYZ = XYZ <= 0 ? 0. : clampToFloatRange(1. / XYZ);
                         // convert to xyY
-                        x = X * invXYZ;
-                        y = Y * invXYZ;
+                        x = clampToFloatRange(X * invXYZ);
+                        y = clampToFloatRange(Y * invXYZ);
 
                         //out_X = X;
                         out_Y = Y;
@@ -1315,30 +1501,35 @@ private:
                     float bg_Y, bg_x, bg_y;
                     {
                         float X, Y, Z, x, y, XYZ, invXYZ;
+                        // (bounded if the conversion could overflow, see conversionCantOverflow)
+                        float rgb[3];
+                        conversionInput(_bgToXYZAbs, bg, kRGBConversionMax, rgb);
+                        const float r = rgb[0], g = rgb[1], b = rgb[2];
                         // PIK 1.x: Bg was always converted from Rec. 709
                         switch (_legacyColorspace ? eColorspaceRec709 : _colorspace) {
                         case eColorspaceRec709:
                         default:
-                            Color::rgb709_to_xyz(bg[0], bg[1], bg[2], &X, &Y, &Z);
+                            Color::rgb709_to_xyz(r, g, b, &X, &Y, &Z);
                             break;
 
                         case eColorspaceRec2020:
-                            Color::rgb2020_to_xyz(bg[0], bg[1], bg[2], &X, &Y, &Z);
+                            Color::rgb2020_to_xyz(r, g, b, &X, &Y, &Z);
                             break;
 
                         case eColorspaceACESAP0:
-                            Color::rgbACESAP0_to_xyz(bg[0], bg[1], bg[2], &X, &Y, &Z);
+                            Color::rgbACESAP0_to_xyz(r, g, b, &X, &Y, &Z);
                             break;
 
                         case eColorspaceACESAP1:
-                            Color::rgbACESAP1_to_xyz(bg[0], bg[1], bg[2], &X, &Y, &Z);
+                            Color::rgbACESAP1_to_xyz(r, g, b, &X, &Y, &Z);
                             break;
                         }
+                        // (X, Y and Z are finite: the sum is finite or +-inf, and 1/XYZ may overflow)
                         XYZ = X + Y + Z;
-                        invXYZ = XYZ <= 0 ? 0. : (1. / XYZ);
+                        invXYZ = XYZ <= 0 ? 0. : clampToFloatRange(1. / XYZ);
                         // convert to xyY
-                        x = X * invXYZ;
-                        y = Y * invXYZ;
+                        x = clampToFloatRange(X * invXYZ);
+                        y = clampToFloatRange(Y * invXYZ);
 
                         //bg_X = X;
                         bg_Y = Y;
@@ -1350,14 +1541,17 @@ private:
                     // mix
                     float a = (std::max)(0.f, out[3]);
                     if ( _ubc && (bg_Y > 0.) ) {
-                        out_x = a * out_x + (1 - a) * bg_x;
-                        out_y = a * out_y + (1 - a) * bg_y;
+                        // (a may be above 1 without Clamp: each product is finite or +-inf, so the
+                        // second one is kept in the float range, so that the sum is never inf - inf)
+                        out_x = clampToFloatRange( a * out_x + clampToFloatRange( (1 - a) * bg_x ) );
+                        out_y = clampToFloatRange( a * out_y + clampToFloatRange( (1 - a) * bg_y ) );
                         //out_X = a * out_X + (1 - a) * bg_X;
                         //out_Z = a * out_Z + (1 - a) * bg_Z;
                     }
                     if (_ubl) {
                         // magic number (to look like IBK, really)
-                        out_Y = out_Y * (a * 1 + (1 - a) * 5.38845 * bg_Y);
+                        // (computed in double, where it is finite: in the float range)
+                        out_Y = clampToFloatRange( out_Y * (a * 1 + (1 - a) * 5.38845 * bg_Y) );
                     }
 
                     // convert to RGB
@@ -1365,8 +1559,18 @@ private:
                         float Y = out_Y;
                         //float X = out_X;
                         //float Z = out_Z;
-                        float X = (out_y == 0.) ? 0. : out_x * Y / out_y;
-                        float Z = (out_y == 0.) ? 0. : (1. - out_x - out_y) * Y / out_y;
+                        // (X is finite or +-inf, Z is finite in double: in the float range)
+                        float X = (out_y == 0.) ? 0. : clampToFloatRange(out_x * Y / out_y);
+                        float Z = (out_y == 0.) ? 0. : clampToFloatRange( (1. - out_x - out_y) * Y / out_y );
+                        // bounded if the conversion could overflow (see conversionCantOverflow)
+                        {
+                            const float xyz[3] = {X, Y, Z};
+                            float xyzIn[3];
+                            conversionInput(_toRGBAbs, xyz, kXYZConversionMax, xyzIn);
+                            X = xyzIn[0];
+                            Y = xyzIn[1];
+                            Z = xyzIn[2];
+                        }
 
                         switch (_colorspace) {
                         case eColorspaceRec709:
@@ -1403,7 +1607,7 @@ private:
                         }
                     } else {
                         for (int i = 0; i < 3; ++i) {
-                            out[i] = out[i] / out[3];
+                            out[i] = clampToFloatRange(out[i] / out[3]);
                         }
                     }
                     goto FINISH;
@@ -1415,8 +1619,9 @@ private:
                             out[i] = bg[i];
                         }
                     } else {
+                        // (all finite: the sum is finite or +-inf, kept in the float range)
                         for (int i = 0; i < 4; ++i) {
-                            out[i] = out[i] + bg[i] * (1 - out[3]);
+                            out[i] = clampToFloatRange(out[i] + bg[i] * (1 - out[3]));
                         }
                     }
                     goto FINISH;
