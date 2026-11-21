@@ -7,10 +7,10 @@
 # - the bundle names;
 # - the file and directory lists;
 # - the contents of every file but the binaries (Info.plist, Resources, ...);
-# - for each binary (Contents/<arch>/*.ofx): the exported symbols, the rpath, and
-#   the plug-ins it registers (identifier and version, with ofxload.cpp), which must
-#   be at least one, without an ofxload error (except DebugProxy, which registers the
-#   plug-ins of $OFX_DEBUGPROXY_BINARY);
+# - for each binary (Contents/<arch>/*.ofx; Windows: any Contents/Win* folder): the
+#   exported symbols, the rpath, and the plug-ins it registers (identifier and version,
+#   with ofxload.cpp), which must be at least one, without an ofxload error (except
+#   DebugProxy, which registers the plug-ins of $OFX_DEBUGPROXY_BINARY);
 # - the libraries each binary links: a difference is an error, except for OpenGL and
 #   pthread (the Makefiles link OpenGL to every bundle, CMake only where it is used;
 #   SupportExt's Threads::Threads links libpthread with glibc < 2.34), which is printed.
@@ -32,7 +32,7 @@ b=$2
 case "$(uname -s)" in
     Darwin) arch=MacOS; libs= ;;
     Linux) arch=Linux-$(uname -m); [ "$arch" = Linux-x86_64 ] && arch=Linux-x86-64; libs=-ldl ;;
-    *_NT-*) arch=Win64; libs= ;;
+    *_NT-*) arch='Win*'; libs= ;; # any Contents/Win* folder: Win64, Win-arm64ec, Win-arm64...
     *) echo "unsupported OS $(uname -s)"; exit 2 ;;
 esac
 
@@ -122,7 +122,7 @@ while IFS= read -r name; do
         nfiles=$((nfiles + 1))
         case "$f" in
             ./Contents/Libraries/*) ;; # deployed libraries: compared by name
-            ./Contents/"$arch"/*.ofx)
+            ./Contents/$arch/*.ofx) # (unquoted: Win* is a pattern)
                 for what in symbols rpaths plugins; do
                     "$what" "$pa/$f" > "$work/xa"
                     "$what" "$pb/$f" > "$work/xb"

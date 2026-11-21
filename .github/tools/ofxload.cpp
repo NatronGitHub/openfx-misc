@@ -97,6 +97,9 @@ int main(int argc, char** argv)
     // that would block the CI job.
     SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOOPENFILEERRORBOX);
 #endif
+    // Unbuffered: what was printed survives a crash or an exit from a plug-in (loadtest.sh
+    // also requires the final summary line).
+    std::setvbuf(stdout, NULL, _IONBF, 0);
     int errors = 0;
     int plugins = 0;
     std::map<std::string, std::string> seen; // "identifier version" -> binary that registered it

@@ -27,7 +27,8 @@
 #   CImg/pocketfft_hdronly.h, downloaded at configure, is then required for its license).
 # --licenses DIR: license files of code linked into every bundle of this platform, copied into
 #   every archive's LICENSES/ (Windows: the MinGW-w64 runtime and winpthreads that -static links;
-#   required for windows-*).
+#   required for windows-*, except windows-*-msvc: MSVC builds, whose static runtime (/MT) needs
+#   no notice).
 # VERSION: by default, $RELEASE_TAG without its Natron- or openfx-misc- prefix (Natron-2.6.0:
 #   2.6.0), else <date>-<commit> (from $GITHUB_SHA, or git).
 # Each input DIR holds the *.ofx.bundle directories (e.g. an install prefix's OFX/Plugins):
@@ -35,7 +36,8 @@
 #   --denoisesharpen: DenoiseSharpen. The full set gets the Shadertoy of --shadertoy-osmesa;
 #   without it (no OSMesa build for this platform), the OpenGL-only one, and the OSMesa download
 #   is not made.
-# PLATFORM: linux-x86_64, windows-x86_64, macos-universal... (linux-*, windows-*, macos-*).
+# PLATFORM: linux-x86_64, windows-x86_64, macos-universal... (linux-*, windows-*, macos-*);
+#   windows-*-msvc (e.g. windows-x86_64-msvc, windows-arm64x-msvc): built with MSVC (nightly.yml).
 set -eo pipefail
 
 usage() {
@@ -43,7 +45,7 @@ usage() {
     exit 2
 }
 
-version='' platform='' out='' full='' stgl='' stmesa='' ds='' extra='' fft=pocketfft
+version='' platform='' out='' full='' stgl='' stmesa='' ds='' extra='' fft=pocketfft msvc=
 while [ $# -gt 0 ]; do
     case "$1" in
         --version) version=$2; shift 2 ;;
@@ -81,9 +83,13 @@ case "$platform" in
     windows-*)
         os=Windows; ext=zip
         sysdir='C:\Program Files\Common Files\OFX\Plugins'; pathsep=';'
-        command -v zip > /dev/null || { echo "zip not found"; exit 1; }
-        # -static: every bundle contains the MinGW-w64 runtime and winpthreads
-        [ -n "$(ls -A "$extra" 2> /dev/null)" ] || { echo "ERROR: $platform needs --licenses DIR (MinGW-w64 runtime, winpthreads)"; exit 1; }
+        # zip (MSYS2), else 7-Zip (Git for Windows' bash on the GitHub runners has no zip)
+        command -v zip > /dev/null || command -v 7z > /dev/null || { echo "zip or 7z not found"; exit 1; }
+        case "$platform" in
+            *-msvc) msvc=1 ;;
+            # -static: every bundle contains the MinGW-w64 runtime and winpthreads
+            *) [ -n "$(ls -A "$extra" 2> /dev/null)" ] || { echo "ERROR: $platform needs --licenses DIR (MinGW-w64 runtime, winpthreads)"; exit 1; } ;;
+        esac
         ;;
     *) echo "unknown platform $platform (linux-*, macos-*, windows-*)"; exit 2 ;;
 esac
@@ -141,12 +147,32 @@ CImg.ofx and the standalone net.sf.openfx.DenoiseSharpen.ofx need. Any other lib
 bundle (<bundle>.ofx.bundle/Libraries).
 EOF
             ;;
-        Windows) cat << 'EOF'
+        Windows)
+            if [ -z "$msvc" ]; then cat << 'EOF'
 
 The bundles are 64-bit, for Windows 10 or later, with the MinGW runtime linked
 statically (no extra DLL is needed): the licenses of the MinGW-w64 runtime and
 winpthreads are in LICENSES/.
 EOF
+            else
+                cat << 'EOF'
+
+The bundles are built with Microsoft Visual C++, with its runtime linked
+statically (no extra DLL is needed). The host finds its binary in the folder
+of its architecture, in each bundle's Contents:
+EOF
+                # the folders of the full set's Misc.ofx.bundle
+                for d in "$full"/Misc.ofx.bundle/Contents/Win*; do
+                    case "$(basename "$d")" in
+                        Win64) echo "- Win64: x64 (Intel and AMD) hosts, Windows 10 or later" ;;
+                        Win-arm64ec) echo "- Win-arm64ec: an Arm64X binary, for the Arm64EC hosts of Windows 11 on Arm"
+                                     echo "  (and the x64 hosts emulated there that look in this folder)" ;;
+                        Win-arm64) echo "- Win-arm64: native ARM64 hosts, Windows 11 on Arm (a folder reserved by"
+                                   echo "  the OpenFX packaging specification, not yet normative)" ;;
+                        *) echo "- $(basename "$d")" ;;
+                    esac
+                done
+            fi
             ;;
     esac
     cat << EOF
@@ -209,8 +235,10 @@ package() {
     readme "$name" "$contents" > "$work/$name/README.txt"
     [ "$os" != Windows ] || sed -i 's/$/\r/' "$work/$name/README.txt"
     rm -f "$out/$name.$ext"
-    if [ "$ext" = zip ]; then
+    if [ "$ext" = zip ] && command -v zip > /dev/null; then
         (cd "$work" && zip -qr -X "$out/$name.$ext" "$name")
+    elif [ "$ext" = zip ]; then
+        (cd "$work" && 7z a -tzip -bd -bso0 "$out/$name.$ext" "$name")
     else
         # COPYFILE_DISABLE: no ._* AppleDouble files (macOS tar)
         (cd "$work" && COPYFILE_DISABLE=1 tar -czf "$out/$name.$ext" "$name")

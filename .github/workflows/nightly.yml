@@ -12,6 +12,10 @@ name: Nightly extra builds
 # Linux CMake job builds the separate bundles (OFX_PLUGIN_BUNDLES=SEPARATE) instead.
 # Every CMake job passes its C++ standard explicitly (OFX_CXX_STANDARD=17 or 20).
 # Each build is followed by the same plugin load test as in ci.yml.
+# The Windows MSVC jobs build the downloadable Windows nightlies, for x64 and for Windows on Arm
+# (Arm64X), uploaded as the openfx-misc-nightly-windows-msvc-x64 and -arm64x artifacts (30 days).
+# On demand, "only: windows-msvc" runs just them, and cimg_patches, which always runs
+# (gh workflow run nightly.yml -f only=windows-msvc).
 # The CImg plug-ins: ci.yml builds their default FFT (pocketfft); here, Linux FFTW builds the opt-in
 # FFT=fftw3 (GPL) with the render tests, and macOS OpenMP is FFT=pow2. The cimg_patches job checks that CImg.h is still patched as openfx-gmic's.
 # The render and smoke tests of ci.yml (Linux release) also run after the macOS
@@ -26,6 +30,12 @@ on:
   schedule:
     - cron: '17 3 * * *' # every day at 03:17 UTC
   workflow_dispatch:
+    inputs:
+      only:
+        description: "all: every job; windows-msvc: only the Windows MSVC jobs (windows_msvc, windows_msvc_arm), and cimg_patches (a few seconds, it always runs)"
+        type: choice
+        options: [ all, windows-msvc ]
+        default: all
 
 permissions:
   contents: read
@@ -50,10 +60,13 @@ jobs:
       actions: read
     outputs:
       run: ${{ steps.check.outputs.run }}
+      # the Windows MSVC jobs: also with "only: windows-msvc"
+      msvc: ${{ steps.check.outputs.msvc }}
     steps:
       - id: check
         env:
           GH_TOKEN: ${{ github.token }}
+          ONLY: ${{ inputs.only }}
         run: |
           last=
           if [ "$GITHUB_EVENT_NAME" = schedule ]; then
@@ -62,12 +75,15 @@ jobs:
             last=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/nightly.yml/runs?event=schedule&status=completed&per_page=20" \
                      --jq '[.workflow_runs[] | select(.conclusion == "success" or .conclusion == "failure")][0].head_sha // empty')
           fi
+          run=true
           if [ -n "$last" ] && [ "$last" = "$GITHUB_SHA" ]; then
-            echo "run=false" >> "$GITHUB_OUTPUT"
+            run=false
             echo "No change since the last nightly run ($last): skipping."
-          else
-            echo "run=true" >> "$GITHUB_OUTPUT"
           fi
+          msvc=$run
+          if [ "$ONLY" = windows-msvc ]; then run=false msvc=true; fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+          echo "msvc=$msvc" >> "$GITHUB_OUTPUT"
 
   # CImg.h is patched as openfx-gmic's (CImg/CImgVersion.mk): check that CImg/patches are still
   # byte-identical to openfx-gmic's patches at master, that they are applied in the same order,
@@ -300,45 +316,118 @@ jobs:
           set -eo pipefail
           RENDERTEST_ONLY='^CImgConvolve' .github/tools/rendertest.sh install-${{ matrix.config }}
 
-  # MSVC is not used by the other Windows builds (MinGW GCC), but the CMake build and
-  # Misc/*.vcxproj support it: check that the sources build with Visual Studio 2022
-  # (C++17, /Zc:__cplusplus from openfx::Api). The build needs nothing beyond the
-  # runner image (CMake downloads CImg.h); the load test uses the cached MSYS2 UCRT64.
+  # Windows MSVC: the downloadable Windows nightlies (#203). They are built with MSVC, since users
+  # also run them in third-party hosts; only the OSMesa Shadertoy stays on MSYS2 UCRT64
+  # (release.yml). .github/tools/msvc-build.sh (also run by ci.yml for arm64x) builds Misc, CImg,
+  # Shadertoy (OpenGL) and the standalone DenoiseSharpen with CMake and Ninja (C++17), with the
+  # static CRT (CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded: no vcruntime DLL to ship) and without
+  # OpenMP (if it is ever enabled, vcomp140.dll must be pinned and shipped app-local, as
+  # openfx-gmic#108: see the script), and checks each binary with dumpbin (machine type, no
+  # MSVC runtime DLL). Both run on windows-2025, whose Visual Studio 2022 has the ARM64 and
+  # ARM64EC cross tools:
+  # - x64: Contents/Win64, load-tested here, with an ofxload built by cl;
+  # - arm64x: Microsoft's Arm64X recipe (cmake/OFXMiscArm64X.cmake): an ARM64 build, then an
+  #   Arm64EC build linked with its objects into Arm64X binaries, in Contents/Win-arm64ec (Arm64EC
+  #   hosts, and the x64 hosts emulated on Windows on Arm that look there), plus the ARM64 binaries
+  #   in Contents/Win-arm64 (native ARM64 hosts; a reserved folder). Load-tested on windows-11-arm
+  #   (windows_msvc_arm below).
+  # The downloads are packaged as release.yml's (package-release.sh: the full set, Shadertoy
+  # (OpenGL) and DenoiseSharpen, each a zip with README.txt, LICENSE.txt and LICENSES/), and
+  # uploaded as openfx-misc-nightly-windows-msvc-<arch>, kept 30 days (a scheduled run is skipped
+  # when master did not change, so the last downloads must outlive a quiet week).
   windows_msvc:
-    name: Windows MSVC 2022 CMake
+    name: Windows MSVC ${{ matrix.arch }}
     needs: changes
-    if: needs.changes.outputs.run == 'true'
-    timeout-minutes: 20
-    runs-on: windows-2022
+    if: needs.changes.outputs.msvc == 'true'
+    # arm64x: two builds
+    timeout-minutes: ${{ matrix.arch == 'x64' && 25 || 45 }}
+    runs-on: windows-2025
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            msvc: x64
+            platform: windows-x86_64-msvc
+          - arch: arm64x
+            msvc: amd64_arm64 # the ARM64 cross tools (cl -arm64EC: Arm64EC)
+            platform: windows-arm64x-msvc
     steps:
       - name: Checkout branch
         uses: actions/checkout@v5
         with:
           submodules: recursive
           persist-credentials: false
-      - name: Build
-        # (the patches of CImg.h use Git for Windows' sh)
-        run: |
-          cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DOFX_CXX_STANDARD=17
-          cmake --build build --config Release --parallel
-          cmake --install build --config Release --prefix "$PWD/cmake-install"
-      - name: Setup MSYS2 UCRT64 environment (cached), for the load test
-        # the same options as the MSYS2 builds, so that all share one cache
-        uses: msys2/setup-msys2@ec48f7c5447b3140e2b088413ae3a55687bccb6e # v2.33.0
+      - name: Set up MSVC (${{ matrix.msvc }})
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
         with:
-          msystem: UCRT64
-          update: false
-          cache: true
-          install: git base-devel
-          pacboy: cc:p cmake:p ninja:p expat:p python:p
+          arch: ${{ matrix.msvc }}
+      - name: Build
+        # (in Git for Windows' bash, whose sh patches CImg.h)
+        run: .github/tools/msvc-build.sh ${{ matrix.arch }} msvc
       - name: Load test
-        # ofxload is built with the MSYS2 UCRT64 GCC (loadtest.sh uses GCC options),
-        # and objdump is MSYS2's; ofxload only loads the MSVC-built plugins through
-        # LoadLibrary (C entry points). This proves the DLLs load and register their
-        # plug-ins; it does not call setHost/mainEntry, so the threading code
-        # /Zc:__cplusplus switches is not run.
-        shell: msys2 {0}
+        # x64 only (the Arm binaries don't run here): ofxload built with cl (x64, /MT)
+        if: matrix.arch == 'x64'
         run: |
-          set -eo pipefail
-          command -v c++ objdump
-          .github/tools/loadtest.sh cmake-install
+          cl -nologo -EHsc -W3 -Iopenfx/include .github/tools/ofxload.cpp -Fe:ofxload.exe
+          OFXLOAD=./ofxload.exe .github/tools/loadtest.sh msvc/install
+          OFXLOAD=./ofxload.exe .github/tools/loadtest.sh msvc/install-denoisesharpen
+      - name: Package
+        run: |
+          .github/tools/package-release.sh --platform ${{ matrix.platform }} --out dist \
+              --full msvc/install/OFX/Plugins --shadertoy-gl msvc/install/OFX/Plugins \
+              --denoisesharpen msvc/install-denoisesharpen/OFX/Plugins
+      - name: Upload artifacts
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: openfx-misc-nightly-windows-msvc-${{ matrix.arch }}
+          path: dist
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0 # (zip files)
+
+  # The Windows on Arm load test of the arm64x downloads (windows_msvc), on windows-11-arm: each
+  # download (the full set, Shadertoy, DenoiseSharpen) is loaded by an ARM64 ofxload from
+  # Win-arm64 (the ARM64 binaries) and from Win-arm64ec (the Arm64X binaries, their ARM64 code),
+  # and by an Arm64EC ofxload from Win-arm64ec (their Arm64EC code), with ofxload built by cl.
+  # (Only when both windows_msvc builds pass.)
+  windows_msvc_arm:
+    name: Windows on Arm MSVC load test (ARM64, Arm64X)
+    needs: windows_msvc
+    timeout-minutes: 15
+    runs-on: windows-11-arm
+    steps:
+      - name: Checkout branch
+        # (openfx's headers for ofxload, and the scripts)
+        uses: actions/checkout@v5
+        with:
+          submodules: true
+          persist-credentials: false
+      - name: Set up MSVC (ARM64)
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+        with:
+          arch: arm64
+      - name: Download the arm64x downloads
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: openfx-misc-nightly-windows-msvc-arm64x
+          path: dist
+      - name: Unzip
+        shell: pwsh
+        run: Get-ChildItem dist/*.zip | ForEach-Object { Expand-Archive $_.FullName -DestinationPath unpacked }
+      - name: Load test
+        run: |
+          cl -nologo -EHsc -W3 -Iopenfx/include .github/tools/ofxload.cpp -Fe:ofxload-arm64.exe
+          cl -nologo -EHsc -W3 -arm64EC -Iopenfx/include .github/tools/ofxload.cpp -Fe:ofxload-arm64ec.exe -link -machine:arm64ec
+          for e in arm64 arm64ec; do
+            echo "ofxload-$e.exe: $(dumpbin -nologo -headers ofxload-$e.exe | tr -d '\r' | grep -m1 ' machine (' | sed 's/^ *//')"
+          done
+          status=0
+          for d in unpacked/*/; do
+            for t in arm64:Win-arm64 arm64:Win-arm64ec arm64ec:Win-arm64ec; do
+              echo "::group::$d: ofxload-${t%%:*}.exe, ${t##*:}"
+              OFXLOAD=./ofxload-${t%%:*}.exe LOADTEST_ARCHDIR=${t##*:} .github/tools/loadtest.sh "$d" || status=1
+              echo "::endgroup::"
+            done
+          done
+          exit $status

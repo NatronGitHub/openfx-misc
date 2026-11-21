@@ -46,6 +46,8 @@
 #      as their own bundle (net.sf.openfx.DenoiseSharpen.ofx.bundle, install component
 #      DenoiseSharpen), for the binary releases. Their plug-ins are also in Misc.ofx.bundle, with
 #      the same identifiers and versions: a host must not load both (install one or the other).
+#   -DOFXMISC_ARM64X=ARM64|ARM64EC -DOFXMISC_ARM64X_DIR=<dir> (MSVC): Arm64X plug-ins, from an ARM64
+#      build then an Arm64EC build (cmake/OFXMiscArm64X.cmake; .github/tools/msvc-build.sh arm64x)
 #   -DOFX_LICENSE=GPL (default) or COMMERCIAL ("make LICENSE=...", Natron's NATRON_LICENSE, as in
 #      openfx-gmic): COMMERCIAL builds refuse FFT=fftw3 (FFTW is GPL)
 #   -DFFT=pocketfft|pow2|fftw3 ("make FFT=..."): the FFT of the CImg plugins: pocketfft
@@ -750,3 +752,9 @@ if(BUILD_DEBUGPROXY)
   target_link_libraries(DebugProxy PRIVATE ${CMAKE_DL_LIBS})
   ofx_deploy_bundle(DebugProxy)
 endif()
+
+########################################################################
+# Arm64X (MSVC, two builds): -DOFXMISC_ARM64X=ARM64|ARM64EC, see cmake/OFXMiscArm64X.cmake
+########################################################################
+# after the last plug-in target: it applies to all of them
+include(cmake/OFXMiscArm64X.cmake)
