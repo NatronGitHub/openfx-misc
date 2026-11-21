@@ -456,7 +456,7 @@ source of truth), at the openfx-gmic commit `CIMG_PATCHES_FROM` of
 `CImg/CImgVersion.mk`, applied in the same order, so that both get the same `CImg.h`
 (the same for every `FFT`: CImg 4.0.8 has pocketfft support itself, `cimg_use_pocketfft`,
 and includes `pocketfft_hdronly.h` from the `CImg` directory). They need a POSIX `sh`,
-`awk` and `wc`. A nightly CI job (`.github/tools/check-cimg-patches.sh`) reports when
+`awk`, `head`, `tr` and `wc`. A nightly CI job (`.github/tools/check-cimg-patches.sh`) reports when
 openfx-gmic's scripts or G'MIC version change.
 
 The compiled plugins are placed in subdirectories named after the

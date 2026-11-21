@@ -494,7 +494,7 @@ endfunction()
 # CImg.h is patched with the scripts of openfx-gmic (CImg/patches, see CImgVersion.mk): CIMG_PATCHES,
 # in this order, as CImg/Makefile does, whatever the FFT (CImg.h is the same for every FFT). Each
 # runs as "sh <script> <dir>/CImg.h", and fails if CImg.h does not have the expected code. They need
-# a POSIX sh, awk and wc (Linux, macOS, MSYS2; with MSVC, e.g. Git for Windows' sh.exe in the PATH,
+# a POSIX sh, awk, head, tr and wc (Linux, macOS, MSYS2; with MSVC, e.g. Git for Windows' sh.exe in the PATH,
 # or -DCIMG_PATCH_SH=<path>).
 separate_arguments(_cimg_applied_patches UNIX_COMMAND "${_cimg_patches}")
 foreach(_script IN LISTS _cimg_applied_patches)
