@@ -13,7 +13,9 @@
 # page (native ARM64 builds, about 1 render in 8), garbage in the title otherwise (x64 too). MinGW
 # and the other compilers use std::snprintf and are not affected.
 #
-# The patch declares cimg::_vsnprintf just before cimg::_snprintf, so that the call finds it.
+# The patch declares cimg::_vsnprintf just before MSVC's cimg::_snprintf, inside its
+# '#if cimg_OS==2 && defined(_MSC_VER)' block (also when another platform's block comes first; the
+# result is checked), so that the call finds it.
 # Running it again on a patched file does nothing (it says so), and so does running it on a CImg.h
 # where the call no longer resolves to the CRT's function: cimg::_vsnprintf declared or defined
 # before cimg::_snprintf, or no unqualified _vsnprintf( call left in its body (an upstream fix,
@@ -47,11 +49,13 @@ fi
 state() {
   awk -v marker="$marker" '
     { t = $0; sub(/^[ \t]+/, "", t); sub(/[ \t]+$/, "", t) }
-    # the MSVC block: from "#if cimg_OS==2 && defined(_MSC_VER)" to its #elif, #else or #endif
+    # the MSVC block: from "#if (or #elif) cimg_OS==2 && defined(_MSC_VER)" to its next #elif, #else
+    # or #endif
     t ~ /^#[ \t]*if/ { if (msvc) nest++; else if (t ~ /cimg_OS[ \t]*==[ \t]*2[ \t]*&&[ \t]*defined[ \t]*\([ \t]*_MSC_VER[ \t]*\)/) msvc = 1 }
-    t ~ /^#[ \t]*(elif|else|endif)/ { if (nest) { if (t ~ /^#[ \t]*endif/) nest-- } else msvc = 0 }
+    t ~ /^#[ \t]*(elif|else|endif)/ { if (nest) { if (t ~ /^#[ \t]*endif/) nest-- } else msvc = (t ~ /^#[ \t]*elif/ && t ~ /cimg_OS[ \t]*==[ \t]*2[ \t]*&&[ \t]*defined[ \t]*\([ \t]*_MSC_VER[ \t]*\)/) }
     t == marker { m++; next }
-    !seen && t ~ /^inline[ \t]+int[ \t]+_vsnprintf[ \t]*\(/ { d++ }
+    # (declarations anywhere before it; definitions only in the MSVC block, not e.g. the macOS ones)
+    !seen && t ~ /^inline[ \t]+int[ \t]+_vsnprintf[ \t]*\(/ && (msvc || t ~ /;$/) { d++ }
     !seen && msvc && t ~ /^inline[ \t]+int[ \t]+_snprintf[ \t]*\(/ { seen = 1; fn = 1; infn = 1; depth = 0 }
     infn {
       if (match(t, /(^|[^:_A-Za-z0-9])_vsnprintf[ \t]*\(/)) c++
@@ -79,12 +83,24 @@ fi
 [ "$defs" -ge 1 ] || fail "MSVC's cimg::_vsnprintf not found after cimg::_snprintf"
 [ "$calls" = 1 ] || fail "$calls unqualified calls of _vsnprintf in cimg::_snprintf, expected one"
 
-# the forward declaration, just before cimg::_snprintf, with its indentation
+# the forward declaration, just before the MSVC cimg::_snprintf (the one in the '#if cimg_OS==2
+# && defined(_MSC_VER)' block, as in state()), with its indentation
 awk -v marker="$marker" '
   { t = $0; sub(/^[ \t]+/, "", t); ind = substr($0, 1, length($0) - length(t)) }
-  !done && t ~ /^inline[ \t]+int[ \t]+_snprintf[ \t]*\(/ { print ind marker; done = 1 }
+  t ~ /^#[ \t]*if/ { if (msvc) nest++; else if (t ~ /cimg_OS[ \t]*==[ \t]*2[ \t]*&&[ \t]*defined[ \t]*\([ \t]*_MSC_VER[ \t]*\)/) msvc = 1 }
+  t ~ /^#[ \t]*(elif|else|endif)/ { if (nest) { if (t ~ /^#[ \t]*endif/) nest-- } else msvc = (t ~ /^#[ \t]*elif/ && t ~ /cimg_OS[ \t]*==[ \t]*2[ \t]*&&[ \t]*defined[ \t]*\([ \t]*_MSC_VER[ \t]*\)/) }
+  !done && msvc && t ~ /^inline[ \t]+int[ \t]+_snprintf[ \t]*\(/ { print ind marker; done = 1 }
   { print }' "$f" > "$f.patched"
 set -- $(state "$f.patched")
 [ "$1 $2 $3 $4" = "1 1 1 0" ] || fail "the patched file is not as expected ($*)"
+# and the declaration is in the MSVC block, right before the MSVC cimg::_snprintf
+inblock=$(awk -v marker="$marker" '
+  { t = $0; sub(/^[ \t]+/, "", t); sub(/[ \t]+$/, "", t) }
+  t ~ /^#[ \t]*if/ { if (msvc) nest++; else if (t ~ /cimg_OS[ \t]*==[ \t]*2[ \t]*&&[ \t]*defined[ \t]*\([ \t]*_MSC_VER[ \t]*\)/) msvc = 1 }
+  t ~ /^#[ \t]*(elif|else|endif)/ { if (nest) { if (t ~ /^#[ \t]*endif/) nest-- } else msvc = (t ~ /^#[ \t]*elif/ && t ~ /cimg_OS[ \t]*==[ \t]*2[ \t]*&&[ \t]*defined[ \t]*\([ \t]*_MSC_VER[ \t]*\)/) }
+  prev && msvc && t ~ /^inline[ \t]+int[ \t]+_snprintf[ \t]*\(/ { ok = 1 }
+  { prev = (t == marker && msvc) }
+  END { print ok + 0 }' "$f.patched")
+[ "$inblock" = 1 ] || fail "the declaration is not right before the MSVC cimg::_snprintf, in its #if block"
 mv "$f.patched" "$f"
 printf '%s: patched so that cimg_snprintf() always ends its output with a null character with MSVC (#111)\n' "$f"
