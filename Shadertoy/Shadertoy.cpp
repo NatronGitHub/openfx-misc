@@ -644,8 +644,14 @@ namespace Shadertoy {
     "- Cubemaps: [cube00_0](https://www.shadertoy.com/presets/cube00_0.jpg),  [cube01_0](https://www.shadertoy.com/presets/cube01_0.png),  [cube02_0](https://www.shadertoy.com/presets/cube02_0.jpg),  [cube03_0](https://www.shadertoy.com/presets/cube03_0.png),  [cube04_0](https://www.shadertoy.com/presets/cube04_0.png),  [cube05](https://www.shadertoy.com/presets/cube05_0.png)"
 
 #define kPluginIdentifier "net.sf.openfx.Shadertoy"
+// History:
+// 1.0: initial version
+// 1.1: the Output components are always supported ones (RGBA or Alpha): with an RGB (or other) iChannel0,
+//      the Output is RGBA (opaque for RGB, as Natron made it), instead of the unsupported RGB; the Output
+//      components are only set in the general context, since the plug-in cannot change them in the filter
+//      and generator contexts (issue #217)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -1452,10 +1458,22 @@ ShadertoyPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
 void
 ShadertoyPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
-    // We have to do this because the processing code does not support varying components for srcClip and dstClip
-    // (The OFX spec doesn't state a default value for this)
-    if (_srcClips[0]) {
-        clipPreferences.setClipComponents( *_dstClip, _srcClips[0]->getUnmappedPixelComponents() );
+    // The Output has the components of iChannel0, mapped to the ones that Output supports (RGBA and Alpha).
+    // Only in the general context: in the filter context, the plug-in "cannot change the component type of the
+    // Output clip, it will always be the same as the Source clip", and in the generator context it "cannot
+    // change the component type of the Output clip" (ofxImageEffectContexts.rst).
+    if ( _srcClips[0] && (getContext() == eContextGeneral) ) {
+        const PixelComponentEnum srcComps = _srcClips[0]->getUnmappedPixelComponents();
+        if (srcComps == ePixelComponentAlpha) {
+            clipPreferences.setClipComponents(*_dstClip, ePixelComponentAlpha);
+        } else if (srcComps != ePixelComponentNone) {
+            // RGBA, or RGB (and others) mapped to RGBA: Output does not support RGB
+            clipPreferences.setClipComponents(*_dstClip, ePixelComponentRGBA);
+            if (srcComps == ePixelComponentRGB) {
+                // an RGB image is opaque (Natron also made the RGBA output opaque for the RGB request)
+                clipPreferences.setOutputPremultiplication(eImageOpaque);
+            }
+        }
     }
     clipPreferences.setOutputFrameVarying(true);
     clipPreferences.setOutputHasContinuousSamples(true);

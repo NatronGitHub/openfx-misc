@@ -59,7 +59,9 @@
 #   plug-in supports neither the filter nor the general context;
 # - in the filter context, the Output clip does not support every component
 #   that the Source clip supports (the spec says that Output always has the
-#   components of Source there);
+#   components of Source there), or, in a filter-context render, the Output components
+#   after getClipPreferences (hostDemo --report: clipPreferences.clips) are not the
+#   Source components (a plug-in that remaps Source or Output there, issue #217);
 # - a render fails: hostDemo fails (an action failed: createInstance,
 #   getClipPreferences, getRegionOfDefinition, render...; an image fetch failed;
 #   a float output pixel was not written, i.e. is still NaN; or the plug-in
@@ -679,6 +681,16 @@ for line in open(os.path.join(work, "jobs.txt")):
         for a in r.get("actions") or []:
             if not a.get("ok"):
                 errors.append("action %s failed (%s)" % (a.get("action"), a.get("status")))
+        if ctx == "filter":
+            # "a plugin cannot change the component type of the Output clip, it will always be the
+            # same as the Source clip" (ofxImageEffectContexts.rst, The Filter Context), and "mandated
+            # input clips cannot have their component types remapped, nor can the output"
+            # (ofxClipPreferences.rst): after getClipPreferences, Output has the components of Source
+            cpc = (r.get("clipPreferences") or {}).get("clips") or {}
+            src, dst = cpc.get("Source") or {}, cpc.get("Output") or {}
+            if src.get("components") and dst.get("components") and src["components"] != dst["components"]:
+                errors.append("filter context: after getClipPreferences, Output is %s and Source %s (Output must"
+                              " have the components of Source)" % (dst["components"], src["components"]))
         renders = r.get("renders") or []
         is_identity = any((k.get("isIdentity") or {}).get("identity") for k in renders)
         for m in r.get("messages") or []:
