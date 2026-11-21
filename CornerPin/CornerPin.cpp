@@ -1144,7 +1144,11 @@ CornerPinTransformInteract::draw(const DrawArgs &args)
         d.glColor3f( (float)color.r * l, (float)color.g * l, (float)color.b * l );
         for (int i = enableBegin; i < enableEnd; ++i) {
             if (enable[i]) {
-                d.bitmapString(p[i].x, p[i].y + POINT_SIZE * screenPixelRatio, useFrom ? kParamFrom[i] : kParamTo[i], font);
+                // the label is POINT_SIZE screen pixels above the point, in canonical units
+                // (kOfxInteractPropPixelScale: "The size of a real screen pixel under the
+                // interact's canonical projection"; the screen pixel ratio is for framebuffer
+                // sizes such as glPointSize, so it is not applied here, as for the handles)
+                d.bitmapString(p[i].x, p[i].y + POINT_SIZE * args.pixelScale.y, useFrom ? kParamFrom[i] : kParamTo[i], font);
             }
         }
 
