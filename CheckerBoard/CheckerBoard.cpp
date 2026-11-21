@@ -47,6 +47,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "See also: https://web.archive.org/web/20220807183203/http://www.opticalenquiry.com/nuke/index.php?title=Constant,_CheckerBoard,_ColorBars,_ColorWheel"
 
 #define kPluginIdentifier "net.sf.openfx.CheckerBoardPlugin"
+// history:
+// 1.0 initial version
+//     (no version change) removed the XY render branch: Output never declares XY, so the generator
+//     never offers it and a conforming host never gives it; other components give kOfxStatErrFormat
+//     (issue #226). Output is unchanged.
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -99,13 +104,6 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamCenterLineWidth "centerlineWidth"
 #define kParamCenterLineWidthLabel "Centerline Width"
 #define kParamCenterLineWidthHint "Width, in pixels, of the center lines."
-
-#ifdef OFX_EXTENSIONS_NATRON
-#define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentXY || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
-#else
-#define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
-#endif
-
 
 /** @brief  Base class used to blend two images together */
 class CheckerBoardProcessorBase
@@ -505,8 +503,6 @@ CheckerBoardPlugin::render(const RenderArguments &args)
     BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-    assert(OFX_COMPONENTS_OK(dstComponents));
-
     checkComponents(dstBitDepth, dstComponents);
 
     // do the rendering
@@ -514,13 +510,10 @@ CheckerBoardPlugin::render(const RenderArguments &args)
         renderInternal<4>(args, dstBitDepth);
     } else if (dstComponents == ePixelComponentRGB) {
         renderInternal<3>(args, dstBitDepth);
-#ifdef OFX_EXTENSIONS_NATRON
-    } else if (dstComponents == ePixelComponentXY) {
-        renderInternal<2>(args, dstBitDepth);
-#endif
-    } else {
-        assert(dstComponents == ePixelComponentAlpha);
+    } else if (dstComponents == ePixelComponentAlpha) {
         renderInternal<1>(args, dstBitDepth);
+    } else {
+        throwSuiteStatusException(kOfxStatErrFormat);
     }
 }
 

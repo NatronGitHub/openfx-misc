@@ -87,6 +87,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 2.0: use kNatronOfxParamProcess* parameters
 // version 2.1: antialiased render & remove blackOutside parameter (the outside color is always color0)
 // version 2.2: add angle parameter
+//              (no version change) removed the XY render branch: Output never declares XY, so a
+//              conforming host never gives it; other components give kOfxStatErrFormat (issue #226).
+//              Output is unchanged.
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 2 // Increment this when you have fixed a bug or made it faster.
 
@@ -1072,18 +1075,14 @@ RectanglePlugin::render(const RenderArguments &args)
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
-    assert(OFX_COMPONENTS_OK(dstComponents));
     if (dstComponents == ePixelComponentRGBA) {
         renderInternal<4>(args, dstBitDepth);
     } else if (dstComponents == ePixelComponentRGB) {
         renderInternal<3>(args, dstBitDepth);
-#ifdef OFX_EXTENSIONS_NATRON
-    } else if (dstComponents == ePixelComponentXY) {
-        renderInternal<2>(args, dstBitDepth);
-#endif
-    } else {
-        assert(dstComponents == ePixelComponentAlpha);
+    } else if (dstComponents == ePixelComponentAlpha) {
         renderInternal<1>(args, dstBitDepth);
+    } else {
+        throwSuiteStatusException(kOfxStatErrFormat);
     }
 }
 
