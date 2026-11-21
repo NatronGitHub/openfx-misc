@@ -71,7 +71,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 // 1.1: an empty source format no longer gives NaN cell sizes and image areas (NaN audit);
-//      renders on hosts without the plane suite (e.g. OFX 1.4 hosts), with the colour plane only
+//      renders on hosts without the plane suite (e.g. OFX 1.4 hosts), with the colour plane only;
+//      in the filter context, Source is RGBA, so that the RGBA Output has the components of Source, as the
+//      OpenFX spec mandates (issue #190)
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -704,20 +706,27 @@ LayerContactSheetPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 void
 LayerContactSheetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                                  OFX::ContextEnum /*context*/)
+                                                  OFX::ContextEnum context)
 {
     // Source clip only in the filter context
     // create the mandated source clip
     {
         ClipDescriptor *srcClip; 
         srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
-        srcClip->addSupportedComponent(ePixelComponentNone);
-#ifdef OFX_EXTENSIONS_NATRON
-        srcClip->addSupportedComponent(ePixelComponentXY);
-#endif
-        srcClip->addSupportedComponent(ePixelComponentRGB);
         srcClip->addSupportedComponent(ePixelComponentRGBA);
-        srcClip->addSupportedComponent(ePixelComponentAlpha);
+        if (context != eContextFilter) {
+            // The Output is RGBA. In the filter context, "a plugin cannot change the component
+            // type of the Output clip, it will always be the same as the Source clip"
+            // (ofxImageEffectContexts.rst, The Filter Context): Source is RGBA there, and the host
+            // maps the other components to RGBA ("it must map the clip to RGBA in a manner that is
+            // transparent to the plugin", ofxClipPreferences.rst).
+            srcClip->addSupportedComponent(ePixelComponentNone);
+#ifdef OFX_EXTENSIONS_NATRON
+            srcClip->addSupportedComponent(ePixelComponentXY);
+#endif
+            srcClip->addSupportedComponent(ePixelComponentRGB);
+            srcClip->addSupportedComponent(ePixelComponentAlpha);
+        }
         srcClip->setTemporalClipAccess(false);
         srcClip->setSupportsTiles(kSupportsTiles);
         srcClip->setIsMask(false);

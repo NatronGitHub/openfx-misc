@@ -52,6 +52,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 2.0: in "Alpha" and "Image and Alpha" output modes, premultiply RGB by the source alpha
 //              (version 1 premultiplied RGB by the suppress mask);
 //              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79)
+// versions 1.1 and 2.0: in the filter and paint contexts, Source is RGBA and the Output components are those of
+//              Source, as the OpenFX spec mandates (issue #190; the Alpha modes remapped Source and Output to RGBA)
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -774,6 +776,11 @@ ColorSuppressPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     if ( !_srcClip || !_srcClip->isConnected() || !_dstClip || !_dstClip->isConnected() ) {
         return;
     }
+    if (getContext() != eContextGeneral) {
+        // filter and paint contexts: the clip components cannot be changed, Output has the
+        // components of Source, which is RGBA (see describeInContext)
+        return;
+    }
 
     OutputModeEnum outputMode = (OutputModeEnum)_outputMode->getValue();
     switch (outputMode) {
@@ -836,7 +843,14 @@ ColorSuppressPluginFactory<majorVersion>::describeInContext(ImageEffectDescripto
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
 
     srcClip->addSupportedComponent(ePixelComponentRGBA);
-    srcClip->addSupportedComponent(ePixelComponentRGB);
+    if (context == eContextGeneral) {
+        // The Alpha output modes need an RGBA Output. In the filter and paint contexts, "a plugin
+        // cannot change the component type of the Output clip, it will always be the same as the
+        // Source clip" (ofxImageEffectContexts.rst): Source is RGBA there, and the host maps an RGB
+        // input to RGBA ("it must map the clip to RGBA in a manner that is transparent to the
+        // plugin", ofxClipPreferences.rst).
+        srcClip->addSupportedComponent(ePixelComponentRGB);
+    }
 #ifdef OFX_EXTENSIONS_NATRON
     //srcClip->addSupportedComponent(ePixelComponentXY);
 #endif

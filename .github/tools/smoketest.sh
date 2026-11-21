@@ -57,6 +57,9 @@
 # default). A plug-in fails if:
 # - hostDemo --describe fails (load, describe or describeInContext), or the
 #   plug-in supports neither the filter nor the general context;
+# - in the filter context, the Output clip does not support every component
+#   that the Source clip supports (the spec says that Output always has the
+#   components of Source there);
 # - a render fails: hostDemo fails (an action failed: createInstance,
 #   getClipPreferences, getRegionOfDefinition, render...; an image fetch failed;
 #   a float output pixel was not written, i.e. is still NaN; or the plug-in
@@ -450,6 +453,16 @@ for line in open(os.path.join(work, "plugins.txt")):
                   % (tag, pid, ctx, ctx, text(os.path.join(d, "describe.log"))), file=sys.stderr)
             n += 1  # not also "no render"
             continue
+        if ctx == "filter":
+            # "a plugin cannot change the component type of the Output clip, it will always be the
+            # same as the Source clip" (ofxImageEffectContexts.rst, The Filter Context): Output must
+            # support every component that Source supports (issue #190; None, no image, is ignored)
+            comps = dict((clip["name"], set(clip.get("supportedComponents") or []) - {"OfxImageComponentNone"})
+                         for clip in c["clips"])
+            if "Source" in comps and "Output" in comps and not comps["Source"] <= comps["Output"]:
+                print("FAIL|%s|%s|%s|filter context: Source supports %s, Output only %s (Output must have the components of Source)"
+                      % (tag, pid, ctx, " ".join(sorted(comps["Source"])), " ".join(sorted(comps["Output"]))),
+                      file=sys.stderr)
         inputs, k = {}, 0
         for clip in c["clips"]:
             name = clip["name"]

@@ -72,7 +72,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginIdentifier "net.sf.openfx.HSVToolPlugin"
 // version 1.1: wrap the rotated hue into the hue circle (bug fix: some rotations gave magenta), and
 //              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79);
-//              normalizing an angle no longer converts it to int (undefined beyond the int range) (#178)
+//              normalizing an angle no longer converts it to int (undefined beyond the int range) (#178);
+//              in the filter and paint contexts, Source is RGBA and the Output components are those of Source,
+//              as the OpenFX spec mandates (issue #190; Output Alpha remapped Source and Output to RGBA)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -1729,8 +1731,12 @@ HSVToolPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 
     if (outputAlpha != eOutputAlphaSource) {
         // output must be RGBA, output image is unpremult
-        clipPreferences.setClipComponents(*_dstClip, ePixelComponentRGBA);
-        clipPreferences.setClipComponents(*_srcClip, ePixelComponentRGBA);
+        if (getContext() == eContextGeneral) {
+            // in the filter and paint contexts, the clip components cannot be changed: Output has
+            // the components of Source, which is RGBA (see describeInContext)
+            clipPreferences.setClipComponents(*_dstClip, ePixelComponentRGBA);
+            clipPreferences.setClipComponents(*_srcClip, ePixelComponentRGBA);
+        }
         clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
     }
 }
@@ -1855,7 +1861,14 @@ HSVToolPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
 
     srcClip->addSupportedComponent(ePixelComponentRGBA);
-    srcClip->addSupportedComponent(ePixelComponentRGB);
+    if (context == eContextGeneral) {
+        // The Output Alpha parameter needs an RGBA Output. In the filter and paint contexts, "a plugin
+        // cannot change the component type of the Output clip, it will always be the same as the
+        // Source clip" (ofxImageEffectContexts.rst): Source is RGBA there, and the host maps an RGB
+        // input to RGBA ("it must map the clip to RGBA in a manner that is transparent to the
+        // plugin", ofxClipPreferences.rst).
+        srcClip->addSupportedComponent(ePixelComponentRGB);
+    }
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
