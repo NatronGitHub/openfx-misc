@@ -26,12 +26,20 @@
 #include <string>
 #include <vector>
 #include <cstdlib> // getenv
+#include <cstdio> // rename
+#include <cerrno>
+#include <algorithm> // min
+#include <atomic>
 #ifdef _WIN32
-#include <cstdio> // _wfopen
 #include <cwchar>
+#include <fcntl.h> // _O_CREAT...
+#include <io.h> // _wsopen, _write, _close
+#include <process.h> // _getpid
+#include <share.h> // _SH_DENYRW
+#include <sys/stat.h> // _S_IREAD, _S_IWRITE
 #else
 #include <fcntl.h> // open
-#include <unistd.h> // write, close
+#include <unistd.h> // write, close, unlink, getpid
 #endif
 
 #include "ofxsProcessing.H"
@@ -774,12 +782,8 @@ appendHostInfo(std::ostringstream& oss)
 {
     const ImageEffectHostDescription& h = *getImageEffectHostDescription();
 
-    // Support sets 1.0 when the host does not set kOfxPropAPIVersion (OFX 1.2)
-    oss << "OFX API version " << h.APIVersionMajor << '.' << h.APIVersionMinor;
-    if ( (h.APIVersionMajor == 1) && (h.APIVersionMinor == 0) ) {
-        oss << " (or kOfxPropAPIVersion not set)";
-    }
-    oss << '\n';
+    // (Support sets 1.0 when the host does not set kOfxPropAPIVersion, OFX 1.2)
+    oss << "OFX API version " << h.APIVersionMajor << '.' << h.APIVersionMinor << '\n';
     oss << "hostName=" << h.hostName << '\n';
     oss << "hostLabel=" << h.hostLabel << '\n';
     oss << "hostVersion=" << h.versionMajor << '.' << h.versionMinor << '.' << h.versionMicro;
@@ -823,6 +827,9 @@ appendHostInfo(std::ostringstream& oss)
     oss << "supportsCustomAnimation=" << h.supportsCustomAnimation << '\n';
     oss << "supportsParametricParameter=" << h.supportsParametricParameter << '\n';
     oss << "supportsParametricAnimation=" << h.supportsParametricAnimation << '\n';
+#ifdef OFX_EXTENSIONS_NUKE
+    oss << "canTransform=" << h.canTransform << '\n';
+#endif
     oss << "nativeOrigin=" << nativeOriginName(h.nativeOrigin) << '\n';
     oss << "osHandle=" << (h.osHandle ? 1 : 0) << '\n';
     oss << "supportsCPURender=" << h.supportsCPURender << '\n';
@@ -843,7 +850,6 @@ appendHostInfo(std::ostringstream& oss)
     oss << '\n';
 #ifdef OFX_EXTENSIONS_NUKE
     oss << "supportsCamera=" << h.supportsCamera << '\n';
-    oss << "canTransform=" << h.canTransform << '\n';
     oss << "isMultiPlanar=" << h.isMultiPlanar << '\n';
 #endif
     oss << "maxParameters=" << h.maxParameters << '\n';
@@ -929,44 +935,86 @@ winGetEnv(const wchar_t* name)
 
 // Save the host info text to OFXHostInfo-<hostName>.txt in the user's temporary directory, because
 // some hosts truncate messages or show them in a small dialog. Best effort, never throws: returns
-// the file name to show the user, or an empty string if the file could not be written.
+// the file name to show the user, or an empty string if the file could not be written (then no
+// file, not even a partial one, is left behind).
+// The temporary directory may be shared (/tmp, with TMPDIR unset on Linux), and another user may
+// have planted a FIFO, a symbolic or hard link, or a file of their own at the final name: the text
+// is written to a new file next to it, created with O_EXCL (never an existing file, FIFO or link)
+// and mode 0600, which then replaces the final name with rename(). If the final name belongs to
+// another user in a sticky directory, rename() fails, and only the message is shown.
 static std::string
 saveHostInfo(const std::string& hostName,
              const std::string& text)
 {
-    // keep only portable file name characters of the host name
+    // keep only portable file name characters of the host name, and at most 64 of them
     std::string fileName = "OFXHostInfo-";
-    for (std::size_t i = 0; i < hostName.size(); ++i) {
+    for (std::size_t i = 0; i < hostName.size() && i < 64; ++i) {
         const char c = hostName[i];
         const bool ok = ( (c >= 'A') && (c <= 'Z') ) || ( (c >= 'a') && (c <= 'z') ) || ( (c >= '0') && (c <= '9') ) ||
                         (c == '.') || (c == '-') || (c == '_');
         fileName += ok ? c : '_';
     }
     fileName += ".txt";
+    // a unique suffix for the new file (several instances, or hosts, may save at the same time)
+    static std::atomic<unsigned> counter(0);
+    std::ostringstream suffix;
 #ifdef _WIN32
-    std::wstring path = winGetEnv(L"TEMP");
-    if ( path.empty() ) {
-        path = winGetEnv(L"TMP");
+    suffix << ".tmp" << _getpid() << '.' << counter++;
+#else
+    suffix << ".tmp" << getpid() << '.' << counter++;
+#endif
+
+#ifdef _WIN32
+    std::wstring dir = winGetEnv(L"TEMP");
+    if ( dir.empty() ) {
+        dir = winGetEnv(L"TMP");
     }
-    if ( path.empty() ) {
+    if ( dir.empty() ) {
         return std::string();
     }
-    path += L'\\';
+    dir += L'\\';
+    std::wstring path = dir;
     path.append( fileName.begin(), fileName.end() ); // ASCII only
-    FILE* f = NULL;
+    const std::string suffixStr = suffix.str();
+    std::wstring tmpPath = path;
+    tmpPath.append( suffixStr.begin(), suffixStr.end() ); // ASCII only
+    // CRLF line endings (Notepad), written in binary mode
+    std::string data;
+    data.reserve( text.size() + text.size() / 32 );
+    for (std::size_t i = 0; i < text.size(); ++i) {
+        if (text[i] == '\n') {
+            data += '\r';
+        }
+        data += text[i];
+    }
+    int fd = -1;
+    const int oflag = _O_CREAT | _O_EXCL | _O_WRONLY | _O_BINARY | _O_NOINHERIT;
 #ifdef _MSC_VER
-    if (_wfopen_s(&f, path.c_str(), L"w") != 0) {
-        f = NULL;
+    if (_wsopen_s(&fd, tmpPath.c_str(), oflag, _SH_DENYRW, _S_IREAD | _S_IWRITE) != 0) {
+        fd = -1;
     }
 #else
-    f = _wfopen(path.c_str(), L"w");
+    fd = _wsopen(tmpPath.c_str(), oflag, _SH_DENYRW, _S_IREAD | _S_IWRITE);
 #endif
-    if (!f) {
+    if (fd < 0) {
         return std::string();
     }
-    const bool ok = std::fwrite(text.data(), 1, text.size(), f) == text.size();
-    const bool closed = std::fclose(f) == 0;
-    if (!ok || !closed) {
+    std::size_t written = 0;
+    while ( written < data.size() ) {
+        const std::size_t chunk = std::min<std::size_t>(data.size() - written, 1 << 20);
+        const int n = _write(fd, data.data() + written, (unsigned int)chunk);
+        if (n <= 0) {
+            break;
+        }
+        written += (std::size_t)n;
+    }
+    const bool closed = _close(fd) == 0;
+    // _wrename does not replace an existing file: remove the old one first (%TEMP% is per-user)
+    if ( (written != data.size()) || !closed ||
+         ( (_wremove( path.c_str() ) != 0) && (errno != ENOENT) ) ||
+         (_wrename( tmpPath.c_str(), path.c_str() ) != 0) ) {
+        _wremove( tmpPath.c_str() );
+
         return std::string();
     }
 
@@ -978,21 +1026,30 @@ saveHostInfo(const std::string& hostName,
         path += '/';
     }
     path += fileName;
-    // O_NOFOLLOW: never write through a symbolic link planted in a shared /tmp
-    const int fd = open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW | O_CLOEXEC, 0600);
+    const std::string tmpPath = path + suffix.str();
+    const int fd = open(tmpPath.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0600);
     if (fd < 0) {
         return std::string();
     }
     std::size_t written = 0;
     while ( written < text.size() ) {
         const ssize_t n = write(fd, text.data() + written, text.size() - written);
-        if (n <= 0) {
+        if (n < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+            break;
+        }
+        if (n == 0) {
             break;
         }
         written += (std::size_t)n;
     }
     const bool closed = close(fd) == 0;
-    if ( (written != text.size()) || !closed ) {
+    // rename() replaces the directory entry atomically, whatever it was (it never follows a link)
+    if ( (written != text.size()) || !closed || (std::rename( tmpPath.c_str(), path.c_str() ) != 0) ) {
+        unlink( tmpPath.c_str() );
+
         return std::string();
     }
 

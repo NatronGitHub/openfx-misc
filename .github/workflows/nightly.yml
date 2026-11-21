@@ -319,9 +319,9 @@ jobs:
   # Windows MSVC: the downloadable Windows nightlies (#203). They are built with MSVC, since users
   # also run them in third-party hosts; only the OSMesa Shadertoy stays on MSYS2 UCRT64
   # (release.yml). .github/tools/msvc-build.sh (also run by ci.yml for arm64x) builds Misc, CImg,
-  # Shadertoy (OpenGL) and the standalone DenoiseSharpen and NoOp with CMake and Ninja (C++17), with the
-  # static CRT (CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded: no vcruntime DLL to ship) and without
-  # OpenMP (if it is ever enabled, vcomp140.dll must be pinned and shipped app-local, as
+  # Shadertoy (OpenGL) and the standalone DenoiseSharpen and NoOp with CMake and Ninja (C++17),
+  # with the static CRT (CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded: no vcruntime DLL to ship) and
+  # without OpenMP (if it is ever enabled, vcomp140.dll must be pinned and shipped app-local, as
   # openfx-gmic#108: see the script), and checks each binary with dumpbin (machine type, no
   # MSVC runtime DLL). Both run on windows-2025, whose Visual Studio 2022 has the ARM64 and
   # ARM64EC cross tools:
