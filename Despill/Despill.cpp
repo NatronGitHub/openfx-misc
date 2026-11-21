@@ -63,8 +63,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //     Spill Map; Mix and the mask also mixed with the non-finite source), and the results computed
 //     in double are kept in the float range. The output for finite inputs is unchanged.
 //     XY and Alpha Output images (never declared, so never given by a conforming host) are refused
-//     with kOfxStatErrFormat (issue #226): they were dispatched to a processor that left them
-//     unwritten. RGBA and RGB output is unchanged.
+//     with kOfxStatErrFormat (issue #226): they were processed as if they had 3 or 4
+//     components (a Debug assert; in Release, a read past the source pixel). RGBA and RGB output
+//     is unchanged.
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
