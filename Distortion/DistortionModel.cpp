@@ -48,6 +48,63 @@ nonZero(double x)
 #define EPSJAC 1.e-3 // epsilon for Jacobian calculation
 #define EPSCONV 1.e-4 // epsilon for convergence test
 
+// A second Newton solver, only used to check convergence for the RoD estimate (distortConverged,
+// undistortConverged), when the one used by the render (below) did not converge: the full 2x2
+// Jacobian (by finite differences) instead of the column norms, and 50 iterations instead of 10.
+// The column-norm step is wrong when the Jacobian is far from diagonal (e.g. a decentered model)
+// and converges slowly near a fold, so that ordinary parameters often hit the 10 iterations.
+// Finite only: a singular Jacobian stops, and an iterate beyond 1e9 pixels is not converged
+// (its function values stay finite for every model). The result may be a root on another branch
+// of the model: the caller checks the orientation there.
+template<class Func>
+static bool
+newtonFullJacobian(const Func& f,
+                   double tx,
+                   double ty,
+                   double* xo,
+                   double* yo)
+{
+    double x = tx;
+    double y = ty;
+    for (int iter = 0; iter < 50; ++iter) {
+        double fx, fy, fx10, fy10, fx01, fy01;
+        f(x, y, &fx, &fy);
+        f(x + EPSJAC, y, &fx10, &fy10);
+        f(x, y + EPSJAC, &fx01, &fy01);
+        const double a = (fx10 - fx) / EPSJAC;
+        const double b = (fx01 - fx) / EPSJAC;
+        const double c = (fy10 - fy) / EPSJAC;
+        const double d = (fy01 - fy) / EPSJAC;
+        const double det = a * d - b * c;
+        const double rx = fx - tx;
+        const double ry = fy - ty;
+        if (std::abs(det) < 1e-12) {
+            return false;
+        }
+        const double dx = (d * rx - b * ry) / det;
+        const double dy = (a * ry - c * rx) / det;
+        x -= dx;
+        y -= dy;
+        if (std::abs(x) > 1e9 || std::abs(y) > 1e9) {
+            return false;
+        }
+        if (dx * dx + dy * dy < EPSCONV) {
+            double rx1, ry1;
+            f(x, y, &rx1, &ry1);
+            rx1 -= tx;
+            ry1 -= ty;
+            if (rx1 * rx1 + ry1 * ry1 < EPSCONV) {
+                *xo = x;
+                *yo = y;
+
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 bool
 DistortionModelUndistort::distortNewton(const double xu,
                                         const double yu,
@@ -126,6 +183,14 @@ DistortionModelUndistort::distortNewton(const double xu,
         xr -= xu;
         yr -= yu;
         converged = (xr * xr + yr * yr < EPSCONV);
+    }
+    if (!converged && checkResidual) {
+        // RoD only: try the full-Jacobian solver (the render never gets here)
+        struct F {
+            const DistortionModelUndistort* m;
+            void operator()(double x, double y, double* fx, double* fy) const { m->undistort(x, y, fx, fy); }
+        } f = { this };
+        converged = newtonFullJacobian(f, xu, yu, xd, yd);
     }
 
     return converged;
@@ -227,6 +292,14 @@ DistortionModelDistort::undistortNewton(const double xd,
         xr -= xd;
         yr -= yd;
         converged = (xr * xr + yr * yr < EPSCONV);
+    }
+    if (!converged && checkResidual) {
+        // RoD only: try the full-Jacobian solver (the render never gets here)
+        struct F {
+            const DistortionModelDistort* m;
+            void operator()(double x, double y, double* fx, double* fy) const { m->distort(x, y, fx, fy); }
+        } f = { this };
+        converged = newtonFullJacobian(f, xd, yd, xu, yu);
     }
 
     return converged;
