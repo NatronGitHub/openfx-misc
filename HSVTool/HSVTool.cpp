@@ -76,8 +76,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              normalizing an angle no longer converts it to int (undefined beyond the int range) (#178);
 //              in the filter and paint contexts, Source is RGBA and the Output components are those of Source,
 //              as the OpenFX spec mandates (issue #190; Output Alpha remapped Source and Output to RGBA);
-//              with an Output Alpha other than Source, a NaN or infinite Mask sample gives a finite alpha (NaN is
-//              0, +-inf is +-FLT_MAX, as in the mask mix), instead of NaN (issue #220)
+//              with an Output Alpha other than Source, a NaN Mask sample is 0 (it was ignored) and +-inf is
+//              +-FLT_MAX (-inf gave a -inf alpha), as in the mask mix (issue #220)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 

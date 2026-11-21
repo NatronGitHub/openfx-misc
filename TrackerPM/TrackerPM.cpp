@@ -63,8 +63,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "the tracker will continue tracking, picking up the previous/next frame as reference. "
 #define kPluginIdentifier "net.sf.openfx.TrackerPM"
 // version 1.1: works in the filter context (it fetched the Mask clip that is not defined there);
-//              a NaN or infinite Mask sample gives a finite pattern weight (NaN is 0, +-inf is +-FLT_MAX, as
-//              in the mask mix), and the weighted sums stay finite, instead of giving a NaN score (issue #220)
+//              a NaN Mask sample is 0 (it gave NaN scores, so the track failed) and +-inf is +-FLT_MAX, as in the
+//              mask mix; a position whose score overflowed (inf or NaN, never chosen) is not scored (kScoreNone),
+//              and an NCC/ZNCC score that overflowed to -inf is -DBL_MAX, so the correlation is finite (issue #220)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -72,9 +73,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // best score before any position is scored. A finite value, so that it can be tested (with
 // -ffinite-math-only, x == infinity is assumed false), and larger than any finite score.
 #define kScoreNone DBL_MAX
-// The NCC and ZNCC scores are kept within +-kScoreMax (see computeScore), so that the reported score
-// and the subpixel refinement (differences and sums of scores) stay finite.
-#define kScoreMax (DBL_MAX / 8)
+// A float product a*b overflows to +-inf (round to nearest) exactly when the exact product, which the
+// double product of two floats is, has a magnitude of at least 2^128 - 2^103: a finite comparison
+// (as in SupportExt's ofxsMixValue) (issue #220).
+#define kFloatOverflow 340282356779733661637539395458142568448. // 2^128-2^103
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -228,17 +230,12 @@ public:
 };
 
 
-// v beyond +-vmax gives +-vmax, with comparisons only: every value within the range is unchanged, and
-// a NaN (from a NaN Source sample) falls through, as before (issue #220).
-// A float product of a pattern weight, from a huge or infinite Mask sample (up to FLT_MAX), and a sample
-// or another weight may overflow to +-inf (then inf * 0 or inf - inf would give NaN): it is kept within
-// +-FLT_MAX.
-template<typename T>
-inline T
-clampMagnitude(T v,
-               T vmax)
+// Does the float product a*b overflow to +-inf?
+inline bool
+floatProductOverflows(float a,
+                      double b)
 {
-    return (v > vmax) ? vmax : ( (v < -vmax) ? -vmax : v );
+    return std::fabs( (double)a * b ) >= kFloatOverflow;
 }
 
 // The "masked", "filter" and "clamp" template parameters allow filter-specific optimization
@@ -253,6 +250,8 @@ protected:
     auto_ptr<ImageMemory> _weightImg;
     float *_weightData;
     double _weightTotal;
+    // a squared weight overflows in float (SSD): no position can be scored (issue #220)
+    bool _weightSquareOverflows;
 
 public:
     TrackerPMProcessor(ImageEffect &instance)
@@ -262,6 +261,7 @@ public:
         , _weightImg()
         , _weightData(NULL)
         , _weightTotal(0.)
+        , _weightSquareOverflows(false)
     {
     }
 
@@ -301,6 +301,7 @@ private:
         PIX *patternPtr = _patternData;
         float *weightPtr = _weightData;
         _weightTotal = 0.;
+        _weightSquareOverflows = false;
 
         // extract ref and mask
         for (int i = _refRectPixel.y1; i < _refRectPixel.y2; ++i) {
@@ -330,6 +331,11 @@ private:
                     }
                 }
                 _weightTotal += *weightPtr;
+                // with a huge weight (from a huge or infinite Mask sample), the SSD weight * weight
+                // overflowed to inf, and every score was inf or NaN (inf * 0): none is scored, as before
+                if ( floatProductOverflows(*weightPtr, *weightPtr) ) {
+                    _weightSquareOverflows = true;
+                }
             }
         }
 
@@ -357,8 +363,14 @@ private:
     template<enum TrackerScoreEnum scoreTypeE>
     double computeScore(int x,
                         int y,
-                        const double refMean[3])
+                        const double refMean[3],
+                        bool refMeanOverflows)
     {
+        // see setValues and multiThreadProcessImagesForScore (issue #220)
+        if ( ( (scoreTypeE == eTrackerSSD) && _weightSquareOverflows ) ||
+             ( (scoreTypeE == eTrackerZNCC) && refMeanOverflows ) ) {
+            return kScoreNone;
+        }
         double score = 0;
         double otherSsq = 0.;
         double otherMean[3];
@@ -382,7 +394,12 @@ private:
                     othery = (std::max)( _otherImg->getBounds().y1, (std::min)(othery, _otherImg->getBounds().y2 - 1) );
                     const PIX *otherPix = (const PIX *) _otherImg->getPixelAddress(otherx, othery);
                     for (int c = 0; c < scoreComps; ++c) {
-                        otherMean[c] += clampMagnitude<float>(*weightPtr * otherPix[c], FLT_MAX);
+                        // a product that overflows in float made this score inf or NaN: not scored, as
+                        // before (the other positions are still scored)
+                        if ( floatProductOverflows(*weightPtr, otherPix[c]) ) {
+                            return kScoreNone;
+                        }
+                        otherMean[c] += *weightPtr * otherPix[c];
                     }
                 }
             }
@@ -415,7 +432,7 @@ private:
                     switch (scoreTypeE) {
                     case eTrackerSSD:
                         // reference is squared in SSD, so is the weight
-                        score += clampMagnitude<float>(weight * weight, FLT_MAX) * aggregateSD(refPix[c], otherPix[c]);
+                        score += weight * weight * aggregateSD(refPix[c], otherPix[c]);
                         break;
                     case eTrackerSAD:
                         score += weight * aggregateAD(refPix[c], otherPix[c]);
@@ -435,8 +452,11 @@ private:
         if ( (scoreTypeE == eTrackerNCC) || (scoreTypeE == eTrackerZNCC) ) {
             double sdev = std::sqrt( (std::max)(otherSsq, 0.) );
             if (sdev != 0.) {
-                // the quotient may overflow to +-inf with huge weights (see clampMagnitude) and a tiny sdev
-                score = clampMagnitude<double>(score / sdev, kScoreMax);
+                // the quotient may overflow to +-inf with huge weights and a tiny sdev: +inf gives
+                // DBL_MAX (kScoreNone, never chosen, as before), -inf gives -DBL_MAX (chosen, as before,
+                // with a finite correlation); every finite quotient is unchanged
+                const double q = score / sdev;
+                score = (q > DBL_MAX) ? DBL_MAX : ( (q < -DBL_MAX) ? -DBL_MAX : q );
             } else {
                 score = kScoreNone;
             }
@@ -463,6 +483,7 @@ private:
 
         const int scoreComps = (std::min)(nComponents, 3);
         double refMean[3];
+        bool refMeanOverflows = false;
         if (scoreTypeE == eTrackerZNCC) {
             for (int c = 0; c < 3; ++c) {
                 refMean[c] = 0;
@@ -478,7 +499,12 @@ private:
                     assert( patternIdx == ( (i - _refRectPixel.y1) * (_refRectPixel.x2 - _refRectPixel.x1) + (j - _refRectPixel.x1) ) );
                     const PIX *refPix = patternPtr;
                     for (int c = 0; c < scoreComps; ++c) {
-                        refMean[c] += clampMagnitude<float>(*weightPtr * refPix[c], FLT_MAX);
+                        // a product that overflows in float made every score inf or NaN: none is
+                        // scored, as before (issue #220)
+                        if ( floatProductOverflows(*weightPtr, refPix[c]) ) {
+                            refMeanOverflows = true;
+                        }
+                        refMean[c] += *weightPtr * refPix[c];
                     }
                 }
             }
@@ -494,7 +520,7 @@ private:
             }
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
-                double score = computeScore<scoreTypeE>(x, y, refMean);
+                double score = computeScore<scoreTypeE>(x, y, refMean, refMeanOverflows);
                 if (score < bestScore) {
                     bestScore = score;
                     point.x = x;
@@ -515,8 +541,8 @@ private:
             // don't block other threads
             _bestMatchMutex.unlock();
             // compute subpixel position.
-            double scorepc = computeScore<scoreTypeE>(point.x - 1, point.y, refMean);
-            double scorenc = computeScore<scoreTypeE>(point.x + 1, point.y, refMean);
+            double scorepc = computeScore<scoreTypeE>(point.x - 1, point.y, refMean, refMeanOverflows);
+            double scorenc = computeScore<scoreTypeE>(point.x + 1, point.y, refMean, refMeanOverflows);
             // only with neighbours that have a score (kScoreNone would give dx = 0.5)
             if ( (scorepc < kScoreNone) && (scorenc < kScoreNone) && (bestScore < scorepc) && (bestScore <= scorenc) ) {
                 // don't simplify the denominator in the following expression,
@@ -527,8 +553,8 @@ private:
                     assert(-0.5 < dx && dx <= 0.5);
                 }
             }
-            double scorecp = computeScore<scoreTypeE>(point.x, point.y - 1, refMean);
-            double scorecn = computeScore<scoreTypeE>(point.x, point.y + 1, refMean);
+            double scorecp = computeScore<scoreTypeE>(point.x, point.y - 1, refMean, refMeanOverflows);
+            double scorecn = computeScore<scoreTypeE>(point.x, point.y + 1, refMean, refMeanOverflows);
             if ( (scorecp < kScoreNone) && (scorecn < kScoreNone) && (bestScore < scorecp) && (bestScore <= scorecn) ) {
                 // don't simplify the denominator in the following expression,
                 // 2*bestScore - scorenc - scorepc may cause an underflow.
