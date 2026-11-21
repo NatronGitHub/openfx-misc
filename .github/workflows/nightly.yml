@@ -23,12 +23,10 @@ name: Weekly extra builds
 # hostDemo built by -DOFX_BUILD_HOSTDEMO=ON. On Windows (MSYS2 CMake builds), only the
 # CImgConvolve render test runs (RENDERTEST_ONLY), as a check of the pocketfft unload
 # deadlock (POCKETFFT_NO_MULTITHREADING); smoketest.sh does not run on Windows.
-# Frugal CI: runs weekly (maintainer decision, 2026-11-21) and on demand; the scheduled run is
-# skipped if master did not change since the last scheduled run that succeeded or failed (a
-# cancelled run does not count), except the jobs with a moving upstream, which always run:
-# cimg_patches (openfx-gmic master), macos (latest MacPorts ports) and windows (latest MSYS2
-# packages); jobs time out. The file and artifact names keep "nightly" so that
-# existing links (README, issues, the skip check's API path) keep working.
+# Frugal CI: runs weekly (maintainer decision, 2026-11-21) and on demand, and jobs time out.
+# No job is skipped when master did not change: every job builds with a rolling toolchain or
+# checks a moving upstream (cimg_patches: openfx-gmic master), and those are tested every week.
+# The file and artifact names keep "nightly" so that existing links (README, issues) keep working.
 on:
   schedule:
     - cron: '17 3 * * 6' # every Saturday at 03:17 UTC (plug-ins; Natron runs on Sunday)
@@ -54,43 +52,26 @@ defaults:
     shell: bash -eo pipefail {0}
 
 jobs:
-  # Skip the scheduled run if it would build the same commit as the last scheduled run that
-  # succeeded or failed, except the jobs that build with a moving toolchain (output "moving").
-  # Manual runs always build.
+  # Which jobs run: everything, except with "only: windows-msvc" (the Windows MSVC jobs, plus
+  # cimg_patches, which has no needs). There is no skip when master did not change: every job
+  # builds with a rolling toolchain (runner images, apt, MacPorts ports, MSYS2 packages, the
+  # runner's Visual Studio), a moving upstream that is tested every week (maintainer rule,
+  # 2026-11-21).
   changes:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
-    permissions:
-      actions: read
     outputs:
       run: ${{ steps.check.outputs.run }}
       # the Windows MSVC jobs: also with "only: windows-msvc"
       msvc: ${{ steps.check.outputs.msvc }}
-      # macos and windows (MSYS2): they install the latest MacPorts ports and MSYS2 packages
-      # (compiler, CMake), a moving upstream, so they run every week even if master did not change
-      moving: ${{ steps.check.outputs.moving }}
     steps:
       - id: check
         env:
-          GH_TOKEN: ${{ github.token }}
           ONLY: ${{ inputs.only }}
         run: |
-          last=
-          if [ "$GITHUB_EVENT_NAME" = schedule ]; then
-            # last scheduled run that built or failed (not cancelled): a known failure
-            # is not rebuilt every week until master changes (linux, MSVC; macos and windows always run) (use workflow_dispatch to retry)
-            last=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/nightly.yml/runs?event=schedule&status=completed&per_page=20" \
-                     --jq '[.workflow_runs[] | select(.conclusion == "success" or .conclusion == "failure")][0].head_sha // empty')
-          fi
-          run=true
-          if [ -n "$last" ] && [ "$last" = "$GITHUB_SHA" ]; then
-            run=false
-            echo "No change since the last weekly run ($last): skipping the linux and MSVC jobs."
-          fi
-          msvc=$run
-          moving=true
-          if [ "$ONLY" = windows-msvc ]; then run=false msvc=true moving=false; fi
-          { echo "run=$run"; echo "msvc=$msvc"; echo "moving=$moving"; } >> "$GITHUB_OUTPUT"
+          run=true msvc=true
+          if [ "$ONLY" = windows-msvc ]; then run=false; fi
+          { echo "run=$run"; echo "msvc=$msvc"; } >> "$GITHUB_OUTPUT"
 
   # CImg.h is patched as openfx-gmic's (CImg/CImgVersion.mk): check that CImg/patches are still
   # byte-identical to openfx-gmic's patches at master, that they are applied in the same order,
@@ -114,7 +95,7 @@ jobs:
   macos:
     name: macOS 15 ${{ matrix.name }}
     needs: changes
-    if: needs.changes.outputs.moving == 'true'
+    if: needs.changes.outputs.run == 'true'
     timeout-minutes: 30
     runs-on: macos-15
     strategy:
@@ -266,7 +247,7 @@ jobs:
   windows:
     name: Windows (MSYS2 UCRT64) ${{ matrix.name }}
     needs: changes
-    if: needs.changes.outputs.moving == 'true'
+    if: needs.changes.outputs.run == 'true'
     timeout-minutes: 60
     runs-on: windows-2022
     defaults:
@@ -340,8 +321,8 @@ jobs:
   #   (windows_msvc_arm below).
   # The downloads are packaged as release.yml's (package-release.sh: the full set, Shadertoy
   # (OpenGL), DenoiseSharpen and NoOp, each a zip with README.txt, LICENSE.txt and LICENSES/), and
-  # uploaded as openfx-misc-nightly-windows-msvc-<arch>, kept 30 days (a scheduled run is skipped
-  # when master did not change, so the last downloads must outlive a quiet week).
+  # uploaded as openfx-misc-nightly-windows-msvc-<arch>, kept 30 days (more than four weekly runs,
+  # so a failed week still leaves downloads).
   windows_msvc:
     name: Windows MSVC ${{ matrix.arch }}
     needs: changes
