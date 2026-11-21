@@ -78,21 +78,19 @@ jobs:
           last=
           if [ "$GITHUB_EVENT_NAME" = schedule ]; then
             # last scheduled run that built or failed (not cancelled): a known failure
-            # is not rebuilt every week until master changes (use workflow_dispatch to retry)
+            # is not rebuilt every week until master changes (linux, MSVC; macos and windows always run) (use workflow_dispatch to retry)
             last=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/nightly.yml/runs?event=schedule&status=completed&per_page=20" \
                      --jq '[.workflow_runs[] | select(.conclusion == "success" or .conclusion == "failure")][0].head_sha // empty')
           fi
           run=true
           if [ -n "$last" ] && [ "$last" = "$GITHUB_SHA" ]; then
             run=false
-            echo "No change since the last weekly run ($last): skipping."
+            echo "No change since the last weekly run ($last): skipping the linux and MSVC jobs."
           fi
           msvc=$run
           moving=true
           if [ "$ONLY" = windows-msvc ]; then run=false msvc=true moving=false; fi
-          echo "run=$run" >> "$GITHUB_OUTPUT"
-          echo "msvc=$msvc" >> "$GITHUB_OUTPUT"
-          echo "moving=$moving" >> "$GITHUB_OUTPUT"
+          { echo "run=$run"; echo "msvc=$msvc"; echo "moving=$moving"; } >> "$GITHUB_OUTPUT"
 
   # CImg.h is patched as openfx-gmic's (CImg/CImgVersion.mk): check that CImg/patches are still
   # byte-identical to openfx-gmic's patches at master, that they are applied in the same order,
