@@ -33,6 +33,7 @@
 #include "ofxsCopier.h"
 #include "ofxsMacros.h"
 #include "ofxsCoords.h"
+#include "ofxsNonFinite.h" // clampToFloatRange, finiteSample
 #ifdef OFX_EXTENSIONS_NATRON
 #include "ofxNatron.h"
 #endif
@@ -57,6 +58,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // 1.1 in the filter context, Source is RGBA and the Output components are those of Source, as the OpenFX
 //     spec mandates (issue #190; "Spillmap to Alpha" remapped Source and Output to RGBA). The general
 //     context, which Natron uses, is unchanged.
+//     Non-finite input samples give a finite output (issue #213): a NaN sample is despilled as 0,
+//     +-inf as +-FLT_MAX (std::max(NaN, 0.) gave a NaN spill map, and a NaN alpha with Output
+//     Spill Map; Mix and the mask also mixed with the non-finite source), and the results computed
+//     in double are kept in the float range. The output for finite inputs is unchanged.
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -289,7 +294,19 @@ private:
                 continue;
             }
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
-                const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
+                const PIX *srcPixRaw = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
+                // NaN rule (issue #213, see ofxsNonFinite.h): the source, with non-finite float samples
+                // made finite (NaN gives 0, +-inf gives +-FLT_MAX), also used for Mix and the mask.
+                // With samples in the float range and the parameters in their (bounded) ranges, the
+                // spill map and the despilled color, computed in double, are finite.
+                PIX srcPixFinite[nComponents];
+                const PIX *srcPix = NULL;
+                if (srcPixRaw) {
+                    for (int c = 0; c < nComponents; ++c) {
+                        srcPixFinite[c] = finiteSample<PIX, maxValue>(srcPixRaw[c]);
+                    }
+                    srcPix = srcPixFinite;
+                }
                 double spillmap;
                 if (srcPix) {
                     tmpPix[0] = sampleToFloat<PIX, maxValue>(srcPix[0]);
@@ -306,9 +323,10 @@ private:
                         spillmap = (std::max)(tmpPix[2] - ( tmpPix[0] * _spillMix + tmpPix[1] * (1 - _spillMix) ) * (1 - _spillExpand), 0.);
                     }
 
-                    tmpPix[0] = clamp<float>(tmpPix[0] + spillmap * _redScale   + _brightness * spillmap, 1.);
-                    tmpPix[1] = clamp<float>(tmpPix[1] + spillmap * _greenScale + _brightness * spillmap, 1.);
-                    tmpPix[2] = clamp<float>(tmpPix[2] + spillmap * _blueScale  + _brightness * spillmap, 1.);
+                    // (in the float range before the conversion to float)
+                    tmpPix[0] = clampToFloatRange( clamp<float>(tmpPix[0] + spillmap * _redScale   + _brightness * spillmap, 1.) );
+                    tmpPix[1] = clampToFloatRange( clamp<float>(tmpPix[1] + spillmap * _greenScale + _brightness * spillmap, 1.) );
+                    tmpPix[2] = clampToFloatRange( clamp<float>(tmpPix[2] + spillmap * _blueScale  + _brightness * spillmap, 1.) );
                 } else {
                     tmpPix[0] = tmpPix[1] = tmpPix[2] = tmpPix[3] = 0.;
                     spillmap = 0.;
@@ -322,7 +340,8 @@ private:
 
                 if (_outputToAlpha) {
                     assert(nComponents == 4);
-                    dstPix[3] = ofxsClampIfInt<PIX, maxValue>(spillmap * maxValue, 0, maxValue);
+                    // (in the float range before the conversion to float)
+                    dstPix[3] = ofxsClampIfInt<PIX, maxValue>(clampToFloatRange(spillmap * maxValue), 0, maxValue);
                 }
 
                 // increment the dst pixel

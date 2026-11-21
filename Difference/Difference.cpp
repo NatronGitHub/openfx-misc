@@ -26,6 +26,7 @@
 #include <algorithm>
 
 #include "ofxsProcessing.H"
+#include "ofxsNonFinite.h" // finiteSample
 #include "ofxsMacros.h"
 #include "ofxsThreadSuite.h"
 
@@ -40,8 +41,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "See also: https://web.archive.org/web/20220524000628/http://www.opticalenquiry.com/nuke/index.php?title=The_Keyer_Nodes#Difference and https://web.archive.org/web/20211023071843/http://opticalenquiry.com/nuke/index.php?title=Keying_Tips"
 
 #define kPluginIdentifier "net.sf.openfx.DifferencePlugin"
+// history:
+// 1.0 initial version
+// 1.1 non-finite input samples give a finite output and a matte in [0,1] (issue #213): a NaN
+//     sample is taken as 0, +-inf as +-FLT_MAX (inf - inf and 0 * inf gave NaN before the clamp
+//     to [0,1], and the RGB copied from B was not finite). The output for finite inputs is unchanged.
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -135,13 +141,17 @@ private:
                 const PIX *srcPixA = (const PIX *)  (_srcImgA ? _srcImgA->getPixelAddress(x, y) : 0);
                 const PIX *srcPixB = (const PIX *)  (_srcImgB ? _srcImgB->getPixelAddress(x, y) : 0);
 
+                // NaN rule (issue #213, see ofxsNonFinite.h): non-finite float samples are made finite
+                // (NaN gives 0, +-inf gives +-FLT_MAX), so that diff is finite (in double), and
+                // _gain * diff - _offset is finite or +-inf (an overflow, never NaN)
                 if (srcPixA && srcPixB) {
                     double diff = 0.;
                     if (nComponents > 1) {
                         for (int c = 0; c < nComponents - 1; ++c) {
-                            dstPix[c] = srcPixB[c];
+                            const PIX b = finiteSample<PIX, maxValue>(srcPixB[c]);
+                            dstPix[c] = b;
                             // normalize, so that offset and gain have the same meaning for all bit depths
-                            double d = ( (double)srcPixB[c] - (double)srcPixA[c] ) / maxValue;
+                            double d = ( (double)b - (double)finiteSample<PIX, maxValue>(srcPixA[c]) ) / maxValue;
                             diff += d * d;
                         }
                     }
@@ -149,7 +159,7 @@ private:
                     dstPix[nComponents - 1] = (PIX)( (std::max)( 0., (std::min)(diff, 1.) ) * maxValue );
                 } else if (srcPixB && !srcPixA) {
                     for (int c = 0; c < nComponents; ++c) {
-                        dstPix[c] = srcPixB[c];
+                        dstPix[c] = finiteSample<PIX, maxValue>(srcPixB[c]);
                     }
                 } else {
                     for (int c = 0; c < nComponents; ++c) {
