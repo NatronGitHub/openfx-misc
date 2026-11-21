@@ -59,7 +59,7 @@ CIMG_SHA256=adf13c3e991f6812c2db484ff07aa614421830117924590d3def10e8ac6a485b
 # fftw_cleanup_threads() after each FFT (4.0.8 moved it to unload, which the script above removes),
 # and pocketfft itself (cimg_use_pocketfft, GreycLab/CImg#497).
 # CMakeLists.txt reads these variables: keep each on one line, as a plain "NAME=value" assignment.
-CIMG_PATCHES_FROM=54965eee83096cbcd3f1c23d1a80fe0ac79348e0
+CIMG_PATCHES_FROM=522199a19f587940e33214f587c493b3d725ca10
 CIMG_PATCHES=patches/cimg-omp-rand.sh patches/cimg-vvar2.sh patches/cimg-vargkth2.sh patches/cimg-log1p-peephole.sh patches/cimg-abs-peephole.sh patches/cimg-fftw-no-cleanup-at-unload.sh patches/cimg-msvc-snprintf.sh
 
 # pocketfft (FFT=pocketfft), C++ header-only version, at a pinned commit of its 'cpp' branch: the

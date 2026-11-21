@@ -15,10 +15,11 @@
 # avoided (openfx-misc, which copies this script, forbids it).
 #
 # Running it again on a patched file does nothing, and so does running it on a CImg.h whose
-# mp_vargkth2 already returns 0, 'e1==e1?0:1' or 'cimg::type<double>::is_nan(e1)?1:0' (an
-# upstream fix). The script fails in any other case: mp_vargkth2
-# missing or with another body (e.g. after a GMICVER bump: then check what upstream changed, and
-# update or remove this patch), or CRLF line endings. Only POSIX sh, awk and wc are used, for
+# mp_vargkth2 already returns 0, '_cimg_mp_vfunc2(0);' (an upstream fix). The script fails in any
+# other case: mp_vargkth2 missing or with another body, including upstream fixes that test for NaN
+# (e.g. 'e1==e1?0:1' or 'cimg::type<double>::is_nan(e1)?1:0', which openfx-misc's rule forbids:
+# review them by hand), or after a GMICVER bump (then check what upstream changed, and update or
+# remove this patch), or CRLF line endings. Only POSIX sh, awk and wc are used, for
 # Linux, macOS and MSYS2.
 set -e
 f="$1"
@@ -26,8 +27,6 @@ f="$1"
 head="static double mp_vargkth2(_cimg_math_parser& mp) {"
 old="_cimg_mp_vfunc2(1);"
 fixed0="_cimg_mp_vfunc2(0);"
-fixed1="_cimg_mp_vfunc2(e1==e1?0:1);"
-fixed2="_cimg_mp_vfunc2(cimg::type<double>::is_nan(e1)?1:0);"
 marker="_cimg_mp_vfunc2(0); // openfx-gmic patch: 0-based index, as mp_vargkth"
 
 fail() {
@@ -39,9 +38,9 @@ fail() {
 
 # counts <file>: "<mp_vargkth2 definitions> <bodies returning 1> <fixed bodies> <markers>"
 counts() {
-  awk -v head="$head" -v old="$old" -v fixed0="$fixed0" -v fixed1="$fixed1" -v fixed2="$fixed2" -v marker="$marker" '
+  awk -v head="$head" -v old="$old" -v fixed0="$fixed0" -v marker="$marker" '
     { t = $0; gsub(/^[ \t]+|[ \t]+$/, "", t) }
-    infn { if (t == old) o++; else if (t == fixed0 || t == fixed1 || t == fixed2) z++; else if (t == marker) m++; infn = 0 }
+    infn { if (t == old) o++; else if (t == fixed0) z++; else if (t == marker) m++; infn = 0 }
     t == head { h++; infn = 1 }
     END { print h + 0, o + 0, z + 0, m + 0 }' "$1"
 }
@@ -66,7 +65,7 @@ if [ "$1" = 1 ] && [ "$3" = 1 ]; then
   exit 0
 fi
 [ "$1" = 1 ] && [ "$2" = 1 ] ||
-  fail "expected one mp_vargkth2 whose body is '$old'; found $1 definitions, $2 such bodies"
+  fail "expected one mp_vargkth2 whose body is '$old' (or '$fixed0', fixed upstream); found $1 definitions, $2 such bodies (a body that tests for NaN must be reviewed by hand)"
 
 awk -v head="$head" -v old="$old" -v marker="$marker" '
 { t = $0; gsub(/^[ \t]+|[ \t]+$/, "", t) }
