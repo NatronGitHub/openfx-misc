@@ -153,6 +153,9 @@ enum MergePluginEnum
 //      A inputs after the first one are merged as transparent black outside of their image (instead of being skipped).
 //      As in 1.1 and 2.1, the SupportExt #80 and #82 fixes, MergeRoto renders on hosts without the plane suite v2,
 //      and the issue #220 fix (non-finite RotoMask samples).
+// 1.1, 2.1 and 3.0 (unreleased, fixed in place): in the filter context, B is the mandated Source clip
+//      (RGBA or Alpha), and Source and Output are no longer remapped there (issue #217). The general
+//      context, used by Natron, is unchanged.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
