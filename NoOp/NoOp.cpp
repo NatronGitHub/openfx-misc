@@ -23,6 +23,16 @@
  */
 
 #include <sstream> // stringstream
+#include <string>
+#include <vector>
+#include <cstdlib> // getenv
+#ifdef _WIN32
+#include <cstdio> // _wfopen
+#include <cwchar>
+#else
+#include <fcntl.h> // open
+#include <unistd.h> // write, close
+#endif
 
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
@@ -30,6 +40,11 @@
 #include "ofxsCoords.h"
 #include "ofxsGenerator.h" // for format-related parameters
 #include "ofxsFormatResolution.h" // for format-related enums
+#include "ofxsMultiThread.h" // getNumCPUs
+#include "ofxColour.h" // kOfxImageEffectColourManagement*
+#include "ofxDialog.h" // kOfxDialogSuite
+#include "ofxDrawSuite.h" // kOfxDrawSuite
+#include "ofxGPURender.h" // kOfxOpenGLRenderSuite, kOfxOpenCLProgramSuite
 
 #ifdef OFX_EXTENSIONS_NUKE
 #include "nuke/fnOfxExtensions.h"
@@ -50,7 +65,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // Version 2.0: introduce setFormat, deprecate setPixelAspectRatio on Natron
 // version 2.1: a NULL Source image (disconnected input; render is called although isIdentity returned true,
 //              e.g. by hostDemo) renders black instead of crashing (SupportExt copyPixels);
-//              Clip Info shows the display time offset and the displayed time (display only)
+//              Clip Info shows the display time offset and the displayed time (display only);
+//              new "Host Info..." button shows the host description (display only, see issue #66)
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -64,6 +80,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamClipInfo "clipInfo"
 #define kParamClipInfoLabel "Clip Info..."
 #define kParamClipInfoHint "Display information about the inputs"
+
+#define kParamHostInfo "hostInfo"
+#define kParamHostInfoLabel "Host Info..."
+#define kParamHostInfoHint "Display what the OpenFX host supports (host name and version, properties, suites), " \
+    "in the format of openfx-misc's README-hosts.txt. The same text is also saved to OFXHostInfo-<hostName>.txt " \
+    "in the temporary directory (TMPDIR or /tmp, or %TEMP% on Windows)."
 
 #define kParamForceCopy "forceCopy"
 #define kParamForceCopyLabel "Force Copy"
@@ -659,6 +681,325 @@ appendClipInfo(std::ostringstream& oss,
     }
 }
 
+// The enum-to-string functions of Support throw std::invalid_argument on values they don't know
+// (e.g. a custom component that the host lists): print a placeholder instead.
+static const char*
+contextName(ContextEnum e)
+{
+    try {
+        return mapContextEnumToStr(e);
+    } catch (...) {
+        return "[unknown context]";
+    }
+}
+
+static const char*
+componentName(PixelComponentEnum e)
+{
+    try {
+        return mapPixelComponentEnumToStr(e);
+    } catch (...) {
+        return "[custom components]";
+    }
+}
+
+static const char*
+depthName(BitDepthEnum e)
+{
+    try {
+        return mapBitDepthEnumToStr(e);
+    } catch (...) {
+        return "[unknown depth]";
+    }
+}
+
+static const char*
+nativeOriginName(NativeOriginEnum e)
+{
+    switch (e) {
+    case eNativeOriginBottomLeft:
+        return kOfxHostNativeOriginBottomLeft;
+    case eNativeOriginTopLeft:
+        return kOfxHostNativeOriginTopLeft;
+    case eNativeOriginCenter:
+        return kOfxHostNativeOriginCenter;
+    }
+
+    return "[unknown origin]";
+}
+
+static const char*
+colourManagementStyleName(ColourManagementStyleEnum e)
+{
+    switch (e) {
+    case eColourManagementStyleNone:
+        return kOfxImageEffectColourManagementNone;
+    case eColourManagementStyleBasic:
+        return kOfxImageEffectColourManagementBasic;
+    case eColourManagementStyleCore:
+        return kOfxImageEffectColourManagementCore;
+    case eColourManagementStyleFull:
+        return kOfxImageEffectColourManagementFull;
+    case eColourManagementStyleOCIO:
+        return kOfxImageEffectColourManagementOCIO;
+    }
+
+    return "[unknown style]";
+}
+
+// Append the suite name to the comma-separated list if the host provides it.
+// "Repeated calls to fetchSuite with the same parameters will return the same pointer" (ofxCore.h),
+// so fetching again after kOfxActionLoad is harmless; optional=true never throws.
+static void
+appendSuite(std::ostringstream& oss,
+            bool& first,
+            const char* suiteName,
+            int suiteVersion,
+            const char* printedName)
+{
+    if ( fetchSuite(suiteName, suiteVersion, true) ) {
+        if (!first) {
+            oss << ',';
+        }
+        first = false;
+        oss << printedName;
+    }
+}
+
+// Append the host description, in the format of README-hosts.txt (one "key=value" per line, 0/1 for
+// booleans). Everything comes from the host description that Support read at kOfxActionLoad with the
+// non-throwing getters (a property that an OFX 1.4 host lacks gets its default), plus fetchSuite.
+static void
+appendHostInfo(std::ostringstream& oss)
+{
+    const ImageEffectHostDescription& h = *getImageEffectHostDescription();
+
+    // Support sets 1.0 when the host does not set kOfxPropAPIVersion (OFX 1.2)
+    oss << "OFX API version " << h.APIVersionMajor << '.' << h.APIVersionMinor;
+    if ( (h.APIVersionMajor == 1) && (h.APIVersionMinor == 0) ) {
+        oss << " (or kOfxPropAPIVersion not set)";
+    }
+    oss << '\n';
+    oss << "hostName=" << h.hostName << '\n';
+    oss << "hostLabel=" << h.hostLabel << '\n';
+    oss << "hostVersion=" << h.versionMajor << '.' << h.versionMinor << '.' << h.versionMicro;
+    oss << " (" << h.versionLabel << ")\n";
+    oss << "hostIsBackground=" << h.hostIsBackground << '\n';
+    oss << "supportsOverlays=" << h.supportsOverlays << '\n';
+    oss << "supportsDrawSuite=" << h.supportsDrawSuite << '\n';
+    oss << "supportsMultiResolution=" << h.supportsMultiResolution << '\n';
+    oss << "supportsTiles=" << h.supportsTiles << '\n';
+    oss << "temporalClipAccess=" << h.temporalClipAccess << '\n';
+    oss << "supportedComponents=";
+    for (std::size_t i = 0; i < h._supportedComponents.size(); ++i) {
+        oss << (i ? "," : "") << componentName(h._supportedComponents[i]);
+    }
+    oss << '\n';
+    oss << "supportedContexts=";
+    for (std::size_t i = 0; i < h._supportedContexts.size(); ++i) {
+        oss << (i ? "," : "") << contextName(h._supportedContexts[i]);
+    }
+    oss << '\n';
+    oss << "supportedPixelDepths=";
+    for (std::size_t i = 0; i < h._supportedPixelDepths.size(); ++i) {
+        oss << (i ? "," : "") << depthName(h._supportedPixelDepths[i]);
+    }
+    oss << '\n';
+    oss << "supportsMultipleClipDepths=" << h.supportsMultipleClipDepths << '\n';
+    oss << "supportsMultipleClipPARs=" << h.supportsMultipleClipPARs << '\n';
+    oss << "supportsSetableFrameRate=" << h.supportsSetableFrameRate << '\n';
+    oss << "supportsSetableFielding=" << h.supportsSetableFielding << '\n';
+    // render threads: kOfxImageEffectInstancePropSequentialRender on the host (0: never sequential,
+    // 1: always, 2: if the plug-in asks; OFX 1.2), and the multithread suite's number of CPUs
+    oss << "sequentialRender=" << h.sequentialRender << '\n';
+    oss << "numCPUs=" << MultiThread::getNumCPUs() << '\n';
+    oss << "supportsRenderQualityDraft=" << h.supportsRenderQualityDraft << '\n';
+    oss << "supportsStringAnimation=" << h.supportsStringAnimation << '\n';
+    oss << "supportsCustomInteract=" << h.supportsCustomInteract << '\n';
+    oss << "supportsChoiceAnimation=" << h.supportsChoiceAnimation << '\n';
+    oss << "supportsStrChoice=" << h.supportsStrChoice << '\n';
+    oss << "supportsStrChoiceAnimation=" << h.supportsStrChoiceAnimation << '\n';
+    oss << "supportsBooleanAnimation=" << h.supportsBooleanAnimation << '\n';
+    oss << "supportsCustomAnimation=" << h.supportsCustomAnimation << '\n';
+    oss << "supportsParametricParameter=" << h.supportsParametricParameter << '\n';
+    oss << "supportsParametricAnimation=" << h.supportsParametricAnimation << '\n';
+    oss << "nativeOrigin=" << nativeOriginName(h.nativeOrigin) << '\n';
+    oss << "osHandle=" << (h.osHandle ? 1 : 0) << '\n';
+    oss << "supportsCPURender=" << h.supportsCPURender << '\n';
+#ifdef OFX_SUPPORTS_OPENGLRENDER
+    // kOfxImageEffectPropOpenGLRenderSupported is "true" and the host provides the OpenGL render suite
+    oss << "supportsOpenGLRender=" << h.supportsOpenGLRender << '\n';
+#endif
+    oss << "supportsOpenCLRender=" << h.supportsOpenCLRender << '\n';
+    oss << "supportsCudaRender=" << h.supportsCudaRender << '\n';
+    oss << "supportsCudaStream=" << h.supportsCudaStream << '\n';
+    oss << "supportsMetalRender=" << h.supportsMetalRender << '\n';
+    oss << "supportsMetalTexture=" << h.supportsMetalTexture << '\n';
+    oss << "colourManagementStyle=" << colourManagementStyleName(h.colourManagementStyle) << '\n';
+    oss << "colourManagementAvailableConfigs=";
+    for (std::size_t i = 0; i < h.colourManagementAvailableConfigs.size(); ++i) {
+        oss << (i ? "," : "") << h.colourManagementAvailableConfigs[i];
+    }
+    oss << '\n';
+#ifdef OFX_EXTENSIONS_NUKE
+    oss << "supportsCamera=" << h.supportsCamera << '\n';
+    oss << "canTransform=" << h.canTransform << '\n';
+    oss << "isMultiPlanar=" << h.isMultiPlanar << '\n';
+#endif
+    oss << "maxParameters=" << h.maxParameters << '\n';
+    oss << "maxPages=" << h.maxPages << '\n';
+    oss << "pageRowCount=" << h.pageRowCount << '\n';
+    oss << "pageColumnCount=" << h.pageColumnCount << '\n';
+    oss << "supportsProgressSuite=" << h.supportsProgressSuite << '\n';
+    oss << "supportsTimeLineSuite=" << h.supportsTimeLineSuite << '\n';
+    oss << "supportsMessageSuiteV2=" << h.supportsMessageSuiteV2 << '\n';
+#ifdef OFX_EXTENSIONS_NATRON
+    oss << "isNatron=" << h.isNatron << '\n';
+    oss << "supportsDynamicChoices=" << h.supportsDynamicChoices << '\n';
+    oss << "supportsCascadingChoices=" << h.supportsCascadingChoices << '\n';
+    oss << "supportsChannelSelector=" << h.supportsChannelSelector << '\n';
+    oss << "canDistort=" << h.canDistort << '\n';
+    oss << "supportsInteractKeyModifiers=" << h.supportsInteractKeyModifiers << '\n';
+    oss << "nativeOverlays=";
+    for (std::size_t i = 0; i < h.nativeInteracts.size(); ++i) {
+        oss << (i ? "," : "") << h.nativeInteracts[i].identifier;
+    }
+    oss << '\n';
+    oss << "supportedCursors=";
+    for (std::size_t i = 0; i < h.supportedCursors.size(); ++i) {
+        oss << (i ? "," : "") << h.supportedCursors[i];
+    }
+    oss << '\n';
+#endif
+    oss << "suites=";
+    bool first = true;
+    appendSuite(oss, first, kOfxImageEffectSuite, 1, kOfxImageEffectSuite);
+    appendSuite(oss, first, kOfxPropertySuite, 1, kOfxPropertySuite);
+    appendSuite(oss, first, kOfxParameterSuite, 1, kOfxParameterSuite);
+    appendSuite(oss, first, kOfxMemorySuite, 1, kOfxMemorySuite);
+    appendSuite(oss, first, kOfxMultiThreadSuite, 1, kOfxMultiThreadSuite);
+    appendSuite(oss, first, kOfxMessageSuite, 1, kOfxMessageSuite);
+    appendSuite(oss, first, kOfxMessageSuite, 2, kOfxMessageSuite "V2");
+    appendSuite(oss, first, kOfxProgressSuite, 1, kOfxProgressSuite);
+    appendSuite(oss, first, kOfxProgressSuite, 2, kOfxProgressSuite "V2");
+    appendSuite(oss, first, kOfxTimeLineSuite, 1, kOfxTimeLineSuite);
+    appendSuite(oss, first, kOfxParametricParameterSuite, 1, kOfxParametricParameterSuite);
+    appendSuite(oss, first, kOfxInteractSuite, 1, kOfxInteractSuite);
+    appendSuite(oss, first, kOfxDrawSuite, 1, kOfxDrawSuite);
+    appendSuite(oss, first, kOfxOpenGLRenderSuite, 1, kOfxOpenGLRenderSuite);
+    appendSuite(oss, first, kOfxOpenCLProgramSuite, 1, kOfxOpenCLProgramSuite);
+    appendSuite(oss, first, kOfxDialogSuite, 1, kOfxDialogSuite);
+#ifdef OFX_EXTENSIONS_NUKE
+    appendSuite(oss, first, kNukeOfxCameraSuite, 1, kNukeOfxCameraSuite);
+    appendSuite(oss, first, kFnOfxImageEffectPlaneSuite, 1, kFnOfxImageEffectPlaneSuite "V1");
+    appendSuite(oss, first, kFnOfxImageEffectPlaneSuite, 2, kFnOfxImageEffectPlaneSuite "V2");
+#endif
+#ifdef OFX_EXTENSIONS_VEGAS
+    appendSuite(oss, first, kOfxVegasProgressSuite, 1, kOfxVegasProgressSuite);
+    appendSuite(oss, first, kOfxVegasStereoscopicImageEffectSuite, 1, kOfxVegasStereoscopicImageEffectSuite);
+    appendSuite(oss, first, kOfxVegasKeyframeSuite, 1, kOfxVegasKeyframeSuite);
+    appendSuite(oss, first, kOfxHWndInteractSuite, 1, kOfxHWndInteractSuite);
+#endif
+    oss << '\n';
+} // appendHostInfo
+
+#ifdef _WIN32
+// the value of a (wide, so that non-ASCII user names work) environment variable, or empty
+static std::wstring
+winGetEnv(const wchar_t* name)
+{
+#ifdef _MSC_VER
+    wchar_t* value = NULL;
+    std::size_t len = 0;
+    std::wstring ret;
+    if ( (_wdupenv_s(&value, &len, name) == 0) && value ) {
+        ret = value;
+    }
+    std::free(value);
+
+    return ret;
+#else
+    const wchar_t* value = _wgetenv(name);
+
+    return value ? std::wstring(value) : std::wstring();
+#endif
+}
+
+#endif
+
+// Save the host info text to OFXHostInfo-<hostName>.txt in the user's temporary directory, because
+// some hosts truncate messages or show them in a small dialog. Best effort, never throws: returns
+// the file name to show the user, or an empty string if the file could not be written.
+static std::string
+saveHostInfo(const std::string& hostName,
+             const std::string& text)
+{
+    // keep only portable file name characters of the host name
+    std::string fileName = "OFXHostInfo-";
+    for (std::size_t i = 0; i < hostName.size(); ++i) {
+        const char c = hostName[i];
+        const bool ok = ( (c >= 'A') && (c <= 'Z') ) || ( (c >= 'a') && (c <= 'z') ) || ( (c >= '0') && (c <= '9') ) ||
+                        (c == '.') || (c == '-') || (c == '_');
+        fileName += ok ? c : '_';
+    }
+    fileName += ".txt";
+#ifdef _WIN32
+    std::wstring path = winGetEnv(L"TEMP");
+    if ( path.empty() ) {
+        path = winGetEnv(L"TMP");
+    }
+    if ( path.empty() ) {
+        return std::string();
+    }
+    path += L'\\';
+    path.append( fileName.begin(), fileName.end() ); // ASCII only
+    FILE* f = NULL;
+#ifdef _MSC_VER
+    if (_wfopen_s(&f, path.c_str(), L"w") != 0) {
+        f = NULL;
+    }
+#else
+    f = _wfopen(path.c_str(), L"w");
+#endif
+    if (!f) {
+        return std::string();
+    }
+    const bool ok = std::fwrite(text.data(), 1, text.size(), f) == text.size();
+    const bool closed = std::fclose(f) == 0;
+    if (!ok || !closed) {
+        return std::string();
+    }
+
+    return "%TEMP%\\" + fileName;
+#else
+    const char* dir = std::getenv("TMPDIR");
+    std::string path = (dir && *dir) ? dir : "/tmp";
+    if (path[path.size() - 1] != '/') {
+        path += '/';
+    }
+    path += fileName;
+    // O_NOFOLLOW: never write through a symbolic link planted in a shared /tmp
+    const int fd = open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW | O_CLOEXEC, 0600);
+    if (fd < 0) {
+        return std::string();
+    }
+    std::size_t written = 0;
+    while ( written < text.size() ) {
+        const ssize_t n = write(fd, text.data() + written, text.size() - written);
+        if (n <= 0) {
+            break;
+        }
+        written += (std::size_t)n;
+    }
+    const bool closed = close(fd) == 0;
+    if ( (written != text.size()) || !closed ) {
+        return std::string();
+    }
+
+    return path;
+#endif
+} // saveHostInfo
+
 void
 NoOpPlugin::changedParam(const InstanceChangedArgs &args,
                          const std::string &paramName)
@@ -748,6 +1089,16 @@ NoOpPlugin::changedParam(const InstanceChangedArgs &args,
         oss << ", renderscale: " << args.renderScale.x << 'x' << args.renderScale.y << '\n';
 
         sendMessage( Message::eMessageMessage, "", oss.str() );
+    } else if (paramName == kParamHostInfo) {
+        std::ostringstream oss;
+        appendHostInfo(oss);
+        const std::string text = oss.str();
+        const std::string saved = saveHostInfo(getImageEffectHostDescription()->hostName, text);
+        if ( saved.empty() ) {
+            sendMessage(Message::eMessageMessage, "", text);
+        } else {
+            sendMessage(Message::eMessageMessage, "", text + "\n(also saved to " + saved + ")\n");
+        }
     }
 } // NoOpPlugin::changedParam
 
@@ -1262,6 +1613,16 @@ NoOpPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamClipInfo);
         param->setLabel(kParamClipInfoLabel);
         param->setHint(kParamClipInfoHint);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    // hostInfo
+    {
+        PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamHostInfo);
+        param->setLabel(kParamHostInfoLabel);
+        param->setHint(kParamHostInfoHint);
         if (page) {
             page->addChild(*param);
         }

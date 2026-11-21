@@ -1,7 +1,8 @@
 #!/bin/bash
 # Windows MSVC build of the downloadable bundles (nightly.yml, ci.yml): Misc, CImg, Shadertoy
 # (OpenGL only: the OSMesa Shadertoy is built with MSYS2 UCRT64) and the standalone
-# net.sf.openfx.DenoiseSharpen.ofx.bundle, with CMake and Ninja, then a check of each binary.
+# net.sf.openfx.DenoiseSharpen.ofx.bundle and net.sf.openfx.NoOpPlugin.ofx.bundle, with CMake and
+# Ninja, then a check of each binary.
 #   .github/tools/msvc-build.sh [--no-standalone] x64|arm64x [OUTDIR]
 # Run from the top of the source tree, in Git for Windows' bash (its sh patches CImg.h), in an
 # MSVC environment (cl, link and dumpbin in the PATH, e.g. ilammy/msvc-dev-cmd): x64 for x64,
@@ -11,8 +12,9 @@
 #   (cmake/OFXMiscArm64X.cmake): bundles with Contents/Win-arm64ec (the Arm64X binary, for Arm64EC
 #   hosts and for the x64 hosts emulated on Windows on Arm that look there) and Contents/Win-arm64
 #   (the ARM64 binary, for native ARM64 hosts: a reserved folder of the OFX packaging spec).
-# The standalone DenoiseSharpen goes into OUTDIR/install-denoisesharpen/OFX/Plugins (a host must
-# not load it with Misc.ofx.bundle, which has the same plug-in); --no-standalone skips it (ci.yml).
+# The standalone DenoiseSharpen goes into OUTDIR/install-denoisesharpen/OFX/Plugins, and NoOp into
+# OUTDIR/install-noop/OFX/Plugins (a host must not load them with Misc.ofx.bundle, which has the
+# same plug-ins); --no-standalone skips them (ci.yml).
 # OUTDIR defaults to msvc-<arch>. Its build directories are removed first: every run is a clean
 # build (an Arm64EC build must not reuse a CMake cache, or the linker inputs, of an older one).
 # Static CRT (CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded, /MT): no vcruntime/msvcp DLL to ship; the
@@ -42,7 +44,7 @@ w() { cygpath -m "$1"; }
 options=(-G Ninja -DCMAKE_BUILD_TYPE=Release -DOFX_CXX_STANDARD=17
     -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
     -DOFX_USE_OPENMP=OFF -DBUILD_TESTING=OFF)
-[ -z "$standalone" ] || options+=(-DOFXMISC_STANDALONE_BUNDLES=DenoiseSharpen)
+[ -z "$standalone" ] || options+=("-DOFXMISC_STANDALONE_BUNDLES=DenoiseSharpen;NoOp")
 
 # build BUILDDIR PREFIX [CMAKE_OPTION...]: configure, build and install the bundles into PREFIX
 build() {
@@ -54,24 +56,25 @@ build() {
     for c in Misc CImg Shadertoy; do cmake --install "$b" --prefix "$(w "$p")" --component $c; done
     if [ -n "$standalone" ]; then
         cmake --install "$b" --prefix "$(w "$p-denoisesharpen")" --component DenoiseSharpen
+        cmake --install "$b" --prefix "$(w "$p-noop")" --component NoOp
     fi
     echo "::endgroup::"
     echo "$b: built in $(( (SECONDS - start) / 60 )) min $(( (SECONDS - start) % 60 )) s"
 }
 
-rm -rf "$out/build" "$out/build-arm64" "$out/build-arm64x" "$out/install" "$out/install-denoisesharpen"
-mkdir -p "$out/install-denoisesharpen" # (empty with --no-standalone)
+rm -rf "$out/build" "$out/build-arm64" "$out/build-arm64x" "$out/install" "$out/install-denoisesharpen" "$out/install-noop"
+mkdir -p "$out/install-denoisesharpen" "$out/install-noop" # (empty with --no-standalone)
 if [ "$arch" = x64 ]; then
     build "$out/build" "$out/install"
 else
-    rm -rf "$out/install-arm64" "$out/install-arm64-denoisesharpen" "$out/arm64x"
+    rm -rf "$out/install-arm64" "$out/install-arm64-denoisesharpen" "$out/install-arm64-noop" "$out/arm64x"
     build "$out/build-arm64" "$out/install-arm64" \
         -DOFXMISC_ARM64X=ARM64 -DOFXMISC_ARM64X_DIR="$(w "$out/arm64x")"
     # CFLAGS/CXXFLAGS: added to CMake's default flags (a -DCMAKE_CXX_FLAGS would replace them)
     CFLAGS=-arm64EC CXXFLAGS=-arm64EC build "$out/build-arm64x" "$out/install" \
         -DOFXMISC_ARM64X=ARM64EC -DOFXMISC_ARM64X_DIR="$(w "$out/arm64x")"
     # one bundle with both: Win-arm64ec (Arm64X) and Win-arm64 (ARM64)
-    for i in install install-denoisesharpen; do
+    for i in install install-denoisesharpen install-noop; do
         [ -d "$out/install-arm64${i#install}" ] || continue # (--no-standalone)
         for b in "$out/install-arm64${i#install}/OFX/Plugins"/*.ofx.bundle; do
             cp -R "$b/Contents/Win-arm64" "$out/$i/OFX/Plugins/$(basename "$b")/Contents/"
@@ -100,15 +103,15 @@ while IFS= read -r f; do
         echo "ERROR: $f imports the MSVC runtime DLLs above (it must be built with /MT)"
         status=1
     fi
-done < <(find "$out/install" "$out/install-denoisesharpen" -path '*.ofx.bundle/Contents/Win*/*.ofx' | sort)
-# x64: 4 (Misc, CImg, Shadertoy, DenoiseSharpen; 3 with --no-standalone); arm64x: twice as many
-# (Win-arm64ec and Win-arm64 of each)
-expected=4
+done < <(find "$out/install" "$out/install-denoisesharpen" "$out/install-noop" -path '*.ofx.bundle/Contents/Win*/*.ofx' | sort)
+# x64: 5 (Misc, CImg, Shadertoy, DenoiseSharpen, NoOp; 3 with --no-standalone); arm64x: twice as
+# many (Win-arm64ec and Win-arm64 of each)
+expected=5
 [ -n "$standalone" ] || expected=3
 [ "$arch" = x64 ] || expected=$((expected * 2))
 if [ "$n" != "$expected" ]; then
     echo "ERROR: $n binaries, expected $expected"
     status=1
 fi
-find "$out/install" "$out/install-denoisesharpen" -maxdepth 5 -path '*.ofx.bundle/Contents/*' -type d -name 'Win*' | sed "s|^$out/||" | sort
+find "$out/install" "$out/install-denoisesharpen" "$out/install-noop" -maxdepth 5 -path '*.ofx.bundle/Contents/*' -type d -name 'Win*' | sed "s|^$out/||" | sort
 exit $status

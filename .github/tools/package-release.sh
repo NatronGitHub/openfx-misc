@@ -7,6 +7,8 @@
 #   openfx-misc-Shadertoy-OSMesa-<VERSION>-<PLATFORM>  Shadertoy alone, OpenGL + OSMesa (CPU
 #                                                      rendering): the Shadertoy of the full set
 #   openfx-misc-DenoiseSharpen-<VERSION>-<PLATFORM>    DenoiseSharpen alone
+#   openfx-misc-NoOp-<VERSION>-<PLATFORM>              NoOp alone (its Host Info button shows what
+#                                                      the host supports)
 # Each is a .tar.gz (.zip on Windows) of a directory of the same name, with the bundles, a
 # README.txt (what it contains, where to install it, and which downloads exclude each other),
 # LICENSE.txt (openfx-misc's GPLv2) and LICENSES/: the licenses of the third-party code in the
@@ -21,7 +23,8 @@
 # sources give the license texts; the script itself, its CeCILL-C text and its parameters may come
 # from another checkout, e.g. release.yml's .release-tools):
 #   .github/tools/package-release.sh [--version VERSION] --platform PLATFORM --out DIR \
-#       --full DIR --shadertoy-gl DIR [--shadertoy-osmesa DIR] --denoisesharpen DIR [--licenses DIR] \
+#       --full DIR --shadertoy-gl DIR [--shadertoy-osmesa DIR] --denoisesharpen DIR --noop DIR \
+#       [--licenses DIR] \
 #       [--fft pocketfft|pow2|fftw3]
 # --fft: the FFT of the CImg plug-ins (CMake's FFT; default pocketfft, whose
 #   CImg/pocketfft_hdronly.h, downloaded at configure, is then required for its license).
@@ -33,7 +36,7 @@
 #   2.6.0), else <date>-<commit> (from $GITHUB_SHA, or git).
 # Each input DIR holds the *.ofx.bundle directories (e.g. an install prefix's OFX/Plugins):
 #   --full: Misc and CImg; --shadertoy-gl and --shadertoy-osmesa: Shadertoy;
-#   --denoisesharpen: DenoiseSharpen. The full set gets the Shadertoy of --shadertoy-osmesa;
+#   --denoisesharpen: DenoiseSharpen; --noop: NoOp. The full set gets the Shadertoy of --shadertoy-osmesa;
 #   without it (no OSMesa build for this platform), the OpenGL-only one, and the OSMesa download
 #   is not made.
 # PLATFORM: linux-x86_64, windows-x86_64, macos-universal... (linux-*, windows-*, macos-*);
@@ -45,7 +48,7 @@ usage() {
     exit 2
 }
 
-version='' platform='' out='' full='' stgl='' stmesa='' ds='' extra='' fft=pocketfft msvc=
+version='' platform='' out='' full='' stgl='' stmesa='' ds='' noop='' extra='' fft=pocketfft msvc=
 while [ $# -gt 0 ]; do
     case "$1" in
         --version) version=$2; shift 2 ;;
@@ -55,6 +58,7 @@ while [ $# -gt 0 ]; do
         --shadertoy-gl) stgl=$2; shift 2 ;;
         --shadertoy-osmesa) stmesa=$2; shift 2 ;;
         --denoisesharpen) ds=$2; shift 2 ;;
+        --noop) noop=$2; shift 2 ;;
         --licenses) extra=$2; shift 2 ;;
         --fft) fft=$2; shift 2 ;;
         *) usage ;;
@@ -69,7 +73,7 @@ if [ -z "$version" ]; then
         version=$(date -u +%Y%m%d)-${commit:0:7}
     fi
 fi
-[ -n "$version" ] && [ -n "$platform" ] && [ -n "$out" ] && [ -n "$full" ] && [ -n "$stgl" ] && [ -n "$ds" ] || usage
+[ -n "$version" ] && [ -n "$platform" ] && [ -n "$out" ] && [ -n "$full" ] && [ -n "$stgl" ] && [ -n "$ds" ] && [ -n "$noop" ] || usage
 
 case "$platform" in
     linux-*)
@@ -180,11 +184,11 @@ EOF
 Install only one of each plug-in
 --------------------------------
 Install EITHER the full set (openfx-misc-$version-$platform) OR standalone
-bundles (openfx-misc-Shadertoy-*, openfx-misc-DenoiseSharpen-*), NOT both: the
-standalone bundles contain the same plug-ins, with the same identifiers and
-versions, as the full set (Shadertoy.ofx.bundle is in the full set,
-DenoiseSharpen is in Misc.ofx.bundle), and a host must not find the same
-plug-in twice.
+bundles (openfx-misc-Shadertoy-*, openfx-misc-DenoiseSharpen-*,
+openfx-misc-NoOp-*), NOT both: the standalone bundles contain the same
+plug-ins, with the same identifiers and versions, as the full set
+(Shadertoy.ofx.bundle is in the full set, DenoiseSharpen and NoOp are in
+Misc.ofx.bundle), and a host must not find the same plug-in twice.
 EOF
     if [ -n "$stmesa" ]; then cat << 'EOF'
 
@@ -339,7 +343,7 @@ fi
 shadertoy_src=${stmesa:-$stgl}
 
 package "openfx-misc-$version-$platform" \
-"- Misc.ofx.bundle: the Misc plug-ins (DenoiseSharpen included)
+"- Misc.ofx.bundle: the Misc plug-ins (DenoiseSharpen and NoOp included)
 - CImg.ofx.bundle: the CImg plug-ins
 - $shadertoy_full" \
     "$full/Misc.ofx.bundle" "$full/CImg.ofx.bundle" "$shadertoy_src/Shadertoy.ofx.bundle"
@@ -356,3 +360,8 @@ package "openfx-misc-DenoiseSharpen-$version-$platform" \
 "- net.sf.openfx.DenoiseSharpen.ofx.bundle: DenoiseSharpen alone (the same plug-in as in Misc.ofx.bundle).
   Older releases named it DenoiseSharpen.ofx.bundle: remove that old bundle." \
     "$ds/net.sf.openfx.DenoiseSharpen.ofx.bundle"
+package "openfx-misc-NoOp-$version-$platform" \
+"- net.sf.openfx.NoOpPlugin.ofx.bundle: NoOp alone (the same plug-in as in Misc.ofx.bundle).
+  Its \"Host Info...\" button shows what the OpenFX host supports (also saved to
+  OFXHostInfo-<host>.txt in the temporary directory), to paste into a bug report." \
+    "$noop/net.sf.openfx.NoOpPlugin.ofx.bundle"

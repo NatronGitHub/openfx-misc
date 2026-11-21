@@ -12,7 +12,9 @@ name: Binary release
 #   openfx-misc-Shadertoy-OSMesa-<version>-<platform>  Shadertoy.ofx alone, OpenGL + OSMesa
 #                                                     (the bundle of the full set)
 #   openfx-misc-DenoiseSharpen-<version>-<platform>    net.sf.openfx.DenoiseSharpen.ofx alone
-#                                                     (-DOFXMISC_STANDALONE_BUNDLES=DenoiseSharpen)
+#   openfx-misc-NoOp-<version>-<platform>              net.sf.openfx.NoOpPlugin.ofx alone (its
+#                                                     Host Info button shows what a host supports)
+#                                                     (-DOFXMISC_STANDALONE_BUNDLES=DenoiseSharpen;NoOp)
 # The standalone bundles have the same plug-ins (identifiers and versions) as the full
 # set: users install one or the other, never both, and only one Shadertoy.
 #
@@ -98,10 +100,10 @@ env:
   # Release builds (C++17, passed explicitly), without the Test bundle; the bundles are
   # deployed (OFX_DEPLOY_BUNDLES: on macOS, osxDeploy.sh copies the non-system libraries
   # into the bundles); hostDemo is built for the smoke test (installed in <prefix>/bin,
-  # not packaged). DenoiseSharpen is also built as a standalone bundle.
+  # not packaged). DenoiseSharpen and NoOp are also built as standalone bundles.
   # OSMESA_PKGCONFIG_STATIC: the builds with USE_OSMESA link osmesa-install's static OSMesa
   # with the flags of pkg-config --static.
-  CMAKE_OPTIONS: -DCMAKE_BUILD_TYPE=Release -DOFX_CXX_STANDARD=17 -DBUILD_TESTING=OFF -DOFX_DEPLOY_BUNDLES=ON -DOFX_BUILD_HOSTDEMO=ON -DOFXMISC_STANDALONE_BUNDLES=DenoiseSharpen -DOSMESA_PKGCONFIG_STATIC=ON
+  CMAKE_OPTIONS: -DCMAKE_BUILD_TYPE=Release -DOFX_CXX_STANDARD=17 -DBUILD_TESTING=OFF -DOFX_DEPLOY_BUNDLES=ON -DOFX_BUILD_HOSTDEMO=ON -DOFXMISC_STANDALONE_BUNDLES=DenoiseSharpen;NoOp -DOSMESA_PKGCONFIG_STATIC=ON
   # The Shadertoy-only builds (without Misc and CImg)
   SHADERTOY_OPTIONS: -DCMAKE_BUILD_TYPE=Release -DOFX_CXX_STANDARD=17 -DBUILD_TESTING=OFF -DOFX_DEPLOY_BUNDLES=ON -DBUILD_MISC=OFF -DBUILD_CIMG_PLUGINS=OFF -DOSMESA_PKGCONFIG_STATIC=ON
   # The bundles that the smoke test of the full set expects (no Test bundle)
@@ -258,7 +260,7 @@ jobs:
       - name: Install the OpenGL headers
         # mesa-libGL-devel (which requires libdrm-devel), after OSMesa
         run: dnf -y -q install mesa-libGL-devel
-      - name: Build the full set (Shadertoy with OSMesa) and DenoiseSharpen
+      - name: Build the full set (Shadertoy with OSMesa), DenoiseSharpen and NoOp
         # --as-needed: Shadertoy only links the libraries of llvm-config --system-libs that
         # LLVM's code in it uses (not libxml2)
         run: |
@@ -266,11 +268,12 @@ jobs:
               -DUSE_OSMESA=ON ${OSMESA_LINUX_OPTIONS:--DOSMESA_PATH=/opt/osmesa -DLLVM_PATH=/usr -DOSMESA_LICENSES_DIR=/opt/osmesa/licenses} \
               -DCMAKE_MODULE_LINKER_FLAGS=-Wl,--as-needed
           cmake --build build
-          # each bundle is an install component (openfx's add_ofx_plugin): net.sf.openfx.DenoiseSharpen.ofx.bundle
-          # and Misc.ofx.bundle have the same plug-in, so each is installed, tested and packaged
-          # in its own prefix
+          # each bundle is an install component (openfx's add_ofx_plugin): net.sf.openfx.DenoiseSharpen.ofx.bundle,
+          # net.sf.openfx.NoOpPlugin.ofx.bundle and Misc.ofx.bundle have the same plug-ins, so each
+          # is installed, tested and packaged in its own prefix
           for c in Misc CImg Shadertoy hostDemo; do cmake --install build --prefix "$PWD/install" --component $c; done
           cmake --install build --prefix "$PWD/install-denoisesharpen" --component DenoiseSharpen
+          cmake --install build --prefix "$PWD/install-noop" --component NoOp
       - name: Build Shadertoy (OpenGL only)
         run: |
           cmake -S . -B build-shadertoy -G Ninja $SHADERTOY_OPTIONS -DUSE_OSMESA=OFF
@@ -288,17 +291,19 @@ jobs:
         run: |
           "$TOOLS"/bundle-linux-libs.sh install/OFX/Plugins/Shadertoy.ofx.bundle libzstd.so.1
           check=$(sed -n 's/^OFX_LINUX_CHECK_BUNDLE:[A-Z]*=//p' build/CMakeCache.txt)
-          "$check" install/OFX/Plugins install-shadertoy/OFX/Plugins install-denoisesharpen/OFX/Plugins
+          "$check" install/OFX/Plugins install-shadertoy/OFX/Plugins install-denoisesharpen/OFX/Plugins install-noop/OFX/Plugins
       - name: Load test
         run: |
           .github/tools/loadtest.sh install
           .github/tools/loadtest.sh install-shadertoy
           .github/tools/loadtest.sh install-denoisesharpen
+          .github/tools/loadtest.sh install-noop
       - name: Smoke test (hostDemo, all plug-ins)
         timeout-minutes: 15
         run: |
           SMOKETEST_BUNDLES="$SMOKETEST_FULL" .github/tools/smoketest.sh --quick install
           SMOKETEST_BUNDLES="net.sf.openfx.DenoiseSharpen:1" HOSTDEMO="$PWD/install/bin/hostDemo" .github/tools/smoketest.sh install-denoisesharpen
+          SMOKETEST_BUNDLES="net.sf.openfx.NoOpPlugin:1" HOSTDEMO="$PWD/install/bin/hostDemo" .github/tools/smoketest.sh install-noop
       - name: Render test of the shipped Shadertoy (OSMesa)
         # smoketest.sh skips Shadertoy (the OpenGL-only one doesn't describe in hostDemo); the
         # OSMesa one of the full set renders on the CPU
@@ -310,7 +315,8 @@ jobs:
           "$TOOLS"/package-release.sh \
               --platform linux-x86_64 --out dist \
               --full install/OFX/Plugins --shadertoy-osmesa install/OFX/Plugins \
-              --shadertoy-gl install-shadertoy/OFX/Plugins --denoisesharpen install-denoisesharpen/OFX/Plugins
+              --shadertoy-gl install-shadertoy/OFX/Plugins --denoisesharpen install-denoisesharpen/OFX/Plugins \
+              --noop install-noop/OFX/Plugins
       - name: Upload artifacts
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
@@ -368,14 +374,15 @@ jobs:
         run: |
           PATH=$(printf '%s' "$PATH" | tr ':' '\n' | grep -v -e '^/opt/homebrew' -e '^/usr/local/' | paste -sd: -)
           echo "PATH=/opt/local/bin:/opt/local/sbin:$PATH" >> "$GITHUB_ENV"
-      - name: Build the full set and DenoiseSharpen
+      - name: Build the full set, DenoiseSharpen and NoOp
         # Shadertoy is OpenGL only: it is also the standalone Shadertoy (OpenGL)
         run: |
           cmake -S . -B build $CMAKE_OPTIONS $MACOS_OPTIONS "-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64"
           cmake --build build --parallel "$(getconf _NPROCESSORS_ONLN)"
-          # each bundle is an install component; DenoiseSharpen in its own prefix (see Linux)
+          # each bundle is an install component; DenoiseSharpen and NoOp in their own prefixes (see Linux)
           for c in Misc CImg Shadertoy hostDemo; do cmake --install build --prefix "$PWD/install" --component $c; done
           cmake --install build --prefix "$PWD/install-denoisesharpen" --component DenoiseSharpen
+          cmake --install build --prefix "$PWD/install-noop" --component NoOp
       - name: Build Shadertoy with OSMesa (prebuilt OSMesa)
         if: env.OSMESA_RELEASE != ''
         # Preferred: one build per architecture with the macos-arm64 and macos-x86_64 assets,
@@ -421,12 +428,14 @@ jobs:
         run: |
           .github/tools/loadtest.sh install
           .github/tools/loadtest.sh install-denoisesharpen
+          .github/tools/loadtest.sh install-noop
           [ ! -d install-shadertoy-osmesa ] || .github/tools/loadtest.sh install-shadertoy-osmesa
       - name: Smoke test (hostDemo, all plug-ins)
         timeout-minutes: 20
         run: |
           SMOKETEST_BUNDLES="$SMOKETEST_FULL" .github/tools/smoketest.sh --quick install
           SMOKETEST_BUNDLES="net.sf.openfx.DenoiseSharpen:1" HOSTDEMO="$PWD/install/bin/hostDemo" .github/tools/smoketest.sh install-denoisesharpen
+          SMOKETEST_BUNDLES="net.sf.openfx.NoOpPlugin:1" HOSTDEMO="$PWD/install/bin/hostDemo" .github/tools/smoketest.sh install-noop
       - name: Render test of the shipped Shadertoy (OSMesa)
         # smoketest.sh skips Shadertoy (the OpenGL-only one doesn't describe in hostDemo); the
         # lipo-merged OSMesa one (also in the full set) renders on the CPU: each architecture
@@ -441,7 +450,7 @@ jobs:
           "$TOOLS"/package-release.sh \
               --platform macos-universal --out dist \
               --full install/OFX/Plugins --shadertoy-gl install/OFX/Plugins ${SHADERTOY_OSMESA:-} \
-              --denoisesharpen install-denoisesharpen/OFX/Plugins
+              --denoisesharpen install-denoisesharpen/OFX/Plugins --noop install-noop/OFX/Plugins
       - name: Upload artifacts
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
@@ -509,16 +518,17 @@ jobs:
           "$TOOLS"/fetch-osmesa.sh "$OSMESA_RELEASE" windows-ucrt64-x86_64 "$PWD/osmesa"
           echo "OSMESA_OPTIONS=-DUSE_OSMESA=ON -DOSMESA_PATH=$(cygpath -m "$PWD/osmesa/osmesa") -DLLVM_PATH=$(cygpath -m "$PWD/osmesa/llvm") -DOSMESA_LICENSES_DIR=$(cygpath -m "$PWD/osmesa/licenses")" >> "$GITHUB_ENV"
           echo "SHADERTOY_OSMESA=--shadertoy-osmesa install/OFX/Plugins" >> "$GITHUB_ENV"
-      - name: Build the full set and DenoiseSharpen
+      - name: Build the full set, DenoiseSharpen and NoOp
         # Shadertoy has OSMesa with OSMESA_RELEASE, else it is OpenGL only (and is also the
         # standalone Shadertoy (OpenGL)).
         run: |
           set -eo pipefail
           cmake -S . -B build -G Ninja $CMAKE_OPTIONS $WINDOWS_OPTIONS ${OSMESA_OPTIONS:-}
           cmake --build build
-          # each bundle is an install component; DenoiseSharpen in its own prefix (see Linux)
+          # each bundle is an install component; DenoiseSharpen and NoOp in their own prefixes (see Linux)
           for c in Misc CImg Shadertoy; do cmake --install build --prefix "$PWD/install" --component $c; done
           cmake --install build --prefix "$PWD/install-denoisesharpen" --component DenoiseSharpen
+          cmake --install build --prefix "$PWD/install-noop" --component NoOp
       - name: Build Shadertoy (OpenGL only)
         if: env.OSMESA_RELEASE != ''
         run: |
@@ -536,6 +546,7 @@ jobs:
           set -eo pipefail
           .github/tools/loadtest.sh install
           .github/tools/loadtest.sh install-denoisesharpen
+          .github/tools/loadtest.sh install-noop
           [ -z "$OSMESA_RELEASE" ] || .github/tools/loadtest.sh install-shadertoy
       - name: Licenses of the MinGW-w64 runtime
         # -static links into every bundle winpthreads (MIT/BSD-style) and the MinGW-w64 CRT (ZPL
@@ -576,7 +587,8 @@ jobs:
           "$TOOLS"/package-release.sh \
               --platform windows-x86_64 --out dist \
               --full install/OFX/Plugins --shadertoy-gl install-shadertoy/OFX/Plugins ${SHADERTOY_OSMESA:-} \
-              --denoisesharpen install-denoisesharpen/OFX/Plugins --licenses windows-licenses
+              --denoisesharpen install-denoisesharpen/OFX/Plugins --noop install-noop/OFX/Plugins \
+              --licenses windows-licenses
       - name: Upload artifacts
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
@@ -646,6 +658,7 @@ jobs:
           - \`openfx-misc-Shadertoy-OpenGL-<version>-<platform>\`: \`Shadertoy.ofx.bundle\` alone, OpenGL only.
           $osmesa_item
           - \`openfx-misc-DenoiseSharpen-<version>-<platform>\`: \`net.sf.openfx.DenoiseSharpen.ofx.bundle\` alone (DenoiseSharpen is also in \`Misc.ofx.bundle\`).
+          - \`openfx-misc-NoOp-<version>-<platform>\`: \`net.sf.openfx.NoOpPlugin.ofx.bundle\` alone (NoOp is also in \`Misc.ofx.bundle\`); its Host Info button shows what the host supports.
 
           **Install either the full set or standalone bundles, not both**: they contain the same plug-ins, with the same identifiers and versions. The two Shadertoy downloads are mutually exclusive. Each archive has a README.txt with the installation directories. Natron users don't need these: Natron includes them.
           EOF
