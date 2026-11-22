@@ -366,6 +366,14 @@ jobs:
           .github/tools/package-release.sh --platform ${{ matrix.platform }} --out dist \
               --full msvc/install/OFX/Plugins --shadertoy-gl msvc/install/OFX/Plugins \
               --denoisesharpen msvc/install-denoisesharpen/OFX/Plugins --noop msvc/install-noop/OFX/Plugins
+      - name: Package the debug symbols
+        # the .pdb of each binary (msvc-build.sh), for crash dumps from hosts: not in the bundles
+        shell: pwsh
+        run: |
+          $d = "openfx-misc-symbols-${{ matrix.platform }}"
+          New-Item -ItemType Directory -Force -Path $d | Out-Null
+          Copy-Item -Recurse msvc/symbols/* $d
+          Compress-Archive -Path $d -DestinationPath "dist/$d.zip"
       - name: Upload artifacts
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
@@ -403,7 +411,8 @@ jobs:
           path: dist
       - name: Unzip
         shell: pwsh
-        run: Get-ChildItem dist/*.zip | ForEach-Object { Expand-Archive $_.FullName -DestinationPath unpacked }
+        # (not the debug symbols: they have no bundles)
+        run: Get-ChildItem dist/*.zip | Where-Object { $_.Name -notlike 'openfx-misc-symbols-*' } | ForEach-Object { Expand-Archive $_.FullName -DestinationPath unpacked }
       - name: Load test
         run: |
           cl -nologo -EHsc -W3 -Iopenfx/include .github/tools/ofxload.cpp -Fe:ofxload-arm64.exe
