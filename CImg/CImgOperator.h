@@ -249,7 +249,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
     _premultChannel->getValueAtTime(time, premultChannel);
     const double mix = _ignoreMix ? 1. : _mix->getValueAtTime(time);
 
-    Params params;
+    Params params{}; // value-initialised: getValuesAtTime() may not set every field
     getValuesAtTime(time, params);
     int srcBoundary = getBoundary(params);
     assert(0 <= srcBoundary && srcBoundary <= 2);
@@ -432,7 +432,7 @@ CImgOperatorPluginHelper<Params>::getRegionsOfInterest(const OFX::RegionsOfInter
 # endif
     const double time = args.time;
     const OfxRectD& regionOfInterest = args.regionOfInterest;
-    Params params;
+    Params params{}; // value-initialised: getValuesAtTime() may not set every field
     getValuesAtTime(time, params);
 
     {
@@ -469,7 +469,7 @@ CImgOperatorPluginHelper<Params>::getRegionOfDefinition(const OFX::RegionOfDefin
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 # endif
-    Params params;
+    Params params{}; // value-initialised: getValuesAtTime() may not set every field
     getValuesAtTime(args.time, params);
 
     double srcApixelaspectratio = _srcAClip ? _srcAClip->getPixelAspectRatio() : 1.;
@@ -514,7 +514,7 @@ CImgOperatorPluginHelper<Params>::isIdentity(const OFX::IsIdentityArguments &arg
 
         return true;
     }
-    Params params;
+    Params params{}; // value-initialised: getValuesAtTime() may not set every field
     getValuesAtTime(time, params);
     switch ( isIdentity(args, params) ) {
     case 0:
