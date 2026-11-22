@@ -41,15 +41,21 @@ mkdir -p "$out"
 out=$(cd "$out" && pwd)
 w() { cygpath -m "$1"; }
 
+# Debug symbols: /Z7 (Embedded: in the objects, so that parallel compiles don't share a PDB) and
+# /DEBUG, with /OPT:REF /OPT:ICF to keep the Release code: each binary gets a .pdb, collected into
+# OUTDIR/symbols/<bundle folder>/ (for crash dumps from hosts; not shipped in the bundles).
 options=(-G Ninja -DCMAKE_BUILD_TYPE=Release -DOFX_CXX_STANDARD=17
     -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+    -DCMAKE_POLICY_DEFAULT_CMP0141=NEW -DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded
+    "-DCMAKE_MODULE_LINKER_FLAGS_RELEASE=/DEBUG /OPT:REF /OPT:ICF"
     -DOFX_USE_OPENMP=OFF -DBUILD_TESTING=OFF)
 [ -z "$standalone" ] || options+=("-DOFXMISC_STANDALONE_BUNDLES=DenoiseSharpen;NoOp")
 
-# build BUILDDIR PREFIX [CMAKE_OPTION...]: configure, build and install the bundles into PREFIX
+# build BUILDDIR PREFIX SYMBOLDIR [CMAKE_OPTION...]: configure, build and install the bundles into
+# PREFIX, and copy the binaries' .pdb into OUTDIR/symbols/SYMBOLDIR
 build() {
-    local b=$1 p=$2 c start=$SECONDS
-    shift 2
+    local b=$1 p=$2 sym=$out/symbols/$3 c start=$SECONDS
+    shift 3
     echo "::group::$b"
     cmake -S . -B "$b" "${options[@]}" "$@"
     cmake --build "$b"
@@ -58,20 +64,22 @@ build() {
         cmake --install "$b" --prefix "$(w "$p-denoisesharpen")" --component DenoiseSharpen
         cmake --install "$b" --prefix "$(w "$p-noop")" --component NoOp
     fi
+    mkdir -p "$sym"
+    find "$b" -name '*.pdb' -not -path '*/CMakeFiles/*' -exec cp {} "$sym/" \;
     echo "::endgroup::"
     echo "$b: built in $(( (SECONDS - start) / 60 )) min $(( (SECONDS - start) % 60 )) s"
 }
 
-rm -rf "$out/build" "$out/build-arm64" "$out/build-arm64x" "$out/install" "$out/install-denoisesharpen" "$out/install-noop"
+rm -rf "$out/build" "$out/build-arm64" "$out/build-arm64x" "$out/install" "$out/install-denoisesharpen" "$out/install-noop" "$out/symbols"
 mkdir -p "$out/install-denoisesharpen" "$out/install-noop" # (empty with --no-standalone)
 if [ "$arch" = x64 ]; then
-    build "$out/build" "$out/install"
+    build "$out/build" "$out/install" Win64
 else
     rm -rf "$out/install-arm64" "$out/install-arm64-denoisesharpen" "$out/install-arm64-noop" "$out/arm64x"
-    build "$out/build-arm64" "$out/install-arm64" \
+    build "$out/build-arm64" "$out/install-arm64" Win-arm64 \
         -DOFXMISC_ARM64X=ARM64 -DOFXMISC_ARM64X_DIR="$(w "$out/arm64x")"
     # CFLAGS/CXXFLAGS: added to CMake's default flags (a -DCMAKE_CXX_FLAGS would replace them)
-    CFLAGS=-arm64EC CXXFLAGS=-arm64EC build "$out/build-arm64x" "$out/install" \
+    CFLAGS=-arm64EC CXXFLAGS=-arm64EC build "$out/build-arm64x" "$out/install" Win-arm64ec \
         -DOFXMISC_ARM64X=ARM64EC -DOFXMISC_ARM64X_DIR="$(w "$out/arm64x")"
     # one bundle with both: Win-arm64ec (Arm64X) and Win-arm64 (ARM64)
     for i in install install-denoisesharpen install-noop; do
@@ -111,6 +119,13 @@ expected=5
 [ "$arch" = x64 ] || expected=$((expected * 2))
 if [ "$n" != "$expected" ]; then
     echo "ERROR: $n binaries, expected $expected"
+    status=1
+fi
+# one .pdb per binary, for the crash dumps
+npdb=$(find "$out/symbols" -name '*.pdb' | wc -l)
+echo "symbols: $npdb .pdb files: $(cd "$out/symbols" && find . -name '*.pdb' | sort | tr '\n' ' ')"
+if [ "$npdb" != "$n" ]; then
+    echo "ERROR: $npdb .pdb files for $n binaries"
     status=1
 fi
 find "$out/install" "$out/install-denoisesharpen" "$out/install-noop" -maxdepth 5 -path '*.ofx.bundle/Contents/*' -type d -name 'Win*' | sed "s|^$out/||" | sort
