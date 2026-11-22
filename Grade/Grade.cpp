@@ -35,8 +35,8 @@
 #include "ofxsMultiThread.h"
 #ifdef OFX_USE_MULTITHREAD_MUTEX
 namespace {
-    typedef MultiThread::Mutex Mutex;
-    typedef MultiThread::AutoMutex AutoMutex;
+    typedef OFX::MultiThread::Mutex Mutex;
+    typedef OFX::MultiThread::AutoMutex AutoMutex;
 }
 #else
 // some OFX hosts do not have mutex handling in the MT-Suite (e.g. Sony Catalyst Edit)
