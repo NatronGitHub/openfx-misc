@@ -1317,10 +1317,8 @@ ShufflePlugin::render(const RenderArguments &args)
         if ( !dst.get() ) {
             throwSuiteStatusException(kOfxStatFailed);
         }
-       BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-        PixelComponentEnum dstComponents  = dst->getPixelComponents();
-        if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
-            ( dstComponents != _dstClip->getPixelComponents() ) ) {
+        if ( ( dst->getPixelDepth() != _dstClip->getPixelDepth() ) ||
+            ( dst->getPixelComponents() != _dstClip->getPixelComponents() ) ) {
             setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
             throwSuiteStatusException(kOfxStatFailed);
         }
@@ -1330,7 +1328,8 @@ ShufflePlugin::render(const RenderArguments &args)
             throwSuiteStatusException(kOfxStatFailed);
         }
         // In multiplane mode, we cannot expect the image plane to match the clip components
-        if (dstBitDepth != _dstClip->getPixelDepth()) {
+        // (this compared the clip depth with itself: check the fetched plane's depth)
+        if (dst->getPixelDepth() != _dstClip->getPixelDepth()) {
             setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
             throwSuiteStatusException(kOfxStatFailed);
         }

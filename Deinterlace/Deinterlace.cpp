@@ -49,8 +49,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "- Yadif: Interpolator (Yet Another DeInterlacing Filter) from MPlayer by Michael Niedermayer (http://www.mplayerhq.hu). It checks pixels of previous, current and next frames to re-create the missed field by some local adaptive method (edge-directed interpolation) and uses spatial check to prevent most artifacts." \
 
 #define kPluginIdentifier    "net.sf.openfx.Deinterlace"
+// History:
+// version 1.0: initial version
+// version 1.1: images of less than 3 columns or rows whose bounds don't start at x = 0 are copied
+//              instead of dereferencing a NULL pixel address; an unsupported bit depth fails the
+//              render instead of leaving the output unwritten (#254)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
@@ -535,11 +540,16 @@ DeinterlacePlugin::render(const RenderArguments &args)
     if ( (width < 3) || (height < 3) ) {
         // Video of less than 3 columns or lines is not supported
         // just copy src to dst
-        for (int y = 0; y < height; y++) {
-            unsigned char* lineStart = (unsigned char*)dst->getPixelAddress(0, y);
-            unsigned int lineLen = std::abs( dst->getRowBytes() );
-            if ( src.get() ) {
-                std::memcpy( lineStart, src->getPixelAddress(0, y), lineLen );
+        // rows start at x = rect.x1 (getPixelAddress() returns NULL outside the bounds), and only the
+        // pixels are copied (src and dst may have different row padding)
+        const std::size_t lineLen = static_cast<std::size_t>(width) * dst->getPixelBytes();
+        for (int y = rect.y1; y < rect.y2; y++) {
+            unsigned char* lineStart = static_cast<unsigned char*>( dst->getPixelAddress(rect.x1, y) );
+            // copy a row only if src covers it entirely (else black)
+            const bool srcCoversRow = src.get() && src->getBounds().x1 <= rect.x1 && rect.x2 <= src->getBounds().x2;
+            const void* srcLine = srcCoversRow ? src->getPixelAddress(rect.x1, y) : NULL;
+            if (srcLine) {
+                std::memcpy( lineStart, srcLine, lineLen );
             } else {
                 std::fill( lineStart, lineStart + lineLen, 0 );
             }

@@ -90,6 +90,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              (no version change) removed the XY render branch: Output never declares XY, so a
 //              conforming host never gives it; other components give kOfxStatErrFormat (issue #226).
 //              Output is unchanged.
+//              With Process A and an opaque Source, Source is mapped to RGBA like the output, so that an
+//              RGB Source is not read as RGBA (out of bounds) (#254).
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 2 // Increment this when you have fixed a bug or made it faster.
 
@@ -1163,6 +1165,8 @@ RectanglePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
         // We just set the output components.
         if ( processA && _srcClip && _srcClip->isConnected() && _srcClip->getPreMultiplication() == eImageOpaque) {
             clipPreferences.setClipComponents(*_dstClip, ePixelComponentRGBA);
+            // the processor reads Source with the output's components (as Radial does)
+            clipPreferences.setClipComponents(*_srcClip, ePixelComponentRGBA);
             clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
         }
     }

@@ -1256,7 +1256,6 @@ HSVToolPlugin::setupAndProcess(HSVToolProcessorBase &processor,
 # endif
 
     OutputAlphaEnum outputAlpha = (OutputAlphaEnum)_outputAlpha->getValueAtTime(time);
-# ifndef NDEBUG
     if (outputAlpha != eOutputAlphaSource) {
         if (dstComponents != ePixelComponentRGBA) {
             setPersistentMessage(Message::eMessageError, "", "OFX Host dit not take into account output components");
@@ -1265,7 +1264,6 @@ HSVToolPlugin::setupAndProcess(HSVToolProcessorBase &processor,
             return;
         }
     }
-# endif
 
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(time) : 0 );

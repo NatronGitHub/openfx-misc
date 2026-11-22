@@ -66,6 +66,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
+// version 2.1: with Process A and an opaque Source, Source is mapped to RGBA like the output, so that
+//              an RGB Source is not read as RGBA (out of bounds) (#254)
+// version 3.0: isIdentity also tests the RGB of the colors (version 2 is kept); includes the 2.1 fix
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -739,6 +742,8 @@ RampPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
         // We just set the output components.
         if ( processA && _srcClip && _srcClip->isConnected() && _srcClip->getPreMultiplication() == eImageOpaque) {
             clipPreferences.setClipComponents(*_dstClip, ePixelComponentRGBA);
+            // the processor reads Source with the output's components (as Radial does)
+            clipPreferences.setClipComponents(*_srcClip, ePixelComponentRGBA);
             clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
         }
     }
@@ -906,7 +911,7 @@ RampPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
 // the plugin UID in a static shared by all objects of the same class.
 static RampPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 // version 2: isIdentity only tests the alpha of the colors (deprecated, kept so old projects render the same)
-static RampPluginFactory<2> p2(kPluginIdentifier, 0);
+static RampPluginFactory<2> p2(kPluginIdentifier, 1); // 2.1, see the history above
 mRegisterPluginFactoryInstance(p)
 mRegisterPluginFactoryInstance(p2)
 
