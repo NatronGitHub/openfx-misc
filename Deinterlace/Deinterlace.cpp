@@ -441,11 +441,11 @@ filter_plane_ofx(int mode,
                  int tff)
 {
     Comp *dst = (Comp*)dst_->getPixelData(); // change this when we support renderWindow
-    int dst_stride = dst_->getRowBytes() / sizeof(Comp); // may be negative, @see kOfxImagePropRowBytes
+    int dst_stride = dst_->getRowBytes() / static_cast<int>( sizeof(Comp) ); // may be negative (kOfxImagePropRowBytes): int division, not size_t
     const Comp *prev0 = (const Comp*)( srcp ? srcp->getPixelData() : src->getPixelData() );
     const Comp *cur0 = (const Comp*)src->getPixelData();
     const Comp *next0 = (const Comp*)( srcn ? srcn->getPixelData() : src->getPixelData() );
-    int refs = src->getRowBytes() / sizeof(Comp); // may be negative, @see kOfxImagePropRowBytes
+    int refs = src->getRowBytes() / static_cast<int>( sizeof(Comp) ); // may be negative (kOfxImagePropRowBytes): int division, not size_t
     const OfxRectI bounds = dst_->getBounds();
 
     filter_plane<ch, Comp, Diff>(mode, dst, dst_stride,

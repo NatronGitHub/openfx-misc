@@ -73,7 +73,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 // 1.1: an empty source format (e.g. a disconnected input) no longer gives a NaN image area (NaN audit);
 //      in the filter context, Source is RGBA, so that the RGBA Output has the components of Source, as the
-//      OpenFX spec mandates (issue #190)
+//      OpenFX spec mandates (issue #190); images with padded rows or negative row bytes
+//      (kOfxImagePropRowBytes) are drawn correctly instead of skewed or out of bounds (issue #232)
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1

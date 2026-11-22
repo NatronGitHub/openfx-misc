@@ -136,19 +136,25 @@ drawImage(const Image* src,
           double dstPar)
 {
     assert(dst->getPixelDepth() == eBitDepthFloat && src->getPixelDepth() == eBitDepthFloat);
+    // the strides below are in floats: row bytes that are not a whole number of floats can't be addressed
+    if ( (dst->getRowBytes() % (int)sizeof(float) != 0) || (src->getRowBytes() % (int)sizeof(float) != 0) ) {
+        throwSuiteStatusException(kOfxStatErrImageFormat);
+    }
     const OfxRectI& dstBounds = dst->getBounds();
     float* b = (float*)dst->getPixelData();
     const size_t bwidth = dstBounds.x2 - dstBounds.x1;
     const size_t bheight = dstBounds.y2 - dstBounds.y1;
     const size_t bxstride = dst->getPixelComponentCount();
-    const size_t bystride = bwidth * bxstride;
+    // rows may be padded, and row bytes may be negative (kOfxImagePropRowBytes): use them, not
+    // width * components. getPixelData() is the first row in memory order (bounds.y1).
+    const std::ptrdiff_t bystride = dst->getRowBytes() / (std::ptrdiff_t)sizeof(float);
 
     const OfxRectI& srcBounds = src->getBounds();
     const float* a = (const float*)src->getPixelData();
     const size_t awidth = srcBounds.x2 - srcBounds.x1;
     const size_t aheight = srcBounds.y2 - srcBounds.y1;
     const size_t axstride = src->getPixelComponentCount();
-    const size_t aystride = awidth * axstride;
+    const std::ptrdiff_t aystride = src->getRowBytes() / (std::ptrdiff_t)sizeof(float);
     const size_t depth = (std::min)(axstride, bxstride);
     const OfxRectD from = {0., 0., (double)awidth, (double)aheight};
     OfxRectI to;

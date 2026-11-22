@@ -73,7 +73,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // 1.1: an empty source format no longer gives NaN cell sizes and image areas (NaN audit);
 //      renders on hosts without the plane suite (e.g. OFX 1.4 hosts), with the colour plane only;
 //      in the filter context, Source is RGBA, so that the RGBA Output has the components of Source, as the
-//      OpenFX spec mandates (issue #190)
+//      OpenFX spec mandates (issue #190); images with padded rows or negative row bytes
+//      (kOfxImagePropRowBytes) are drawn correctly instead of skewed or out of bounds (issue #232)
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
