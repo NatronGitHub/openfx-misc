@@ -556,19 +556,26 @@ to the prefix (or absolute). The main options are:
 
 ### Xcode and Visual Studio
 
-CMake generates the IDE projects, with the same options as above. Xcode:
+CMake generates the IDE projects, with the same options as above. Set the install
+prefix to the parent of the OpenFX plugins directory when generating. Xcode:
 
-	cmake -S . -B build-xcode -G Xcode
+	cmake -S . -B build-xcode -G Xcode -DCMAKE_INSTALL_PREFIX=/Library
 	open build-xcode/OpenFXMisc.xcodeproj
 
 Visual Studio 2022 (x64; `-A ARM64` for ARM64, see the MSVC options above for Arm64X):
 
-	cmake -S . -B build-vs -G "Visual Studio 17 2022" -A x64
+	cmake -S . -B build-vs -G "Visual Studio 17 2022" -A x64 -DCMAKE_INSTALL_PREFIX="C:/Program Files/Common Files"
 	start build-vs\OpenFXMisc.sln
 
-Build the `ALL_BUILD` target, then the `INSTALL` target (or `cmake --install build-vs
---config Release --prefix <prefix>`) to copy the bundles into `<prefix>/OFX/Plugins`.
-On Windows, 64-bit plugins go in `C:\Program Files\Common Files\OFX\Plugins`.
+Build the `ALL_BUILD` target, then the install target (`install` in Xcode, `INSTALL`
+in Visual Studio) to copy the bundles into `<prefix>/OFX/Plugins`; or, from a shell,
+`cmake --build <build> --config Release` and `cmake --install <build> --config Release`.
+Installing into `/Library` needs `sudo`, and into `C:/Program Files` an elevated prompt.
+
+The IDE projects never build the debug-only bundles, even in their Debug configuration:
+ReConverge, TimeBuffer and TestRender are only built with a single-configuration Debug
+build (`-DCMAKE_BUILD_TYPE=Debug` with Ninja or Makefiles). Test and DebugProxy need
+`-DBUILD_TESTING=ON -DBUILD_DEBUGPROXY=ON`.
 
 Credits
 -------
