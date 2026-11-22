@@ -24,6 +24,7 @@
 #include <cmath>
 #include <cfloat> // DBL_MAX
 #include <map>
+#include <optional>
 #include <limits>
 #include <algorithm>
 
@@ -33,6 +34,7 @@
 #include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 #include "ofxsNonFinite.h" // finiteSample
+#include "ofxsAnalysisScope.h" // InAnalysisScope, ProgressScope
 #ifdef OFX_USE_MULTITHREAD_MUTEX
 namespace {
 typedef MultiThread::Mutex Mutex;
@@ -612,11 +614,8 @@ TrackerPMPlugin::trackRange(const TrackArguments& args)
     if (!_srcClip || !_srcClip->isConnected()) {
         return;
     }
-# ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
-    // Although the following property has been there since OFX 1.0,
-    // it's not in the HostSupport library.
-    getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
-#  endif
+    // restored on return, cancel or exception (issue #237)
+    InAnalysisScope inAnalysis(*this);
     //double t1, t2;
     // get the first and last times available on the effect's timeline
     //timeLineGetBounds(t1, t2);
@@ -627,8 +626,9 @@ TrackerPMPlugin::trackRange(const TrackArguments& args)
     _instanceName->getValueAtTime(t, name);
     assert( (args.forward && args.last >= args.first) || (!args.forward && args.last <= args.first) );
     bool showProgress = std::abs(args.last - args.first) > 1;
+    std::optional<ProgressScope> progress;
     if (showProgress) {
-        progressStart(name);
+        progress.emplace(*this, name);
     }
 
     bool enableRefFrame = _enableReferenceFrame->getValue();
@@ -664,17 +664,9 @@ TrackerPMPlugin::trackRange(const TrackArguments& args)
             timeLineGotoTime(t);
         }
         if ( showProgress && !progressUpdate( (t - args.first) / (args.last - args.first) ) ) {
-            progressEnd();
-
             return;
         }
     }
-    if (showProgress) {
-        progressEnd();
-    }
-# ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
-    getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);
-# endif
 } // TrackerPMPlugin::trackRange
 
 ////////////////////////////////////////////////////////////////////////////////
