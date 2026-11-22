@@ -161,8 +161,8 @@ cimgPadRect(const OfxRectI& rect,
     "This plug-in only supports 32-bit floating-point images, but the host gave it images of another bit depth. " \
     "Please set the pixel format (bit depth) of the host project to 32-bit floating point."
 #define kCImgFilterComponentsUnsupportedMessage \
-    "The host gave this plug-in a source image whose components differ from the output's. " \
-    "Please report this to the host developers."
+    "The source image has other components than the output (e.g. RGB and RGBA), " \
+    "and this plug-in needs them to be the same. Convert the source to the output's components first."
 
 class CImgFilterPluginHelperBase
     : public OFX::ImageEffect
