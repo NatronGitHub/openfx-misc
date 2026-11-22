@@ -1638,44 +1638,69 @@ ShadertoyPlugin::updateVisibilityParam(unsigned i,
 void
 ShadertoyPlugin::updateExtra()
 {
+    // Copy what the last compilation extracted from the shader under the lock, then set the params
+    // without holding it: setValue() is a host call, which may call changedParam() back, and
+    // changedParam() takes the same non-recursive lock (C++ Core Guidelines CP.22).
+    bool updateParams = false;
+    std::vector<ExtraParameter> extraParameters;
+    bool hasMouse = false;
+    std::vector<bool> inputEnabled;
+    std::vector<std::string> inputLabel;
+    std::vector<std::string> inputHint;
+    std::vector<FilterEnum> inputFilter;
+    std::vector<WrapEnum> inputWrap;
+    BBoxEnum bbox = BBoxEnum();
     {
         AutoMutex lock( _imageShaderMutex.get() );
         // only do this if parameters were updated!
-        if (_imageShaderUpdateParams) {
+        updateParams = _imageShaderUpdateParams;
+        if (updateParams) {
             _imageShaderUpdateParams = false;
+            extraParameters = _imageShaderExtraParameters;
+            hasMouse = _imageShaderHasMouse;
+            inputEnabled = _imageShaderInputEnabled;
+            inputLabel = _imageShaderInputLabel;
+            inputHint = _imageShaderInputHint;
+            inputFilter = _imageShaderInputFilter;
+            inputWrap = _imageShaderInputWrap;
+            bbox = _imageShaderBBox;
+        }
+    }
+    {
+        if (updateParams) {
             bool uniformsChanged = false;
             EditBlock eb(*this, kParamAuto);
             // Try to avoid setting parameters to the same value, since this maytrigger an unnecessary instancechanged on some hosts
             for (unsigned i = 0; i < NBINPUTS; ++i) {
-                if ( _imageShaderInputEnabled[i] != _inputEnable[i]->getValue() ) {
-                    _inputEnable[i]->setValue(_imageShaderInputEnabled[i]);
+                if ( inputEnabled[i] != _inputEnable[i]->getValue() ) {
+                    _inputEnable[i]->setValue(inputEnabled[i]);
                 }
                 string s;
                 _inputLabel[i]->getValue(s);
-                if (_imageShaderInputLabel[i] != s) {
-                    _inputLabel[i]->setValue(_imageShaderInputLabel[i]);
+                if (inputLabel[i] != s) {
+                    _inputLabel[i]->setValue(inputLabel[i]);
                 }
                 _inputHint[i]->getValue(s);
-                if (_imageShaderInputHint[i] != s) {
-                    _inputHint[i]->setValue(_imageShaderInputHint[i]);
+                if (inputHint[i] != s) {
+                    _inputHint[i]->setValue(inputHint[i]);
                 }
-                if ( _imageShaderInputFilter[i] != _inputFilter[i]->getValue() ) {
-                    _inputFilter[i]->setValue(_imageShaderInputFilter[i]);
+                if ( inputFilter[i] != _inputFilter[i]->getValue() ) {
+                    _inputFilter[i]->setValue(inputFilter[i]);
                 }
-                if ( _imageShaderInputWrap[i] != _inputWrap[i]->getValue() ) {
-                    _inputWrap[i]->setValue(_imageShaderInputWrap[i]);
+                if ( inputWrap[i] != _inputWrap[i]->getValue() ) {
+                    _inputWrap[i]->setValue(inputWrap[i]);
                 }
             }
-            if ( _imageShaderHasMouse != _mouseParams->getValue() ) {
-                _mouseParams->setValue(_imageShaderHasMouse);
+            if ( hasMouse != _mouseParams->getValue() ) {
+                _mouseParams->setValue(hasMouse);
             }
-            unsigned paramCount = (std::min)( _imageShaderExtraParameters.size() , _paramType.size() );
+            unsigned paramCount = (std::min)( extraParameters.size() , _paramType.size() );
             if ( (int)paramCount != _paramCount->getValue() ) {
                 _paramCount->setValue(paramCount);
                 uniformsChanged = true;
             }
             for (unsigned i = 0; i < paramCount; ++i) {
-                const ExtraParameter& p = _imageShaderExtraParameters[i];
+                const ExtraParameter& p = extraParameters[i];
                 UniformTypeEnum t = p.getType();
                 bool nChanged = false; // did the param name change? (required shader recompilation to get the uniform address)
                 bool tChanged = ( t != (UniformTypeEnum)_paramType[i]->getValue() );
@@ -1885,7 +1910,7 @@ ShadertoyPlugin::updateExtra()
                 }
                 } // switch
             }
-            for (unsigned i = _imageShaderExtraParameters.size(); i < _paramType.size(); ++i) {
+            for (unsigned i = extraParameters.size(); i < _paramType.size(); ++i) {
                 bool tChanged = ( (UniformTypeEnum)_paramType[i]->getValue() != eUniformTypeNone );
                 if (tChanged) {
                     _paramDefaultBool[i]->resetToDefault();
@@ -1906,13 +1931,14 @@ ShadertoyPlugin::updateExtra()
                     //_paramMaxVec4[i]->resetToDefault();
                 }
             }
-            _bbox->setValue( (int)_imageShaderBBox );
+            _bbox->setValue( (int)bbox );
             resetParamsValues();
             if (uniformsChanged) {
                 // mark that image shader must be recompiled on next render
+                AutoMutex lock( _imageShaderMutex.get() );
                 ++_imageShaderUniformsID;
             }
-        } // if (_imageShaderUpdateParams)
+        } // if (updateParams)
     }
 
     // update GUI
