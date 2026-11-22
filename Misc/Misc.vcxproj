@@ -505,6 +505,7 @@ xcopy $(SolutionDir)..\WhiteBalance\net.sf.openfx.WhiteBalance.png $(OutDir)$(Pr
     <ClInclude Include="ofxsLuminanceMath.h" />
     <ClInclude Include="ofxsRGBAProcessing.h" />
     <ClInclude Include="ofxsNonFinite.h" />
+    <ClInclude Include="ofxsAnalysisScope.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

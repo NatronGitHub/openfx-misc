@@ -24,6 +24,7 @@
 #include <cmath>
 #include <cfloat> // DBL_MAX
 #include <map>
+#include <optional>
 #include <limits>
 #include <algorithm>
 
@@ -33,6 +34,7 @@
 #include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 #include "ofxsNonFinite.h" // finiteSample
+#include "ofxsAnalysisScope.h" // InAnalysisScope, ProgressScope
 #ifdef OFX_USE_MULTITHREAD_MUTEX
 namespace {
 typedef MultiThread::Mutex Mutex;
@@ -534,12 +536,12 @@ private:
         double dx = 0.;
         double dy = 0.;
 
-        _bestMatchMutex.lock();
-        if (_bestMatch.second < bestScore) {
-            _bestMatchMutex.unlock();
-        } else {
-            // don't block other threads
-            _bestMatchMutex.unlock();
+        // scoped lock (CP.20); the refinement below runs without it, not to block other threads
+        const bool possibleWinner = [&] {
+            AutoMutex lock(_bestMatchMutex);
+            return !(_bestMatch.second < bestScore);
+        }();
+        if (possibleWinner) {
             // compute subpixel position.
             double scorepc = computeScore<scoreTypeE>(point.x - 1, point.y, refMean, refMeanOverflows);
             double scorenc = computeScore<scoreTypeE>(point.x + 1, point.y, refMean, refMeanOverflows);
@@ -612,11 +614,8 @@ TrackerPMPlugin::trackRange(const TrackArguments& args)
     if (!_srcClip || !_srcClip->isConnected()) {
         return;
     }
-# ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
-    // Although the following property has been there since OFX 1.0,
-    // it's not in the HostSupport library.
-    getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
-#  endif
+    // restored on return, cancel or exception (issue #237)
+    InAnalysisScope inAnalysis(*this);
     //double t1, t2;
     // get the first and last times available on the effect's timeline
     //timeLineGetBounds(t1, t2);
@@ -626,9 +625,9 @@ TrackerPMPlugin::trackRange(const TrackArguments& args)
     std::string name;
     _instanceName->getValueAtTime(t, name);
     assert( (args.forward && args.last >= args.first) || (!args.forward && args.last <= args.first) );
-    bool showProgress = std::abs(args.last - args.first) > 1;
-    if (showProgress) {
-        progressStart(name);
+    std::optional<ProgressScope> progress; // only for more than two frames
+    if (std::abs(args.last - args.first) > 1) {
+        progress.emplace(*this, name);
     }
 
     bool enableRefFrame = _enableReferenceFrame->getValue();
@@ -663,18 +662,10 @@ TrackerPMPlugin::trackRange(const TrackArguments& args)
             // set the timeline to a specific time
             timeLineGotoTime(t);
         }
-        if ( showProgress && !progressUpdate( (t - args.first) / (args.last - args.first) ) ) {
-            progressEnd();
-
+        if ( progress && !progressUpdate( (t - args.first) / (args.last - args.first) ) ) {
             return;
         }
     }
-    if (showProgress) {
-        progressEnd();
-    }
-# ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
-    getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);
-# endif
 } // TrackerPMPlugin::trackRange
 
 ////////////////////////////////////////////////////////////////////////////////

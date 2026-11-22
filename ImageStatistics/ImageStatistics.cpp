@@ -35,6 +35,7 @@
 #include "ofxsLut.h"
 #include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
+#include "ofxsAnalysisScope.h" // InAnalysisScope, ProgressScope
 #ifdef OFX_USE_MULTITHREAD_MUTEX
 namespace {
 typedef MultiThread::Mutex Mutex;
@@ -1719,9 +1720,7 @@ ImageStatisticsPlugin::changedParam(const InstanceChangedArgs &args,
             checkBadRenderScale(src, args);
             bool intersect = computeWindow(src.get(), args.renderScale, args.time, &analysisWindow);
             if (intersect) {
-#             ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
-                getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
-#             endif
+                InAnalysisScope inAnalysis(*this); // restored on exit or exception (issue #237)
                 EditBlock eb(*this, "analyzeFrame");
                 if (doAnalyzeRGBA) {
                     update(src.get(), args.time, analysisWindow, args.renderScale);
@@ -1735,17 +1734,13 @@ ImageStatisticsPlugin::changedParam(const InstanceChangedArgs &args,
                 if (doAnalyzeAutoCrop) {
                     updateAutoCrop(src.get(), args.time, analysisWindow, args.renderScale);
                 }
-#             ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
-                getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);
-#             endif
             }
         }
     }
     if ( (doAnalyzeSequenceRGBA || doAnalyzeSequenceHSVL || doAnalyzeSequenceLuma || doAnalyzeSequenceAutoCrop) && _srcClip && _srcClip->isConnected() ) {
-#     ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
-        getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
-#     endif
-        progressStart("Analyzing sequence...");
+        // restored on exit, cancel or exception (issue #237)
+        InAnalysisScope inAnalysis(*this);
+        ProgressScope progress(*this, "Analyzing sequence...");
         EditBlock eb(*this, "analyzeSequence");
         int tmin, tmax;
         getSequenceRange(&tmin, &tmax);
@@ -1779,10 +1774,6 @@ ImageStatisticsPlugin::changedParam(const InstanceChangedArgs &args,
                 }
             }
         }
-        progressEnd();
-#     ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
-        getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);
-#     endif
     }
 } // ImageStatisticsPlugin::changedParam
 

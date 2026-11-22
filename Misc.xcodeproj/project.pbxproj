@@ -4094,6 +4094,7 @@
 		1EC0C0A11D00000000C0C0A1 /* ofxsLuminanceMath.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsLuminanceMath.h; sourceTree = "<group>"; };
 		1EC0C0A21D00000000C0C0A2 /* ofxsRGBAProcessing.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsRGBAProcessing.h; sourceTree = "<group>"; };
 		1EC0C0A31D00000000C0C0A3 /* ofxsNonFinite.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsNonFinite.h; sourceTree = "<group>"; };
+		1EC0C0A41D00000000C0C0A4 /* ofxsAnalysisScope.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsAnalysisScope.h; sourceTree = "<group>"; };
 		1ED5372E1A234CDF007966D5 /* ColorTransform.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ColorTransform.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1ED537301A234D21007966D5 /* ColorTransform.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ColorTransform.cpp; sourceTree = "<group>"; };
 		1ED537351A234D35007966D5 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -5878,6 +5879,7 @@
 				1EC0C0A11D00000000C0C0A1 /* ofxsLuminanceMath.h */,
 				1EC0C0A21D00000000C0C0A2 /* ofxsRGBAProcessing.h */,
 				1EC0C0A31D00000000C0C0A3 /* ofxsNonFinite.h */,
+				1EC0C0A41D00000000C0C0A4 /* ofxsAnalysisScope.h */,
 				1E8B5D4718B769CA00C31FDC /* Info.plist */,
 				1E8B5D4818B769CA00C31FDC /* Makefile */,
 			);

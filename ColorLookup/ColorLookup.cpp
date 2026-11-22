@@ -64,6 +64,7 @@ typedef void (APIENTRYP PFNGLBLENDEQUATIONSEPARATEPROC)(GLenum modeRGB, GLenum m
 #include "ofxsLuminanceMath.h"
 #include "ofxsMacros.h"
 #include "ofxsThreadSuite.h"
+#include "ofxsAnalysisScope.h" // InAnalysisScope
 #ifdef OFX_USE_MULTITHREAD_MUTEX
 namespace {
     typedef MultiThread::Mutex Mutex;
@@ -1273,14 +1274,9 @@ ColorLookupPlugin::updateHistogram(const InstanceChangedArgs &args)
                              _srcClip->fetchImage(args.time) : 0 );
     if ( src.get() ) {
         checkBadRenderScale(src, args);
-#     ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
-        getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
-#     endif
+        InAnalysisScope inAnalysis(*this); // restored on exit or exception (issue #237)
         EditBlock eb(*this, "analyzeFrame");
         update(src.get(), args.time, src->getBounds(), args.renderScale);
-#     ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
-        getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);
-#     endif
     }
 }
 
