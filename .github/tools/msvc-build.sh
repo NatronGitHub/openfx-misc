@@ -42,12 +42,14 @@ out=$(cd "$out" && pwd)
 w() { cygpath -m "$1"; }
 
 # Debug symbols: /Z7 (Embedded: in the objects, so that parallel compiles don't share a PDB) and
-# /DEBUG, with /OPT:REF /OPT:ICF to keep the Release code: each binary gets a .pdb, collected into
-# OUTDIR/symbols/<bundle folder>/ (for crash dumps from hosts; not shipped in the bundles).
+# /DEBUG:FULL, with /OPT:REF /OPT:ICF /INCREMENTAL:NO to keep the Release link, and /PDBALTPATH so
+# that a binary records only its .pdb's name, not the build machine's path: each binary gets a
+# .pdb, collected into OUTDIR/symbols/<architecture folder>/ (Win64, Win-arm64, Win-arm64ec), for
+# crash dumps from hosts; not shipped in the bundles.
 options=(-G Ninja -DCMAKE_BUILD_TYPE=Release -DOFX_CXX_STANDARD=17
     -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
-    -DCMAKE_POLICY_DEFAULT_CMP0141=NEW -DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded
-    "-DCMAKE_MODULE_LINKER_FLAGS_RELEASE=/DEBUG /OPT:REF /OPT:ICF"
+    -DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded
+    "-DCMAKE_MODULE_LINKER_FLAGS_RELEASE=/DEBUG:FULL /OPT:REF /OPT:ICF /INCREMENTAL:NO /PDBALTPATH:%_PDB%"
     -DOFX_USE_OPENMP=OFF -DBUILD_TESTING=OFF)
 [ -z "$standalone" ] || options+=("-DOFXMISC_STANDALONE_BUNDLES=DenoiseSharpen;NoOp")
 
