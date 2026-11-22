@@ -374,8 +374,8 @@ explains how to compile the plugins from source.
 The plugins can be compiled with CMake or with the provided Makefiles, on Linux,
 macOS, and Windows (MSYS2/MinGW-w64; CMake also supports Visual Studio). Both build
 the same bundles; Natron is moving all its builds to CMake (see
-[Natron#1181](https://github.com/NatronGitHub/Natron/issues/1181)). The Xcode project
-and the Visual Studio project are alternatives, which may not always be up to date.
+[Natron#1181](https://github.com/NatronGitHub/Natron/issues/1181)). For an IDE, let
+CMake generate the project (see [Xcode and Visual Studio](#xcode-and-visual-studio)).
 
 Whichever method you use, the compiled `*.ofx.bundle` directories must end up in
 the standard OpenFX plugins directory (listed in step 4 of [Binaries](#binaries)).
@@ -415,7 +415,7 @@ binary (OS X only).
 
 The Makefiles do not choose a C++ standard: they use the compiler's
 default (`gnu++17` for GCC >= 11 and Clang >= 16, but `gnu++14` for
-Apple clang), whereas the CMake, Xcode and Visual Studio builds use
+Apple clang), whereas the CMake builds (including its Xcode and Visual Studio projects) use
 C++17 by default. The code must compile as C++17 and C++20. To choose
 the standard, add it to the compiler command or to the flags, for
 example `make CXX="g++ -std=c++20"` (as Natron's build scripts do) or
@@ -443,11 +443,6 @@ transforms of ConvolveCImg, ZDefocusCImg and the `fft()` of ExpressionCImg (see
   `${MINGW_PACKAGE_PREFIX}-fftw`, Ubuntu's `libfftw3-dev`). FFTW is a shared library
   with a single global planner that other plugins in the same host (e.g. openfx-gmic)
   also use, so the plugins make its planner thread-safe at load.
-
-`FFT` is an option of the Makefiles and of CMake only. The Xcode and Visual Studio
-projects (`Misc.xcodeproj`, `Misc/CImg.vcxproj`) define neither `cimg_use_pocketfft`
-nor `cimg_use_fftw3`, and do not fetch pocketfft: their CImg plugins always use `pow2`,
-whatever the `FFT` of the make or CMake build that downloaded `CImg.h`.
 
 `LICENSE=GPL` (default) or `LICENSE=COMMERCIAL` (Natron's `NATRON_LICENSE`, as in
 openfx-gmic) only matters for FFTW: COMMERCIAL builds refuse `FFT=fftw3`.
@@ -559,28 +554,28 @@ to the prefix (or absolute). The main options are:
   instead of the `SupportExt` submodule (`smoketest.sh --supportext <dir> <prefix>`
   builds and tests that).
 
-### OS X, using Xcode
+### Xcode and Visual Studio
 
-The latest version of Xcode should be installed in order to compile this plugin.
+CMake generates the IDE projects, with the same options as above. Set the install
+prefix to the parent of the OpenFX plugins directory when generating. Xcode:
 
-Open the "Terminal" application (use spotlight, or browse `/Applications/Utilities`), and paste the following lines one-by-one (an administrator password will be asked for after the second line):
+	cmake -S . -B build-xcode -G Xcode -DCMAKE_INSTALL_PREFIX=/Library
+	open build-xcode/OpenFXMisc.xcodeproj
 
-	xcodebuild -configuration Release install
-	sudo mkdir /Library/OFX/Plugins
-	sudo mv /tmp/Misc.dst/Library/OFX/Plugins/Misc /Library/OFX/Plugins
+Visual Studio 2022 (x64; `-A ARM64` for ARM64, see the MSVC options above for Arm64X):
 
-The plugins may also be compiled by compiling the Xcode project called
-`Misc.xcodeproj` in the toplevel directory. The bundles produced by
-this project have to be moved to `/Library/OFX/Plugins`.
+	cmake -S . -B build-vs -G "Visual Studio 17 2022" -A x64 -DCMAKE_INSTALL_PREFIX="C:/Program Files/Common Files"
+	start build-vs\OpenFXMisc.sln
 
-### MS Windows, using Visual Studio
+Build the `ALL_BUILD` target, then the install target (`install` in Xcode, `INSTALL`
+in Visual Studio) to copy the bundles into `<prefix>/OFX/Plugins`; or, from a shell,
+`cmake --build <build> --config Release` and `cmake --install <build> --config Release`.
+Installing into `/Library` needs `sudo`, and into `C:/Program Files` an elevated prompt.
 
-Compile using the provided `Misc.vcxproj`project found in the `Misc`
-directory.
-
-32-bits plugins should be installed in the directory `c:\Program Files
-(x86)\Common Files\OFX\Plugin`, 64-bits plugins should be installed in
-`c:\Program Files\Common Files\OFX\Plugins`.
+The IDE projects never build the debug-only bundles, even in their Debug configuration:
+ReConverge, TimeBuffer and TestRender are only built with a single-configuration Debug
+build (`-DCMAKE_BUILD_TYPE=Debug` with Ninja or Makefiles). Test and DebugProxy need
+`-DBUILD_TESTING=ON -DBUILD_DEBUGPROXY=ON`.
 
 Credits
 -------
