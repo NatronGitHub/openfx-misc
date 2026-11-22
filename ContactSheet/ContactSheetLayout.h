@@ -110,7 +110,7 @@ fitRod(const OfxRectD& srcFormatCanonical,
     "This plug-in only supports 32-bit floating-point images, but the host gave it images of another bit depth. " \
     "Please set the pixel format (bit depth) of the host project to 32-bit floating point."
 #define kContactSheetRowBytesUnsupportedMessage \
-    "The host gave this plug-in an image whose row bytes are not a whole number of pixels. " \
+    "The host gave this plug-in an image whose row bytes are not a multiple of 4 bytes (one float). " \
     "Please report this to the host developers."
 
 // The plugins only declare eBitDepthFloat, and the pixels are accessed as float: check it in
