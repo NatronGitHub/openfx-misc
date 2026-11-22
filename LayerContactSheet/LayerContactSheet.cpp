@@ -230,8 +230,8 @@ LayerContactSheetPlugin::render(const OFX::RenderArguments &args)
     }
     checkBadRenderScaleOrField(dst, args);
     // the output depth is the same for all the cells: check it once
-    ContactSheet::checkBitDepth(*this, *dst);
-    // clear the message of checkBitDepth() if a previous render posted it
+    ContactSheet::checkImageFormat(*this, *dst);
+    // clear the message of checkImageFormat() if a previous render posted it
     clearPersistentMessage();
     //PixelComponentEnum dstComponents  = dst->getPixelComponents();
     // clear the renderWindow
@@ -329,7 +329,7 @@ LayerContactSheetPlugin::render(const OFX::RenderArguments &args)
 #             endif
 
                 // dst is float (checked above), so this also checks that the depths match
-                ContactSheet::checkBitDepth(*this, *src);
+                ContactSheet::checkImageFormat(*this, *src);
                 //- draw it at the right place
                 ContactSheet::drawImage(src.get(), dst.get(), imageRoD, args.renderScale, dstPar);
             }
