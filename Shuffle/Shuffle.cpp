@@ -1070,6 +1070,10 @@ public:
             delete images[i];
         }
     }
+
+    // owns the images: not copyable (C.21)
+    InputImagesHolder_RAII(const InputImagesHolder_RAII&) = delete;
+    InputImagesHolder_RAII& operator=(const InputImagesHolder_RAII&) = delete;
 };
 
 void

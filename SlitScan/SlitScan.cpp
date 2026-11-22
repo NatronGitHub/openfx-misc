@@ -155,6 +155,10 @@ public:
         }
     }
 
+    // owns the images: not copyable (C.21)
+    SourceImages(const SourceImages&) = delete;
+    SourceImages& operator=(const SourceImages&) = delete;
+
     bool isConnected() const
     {
         return _srcClip != NULL;
