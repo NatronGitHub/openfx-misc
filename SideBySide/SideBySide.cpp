@@ -241,7 +241,6 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor,
 
         return;
     }
-# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -249,6 +248,7 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     checkBadRenderScaleOrField(dst, args);
 # endif
 
@@ -267,10 +267,11 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor,
     auto_ptr<const Image> src2( ( _srcClip && _srcClip->isConnected() ) ?
                                      fetchViewImage(_srcClip, args.time, view2) : 0 );
 
-# ifndef NDEBUG
     // make sure bit depths are sane
     if ( src1.get() ) {
+# ifndef NDEBUG
         checkBadRenderScaleOrField(src1, args);
+# endif
         BitDepthEnum srcBitDepth      = src1->getPixelDepth();
         PixelComponentEnum srcComponents = src1->getPixelComponents();
 
@@ -280,7 +281,9 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor,
         }
     }
     if ( src2.get() ) {
+# ifndef NDEBUG
         checkBadRenderScaleOrField(src2, args);
+# endif
         BitDepthEnum srcBitDepth      = src2->getPixelDepth();
         PixelComponentEnum srcComponents = src2->getPixelComponents();
 
@@ -289,7 +292,6 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor,
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-# endif
 
     bool vertical = vertical_->getValueAtTime(args.time);
 

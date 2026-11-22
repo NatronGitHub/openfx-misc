@@ -337,7 +337,6 @@ KeyMixPlugin::setupAndProcess(KeyMixProcessorBase &processor,
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
-# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -345,6 +344,7 @@ KeyMixPlugin::setupAndProcess(KeyMixProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     checkBadRenderScaleOrField(dst, args);
 # endif
     auto_ptr<const Image> srcA( ( _srcClipA && _srcClipA->isConnected() ) ?
@@ -352,9 +352,10 @@ KeyMixPlugin::setupAndProcess(KeyMixProcessorBase &processor,
     auto_ptr<const Image> srcB( ( _srcClipB && _srcClipB->isConnected() ) ?
                                      _srcClipB->fetchImage(time) : 0 );
 
-# ifndef NDEBUG
     if ( srcA.get() ) {
+# ifndef NDEBUG
         checkBadRenderScaleOrField(srcA, args);
+# endif
         BitDepthEnum srcBitDepth      = srcA->getPixelDepth();
         PixelComponentEnum srcComponents = srcA->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
@@ -363,14 +364,15 @@ KeyMixPlugin::setupAndProcess(KeyMixProcessorBase &processor,
     }
 
     if ( srcB.get() ) {
+# ifndef NDEBUG
         checkBadRenderScaleOrField(srcB, args);
+# endif
         BitDepthEnum srcBitDepth      = srcB->getPixelDepth();
         PixelComponentEnum srcComponents = srcB->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-# endif
 
     // auto ptr for the mask.
     bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );

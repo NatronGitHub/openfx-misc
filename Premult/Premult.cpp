@@ -609,7 +609,6 @@ PremultPlugin<isPremult>::setupAndProcess(PremultBase &processor,
 {
     // get a dst image
 
-# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -617,6 +616,7 @@ PremultPlugin<isPremult>::setupAndProcess(PremultBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     checkBadRenderScaleOrField(dst, args);
 # endif
 
@@ -633,10 +633,11 @@ PremultPlugin<isPremult>::setupAndProcess(PremultBase &processor,
 
 
 
-# ifndef NDEBUG
     // make sure bit depths are sane
     if ( src ) {
+# ifndef NDEBUG
         checkBadRenderScaleOrField(src, args);
+# endif
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
 
@@ -645,7 +646,6 @@ PremultPlugin<isPremult>::setupAndProcess(PremultBase &processor,
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-# endif
 
     bool processR, processG, processB, processA;
     _processR->getValueAtTime(args.time, processR);

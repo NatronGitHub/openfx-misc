@@ -569,7 +569,7 @@ DeinterlacePlugin::render(const RenderArguments &args)
                 break;
 
             default:
-                break;
+                throwSuiteStatusException(kOfxStatErrUnsupported); // the output would be left unwritten
             }
         } else if (dstComponents == ePixelComponentRGB) {
             switch (dstBitDepth) {
@@ -595,7 +595,7 @@ DeinterlacePlugin::render(const RenderArguments &args)
                 break;
 
             default:
-                break;
+                throwSuiteStatusException(kOfxStatErrUnsupported); // the output would be left unwritten
             }
 #ifdef OFX_EXTENSIONS_NATRON
         } else if (dstComponents == ePixelComponentXY) {
@@ -622,7 +622,7 @@ DeinterlacePlugin::render(const RenderArguments &args)
                 break;
 
             default:
-                break;
+                throwSuiteStatusException(kOfxStatErrUnsupported); // the output would be left unwritten
             }
 #endif
         } else if (dstComponents == ePixelComponentAlpha) {
@@ -649,7 +649,7 @@ DeinterlacePlugin::render(const RenderArguments &args)
                 break;
 
             default:
-                break;
+                throwSuiteStatusException(kOfxStatErrUnsupported); // the output would be left unwritten
             }
         }
     }

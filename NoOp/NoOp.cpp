@@ -434,17 +434,19 @@ NoOpPlugin::render(const RenderArguments &args)
                                     _srcClip->fetchImage(args.time) : 0 );
 # ifndef NDEBUG
     checkBadRenderScaleOrField(dst, args);
+# endif
     BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( src.get() ) {
+# ifndef NDEBUG
         checkBadRenderScaleOrField(src, args);
+# endif
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-# endif
     copyPixels( *this, args.renderWindow, args.renderScale, src.get(), dst.get() );
 }
 

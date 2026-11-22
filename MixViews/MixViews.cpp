@@ -196,7 +196,6 @@ MixViewsPlugin::setupAndProcess(MixViewsBase &processor,
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
-# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -204,6 +203,7 @@ MixViewsPlugin::setupAndProcess(MixViewsBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     checkBadRenderScaleOrField(dst, args);
 # endif
 
@@ -213,10 +213,11 @@ MixViewsPlugin::setupAndProcess(MixViewsBase &processor,
     auto_ptr<const Image> srcRight( ( _srcClip && _srcClip->isConnected() ) ?
                                          fetchViewImage(_srcClip, args.time, 1) : 0 );
 
-# ifndef NDEBUG
     // make sure bit depths are sane
     if ( srcLeft.get() ) {
+# ifndef NDEBUG
         checkBadRenderScaleOrField(srcLeft, args);
+# endif
         BitDepthEnum srcBitDepth      = srcLeft->getPixelDepth();
         PixelComponentEnum srcComponents = srcLeft->getPixelComponents();
 
@@ -226,7 +227,9 @@ MixViewsPlugin::setupAndProcess(MixViewsBase &processor,
         }
     }
     if ( srcRight.get() ) {
+# ifndef NDEBUG
         checkBadRenderScaleOrField(srcRight, args);
+# endif
         BitDepthEnum srcBitDepth      = srcRight->getPixelDepth();
         PixelComponentEnum srcComponents = srcRight->getPixelComponents();
 
@@ -235,7 +238,6 @@ MixViewsPlugin::setupAndProcess(MixViewsBase &processor,
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-# endif
 
     double mix = _mix->getValueAtTime(args.time);
 

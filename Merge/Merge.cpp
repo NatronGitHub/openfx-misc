@@ -930,7 +930,6 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
-# ifndef NDEBUG
     BitDepthEnum dstBitDepth = _dstClip->getPixelDepth();
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
     if (dst.get() && _pluginType != eMergePluginRoto) {
@@ -941,9 +940,10 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
             setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
             throwSuiteStatusException(kOfxStatFailed);
         }
+# ifndef NDEBUG
         checkBadRenderScaleOrField(dst, args);
-    }
 # endif
+    }
     auto_ptr<const Image> srcB( ( !renderRotoMask && _srcClipB && _srcClipB->isConnected() ) ?
                                     _srcClipB->fetchImage(time) : 0 );
     OptionalImagesHolder_RAII srcAs;
@@ -965,16 +965,16 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
                 if ( srcA || (getMajorVersion() >= 3) ) {
                     srcAs.images.push_back(srcA);
 
-#                 ifndef NDEBUG
                     if (srcA) {
+#                 ifndef NDEBUG
                         checkBadRenderScaleOrField(srcA, args);
+#                 endif
                         BitDepthEnum srcBitDepth      = srcA->getPixelDepth();
                         PixelComponentEnum srcComponents = srcA->getPixelComponents();
                         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
                             throwSuiteStatusException(kOfxStatErrImageFormat);
                         }
                     }
-#                 endif
 #ifdef OFX_EXTENSIONS_NUKE
                     if (_pluginType == eMergePluginRoto) {
                         const Image* rotoMaskA = fetchRotoMaskPlane(_srcClipAs[i], time, args.renderView, rotoMaskOfxPlaneStr);
@@ -988,16 +988,16 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor,
         }
     }
 
-# ifndef NDEBUG
     if ( srcB.get() ) {
+# ifndef NDEBUG
         checkBadRenderScaleOrField(srcB, args);
+# endif
         BitDepthEnum srcBitDepth      = srcB->getPixelDepth();
         PixelComponentEnum srcComponents = srcB->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-# endif
 
     // auto ptr for the mask.
     bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );

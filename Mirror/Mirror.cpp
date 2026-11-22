@@ -315,12 +315,12 @@ MirrorPlugin::render(const RenderArguments &args)
     if ( src.get() ) {
 #     ifndef NDEBUG
         checkBadRenderScaleOrField(src, args);
+#     endif
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( ( srcBitDepth != dst->getPixelDepth() ) || ( srcComponents != dst->getPixelComponents() ) ) {
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
-#     endif
     } else {
         setPersistentMessage(Message::eMessageError, "", "Failed to fetch source image");
         throwSuiteStatusException(kOfxStatFailed);

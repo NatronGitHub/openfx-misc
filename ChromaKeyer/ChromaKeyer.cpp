@@ -766,7 +766,6 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor,
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
-# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -774,6 +773,7 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     checkBadRenderScaleOrField(dst, args);
 # endif
 
@@ -781,14 +781,15 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor,
                                     _srcClip->fetchImage(time) : 0 );
     auto_ptr<const Image> bg( ( _bgClip && _bgClip->isConnected() ) ?
                                    _bgClip->fetchImage(time) : 0 );
-# ifndef NDEBUG
     if ( src.get() ) {
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         //PixelComponentEnum srcComponents = src->getPixelComponents();
         if (srcBitDepth != dstBitDepth /* || srcComponents != dstComponents*/) { // ChromaKeyer outputs RGBA but may have RGB input
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
+# ifndef NDEBUG
         checkBadRenderScaleOrField(src, args);
+# endif
     }
 
     if ( bg.get() ) {
@@ -797,9 +798,10 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor,
         if (srcBitDepth != dstBitDepth /* || srcComponents != dstComponents*/) { // ChromaKeyer outputs RGBA but may have RGB input
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
+# ifndef NDEBUG
         checkBadRenderScaleOrField(bg, args);
-    }
 # endif
+    }
 
     // auto ptr for the masks.
     auto_ptr<const Image> inMask( ( _inMaskClip && _inMaskClip->isConnected() ) ?
@@ -846,7 +848,6 @@ ChromaKeyerPlugin::render(const RenderArguments &args)
     assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
 
-# ifndef NDEBUG
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
     if (dstComponents != ePixelComponentRGBA) {
         setPersistentMessage(Message::eMessageError, "", "OFX Host dit not take into account output components");
@@ -854,7 +855,6 @@ ChromaKeyerPlugin::render(const RenderArguments &args)
 
         return;
     }
-# endif
 
     switch (dstBitDepth) {
     //case eBitDepthUByte: {
