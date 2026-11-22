@@ -109,6 +109,9 @@ fitRod(const OfxRectD& srcFormatCanonical,
 #define kContactSheetBitDepthUnsupportedMessage \
     "This plug-in only supports 32-bit floating-point images, but the host gave it images of another bit depth. " \
     "Please set the pixel format (bit depth) of the host project to 32-bit floating point."
+#define kContactSheetRowBytesUnsupportedMessage \
+    "The host gave this plug-in an image whose row bytes are not a multiple of 4 bytes (one float). " \
+    "Please report this to the host developers."
 
 // The plugins only declare eBitDepthFloat, and the pixels are accessed as float: check it in
 // release builds too, since a host that ignores kOfxImageEffectPropSupportedPixelDepths
@@ -116,18 +119,24 @@ fitRod(const OfxRectD& srcFormatCanonical,
 // If img is not float, post an error message that explains it and throw kOfxStatFailed (the
 // render action doc: "kOfxStatFailed, something wrong, but no error code appropriate, plugin to
 // post message"). render() clears the message once the output image is float.
+// drawImage() uses the row bytes as a stride in floats: they must be a whole number of floats
+// (kOfxImagePropRowBytes: "at least sizeof(PIXEL) * (bounds.x2-bounds.x1)", and may be negative).
 inline void
-checkBitDepth(ImageEffect& effect,
-              const Image& img)
+checkImageFormat(ImageEffect& effect,
+                 const Image& img)
 {
     if (img.getPixelDepth() != eBitDepthFloat) {
         effect.setPersistentMessage(Message::eMessageError, "", kContactSheetBitDepthUnsupportedMessage);
         throwSuiteStatusException(kOfxStatFailed);
     }
+    if (img.getRowBytes() % static_cast<int>( sizeof(float) ) != 0) {
+        effect.setPersistentMessage(Message::eMessageError, "", kContactSheetRowBytesUnsupportedMessage);
+        throwSuiteStatusException(kOfxStatFailed);
+    }
 }
 
 // Resize the whole (float) src image into the imageRoD area of the (float) dst image.
-// The caller must check both depths with checkBitDepth().
+// The caller must check both images with checkImageFormat().
 inline void
 drawImage(const Image* src,
           Image* dst,
@@ -136,19 +145,24 @@ drawImage(const Image* src,
           double dstPar)
 {
     assert(dst->getPixelDepth() == eBitDepthFloat && src->getPixelDepth() == eBitDepthFloat);
+    assert(dst->getRowBytes() % static_cast<int>( sizeof(float) ) == 0 &&
+           src->getRowBytes() % static_cast<int>( sizeof(float) ) == 0);
     const OfxRectI& dstBounds = dst->getBounds();
     float* b = (float*)dst->getPixelData();
     const size_t bwidth = dstBounds.x2 - dstBounds.x1;
     const size_t bheight = dstBounds.y2 - dstBounds.y1;
     const size_t bxstride = dst->getPixelComponentCount();
-    const size_t bystride = bwidth * bxstride;
+    // Rows may be padded, and row bytes may be negative (kOfxImagePropRowBytes): use them, not
+    // width * components. getPixelData() is row bounds.y1, the lower left corner
+    // (kOfxImagePropData); with negative row bytes, it is not the lowest address.
+    const std::ptrdiff_t bystride = dst->getRowBytes() / static_cast<std::ptrdiff_t>( sizeof(float) );
 
     const OfxRectI& srcBounds = src->getBounds();
     const float* a = (const float*)src->getPixelData();
     const size_t awidth = srcBounds.x2 - srcBounds.x1;
     const size_t aheight = srcBounds.y2 - srcBounds.y1;
     const size_t axstride = src->getPixelComponentCount();
-    const size_t aystride = awidth * axstride;
+    const std::ptrdiff_t aystride = src->getRowBytes() / static_cast<std::ptrdiff_t>( sizeof(float) );
     const size_t depth = (std::min)(axstride, bxstride);
     const OfxRectD from = {0., 0., (double)awidth, (double)aheight};
     OfxRectI to;
