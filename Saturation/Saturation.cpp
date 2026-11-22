@@ -52,6 +52,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 2.1 (kept for backward compatibility): premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79)
 // version 3.0: fix ACES AP1 luminance math (version 2 used CCIR 601);
 //              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79)
+//              (versions 2.1 and 3.0, no output change on hosts with multi-resolution) the mask-RoD
+//              identity test is skipped on hosts without multi-resolution, and premult defaults to false
+//              for a non-RGBA source, as in the other plug-ins (#240)
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -591,19 +594,11 @@ SaturationPlugin::isIdentity(const IsIdentityArguments &args,
         return true;
     }
 
-    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
-    if (doMasking) {
-        bool maskInvert = _maskInvert->getValueAtTime(time);
-        if (!maskInvert) {
-            OfxRectI maskRoD;
-            Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
-            // effect is identity if the renderWindow doesn't intersect the mask RoD
-            if ( !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
-                identityClip = _srcClip;
+    // the shared helper also skips this test on hosts without multi-resolution (#240)
+    if ( ofxsMaskRoDExcludesRenderWindow(args, _maskClip, _maskApply, _maskInvert) ) {
+        identityClip = _srcClip;
 
-                return true;
-            }
-        }
+        return true;
     }
 
     return false;
@@ -613,22 +608,8 @@ void
 SaturationPlugin::changedClip(const InstanceChangedArgs &args,
                               const std::string &clipName)
 {
-    if ( (clipName == kOfxImageEffectSimpleSourceClipName) &&
-         _srcClip && _srcClip->isConnected() &&
-         !_premultChanged->getValue() &&
-         ( args.reason == eChangeUserEdit) ) {
-        switch ( _srcClip->getPreMultiplication() ) {
-        case eImageOpaque:
-            _premult->setValue(false);
-            break;
-        case eImagePreMultiplied:
-            _premult->setValue(true);
-            break;
-        case eImageUnPreMultiplied:
-            _premult->setValue(false);
-            break;
-        }
-    }
+    // the shared helper also sets premult to false for non-RGBA sources (#240)
+    ofxsPremultUpdateFromSourceClip(args, clipName, _srcClip, _premult, _premultChanged);
 }
 
 void

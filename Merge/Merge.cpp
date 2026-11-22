@@ -880,6 +880,10 @@ struct OptionalImagesHolder_RAII
             delete rotoMaskImg[i];
         }
     }
+
+    // owns the images: not copyable (C.21)
+    OptionalImagesHolder_RAII(const OptionalImagesHolder_RAII&) = delete;
+    OptionalImagesHolder_RAII& operator=(const OptionalImagesHolder_RAII&) = delete;
 };
 
 ////////////////////////////////////////////////////////////////////////////////

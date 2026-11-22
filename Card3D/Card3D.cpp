@@ -717,6 +717,10 @@ public:
         delete _projection;
     }
 
+    // owns _projection: not copyable (C.21)
+    PosMatParam(const PosMatParam&) = delete;
+    PosMatParam& operator=(const PosMatParam&) = delete;
+
     void changedParam(const InstanceChangedArgs &args, const std::string &paramName);
 
     void getMatrix(double time, Matrix4x4* mat) const;
@@ -1671,6 +1675,10 @@ public:
         delete _axisPosMat;
         delete _camPosMat;
     }
+
+    // owns _axisPosMat and _camPosMat: not copyable (C.21)
+    Card3DPlugin(const Card3DPlugin&) = delete;
+    Card3DPlugin& operator=(const Card3DPlugin&) = delete;
 
 private:
     //virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
