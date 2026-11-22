@@ -266,27 +266,8 @@ enum SequenceRangeEnum
 #define kParamClearSequenceLumaLabel "Clear Sequence"
 #define kParamClearSequenceLumaHint "Clear luma analysis for all frames from the sequence: delete all the keys, whatever the Sequence Range."
 
-#define kParamLuminanceMath "luminanceMath"
-#define kParamLuminanceMathLabel "Luminance Math"
+// kParamLuminanceMath*, LuminanceMathEnum and luminance() are in ofxsLut.h
 #define kParamLuminanceMathHint "Formula used to compute luminance from RGB values."
-#define kParamLuminanceMathOptionRec709 "Rec. 709", "Use Rec. 709 (0.2126r + 0.7152g + 0.0722b).", "rec709"
-#define kParamLuminanceMathOptionRec2020 "Rec. 2020", "Use Rec. 2020 (0.2627r + 0.6780g + 0.0593b).", "rec2020"
-#define kParamLuminanceMathOptionACESAP0 "ACES AP0", "Use ACES AP0 (0.3439664498r + 0.7281660966g + -0.0721325464b).", "acesap0"
-#define kParamLuminanceMathOptionACESAP1 "ACES AP1", "Use ACES AP1 (0.2722287168r +  0.6740817658g +  0.0536895174b).", "acesap1"
-#define kParamLuminanceMathOptionCcir601 "CCIR 601", "Use CCIR 601 (0.2989r + 0.5866g + 0.1145b).", "ccir601"
-#define kParamLuminanceMathOptionAverage "Average", "Use average of r, g, b.", "average"
-#define kParamLuminanceMathOptionMaximum "Max", "Use max or r, g, b.", "max"
-
-enum LuminanceMathEnum
-{
-    eLuminanceMathRec709,
-    eLuminanceMathRec2020,
-    eLuminanceMathACESAP0,
-    eLuminanceMathACESAP1,
-    eLuminanceMathCcir601,
-    eLuminanceMathAverage,
-    eLuminanceMathMaximum,
-};
 
 #define kParamMaxLumaPix "maxLumaPix"
 #define kParamMaxLumaPixLabel "Max Luma Pixel"
@@ -399,39 +380,6 @@ struct Results
     RGBAValues minVal; // luma only
     OfxRectI cropBox; // auto crop only, in pixel coordinates (empty if x1 >= x2 or y1 >= y2)
 };
-
-// The luminance of a pixel, normalized to [0,1].
-inline double
-luminanceRGB(LuminanceMathEnum luminanceMath,
-             double r,
-             double g,
-             double b)
-{
-    switch (luminanceMath) {
-    case eLuminanceMathRec709:
-    default:
-
-        return Color::rgb709_to_y(r, g, b);
-    case eLuminanceMathRec2020:     // https://www.itu.int/dms_pubrec/itu-r/rec/bt/R-REC-BT.2087-0-201510-I!!PDF-E.pdf
-
-        return Color::rgb2020_to_y(r, g, b);
-    case eLuminanceMathACESAP0:     // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System#Converting_ACES_RGB_values_to_CIE_XYZ_values
-
-        return Color::rgbACESAP0_to_y(r, g, b);
-    case eLuminanceMathACESAP1:     // https://en.wikipedia.org/wiki/Academy_Color_Encoding_System#Converting_ACES_RGB_values_to_CIE_XYZ_values
-
-        return Color::rgbACESAP1_to_y(r, g, b);
-    case eLuminanceMathCcir601:
-
-        return (double)(0.2989f * r + 0.5866f * g + 0.1145f * b);
-    case eLuminanceMathAverage:
-
-        return (r + g + b) / 3;
-    case eLuminanceMathMaximum:
-
-        return (std::max)((std::max)(r, g), b);
-    }
-}
 
 // Number of values per pixel for the HSVL statistics: hue, saturation, value, luminance.
 #define nComponentsHSVL 4
@@ -952,7 +900,7 @@ private:
     luminance(const PIX *p)
     {
         if ( (nComponents == 4) || (nComponents == 3) ) {
-            return luminanceRGB(_luminanceMath, p[0] / (double)maxValue, p[1] / (double)maxValue, p[2] / (double)maxValue);
+            return OFX::luminance(p[0] / (double)maxValue, p[1] / (double)maxValue, p[2] / (double)maxValue, _luminanceMath); // OFX:: (the member luminance(p) hides it)
         }
 
         return 0.;
@@ -1109,7 +1057,7 @@ private:
             return isAbove(1.); // RGB images are opaque
         case eAutoCropModeLuminance:
             if ( (nComponents == 3) || (nComponents == 4) ) {
-                return isAbove( luminanceRGB(_luminanceMath, p[0] / (double)maxValue, p[1] / (double)maxValue, p[2] / (double)maxValue) );
+                return isAbove( OFX::luminance(p[0] / (double)maxValue, p[1] / (double)maxValue, p[2] / (double)maxValue, _luminanceMath) );
             }
 
             return false; // alpha images have no luminance
