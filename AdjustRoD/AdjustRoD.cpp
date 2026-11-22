@@ -158,7 +158,6 @@ AdjustRoDPlugin::setupAndCopy(PixelProcessorFilterBase & processor,
     checkBadRenderScaleOrField(dst, args);
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(args.time) : 0 );
-# ifndef NDEBUG
     if ( src.get() && dst.get() ) {
         BitDepthEnum dstBitDepth       = dst->getPixelDepth();
         PixelComponentEnum dstComponents  = dst->getPixelComponents();
@@ -168,7 +167,6 @@ AdjustRoDPlugin::setupAndCopy(PixelProcessorFilterBase & processor,
             throwSuiteStatusException(kOfxStatFailed);
         }
     }
-# endif
 
     if ( !src.get() ) {
         // no Source image (disconnected, or the host could not fetch it, e.g. because the

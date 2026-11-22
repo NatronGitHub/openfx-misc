@@ -914,7 +914,6 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
-# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -922,6 +921,7 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     checkBadRenderScaleOrField(dst, args);
 # endif
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
@@ -943,7 +943,6 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
         invtransformsize = 1;
         invtransform[0].setNullTransform();
     } else {
-#     ifndef NDEBUG
         BitDepthEnum dstBitDepth       = dst->getPixelDepth();
         PixelComponentEnum dstComponents  = dst->getPixelComponents();
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
@@ -951,7 +950,6 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             throwSuiteStatusException(kOfxStatFailed);
         }
-#     endif
         bool invert = false;
         if (_invert) {
             _invert->getValueAtTime(time, invert);

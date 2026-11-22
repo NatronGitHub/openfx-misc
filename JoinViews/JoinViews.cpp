@@ -203,7 +203,6 @@ JoinViewsPlugin::setupAndProcess(PixelProcessorFilterBase &processor,
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
-# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -211,6 +210,7 @@ JoinViewsPlugin::setupAndProcess(PixelProcessorFilterBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     checkBadRenderScaleOrField(dst, args);
 # endif
 
@@ -226,9 +226,10 @@ JoinViewsPlugin::setupAndProcess(PixelProcessorFilterBase &processor,
         throwSuiteStatusException(kOfxStatFailed);
         return;
     } else {
-# ifndef NDEBUG
        // make sure bit depths are sane
+# ifndef NDEBUG
         checkBadRenderScaleOrField(src, args);
+# endif
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
 
@@ -236,7 +237,6 @@ JoinViewsPlugin::setupAndProcess(PixelProcessorFilterBase &processor,
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
-# endif
     }
 
     // set the images

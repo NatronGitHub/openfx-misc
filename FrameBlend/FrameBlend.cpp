@@ -708,13 +708,13 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor,
         throwSuiteStatusException(kOfxStatFailed);
     }
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
-# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
          ( dstComponents != _dstClip->getPixelComponents() ) ) {
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     checkBadRenderScaleOrField(dst, args);
 # endif
 
@@ -752,16 +752,16 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor,
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() && (doMasking || mix != 1.) ) ?
                                     _srcClip->fetchImage(args.time) :
                                     0 );
-# ifndef NDEBUG
     if ( src.get() ) {
+# ifndef NDEBUG
         checkBadRenderScaleOrField(src, args);
+# endif
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-# endif
 
     // accumulator image
     auto_ptr<ImageMemory> accumulator;
@@ -843,16 +843,16 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor,
                 return;
             }
             const Image* src = _srcClip ? _srcClip->fetchImage(first + i * interval) : 0;
-#         ifndef NDEBUG
             if (src) {
+#         ifndef NDEBUG
                 checkBadRenderScaleOrField(src, args);
+#         endif
                 BitDepthEnum srcBitDepth      = src->getPixelDepth();
                 PixelComponentEnum srcComponents = src->getPixelComponents();
                 if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
                     throwSuiteStatusException(kOfxStatErrImageFormat);
                 }
             }
-#         endif
             srcImgs.images.push_back(src);
         }
         // fetch the foreground mattes

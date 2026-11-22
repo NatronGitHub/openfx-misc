@@ -194,7 +194,6 @@ MatteMonitorPlugin::setupAndProcess(MatteMonitorProcessorBase &processor,
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
-# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -202,20 +201,21 @@ MatteMonitorPlugin::setupAndProcess(MatteMonitorProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     checkBadRenderScaleOrField(dst, args);
 # endif
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(args.time) : 0 );
-# ifndef NDEBUG
     if ( src.get() ) {
+# ifndef NDEBUG
         checkBadRenderScaleOrField(src, args);
+# endif
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-# endif
 
     // set the images
     processor.setDstImg( dst.get() );

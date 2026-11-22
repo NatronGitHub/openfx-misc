@@ -461,7 +461,6 @@ DespillPlugin::setupAndProcess(DespillProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "Failed to fetch output image");
         throwSuiteStatusException(kOfxStatFailed);
     }
-# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -469,6 +468,7 @@ DespillPlugin::setupAndProcess(DespillProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     checkBadRenderScaleOrField(dst, args);
 # endif
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
@@ -476,13 +476,13 @@ DespillPlugin::setupAndProcess(DespillProcessorBase &processor,
     if ( src.get() ) {
 #     ifndef NDEBUG
         checkBadRenderScaleOrField(src, args);
+#     endif
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents  = src->getPixelComponents();
         //PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) { // Keyer outputs RGBA but may have RGB input
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
-#     endif
     } else {
         setPersistentMessage(Message::eMessageError, "", "Failed to fetch source image");
         throwSuiteStatusException(kOfxStatFailed);

@@ -248,7 +248,6 @@ SpriteSheetPlugin::setupAndProcess(SpriteSheetProcessorBase &processor,
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
-# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -256,6 +255,7 @@ SpriteSheetPlugin::setupAndProcess(SpriteSheetProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     checkBadRenderScaleOrField(dst, args);
 # endif
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
@@ -270,6 +270,7 @@ SpriteSheetPlugin::setupAndProcess(SpriteSheetProcessorBase &processor,
     } else {
 #     ifndef NDEBUG
         checkBadRenderScaleOrField(src, args);
+#     endif
         BitDepthEnum dstBitDepth       = dst->getPixelDepth();
         PixelComponentEnum dstComponents  = dst->getPixelComponents();
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
@@ -277,7 +278,6 @@ SpriteSheetPlugin::setupAndProcess(SpriteSheetProcessorBase &processor,
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             throwSuiteStatusException(kOfxStatFailed);
         }
-#     endif
     }
 
     // set the images

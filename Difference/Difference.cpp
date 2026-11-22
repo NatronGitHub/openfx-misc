@@ -232,7 +232,6 @@ DifferencePlugin::setupAndProcess(DifferencerBase &processor,
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
-# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -240,15 +239,17 @@ DifferencePlugin::setupAndProcess(DifferencerBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     checkBadRenderScaleOrField(dst, args);
 # endif
     auto_ptr<const Image> srcA( ( _srcClipA && _srcClipA->isConnected() ) ?
                                      _srcClipA->fetchImage(args.time) : 0 );
     auto_ptr<const Image> srcB( ( _srcClipB && _srcClipB->isConnected() ) ?
                                      _srcClipB->fetchImage(args.time) : 0 );
-# ifndef NDEBUG
     if ( srcA.get() ) {
+# ifndef NDEBUG
         checkBadRenderScaleOrField(srcA, args);
+# endif
         BitDepthEnum srcBitDepth      = srcA->getPixelDepth();
         PixelComponentEnum srcComponents = srcA->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
@@ -257,14 +258,15 @@ DifferencePlugin::setupAndProcess(DifferencerBase &processor,
     }
 
     if ( srcB.get() ) {
+# ifndef NDEBUG
         checkBadRenderScaleOrField(srcB, args);
+# endif
         BitDepthEnum srcBitDepth      = srcB->getPixelDepth();
         PixelComponentEnum srcComponents = srcB->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-# endif
 
     double offset;
     double gain;

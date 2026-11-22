@@ -381,7 +381,6 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor,
         throwSuiteStatusException(kOfxStatFailed);
     }
     const double time = args.time;
-# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -389,6 +388,7 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatErrFormat);
     }
+# ifndef NDEBUG
     checkBadRenderScaleOrField(dst, args);
 # endif
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
@@ -396,11 +396,11 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor,
     if ( src.get() && dst.get() ) {
 #     ifndef NDEBUG
         checkBadRenderScaleOrField(src, args);
+#     endif
         BitDepthEnum srcBitDepth = src->getPixelDepth();
         if (srcBitDepth != dstBitDepth) {
             throwSuiteStatusException(kOfxStatErrFormat);
         }
-#     endif
     }
 
     // auto ptr for the mask.

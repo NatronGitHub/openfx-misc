@@ -1205,7 +1205,6 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     }
     OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
-# ifndef NDEBUG
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
          ( dstComponents != _dstClip->getPixelComponents() ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
@@ -1213,6 +1212,7 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
         return;
     }
+# ifndef NDEBUG
     checkBadRenderScaleOrField(dst, args);
 # endif
 # if defined(USE_OPENGL) && defined(DEBUG)

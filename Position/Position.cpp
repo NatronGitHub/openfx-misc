@@ -166,16 +166,16 @@ PositionPlugin::render(const RenderArguments &args)
     int dstPixelComponentCount = dst->getPixelComponentCount();
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(args.time) : 0 );
-# ifndef NDEBUG
     if ( src.get() ) {
+# ifndef NDEBUG
         checkBadRenderScaleOrField(src, args);
+# endif
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-# endif
     const void* srcPixelData;
     OfxRectI srcBounds;
     PixelComponentEnum srcPixelComponents;

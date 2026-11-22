@@ -965,14 +965,20 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor,
     BitDepthEnum srcBitDepth = eBitDepthNone;
 # ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+# endif
+    // the processor reads A and B with one depth: check it in release builds too (issue #234)
     if (srcImgA) {
+# ifndef NDEBUG
         checkBadRenderScaleOrField(srcImgA, args);
+# endif
         srcBitDepth      = srcImgA->getPixelDepth();
         assert(_srcClipA && _srcClipA->getPixelComponents() == srcImgA->getPixelComponents());
     }
 
     if (srcImgB) {
+# ifndef NDEBUG
         checkBadRenderScaleOrField(srcImgB, args);
+# endif
         BitDepthEnum srcBBitDepth      = srcImgB->getPixelDepth();
         assert(_srcClipB && _srcClipB->getPixelComponents() == srcImgB->getPixelComponents());
         // both input must have the same bit depth (components may differ, see getClipPreferences())
@@ -981,7 +987,6 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor,
         }
         srcBitDepth = srcBBitDepth;
     }
-# endif
 
     r = (InputChannelEnum)_channelParam[0]->getValueAtTime(time);
     g = (InputChannelEnum)_channelParam[1]->getValueAtTime(time);
@@ -1119,12 +1124,10 @@ ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor,
             if (srcBitDepth == eBitDepthNone) {
                 srcBitDepth = p.img->getPixelDepth();
             } else {
-#             ifndef NDEBUG
                 // both input must have the same bit depth and components
                 if ( (srcBitDepth != eBitDepthNone) && ( srcBitDepth != p.img->getPixelDepth() ) ) {
                     throwSuiteStatusException(kOfxStatErrImageFormat);
                 }
-#             endif
             }
             if ( (p.channelIndex < 0) || ( p.channelIndex >= (int)p.img->getPixelComponentCount() ) ) {
                 throwSuiteStatusException(kOfxStatErrImageFormat);
@@ -1314,27 +1317,22 @@ ShufflePlugin::render(const RenderArguments &args)
         if ( !dst.get() ) {
             throwSuiteStatusException(kOfxStatFailed);
         }
-#    ifndef NDEBUG
-       BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-        PixelComponentEnum dstComponents  = dst->getPixelComponents();
-        if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
-            ( dstComponents != _dstClip->getPixelComponents() ) ) {
+        if ( ( dst->getPixelDepth() != _dstClip->getPixelDepth() ) ||
+            ( dst->getPixelComponents() != _dstClip->getPixelComponents() ) ) {
             setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
             throwSuiteStatusException(kOfxStatFailed);
         }
-#     endif
     } else {
         dst.reset( _dstClip->fetchImagePlane( args.time, args.renderView, MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(dstPlane).c_str() ) );
         if ( !dst.get() ) {
             throwSuiteStatusException(kOfxStatFailed);
         }
-#     ifndef NDEBUG
         // In multiplane mode, we cannot expect the image plane to match the clip components
-        if (dstBitDepth != _dstClip->getPixelDepth()) {
+        // (this compared the clip depth with itself: check the fetched plane's depth)
+        if (dst->getPixelDepth() != _dstClip->getPixelDepth()) {
             setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
             throwSuiteStatusException(kOfxStatFailed);
         }
-#     endif
     }
 
     int dstComponentCount = dst->getPixelComponentCount();
