@@ -28,6 +28,7 @@
 
 #include <string>
 
+#include "ofxOld.h" // kOfxImageEffectPropInAnalysis
 #include "ofxsImageEffect.h"
 
 namespace OFX {

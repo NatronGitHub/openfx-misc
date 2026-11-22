@@ -536,12 +536,11 @@ private:
         double dx = 0.;
         double dy = 0.;
 
-        bool possibleWinner;
-        {
-            // scoped lock (CP.20); the refinement below runs without it, not to block other threads
+        // scoped lock (CP.20); the refinement below runs without it, not to block other threads
+        const bool possibleWinner = [&] {
             AutoMutex lock(_bestMatchMutex);
-            possibleWinner = !(_bestMatch.second < bestScore);
-        }
+            return !(_bestMatch.second < bestScore);
+        }();
         if (possibleWinner) {
             // compute subpixel position.
             double scorepc = computeScore<scoreTypeE>(point.x - 1, point.y, refMean, refMeanOverflows);
