@@ -47,7 +47,6 @@
 #include "ofxsRGBAProcessing.h"
 #include "ofxsCoords.h"
 #include "ofxsLut.h"
-#include "ofxsLuminanceMath.h"
 #include "ofxsMacros.h"
 
 using namespace OFX;

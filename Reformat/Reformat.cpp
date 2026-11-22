@@ -59,6 +59,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              incremented: it shipped as 1.1, e.g. in Natron 2.5.0)
 // version 2.0: add eReformatTypeToProjectFormat
 // versions 1.2 and 2.1: the inverse of a transform matrix with huge entries (e.g. a concatenated source transform) no longer overflows to NaN or 0 (SupportExt #81)
+// SupportExt#179, in the current minor versions (not released yet, so no further bump): with the Box
+//              filter, the thin band just outside the source image is black (Black Outside) or the
+//              edge colour, not about 4x the edge value (garbage).
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 

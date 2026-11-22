@@ -281,7 +281,7 @@ if(BUILD_MISC)
   ofx_plugin_bundle_group(Misc
     COMBINED_INFO_PLIST Misc/Info.plist
     ALSO_SEPARATE ${OFXMISC_STANDALONE_BUNDLES}
-    COMMON_INCLUDE_DIRECTORIES ${PROJECT_SOURCE_DIR}/Misc ${OFXMISC_GLEXT_INCLUDE_DIR} # ofxsRGBAProcessing.h...
+    COMMON_INCLUDE_DIRECTORIES ${PROJECT_SOURCE_DIR}/Misc ${OFXMISC_GLEXT_INCLUDE_DIR} # randomGenerator.H...
     OUT_TARGETS _misc_targets
     ${OFXMISC_MISC_PLUGINS} ${_testrender})
   foreach(_t IN LISTS _misc_targets)

@@ -71,6 +71,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "See also https://web.archive.org/web/20210727235824/opticalenquiry.com/nuke/index.php?title=Card3D"
 
 #define kPluginIdentifier "net.sf.openfx.Card3D"
+// SupportExt#179, in the current minor versions (not released yet, so no further bump): with the Box
+//              filter, the thin band just outside the source image is black (Black Outside) or the
+//              edge colour, not about 4x the edge value (garbage).
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 // 1.1: importing a chan or Boujou file no longer sets NaN or infinite rotation and focal length keys (NaN audit);

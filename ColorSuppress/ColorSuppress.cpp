@@ -29,7 +29,6 @@
 #include "ofxsMaskMix.h"
 #include "ofxsCoords.h"
 #include "ofxsLut.h"
-#include "ofxsLuminanceMath.h"
 #include "ofxsMacros.h"
 #include "ofxsThreadSuite.h"
 

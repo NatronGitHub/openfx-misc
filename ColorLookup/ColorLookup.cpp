@@ -61,7 +61,6 @@ typedef void (APIENTRYP PFNGLBLENDEQUATIONSEPARATEPROC)(GLenum modeRGB, GLenum m
 #include "ofxsRGBAProcessing.h"
 #include "ofxsCoords.h"
 #include "ofxsLut.h"
-#include "ofxsLuminanceMath.h"
 #include "ofxsMacros.h"
 #include "ofxsThreadSuite.h"
 #include "ofxsAnalysisScope.h" // InAnalysisScope
