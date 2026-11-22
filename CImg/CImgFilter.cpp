@@ -21,10 +21,6 @@
 
 using namespace OFX;
 
-#if defined(HAVE_THREAD_LOCAL)
-thread_local ImageEffect *tls::gImageEffect = 0;
-#endif
-
 
 #define kParamPremultChanged "premultChanged"
 
@@ -86,13 +82,11 @@ CImgFilterPluginHelperBase::CImgFilterPluginHelperBase(OfxImageEffectHandle hand
     , _premultChanged(NULL)
 {
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-    assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB ||
-                         _dstClip->getPixelComponents() == ePixelComponentRGBA) );
+    assert( _dstClip && (!_dstClip->isConnected() || isSupportedComponents( _dstClip->getPixelComponents() ) ) );
     if (isFilter) {
         _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert( (!_srcClip && getContext() == eContextGenerator) ||
-                ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentRGB ||
-                               _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
+                ( _srcClip && (!_srcClip->isConnected() || isSupportedComponents( _srcClip->getPixelComponents() ) ) ) );
         _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
     }
@@ -509,7 +503,8 @@ CImgFilterPluginHelperBase::maskColumnIsZero(const Image* mask,
     }
 
     assert(mask->getPixelComponents() == ePixelComponentAlpha && mask->getPixelDepth() == eBitDepthFloat);
-    const int rowElems = mask->getRowBytes() / sizeof(float); // may be negative, @see kOfxImagePropRowBytes
+    // may be negative (kOfxImagePropRowBytes): divide as int, not as size_t (ES.46)
+    const int rowElems = mask->getRowBytes() / static_cast<int>( sizeof(float) );
 
     if (maskInvert) {
         const OfxRectI& maskBounds = mask->getBounds();

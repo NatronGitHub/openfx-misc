@@ -29,6 +29,7 @@
 #include <cmath>
 #include <cfloat> // DBL_MAX
 #include <algorithm>
+#include <optional>
 #include <vector>
 
 #include "ofxsImageEffect.h"
@@ -734,15 +735,8 @@ ZDefocusPlugin::render(const RenderArguments &args)
     // can stop the long vanvliet() calls when the host aborts the render.
     // This plugin has two inputs and its own render loop, so it cannot use CImgFilterPluginHelper,
     // which does the same thing around its render() call.
-#if defined(HAVE_THREAD_LOCAL) || defined(HAVE_PTHREAD)
-#  if defined(HAVE_THREAD_LOCAL)
-    tls::gImageEffect = this;
-#  else
-    OFX::ImageEffect **_ptr = (OFX::ImageEffect **)pthread_getspecific(tls::gImageEffect_key);
-    assert (NULL != _ptr);
-    *_ptr = this;
-#  endif
-#endif
+    // The scope is reset after the slice loop, and on any exception.
+    std::optional<CImgAbortScope> abortScope(std::in_place, this);
     // Blur each slice and merge it over the result, from far (most negative) to near.
     // The last channel of result accumulates the slice masks (merged over), and is used to
     // normalize the result: this fills the holes left in the far slices by the near slices,
@@ -823,11 +817,7 @@ ZDefocusPlugin::render(const RenderArguments &args)
     } catch (CImgAbortException&) {
         aborted = true;
     }
-#if defined(HAVE_THREAD_LOCAL)
-    tls::gImageEffect = 0;
-#elif defined(HAVE_PTHREAD)
-    *_ptr = 0;
-#endif
+    abortScope.reset();
     if (aborted) {
         return;
     }
