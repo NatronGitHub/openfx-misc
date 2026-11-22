@@ -30,7 +30,6 @@
 #include "ofxsRGBAProcessing.h"
 #include "ofxsCoords.h"
 #include "ofxsLut.h"
-#include "ofxsLuminanceMath.h"
 #include "ofxsMacros.h"
 #ifdef OFX_EXTENSIONS_NATRON
 #include "ofxNatron.h"
