@@ -41,6 +41,7 @@
 #include <climits>
 #include <cstring>
 #include <cstdio>
+#include <cstdlib> // getenv (diagnostic)
 #include <cmath>
 #include <string>
 #include <set>
@@ -2659,470 +2660,490 @@ defineRGBA(ImageEffectDescriptor &desc,
     //defineRGBASub(desc, nb, kParamMaxVec4, kParamMaxLabel, kParamMaxHint, false, DBL_MAX, page, group);
 }
 
+
+// DIAGNOSTIC BUILD (NatronGitHub/openfx-misc#66), not for release: when describeInContext fails,
+// write the reason and the last block reached to %TEMP%\OFXShadertoyDescribe-<context>.txt
+// (TMPDIR or /tmp elsewhere), for hosts whose logs only say "Failed".
+static int gDiagLine = 0;
+
+static void
+saveDescribeFailure(ContextEnum context,
+                    const char* kind,
+                    const char* what)
+{
+    const ImageEffectHostDescription* h = getImageEffectHostDescription();
+    const char* ctx = context == eContextFilter ? "filter" : context == eContextGeneral ? "general" :
+                      context == eContextGenerator ? "generator" : context == eContextPaint ? "paint" : "other";
+#ifdef _WIN32
+    const char* dir = std::getenv("TEMP");
+    std::string path = std::string(dir ? dir : ".") + "\\OFXShadertoyDescribe-" + ctx + ".txt";
+#else
+    const char* dir = std::getenv("TMPDIR");
+    std::string path = std::string(dir ? dir : "/tmp") + "/OFXShadertoyDescribe-" + ctx + ".txt";
+#endif
+    std::FILE* f = std::fopen(path.c_str(), "w");
+    if (!f) {
+        return;
+    }
+    std::fprintf(f, "Shadertoy describeInContext(%s) failed\n", ctx);
+    std::fprintf(f, "host: %s %s %s\n", h ? h->hostName.c_str() : "?", h ? h->hostLabel.c_str() : "?", h ? h->versionLabel.c_str() : "?");
+    std::fprintf(f, "exception: %s: %s\n", kind, what ? what : "");
+    std::fprintf(f, "last block reached: Shadertoy.cpp line %d\n", gDiagLine);
+    std::fprintf(f, "supportsOpenGLRender=%d maxParameters=%d maxPages=%d\n", h ? (int)h->supportsOpenGLRender : -1, h ? h->maxParameters : -1, h ? h->maxPages : -1);
+    std::fclose(f);
+}
+
 void
 ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                                           ContextEnum context)
 {
-    const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-#if defined(OFX_SUPPORTS_OPENGLRENDER) && !defined(HAVE_OSMESA)
-    if (!hostDescription.supportsOpenGLRender) {
-        throwHostMissingSuiteException(kOfxOpenGLRenderSuite);
-    }
-#endif
-
-    // parse the Shadertoy.txt file from the resources to fetch the presets
-    string resourcesPath = desc.getPropertySet().propGetString(kOfxPluginPropFilePath, /*throwOnFailure=*/false) + "/Contents/Resources";
-    presetsFromDir(resourcesPath + "/presets/default", gPresetsDefault);
-
-
-    // Source clip only in the filter context
-    // create the mandated source clip
-    {
-        ClipDescriptor *srcClip = desc.defineClip( (context == eContextFilter) ?
-                                                   kOfxImageEffectSimpleSourceClipName :
-                                                   kClipChannel "0" );
-        srcClip->addSupportedComponent(ePixelComponentRGBA);
-        srcClip->addSupportedComponent(ePixelComponentAlpha);
-        srcClip->setTemporalClipAccess(false);
-        srcClip->setSupportsTiles(kSupportsTiles);
-        srcClip->setIsMask(false);
-        srcClip->setOptional( !(context == eContextFilter) );
-    }
-    for (unsigned i = 1; i < NBINPUTS; ++i) {
-        string iChannelX(kClipChannel);
-        iChannelX += unsignedToString(i);
-        ClipDescriptor *srcClip = desc.defineClip(iChannelX);
-        srcClip->addSupportedComponent(ePixelComponentRGBA);
-        srcClip->addSupportedComponent(ePixelComponentAlpha);
-        srcClip->setTemporalClipAccess(false);
-        srcClip->setSupportsTiles(kSupportsTiles);
-        srcClip->setIsMask(false);
-        srcClip->setOptional(true);
-    }
-    // create the mandated output clip
-    ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
-    dstClip->addSupportedComponent(ePixelComponentRGBA);
-    dstClip->addSupportedComponent(ePixelComponentAlpha);
-    dstClip->setSupportsTiles(kSupportsTiles);
-
-    // make some pages and to things in
-    PageParamDescriptor *page = desc.definePageParam("Controls");
-
-    {
-        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamMousePosition);
-        param->setLabel(kParamMousePositionLabel);
-        param->setHint(kParamMousePositionHint);
-        param->setDoubleType(eDoubleTypeXYAbsolute);
-        param->setDefaultCoordinateSystem(eCoordinatesCanonical); // Nuke defaults to Normalized for XY and XYAbsolute!
-        param->setUseHostNativeOverlayHandle(true);
-        param->setAnimates(true);
-        if (page) {
-            page->addChild(*param);
+    gDiagLine = __LINE__;
+    try {
+        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+    #if defined(OFX_SUPPORTS_OPENGLRENDER) && !defined(HAVE_OSMESA)
+        if (!hostDescription.supportsOpenGLRender) {
+            throwHostMissingSuiteException(kOfxOpenGLRenderSuite);
         }
-    }
-    {
-        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamMouseClick);
-        param->setLabel(kParamMouseClickLabel);
-        param->setHint(kParamMouseClickHint);
-        param->setDoubleType(eDoubleTypeXYAbsolute);
-        param->setDefaultCoordinateSystem(eCoordinatesCanonical); // Nuke defaults to Normalized for XY and XYAbsolute!
-        param->setDefault(1.,1.);
-        param->setUseHostNativeOverlayHandle(true);
-        param->setAnimates(true);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-    {
-        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMousePressed);
-        param->setLabel(kParamMousePressedLabel);
-        param->setHint(kParamMousePressedHint);
-        param->setAnimates(true);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
+    #endif
 
-    const unsigned int nbuniforms = (hostDescription.hostName == "uk.co.thefoundry.nuke" && hostDescription.versionMajor == 7) ? SHADERTOY_NBUNIFORMS_NUKE7 : NBUNIFORMS; //if more than 7, Nuke 7's parameter page goes blank when unfolding the Extra Parameters group
-    for (unsigned i = 0; i < nbuniforms; ++i) {
-        // generate the number string
-        string nb = unsignedToString(i);
-        defineBooleanSub(desc, nb, kParamValueBool, kParamValueLabel, kParamValueHint, true, page, NULL);
-        defineIntSub(desc, nb, kParamValueInt, kParamValueLabel, kParamValueHint, true, 0, page, NULL);
-        defineDoubleSub(desc, nb, kParamValueFloat, kParamValueLabel, kParamValueHint, true, 0, page, NULL);
-        defineDouble2DSub(desc, nb, kParamValueVec2, kParamValueLabel, kParamValueHint, true, 0, page, NULL);
-        defineDouble3DSub(desc, nb, kParamValueVec3, kParamValueLabel, kParamValueHint, true, 0, page, NULL);
-        defineRGBASub(desc, nb, kParamValueVec4, kParamValueLabel, kParamValueHint, true, 0, page, NULL);
-    }
+        // parse the Shadertoy.txt file from the resources to fetch the presets
+        string resourcesPath = desc.getPropertySet().propGetString(kOfxPluginPropFilePath, /*throwOnFailure=*/false) + "/Contents/Resources";
+        presetsFromDir(resourcesPath + "/presets/default", gPresetsDefault);
 
-    {
-        GroupParamDescriptor* group = desc.defineGroupParam(kGroupImageShader);
-        if (group) {
-            group->setLabel(kGroupImageShaderLabel);
-            group->setOpen(false);
-            //group->setAsTab();
-            if (page) {
-                page->addChild(*group);
-            }
-        }
 
+        // Source clip only in the filter context
+        // create the mandated source clip
+        gDiagLine = __LINE__;
         {
-            StringParamDescriptor* param = desc.defineStringParam(kParamImageShaderFileName);
-            param->setLabel(kParamImageShaderFileNameLabel);
-            param->setHint(kParamImageShaderFileNameHint);
-            param->setStringType(eStringTypeFilePath);
-            param->setFilePathExists(true);
-            param->setLayoutHint(eLayoutHintNoNewLine, 1);
-            param->setEvaluateOnChange(false); // render is triggered using kParamImageShaderTriggerRender
-            param->setAnimates(false);
-            if (page) {
-                page->addChild(*param);
-            }
-            if (group) {
-                param->setParent(*group);
-            }
+            ClipDescriptor *srcClip = desc.defineClip( (context == eContextFilter) ?
+                                                       kOfxImageEffectSimpleSourceClipName :
+                                                       kClipChannel "0" );
+            srcClip->addSupportedComponent(ePixelComponentRGBA);
+            srcClip->addSupportedComponent(ePixelComponentAlpha);
+            srcClip->setTemporalClipAccess(false);
+            srcClip->setSupportsTiles(kSupportsTiles);
+            srcClip->setIsMask(false);
+            srcClip->setOptional( !(context == eContextFilter) );
         }
+        for (unsigned i = 1; i < NBINPUTS; ++i) {
+            string iChannelX(kClipChannel);
+            iChannelX += unsignedToString(i);
+            ClipDescriptor *srcClip = desc.defineClip(iChannelX);
+            srcClip->addSupportedComponent(ePixelComponentRGBA);
+            srcClip->addSupportedComponent(ePixelComponentAlpha);
+            srcClip->setTemporalClipAccess(false);
+            srcClip->setSupportsTiles(kSupportsTiles);
+            srcClip->setIsMask(false);
+            srcClip->setOptional(true);
+        }
+        // create the mandated output clip
+        ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
+        dstClip->addSupportedComponent(ePixelComponentRGBA);
+        dstClip->addSupportedComponent(ePixelComponentAlpha);
+        dstClip->setSupportsTiles(kSupportsTiles);
 
+        // make some pages and to things in
+        PageParamDescriptor *page = desc.definePageParam("Controls");
+
+        gDiagLine = __LINE__;
         {
-            PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamImageShaderReload);
-            param->setLabel(kParamImageShaderReloadLabel);
-            param->setHint(kParamImageShaderReloadHint);
-            if (page) {
-                page->addChild(*param);
-            }
-            if (group) {
-                param->setParent(*group);
-            }
-        }
-
-        if ( !gPresetsDefault.empty() ) {
-            StringParamDescriptor* param = desc.defineStringParam(kParamImageShaderPresetDir);
-            param->setLabel(kParamImageShaderPresetDirLabel);
-            string hint = kParamImageShaderPresetDirHint;
-            replace(hint, "%1", resourcesPath + "/presets");
-            param->setHint(hint);
-            param->setStringType(eStringTypeDirectoryPath);
-            param->setDefault(resourcesPath + "/presets/default");
-            param->setEnabled(getImageEffectHostDescription()->isNatron);
-            param->setFilePathExists(true);
-            param->setEvaluateOnChange(false); // render is triggered using kParamImageShaderTriggerRender
-            param->setAnimates(false);
-            if (page) {
-                page->addChild(*param);
-            }
-            if (group) {
-                param->setParent(*group);
-            }
-        }
-        if ( !gPresetsDefault.empty() ) {
-            ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamImageShaderPreset);
-            param->setLabel(kParamImageShaderPresetLabel);
-            string hint = kParamImageShaderPresetHint;
-            replace(hint, "%1", resourcesPath + "/presets");
-            param->setHint(hint);
-            param->setCascading(true);
-            param->appendOption("No preset");
-            for (std::vector<ShadertoyPlugin::Preset>::iterator it = gPresetsDefault.begin(); it != gPresetsDefault.end(); ++it) {
-                param->appendOption(it->description);
-            }
-            param->setEvaluateOnChange(false); // render is triggered using kParamImageShaderTriggerRender
-            param->setAnimates(false);
-            if (page) {
-                page->addChild(*param);
-            }
-            if (group) {
-                param->setParent(*group);
-            }
-        }
-        // imageShaderPresetString
-        if ( !gPresetsDefault.empty() ) {
-            StringParamDescriptor* param = desc.defineStringParam(kNatronOfxParamStringSublabelName);
-            param->setIsSecretAndDisabled(true); // always secret
-            param->setIsPersistent(false);
-            param->setEvaluateOnChange(false);
+            Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamMousePosition);
+            param->setLabel(kParamMousePositionLabel);
+            param->setHint(kParamMousePositionHint);
+            param->setDoubleType(eDoubleTypeXYAbsolute);
+            param->setDefaultCoordinateSystem(eCoordinatesCanonical); // Nuke defaults to Normalized for XY and XYAbsolute!
+            param->setUseHostNativeOverlayHandle(true);
+            param->setAnimates(true);
             if (page) {
                 page->addChild(*param);
             }
         }
-
+        gDiagLine = __LINE__;
         {
-            StringParamDescriptor* param = desc.defineStringParam(kParamImageShaderSource);
-            param->setLabel(kParamImageShaderSourceLabel);
-            param->setHint(kParamImageShaderSourceHint);
-            param->setStringType(eStringTypeMultiLine);
-            param->setDefault(kParamImageShaderDefault);
-            param->setEvaluateOnChange(false); // render is triggered using kParamImageShaderTriggerRender
-            param->setAnimates(false);
+            Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamMouseClick);
+            param->setLabel(kParamMouseClickLabel);
+            param->setHint(kParamMouseClickHint);
+            param->setDoubleType(eDoubleTypeXYAbsolute);
+            param->setDefaultCoordinateSystem(eCoordinatesCanonical); // Nuke defaults to Normalized for XY and XYAbsolute!
+            param->setDefault(1.,1.);
+            param->setUseHostNativeOverlayHandle(true);
+            param->setAnimates(true);
             if (page) {
                 page->addChild(*param);
             }
-            if (group) {
-                param->setParent(*group);
-            }
         }
-
+        gDiagLine = __LINE__;
         {
-            PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamImageShaderCompile);
-            param->setLabel(kParamImageShaderCompileLabel);
-            param->setHint(kParamImageShaderCompileHint);
-            param->setLayoutHint(eLayoutHintNoNewLine, 1);
+            BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMousePressed);
+            param->setLabel(kParamMousePressedLabel);
+            param->setHint(kParamMousePressedHint);
+            param->setAnimates(true);
             if (page) {
                 page->addChild(*param);
             }
-            if (group) {
-                param->setParent(*group);
-            }
         }
 
-        {
-            PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamAuto);
-            param->setLabel(kParamAutoLabel);
-            param->setHint(kParamAutoHint);
-            param->setLayoutHint(eLayoutHintNoNewLine, 1);
-            if (page) {
-                page->addChild(*param);
-            }
-            if (group) {
-                param->setParent(*group);
-            }
-        }
-
-        {
-            PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamResetParams);
-            param->setLabel(kParamResetParamsLabel);
-            param->setHint(kParamResetParamsHint);
-            if (page) {
-                page->addChild(*param);
-            }
-            if (group) {
-                param->setParent(*group);
-            }
-        }
-
-        {
-            // a dummy boolean parameter, used to trigger a new render when the shader is to be recompiled
-            IntParamDescriptor* param = desc.defineIntParam(kParamImageShaderTriggerRender);
-            param->setEvaluateOnChange(true);
-            param->setAnimates(false);
-            param->setIsSecretAndDisabled(true);
-            param->setIsPersistent(false);
-            if (page) {
-                page->addChild(*param);
-            }
-            if (group) {
-                param->setParent(*group);
-            }
-        }
-
-        {
-            // a dummy boolean parameter, used to update parameters GUI when the shader was recompiled
-            BooleanParamDescriptor* param = desc.defineBooleanParam(kParamImageShaderParamsUpdated);
-            param->setEvaluateOnChange(false);
-            param->setAnimates(false);
-            param->setIsSecretAndDisabled(true);
-            param->setIsPersistent(false);
-            if (page) {
-                page->addChild(*param);
-            }
-            if (group) {
-                param->setParent(*group);
-            }
-        }
-
-        for (unsigned i = 0; i < NBINPUTS; ++i) {
+        const unsigned int nbuniforms = (hostDescription.hostName == "uk.co.thefoundry.nuke" && hostDescription.versionMajor == 7) ? SHADERTOY_NBUNIFORMS_NUKE7 : NBUNIFORMS; //if more than 7, Nuke 7's parameter page goes blank when unfolding the Extra Parameters group
+        for (unsigned i = 0; i < nbuniforms; ++i) {
+            // generate the number string
             string nb = unsignedToString(i);
-            {
-                StringParamDescriptor* param = desc.defineStringParam(kParamInputName + nb);
-                param->setLabel("");
-                param->setDefault(kClipChannel + nb);
-                param->setStringType(eStringTypeLabel);
-                param->setLayoutHint(eLayoutHintNoNewLine, 1);
-                if (page) {
-                    page->addChild(*param);
-                }
-                if (group) {
-                    param->setParent(*group);
-                }
-            }
-            {
-                BooleanParamDescriptor* param = desc.defineBooleanParam(kParamInputEnable + nb);
-                param->setLabel(kParamInputEnableLabel);
-                param->setHint(kParamInputEnableHint);
-                param->setDefault(true);
-                param->setAnimates(false);
-                param->setLayoutHint(eLayoutHintNoNewLine, 1);
-                if (page) {
-                    page->addChild(*param);
-                }
-                if (group) {
-                    param->setParent(*group);
-                }
-            }
-            {
-                ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamInputFilter + nb);
-                param->setLabel(kParamInputFilterLabel);
-                param->setHint(kParamInputFilterHint);
-                assert(param->getNOptions() == (int)ShadertoyPlugin::eFilterNearest);
-                param->appendOption(kParamInputFilterOptionNearest);
-                assert(param->getNOptions() == (int)ShadertoyPlugin::eFilterLinear);
-                param->appendOption(kParamInputFilterOptionLinear);
-                assert(param->getNOptions() == (int)ShadertoyPlugin::eFilterMipmap);
-                param->appendOption(kParamInputFilterOptionMipmap);
-                assert(param->getNOptions() == (int)ShadertoyPlugin::eFilterAnisotropic);
-                param->appendOption(kParamInputFilterOptionAnisotropic);
-                param->setDefault( (int)ShadertoyPlugin::eFilterMipmap );
-                param->setAnimates(false);
-                param->setLayoutHint(eLayoutHintNoNewLine, 1);
-                if (page) {
-                    page->addChild(*param);
-                }
-                if (group) {
-                    param->setParent(*group);
-                }
-            }
-            {
-                ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamInputWrap + nb);
-                param->setLabelAndHint(kParamInputWrapLabel);
-                assert(param->getNOptions() == (int)ShadertoyPlugin::eWrapRepeat);
-                param->appendOption(kParamInputWrapOptionRepeat);
-                assert(param->getNOptions() == (int)ShadertoyPlugin::eWrapClamp);
-                param->appendOption(kParamInputWrapOptionClamp);
-                assert(param->getNOptions() == (int)ShadertoyPlugin::eWrapMirror);
-                param->appendOption(kParamInputWrapOptionMirror);
-                param->setDefault( (int)ShadertoyPlugin::eWrapRepeat );
-                param->setAnimates(false);
-                if (page) {
-                    page->addChild(*param);
-                }
-                if (group) {
-                    param->setParent(*group);
-                }
-            }
-            {
-                StringParamDescriptor* param = desc.defineStringParam(kParamInputLabel + nb);
-                param->setLabel(kParamInputLabelLabel);
-                param->setHint(kParamInputLabelHint);
-                param->setDefault("");
-                param->setAnimates(false);
-                if (page) {
-                    page->addChild(*param);
-                }
-                if (group) {
-                    param->setParent(*group);
-                }
-            }
-            {
-                StringParamDescriptor* param = desc.defineStringParam(kParamInputHint + nb);
-                param->setLabel(kParamInputHintLabel);
-                param->setDefault("");
-                param->setAnimates(false);
-                if (page) {
-                    page->addChild(*param);
-                }
-                if (group) {
-                    param->setParent(*group);
-                }
-            }
+            defineBooleanSub(desc, nb, kParamValueBool, kParamValueLabel, kParamValueHint, true, page, NULL);
+            defineIntSub(desc, nb, kParamValueInt, kParamValueLabel, kParamValueHint, true, 0, page, NULL);
+            defineDoubleSub(desc, nb, kParamValueFloat, kParamValueLabel, kParamValueHint, true, 0, page, NULL);
+            defineDouble2DSub(desc, nb, kParamValueVec2, kParamValueLabel, kParamValueHint, true, 0, page, NULL);
+            defineDouble3DSub(desc, nb, kParamValueVec3, kParamValueLabel, kParamValueHint, true, 0, page, NULL);
+            defineRGBASub(desc, nb, kParamValueVec4, kParamValueLabel, kParamValueHint, true, 0, page, NULL);
         }
 
-        // boundingBox
+        gDiagLine = __LINE__;
         {
-            ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamBBox);
-            param->setLabel(kParamBBoxLabel);
-            param->setHint(kParamBBoxHint);
-            assert(param->getNOptions() == (int)ShadertoyPlugin::eBBoxDefault);
-            param->appendOption(kParamBBoxOptionDefault);
-            assert(param->getNOptions() == (int)ShadertoyPlugin::eBBoxFormat);
-            param->appendOption(kParamBBoxOptionFormat);
-            //assert(param->getNOptions() == (int)eBBoxSize);
-            //param->appendOption(kParamBBoxOptionSize, kParamBBoxOptionSizeHint);
-            assert(param->getNOptions() == (int)ShadertoyPlugin::eBBoxUnion);
-            param->appendOption(kParamBBoxOptionUnion);
-            assert(param->getNOptions() == (int)ShadertoyPlugin::eBBoxIntersection);
-            param->appendOption(kParamBBoxOptionIntersection);
-            assert(param->getNOptions() == (int)ShadertoyPlugin::eBBoxIChannel);
+            GroupParamDescriptor* group = desc.defineGroupParam(kGroupImageShader);
+            if (group) {
+                group->setLabel(kGroupImageShaderLabel);
+                group->setOpen(false);
+                //group->setAsTab();
+                if (page) {
+                    page->addChild(*group);
+                }
+            }
+
+            {
+                StringParamDescriptor* param = desc.defineStringParam(kParamImageShaderFileName);
+                param->setLabel(kParamImageShaderFileNameLabel);
+                param->setHint(kParamImageShaderFileNameHint);
+                param->setStringType(eStringTypeFilePath);
+                param->setFilePathExists(true);
+                param->setLayoutHint(eLayoutHintNoNewLine, 1);
+                param->setEvaluateOnChange(false); // render is triggered using kParamImageShaderTriggerRender
+                param->setAnimates(false);
+                if (page) {
+                    page->addChild(*param);
+                }
+                if (group) {
+                    param->setParent(*group);
+                }
+            }
+
+            {
+                PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamImageShaderReload);
+                param->setLabel(kParamImageShaderReloadLabel);
+                param->setHint(kParamImageShaderReloadHint);
+                if (page) {
+                    page->addChild(*param);
+                }
+                if (group) {
+                    param->setParent(*group);
+                }
+            }
+
+            if ( !gPresetsDefault.empty() ) {
+                StringParamDescriptor* param = desc.defineStringParam(kParamImageShaderPresetDir);
+                param->setLabel(kParamImageShaderPresetDirLabel);
+                string hint = kParamImageShaderPresetDirHint;
+                replace(hint, "%1", resourcesPath + "/presets");
+                param->setHint(hint);
+                param->setStringType(eStringTypeDirectoryPath);
+                param->setDefault(resourcesPath + "/presets/default");
+                param->setEnabled(getImageEffectHostDescription()->isNatron);
+                param->setFilePathExists(true);
+                param->setEvaluateOnChange(false); // render is triggered using kParamImageShaderTriggerRender
+                param->setAnimates(false);
+                if (page) {
+                    page->addChild(*param);
+                }
+                if (group) {
+                    param->setParent(*group);
+                }
+            }
+            if ( !gPresetsDefault.empty() ) {
+                ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamImageShaderPreset);
+                param->setLabel(kParamImageShaderPresetLabel);
+                string hint = kParamImageShaderPresetHint;
+                replace(hint, "%1", resourcesPath + "/presets");
+                param->setHint(hint);
+                param->setCascading(true);
+                param->appendOption("No preset");
+                for (std::vector<ShadertoyPlugin::Preset>::iterator it = gPresetsDefault.begin(); it != gPresetsDefault.end(); ++it) {
+                    param->appendOption(it->description);
+                }
+                param->setEvaluateOnChange(false); // render is triggered using kParamImageShaderTriggerRender
+                param->setAnimates(false);
+                if (page) {
+                    page->addChild(*param);
+                }
+                if (group) {
+                    param->setParent(*group);
+                }
+            }
+            // imageShaderPresetString
+            if ( !gPresetsDefault.empty() ) {
+                StringParamDescriptor* param = desc.defineStringParam(kNatronOfxParamStringSublabelName);
+                param->setIsSecretAndDisabled(true); // always secret
+                param->setIsPersistent(false);
+                param->setEvaluateOnChange(false);
+                if (page) {
+                    page->addChild(*param);
+                }
+            }
+
+            {
+                StringParamDescriptor* param = desc.defineStringParam(kParamImageShaderSource);
+                param->setLabel(kParamImageShaderSourceLabel);
+                param->setHint(kParamImageShaderSourceHint);
+                param->setStringType(eStringTypeMultiLine);
+                param->setDefault(kParamImageShaderDefault);
+                param->setEvaluateOnChange(false); // render is triggered using kParamImageShaderTriggerRender
+                param->setAnimates(false);
+                if (page) {
+                    page->addChild(*param);
+                }
+                if (group) {
+                    param->setParent(*group);
+                }
+            }
+
+            {
+                PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamImageShaderCompile);
+                param->setLabel(kParamImageShaderCompileLabel);
+                param->setHint(kParamImageShaderCompileHint);
+                param->setLayoutHint(eLayoutHintNoNewLine, 1);
+                if (page) {
+                    page->addChild(*param);
+                }
+                if (group) {
+                    param->setParent(*group);
+                }
+            }
+
+            {
+                PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamAuto);
+                param->setLabel(kParamAutoLabel);
+                param->setHint(kParamAutoHint);
+                param->setLayoutHint(eLayoutHintNoNewLine, 1);
+                if (page) {
+                    page->addChild(*param);
+                }
+                if (group) {
+                    param->setParent(*group);
+                }
+            }
+
+            {
+                PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamResetParams);
+                param->setLabel(kParamResetParamsLabel);
+                param->setHint(kParamResetParamsHint);
+                if (page) {
+                    page->addChild(*param);
+                }
+                if (group) {
+                    param->setParent(*group);
+                }
+            }
+
+            {
+                // a dummy boolean parameter, used to trigger a new render when the shader is to be recompiled
+                IntParamDescriptor* param = desc.defineIntParam(kParamImageShaderTriggerRender);
+                param->setEvaluateOnChange(true);
+                param->setAnimates(false);
+                param->setIsSecretAndDisabled(true);
+                param->setIsPersistent(false);
+                if (page) {
+                    page->addChild(*param);
+                }
+                if (group) {
+                    param->setParent(*group);
+                }
+            }
+
+            {
+                // a dummy boolean parameter, used to update parameters GUI when the shader was recompiled
+                BooleanParamDescriptor* param = desc.defineBooleanParam(kParamImageShaderParamsUpdated);
+                param->setEvaluateOnChange(false);
+                param->setAnimates(false);
+                param->setIsSecretAndDisabled(true);
+                param->setIsPersistent(false);
+                if (page) {
+                    page->addChild(*param);
+                }
+                if (group) {
+                    param->setParent(*group);
+                }
+            }
+
             for (unsigned i = 0; i < NBINPUTS; ++i) {
                 string nb = unsignedToString(i);
-                param->appendOption(string(kParamBBoxOptionIChannel) + nb, string(kParamBBoxOptionIChannelHint) + nb + '.', string(kParamBBoxOptionIChannelEnum) + nb);
+                {
+                    StringParamDescriptor* param = desc.defineStringParam(kParamInputName + nb);
+                    param->setLabel("");
+                    param->setDefault(kClipChannel + nb);
+                    param->setStringType(eStringTypeLabel);
+                    param->setLayoutHint(eLayoutHintNoNewLine, 1);
+                    if (page) {
+                        page->addChild(*param);
+                    }
+                    if (group) {
+                        param->setParent(*group);
+                    }
+                }
+                {
+                    BooleanParamDescriptor* param = desc.defineBooleanParam(kParamInputEnable + nb);
+                    param->setLabel(kParamInputEnableLabel);
+                    param->setHint(kParamInputEnableHint);
+                    param->setDefault(true);
+                    param->setAnimates(false);
+                    param->setLayoutHint(eLayoutHintNoNewLine, 1);
+                    if (page) {
+                        page->addChild(*param);
+                    }
+                    if (group) {
+                        param->setParent(*group);
+                    }
+                }
+                {
+                    ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamInputFilter + nb);
+                    param->setLabel(kParamInputFilterLabel);
+                    param->setHint(kParamInputFilterHint);
+                    assert(param->getNOptions() == (int)ShadertoyPlugin::eFilterNearest);
+                    param->appendOption(kParamInputFilterOptionNearest);
+                    assert(param->getNOptions() == (int)ShadertoyPlugin::eFilterLinear);
+                    param->appendOption(kParamInputFilterOptionLinear);
+                    assert(param->getNOptions() == (int)ShadertoyPlugin::eFilterMipmap);
+                    param->appendOption(kParamInputFilterOptionMipmap);
+                    assert(param->getNOptions() == (int)ShadertoyPlugin::eFilterAnisotropic);
+                    param->appendOption(kParamInputFilterOptionAnisotropic);
+                    param->setDefault( (int)ShadertoyPlugin::eFilterMipmap );
+                    param->setAnimates(false);
+                    param->setLayoutHint(eLayoutHintNoNewLine, 1);
+                    if (page) {
+                        page->addChild(*param);
+                    }
+                    if (group) {
+                        param->setParent(*group);
+                    }
+                }
+                {
+                    ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamInputWrap + nb);
+                    param->setLabelAndHint(kParamInputWrapLabel);
+                    assert(param->getNOptions() == (int)ShadertoyPlugin::eWrapRepeat);
+                    param->appendOption(kParamInputWrapOptionRepeat);
+                    assert(param->getNOptions() == (int)ShadertoyPlugin::eWrapClamp);
+                    param->appendOption(kParamInputWrapOptionClamp);
+                    assert(param->getNOptions() == (int)ShadertoyPlugin::eWrapMirror);
+                    param->appendOption(kParamInputWrapOptionMirror);
+                    param->setDefault( (int)ShadertoyPlugin::eWrapRepeat );
+                    param->setAnimates(false);
+                    if (page) {
+                        page->addChild(*param);
+                    }
+                    if (group) {
+                        param->setParent(*group);
+                    }
+                }
+                {
+                    StringParamDescriptor* param = desc.defineStringParam(kParamInputLabel + nb);
+                    param->setLabel(kParamInputLabelLabel);
+                    param->setHint(kParamInputLabelHint);
+                    param->setDefault("");
+                    param->setAnimates(false);
+                    if (page) {
+                        page->addChild(*param);
+                    }
+                    if (group) {
+                        param->setParent(*group);
+                    }
+                }
+                {
+                    StringParamDescriptor* param = desc.defineStringParam(kParamInputHint + nb);
+                    param->setLabel(kParamInputHintLabel);
+                    param->setDefault("");
+                    param->setAnimates(false);
+                    if (page) {
+                        page->addChild(*param);
+                    }
+                    if (group) {
+                        param->setParent(*group);
+                    }
+                }
             }
-            param->setAnimates(true);
-            param->setDefault( (int)ShadertoyPlugin::eBBoxDefault );
-            if (page) {
-                page->addChild(*param);
-            }
-            if (group) {
-                param->setParent(*group);
-            }
-        }
 
-        // format
-        {
-            ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamFormat);
-            param->setLabel(kParamFormatLabel);
-            assert(param->getNOptions() == eParamFormatPCVideo);
-            param->appendOption(kParamFormatPCVideoLabel, "", kParamFormatPCVideo);
-            assert(param->getNOptions() == eParamFormatNTSC);
-            param->appendOption(kParamFormatNTSCLabel, "", kParamFormatNTSC);
-            assert(param->getNOptions() == eParamFormatPAL);
-            param->appendOption(kParamFormatPALLabel, "", kParamFormatPAL);
-            assert(param->getNOptions() == eParamFormatNTSC169);
-            param->appendOption(kParamFormatNTSC169Label, "", kParamFormatNTSC169);
-            assert(param->getNOptions() == eParamFormatPAL169);
-            param->appendOption(kParamFormatPAL169Label, "", kParamFormatPAL169);
-            assert(param->getNOptions() == eParamFormatHD720);
-            param->appendOption(kParamFormatHD720Label, "", kParamFormatHD720);
-            assert(param->getNOptions() == eParamFormatHD);
-            param->appendOption(kParamFormatHDLabel, "", kParamFormatHD);
-            assert(param->getNOptions() == eParamFormatUHD4K);
-            param->appendOption(kParamFormatUHD4KLabel, "", kParamFormatUHD4K);
-            assert(param->getNOptions() == eParamFormat1kSuper35);
-            param->appendOption(kParamFormat1kSuper35Label, "", kParamFormat1kSuper35);
-            assert(param->getNOptions() == eParamFormat1kCinemascope);
-            param->appendOption(kParamFormat1kCinemascopeLabel, "", kParamFormat1kCinemascope);
-            assert(param->getNOptions() == eParamFormat2kSuper35);
-            param->appendOption(kParamFormat2kSuper35Label, "", kParamFormat2kSuper35);
-            assert(param->getNOptions() == eParamFormat2kCinemascope);
-            param->appendOption(kParamFormat2kCinemascopeLabel, "", kParamFormat2kCinemascope);
-            assert(param->getNOptions() == eParamFormat2kDCP);
-            param->appendOption(kParamFormat2kDCPLabel, "", kParamFormat2kDCP);
-            assert(param->getNOptions() == eParamFormat4kSuper35);
-            param->appendOption(kParamFormat4kSuper35Label, "", kParamFormat4kSuper35);
-            assert(param->getNOptions() == eParamFormat4kCinemascope);
-            param->appendOption(kParamFormat4kCinemascopeLabel, "", kParamFormat4kCinemascope);
-            assert(param->getNOptions() == eParamFormat4kDCP);
-            param->appendOption(kParamFormat4kDCPLabel, "", kParamFormat4kDCP);
-            assert(param->getNOptions() == eParamFormatSquare256);
-            param->appendOption(kParamFormatSquare256Label, "", kParamFormatSquare256);
-            assert(param->getNOptions() == eParamFormatSquare512);
-            param->appendOption(kParamFormatSquare512Label, "", kParamFormatSquare512);
-            assert(param->getNOptions() == eParamFormatSquare1k);
-            param->appendOption(kParamFormatSquare1kLabel, "", kParamFormatSquare1k);
-            assert(param->getNOptions() == eParamFormatSquare2k);
-            param->appendOption(kParamFormatSquare2kLabel, "", kParamFormatSquare2k);
-            param->setDefault(eParamFormatPCVideo);
-            param->setHint(kParamFormatHint);
-            param->setAnimates(false);
-            desc.addClipPreferencesSlaveParam(*param);
-            if (page) {
-                page->addChild(*param);
-            }
-            if (group) {
-                param->setParent(*group);
-            }
-        }
-
-        {
-            // two secret parameters for Natron's format handling
-            int w = 0, h = 0;
-            double par = -1.;
-            getFormatResolution(eParamFormatPCVideo, &w, &h, &par);
-            assert(par != -1);
+            // boundingBox
             {
-                Int2DParamDescriptor* param = desc.defineInt2DParam(kParamFormatSize);
-                param->setLabel(kParamFormatSizeLabel);
-                param->setHint(kParamFormatSizeHint);
-                param->setIsSecretAndDisabled(true);
-                param->setDefault(w, h);
+                ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamBBox);
+                param->setLabel(kParamBBoxLabel);
+                param->setHint(kParamBBoxHint);
+                assert(param->getNOptions() == (int)ShadertoyPlugin::eBBoxDefault);
+                param->appendOption(kParamBBoxOptionDefault);
+                assert(param->getNOptions() == (int)ShadertoyPlugin::eBBoxFormat);
+                param->appendOption(kParamBBoxOptionFormat);
+                //assert(param->getNOptions() == (int)eBBoxSize);
+                //param->appendOption(kParamBBoxOptionSize, kParamBBoxOptionSizeHint);
+                assert(param->getNOptions() == (int)ShadertoyPlugin::eBBoxUnion);
+                param->appendOption(kParamBBoxOptionUnion);
+                assert(param->getNOptions() == (int)ShadertoyPlugin::eBBoxIntersection);
+                param->appendOption(kParamBBoxOptionIntersection);
+                assert(param->getNOptions() == (int)ShadertoyPlugin::eBBoxIChannel);
+                for (unsigned i = 0; i < NBINPUTS; ++i) {
+                    string nb = unsignedToString(i);
+                    param->appendOption(string(kParamBBoxOptionIChannel) + nb, string(kParamBBoxOptionIChannelHint) + nb + '.', string(kParamBBoxOptionIChannelEnum) + nb);
+                }
+                param->setAnimates(true);
+                param->setDefault( (int)ShadertoyPlugin::eBBoxDefault );
+                if (page) {
+                    page->addChild(*param);
+                }
+                if (group) {
+                    param->setParent(*group);
+                }
+            }
+
+            // format
+            {
+                ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamFormat);
+                param->setLabel(kParamFormatLabel);
+                assert(param->getNOptions() == eParamFormatPCVideo);
+                param->appendOption(kParamFormatPCVideoLabel, "", kParamFormatPCVideo);
+                assert(param->getNOptions() == eParamFormatNTSC);
+                param->appendOption(kParamFormatNTSCLabel, "", kParamFormatNTSC);
+                assert(param->getNOptions() == eParamFormatPAL);
+                param->appendOption(kParamFormatPALLabel, "", kParamFormatPAL);
+                assert(param->getNOptions() == eParamFormatNTSC169);
+                param->appendOption(kParamFormatNTSC169Label, "", kParamFormatNTSC169);
+                assert(param->getNOptions() == eParamFormatPAL169);
+                param->appendOption(kParamFormatPAL169Label, "", kParamFormatPAL169);
+                assert(param->getNOptions() == eParamFormatHD720);
+                param->appendOption(kParamFormatHD720Label, "", kParamFormatHD720);
+                assert(param->getNOptions() == eParamFormatHD);
+                param->appendOption(kParamFormatHDLabel, "", kParamFormatHD);
+                assert(param->getNOptions() == eParamFormatUHD4K);
+                param->appendOption(kParamFormatUHD4KLabel, "", kParamFormatUHD4K);
+                assert(param->getNOptions() == eParamFormat1kSuper35);
+                param->appendOption(kParamFormat1kSuper35Label, "", kParamFormat1kSuper35);
+                assert(param->getNOptions() == eParamFormat1kCinemascope);
+                param->appendOption(kParamFormat1kCinemascopeLabel, "", kParamFormat1kCinemascope);
+                assert(param->getNOptions() == eParamFormat2kSuper35);
+                param->appendOption(kParamFormat2kSuper35Label, "", kParamFormat2kSuper35);
+                assert(param->getNOptions() == eParamFormat2kCinemascope);
+                param->appendOption(kParamFormat2kCinemascopeLabel, "", kParamFormat2kCinemascope);
+                assert(param->getNOptions() == eParamFormat2kDCP);
+                param->appendOption(kParamFormat2kDCPLabel, "", kParamFormat2kDCP);
+                assert(param->getNOptions() == eParamFormat4kSuper35);
+                param->appendOption(kParamFormat4kSuper35Label, "", kParamFormat4kSuper35);
+                assert(param->getNOptions() == eParamFormat4kCinemascope);
+                param->appendOption(kParamFormat4kCinemascopeLabel, "", kParamFormat4kCinemascope);
+                assert(param->getNOptions() == eParamFormat4kDCP);
+                param->appendOption(kParamFormat4kDCPLabel, "", kParamFormat4kDCP);
+                assert(param->getNOptions() == eParamFormatSquare256);
+                param->appendOption(kParamFormatSquare256Label, "", kParamFormatSquare256);
+                assert(param->getNOptions() == eParamFormatSquare512);
+                param->appendOption(kParamFormatSquare512Label, "", kParamFormatSquare512);
+                assert(param->getNOptions() == eParamFormatSquare1k);
+                param->appendOption(kParamFormatSquare1kLabel, "", kParamFormatSquare1k);
+                assert(param->getNOptions() == eParamFormatSquare2k);
+                param->appendOption(kParamFormatSquare2kLabel, "", kParamFormatSquare2k);
+                param->setDefault(eParamFormatPCVideo);
+                param->setHint(kParamFormatHint);
+                param->setAnimates(false);
+                desc.addClipPreferencesSlaveParam(*param);
                 if (page) {
                     page->addChild(*param);
                 }
@@ -3132,234 +3153,264 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             }
 
             {
-                DoubleParamDescriptor* param = desc.defineDoubleParam(kParamFormatPAR);
-                param->setLabel(kParamFormatPARLabel);
-                param->setHint(kParamFormatPARHint);
-                param->setIsSecretAndDisabled(true);
-                param->setRange(0., DBL_MAX);
-                param->setDisplayRange(0.5, 2.);
-                param->setDefault(par);
-                if (page) {
-                    page->addChild(*param);
+                // two secret parameters for Natron's format handling
+                int w = 0, h = 0;
+                double par = -1.;
+                getFormatResolution(eParamFormatPCVideo, &w, &h, &par);
+                assert(par != -1);
+                {
+                    Int2DParamDescriptor* param = desc.defineInt2DParam(kParamFormatSize);
+                    param->setLabel(kParamFormatSizeLabel);
+                    param->setHint(kParamFormatSizeHint);
+                    param->setIsSecretAndDisabled(true);
+                    param->setDefault(w, h);
+                    if (page) {
+                        page->addChild(*param);
+                    }
+                    if (group) {
+                        param->setParent(*group);
+                    }
                 }
-                if (group) {
-                    param->setParent(*group);
-                }
-            }
-        }
 
-        {
-            BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMouseParams);
-            param->setLabel(kParamMouseParamsLabel);
-            param->setHint(kParamMouseParamsHint);
-            param->setDefault(true);
-            param->setAnimates(false);
-            if (page) {
-                page->addChild(*param);
-            }
-            if (group) {
-                param->setParent(*group);
-            }
-        }
-
-        {
-            RGBAParamDescriptor* param = desc.defineRGBAParam(kParamDate);
-            param->setLabel(kParamDateLabel);
-            param->setHint(kParamDateHint);
-            param->setDefault(1970., 0., 1., 0.);
-            param->setRange(0, 0, 1, 0, 9999, 11, 31, 24*60*60);
-            param->setDisplayRange(0, 0, 1, 0, 9999, 11, 31, 24*60*60);
-            param->setDimensionLabels("y", "m", "d", "s");
-            param->setAnimates(true);
-            if (page) {
-                page->addChild(*param);
-            }
-            if (group) {
-                param->setParent(*group);
-            }
-        }
-
-        {
-            GroupParamDescriptor* sgroup = desc.defineGroupParam(kGroupExtraParameters);
-            if (sgroup) {
-                sgroup->setLabel(kGroupExtraParametersLabel);
-                sgroup->setHint(kGroupExtraParametersHint);
-                sgroup->setOpen(false);
-                if (page) {
-                    page->addChild(*sgroup);
-                }
-                if (group) {
-                    sgroup->setParent(*group);
+                {
+                    DoubleParamDescriptor* param = desc.defineDoubleParam(kParamFormatPAR);
+                    param->setLabel(kParamFormatPARLabel);
+                    param->setHint(kParamFormatPARHint);
+                    param->setIsSecretAndDisabled(true);
+                    param->setRange(0., DBL_MAX);
+                    param->setDisplayRange(0.5, 2.);
+                    param->setDefault(par);
+                    if (page) {
+                        page->addChild(*param);
+                    }
+                    if (group) {
+                        param->setParent(*group);
+                    }
                 }
             }
 
             {
-                IntParamDescriptor* param = desc.defineIntParam(kParamCount);
-                param->setLabel(kParamCountLabel);
-                param->setHint(kParamCountHint);
-                param->setRange(0, nbuniforms);
-                param->setDisplayRange(0, nbuniforms);
+                BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMouseParams);
+                param->setLabel(kParamMouseParamsLabel);
+                param->setHint(kParamMouseParamsHint);
+                param->setDefault(true);
                 param->setAnimates(false);
                 if (page) {
                     page->addChild(*param);
                 }
-                if (sgroup) {
-                    param->setParent(*sgroup);
+                if (group) {
+                    param->setParent(*group);
                 }
             }
 
-            for (unsigned i = 0; i < nbuniforms; ++i) {
-                // generate the number string
-                string nb = unsignedToString(i);
-                GroupParamDescriptor* pgroup = desc.defineGroupParam(kGroupParameter + nb);
-                if (pgroup) {
-                    pgroup->setLabel(kGroupParameterLabel + nb);
-                    pgroup->setOpen(false);
+            {
+                RGBAParamDescriptor* param = desc.defineRGBAParam(kParamDate);
+                param->setLabel(kParamDateLabel);
+                param->setHint(kParamDateHint);
+                param->setDefault(1970., 0., 1., 0.);
+                param->setRange(0, 0, 1, 0, 9999, 11, 31, 24*60*60);
+                param->setDisplayRange(0, 0, 1, 0, 9999, 11, 31, 24*60*60);
+                param->setDimensionLabels("y", "m", "d", "s");
+                param->setAnimates(true);
+                if (page) {
+                    page->addChild(*param);
+                }
+                if (group) {
+                    param->setParent(*group);
+                }
+            }
+
+            {
+                GroupParamDescriptor* sgroup = desc.defineGroupParam(kGroupExtraParameters);
+                if (sgroup) {
+                    sgroup->setLabel(kGroupExtraParametersLabel);
+                    sgroup->setHint(kGroupExtraParametersHint);
+                    sgroup->setOpen(false);
                     if (page) {
-                        page->addChild(*pgroup);
+                        page->addChild(*sgroup);
+                    }
+                    if (group) {
+                        sgroup->setParent(*group);
+                    }
+                }
+
+                {
+                    IntParamDescriptor* param = desc.defineIntParam(kParamCount);
+                    param->setLabel(kParamCountLabel);
+                    param->setHint(kParamCountHint);
+                    param->setRange(0, nbuniforms);
+                    param->setDisplayRange(0, nbuniforms);
+                    param->setAnimates(false);
+                    if (page) {
+                        page->addChild(*param);
                     }
                     if (sgroup) {
-                        pgroup->setParent(*sgroup);
+                        param->setParent(*sgroup);
                     }
                 }
 
-                {
-                    ChoiceParamDescriptor* param = desc.defineChoiceParam(string(kParamType) + nb);
-                    param->setLabel(kParamTypeLabel);
-                    param->setHint(kParamTypeHint);
-                    assert(param->getNOptions() == ShadertoyPlugin::eUniformTypeNone);
-                    param->appendOption(kParamTypeOptionNone);
-                    assert(param->getNOptions() == ShadertoyPlugin::eUniformTypeBool);
-                    param->appendOption(kParamTypeOptionBool);
-                    assert(param->getNOptions() == ShadertoyPlugin::eUniformTypeInt);
-                    param->appendOption(kParamTypeOptionInt);
-                    assert(param->getNOptions() == ShadertoyPlugin::eUniformTypeFloat);
-                    param->appendOption(kParamTypeOptionFloat);
-                    assert(param->getNOptions() == ShadertoyPlugin::eUniformTypeVec2);
-                    param->appendOption(kParamTypeOptionVec2);
-                    assert(param->getNOptions() == ShadertoyPlugin::eUniformTypeVec3);
-                    param->appendOption(kParamTypeOptionVec3);
-                    assert(param->getNOptions() == ShadertoyPlugin::eUniformTypeVec4);
-                    param->appendOption(kParamTypeOptionVec4);
-                    param->setEvaluateOnChange(true);
-                    param->setAnimates(false);
-                    param->setLayoutHint(eLayoutHintNoNewLine, 1);
-                    if (page) {
-                        page->addChild(*param);
-                    }
+                for (unsigned i = 0; i < nbuniforms; ++i) {
+                    // generate the number string
+                    string nb = unsignedToString(i);
+                    GroupParamDescriptor* pgroup = desc.defineGroupParam(kGroupParameter + nb);
                     if (pgroup) {
-                        param->setParent(*pgroup);
+                        pgroup->setLabel(kGroupParameterLabel + nb);
+                        pgroup->setOpen(false);
+                        if (page) {
+                            page->addChild(*pgroup);
+                        }
+                        if (sgroup) {
+                            pgroup->setParent(*sgroup);
+                        }
                     }
+
+                    {
+                        ChoiceParamDescriptor* param = desc.defineChoiceParam(string(kParamType) + nb);
+                        param->setLabel(kParamTypeLabel);
+                        param->setHint(kParamTypeHint);
+                        assert(param->getNOptions() == ShadertoyPlugin::eUniformTypeNone);
+                        param->appendOption(kParamTypeOptionNone);
+                        assert(param->getNOptions() == ShadertoyPlugin::eUniformTypeBool);
+                        param->appendOption(kParamTypeOptionBool);
+                        assert(param->getNOptions() == ShadertoyPlugin::eUniformTypeInt);
+                        param->appendOption(kParamTypeOptionInt);
+                        assert(param->getNOptions() == ShadertoyPlugin::eUniformTypeFloat);
+                        param->appendOption(kParamTypeOptionFloat);
+                        assert(param->getNOptions() == ShadertoyPlugin::eUniformTypeVec2);
+                        param->appendOption(kParamTypeOptionVec2);
+                        assert(param->getNOptions() == ShadertoyPlugin::eUniformTypeVec3);
+                        param->appendOption(kParamTypeOptionVec3);
+                        assert(param->getNOptions() == ShadertoyPlugin::eUniformTypeVec4);
+                        param->appendOption(kParamTypeOptionVec4);
+                        param->setEvaluateOnChange(true);
+                        param->setAnimates(false);
+                        param->setLayoutHint(eLayoutHintNoNewLine, 1);
+                        if (page) {
+                            page->addChild(*param);
+                        }
+                        if (pgroup) {
+                            param->setParent(*pgroup);
+                        }
+                    }
+                    {
+                        StringParamDescriptor* param = desc.defineStringParam(string(kParamName) + nb);
+                        param->setLabel(kParamNameLabel);
+                        param->setHint(kParamNameHint);
+                        param->setEvaluateOnChange(true);
+                        param->setAnimates(false);
+                        param->setLayoutHint(eLayoutHintNoNewLine, 1);
+                        if (page) {
+                            page->addChild(*param);
+                        }
+                        if (pgroup) {
+                            param->setParent(*pgroup);
+                        }
+                    }
+                    {
+                        StringParamDescriptor* param = desc.defineStringParam(string(kParamLabel) + nb);
+                        param->setLabel(kParamLabelLabel);
+                        param->setHint(kParamLabelHint);
+                        param->setEvaluateOnChange(false);
+                        param->setAnimates(false);
+                        if (page) {
+                            page->addChild(*param);
+                        }
+                        if (pgroup) {
+                            param->setParent(*pgroup);
+                        }
+                    }
+                    {
+                        StringParamDescriptor* param = desc.defineStringParam(string(kParamHint) + nb);
+                        param->setLabel(kParamHintLabel);
+                        param->setHint(kParamHintHint);
+                        param->setEvaluateOnChange(false);
+                        param->setAnimates(false);
+                        if (page) {
+                            page->addChild(*param);
+                        }
+                        if (pgroup) {
+                            param->setParent(*pgroup);
+                        }
+                    }
+                    defineBoolean(desc, nb, page, pgroup);
+                    defineInt(desc, nb, page, pgroup);
+                    defineDouble(desc, nb, page, pgroup);
+                    defineDouble2D(desc, nb, page, pgroup);
+                    defineDouble3D(desc, nb, page, pgroup);
+                    defineRGBA(desc, nb, page, pgroup);
                 }
-                {
-                    StringParamDescriptor* param = desc.defineStringParam(string(kParamName) + nb);
-                    param->setLabel(kParamNameLabel);
-                    param->setHint(kParamNameHint);
-                    param->setEvaluateOnChange(true);
-                    param->setAnimates(false);
-                    param->setLayoutHint(eLayoutHintNoNewLine, 1);
-                    if (page) {
-                        page->addChild(*param);
-                    }
-                    if (pgroup) {
-                        param->setParent(*pgroup);
-                    }
-                }
-                {
-                    StringParamDescriptor* param = desc.defineStringParam(string(kParamLabel) + nb);
-                    param->setLabel(kParamLabelLabel);
-                    param->setHint(kParamLabelHint);
-                    param->setEvaluateOnChange(false);
-                    param->setAnimates(false);
-                    if (page) {
-                        page->addChild(*param);
-                    }
-                    if (pgroup) {
-                        param->setParent(*pgroup);
-                    }
-                }
-                {
-                    StringParamDescriptor* param = desc.defineStringParam(string(kParamHint) + nb);
-                    param->setLabel(kParamHintLabel);
-                    param->setHint(kParamHintHint);
-                    param->setEvaluateOnChange(false);
-                    param->setAnimates(false);
-                    if (page) {
-                        page->addChild(*param);
-                    }
-                    if (pgroup) {
-                        param->setParent(*pgroup);
-                    }
-                }
-                defineBoolean(desc, nb, page, pgroup);
-                defineInt(desc, nb, page, pgroup);
-                defineDouble(desc, nb, page, pgroup);
-                defineDouble2D(desc, nb, page, pgroup);
-                defineDouble3D(desc, nb, page, pgroup);
-                defineRGBA(desc, nb, page, pgroup);
             }
         }
-    }
 
 
-#if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
-    {
-        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamEnableGPU);
-        param->setLabel(kParamEnableGPULabel);
-        param->setHint(kParamEnableGPUHint);
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        // Resolve never calls render with OpenGL enabled (and Resolve 19 does not even advertise OpenGL render support, see issue #69)
-        if ( hostDescription.supportsOpenGLRender && (hostDescription.hostName.compare(0, 14, "DaVinciResolve") != 0) ) {
-            param->setDefault(true);
-            if (hostDescription.APIVersionMajor * 100 + hostDescription.APIVersionMinor < 104) {
-                // Switching OpenGL render from the plugin was introduced in OFX 1.4
+    #if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
+        gDiagLine = __LINE__;
+        {
+            BooleanParamDescriptor* param = desc.defineBooleanParam(kParamEnableGPU);
+            param->setLabel(kParamEnableGPULabel);
+            param->setHint(kParamEnableGPUHint);
+            const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
+            // Resolve never calls render with OpenGL enabled (and Resolve 19 does not even advertise OpenGL render support, see issue #69)
+            if ( hostDescription.supportsOpenGLRender && (hostDescription.hostName.compare(0, 14, "DaVinciResolve") != 0) ) {
+                param->setDefault(true);
+                if (hostDescription.APIVersionMajor * 100 + hostDescription.APIVersionMinor < 104) {
+                    // Switching OpenGL render from the plugin was introduced in OFX 1.4
+                    param->setEnabled(false);
+                }
+            } else {
+                param->setDefault(false);
                 param->setEnabled(false);
             }
-        } else {
-            param->setDefault(false);
-            param->setEnabled(false);
+
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+    #endif
+    #if defined(HAVE_OSMESA)
+        if ( ShadertoyPlugin::OSMesaDriverSelectable() ) {
+            ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamCPUDriver);
+            param->setLabel(kParamCPUDriverLabel);
+            param->setHint(kParamCPUDriverHint);
+            assert(param->getNOptions() == ShadertoyPlugin::eCPUDriverSoftPipe);
+            param->appendOption(kParamCPUDriverOptionSoftPipe);
+            assert(param->getNOptions() == ShadertoyPlugin::eCPUDriverLLVMPipe);
+            param->appendOption(kParamCPUDriverOptionLLVMPipe);
+            assert(param->getNOptions() == ShadertoyPlugin::eCPUDriverSWR);
+            param->appendOption(kParamCPUDriverOptionSWR);
+            param->setDefault(kParamCPUDriverDefault);
+            param->setAnimates(false);
+            if (page) {
+                page->addChild(*param);
+            }
         }
 
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-#endif
-#if defined(HAVE_OSMESA)
-    if ( ShadertoyPlugin::OSMesaDriverSelectable() ) {
-        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamCPUDriver);
-        param->setLabel(kParamCPUDriverLabel);
-        param->setHint(kParamCPUDriverHint);
-        assert(param->getNOptions() == ShadertoyPlugin::eCPUDriverSoftPipe);
-        param->appendOption(kParamCPUDriverOptionSoftPipe);
-        assert(param->getNOptions() == ShadertoyPlugin::eCPUDriverLLVMPipe);
-        param->appendOption(kParamCPUDriverOptionLLVMPipe);
-        assert(param->getNOptions() == ShadertoyPlugin::eCPUDriverSWR);
-        param->appendOption(kParamCPUDriverOptionSWR);
-        param->setDefault(kParamCPUDriverDefault);
-        param->setAnimates(false);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
+    #endif
 
-#endif
-
-    {
-        PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamRendererInfo);
-        param->setLabel(kParamRendererInfoLabel);
-        param->setHint(kParamRendererInfoHint);
-        if (page) {
-            page->addChild(*param);
+        gDiagLine = __LINE__;
+        {
+            PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamRendererInfo);
+            param->setLabel(kParamRendererInfoLabel);
+            param->setHint(kParamRendererInfoHint);
+            if (page) {
+                page->addChild(*param);
+            }
         }
-    }
-    {
-        PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamHelp);
-        param->setLabel(kParamHelpLabel);
-        param->setHint(kParamHelpHint);
-        if (page) {
-            page->addChild(*param);
+        gDiagLine = __LINE__;
+        {
+            PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamHelp);
+            param->setLabel(kParamHelpLabel);
+            param->setHint(kParamHelpHint);
+            if (page) {
+                page->addChild(*param);
+            }
         }
+    } catch (const std::exception& e) {
+        saveDescribeFailure(context, "std::exception (OFX::Exception::Suite, PropertyUnknownToHost...)", e.what());
+        throw;
+    } catch (...) {
+        saveDescribeFailure(context, "unknown exception", "");
+        throw;
     }
 } // ShadertoyPluginFactory::describeInContext
 
