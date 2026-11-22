@@ -536,12 +536,13 @@ private:
         double dx = 0.;
         double dy = 0.;
 
-        _bestMatchMutex.lock();
-        if (_bestMatch.second < bestScore) {
-            _bestMatchMutex.unlock();
-        } else {
-            // don't block other threads
-            _bestMatchMutex.unlock();
+        bool possibleWinner;
+        {
+            // scoped lock (CP.20); the refinement below runs without it, not to block other threads
+            AutoMutex lock(_bestMatchMutex);
+            possibleWinner = !(_bestMatch.second < bestScore);
+        }
+        if (possibleWinner) {
             // compute subpixel position.
             double scorepc = computeScore<scoreTypeE>(point.x - 1, point.y, refMean, refMeanOverflows);
             double scorenc = computeScore<scoreTypeE>(point.x + 1, point.y, refMean, refMeanOverflows);
@@ -625,9 +626,8 @@ TrackerPMPlugin::trackRange(const TrackArguments& args)
     std::string name;
     _instanceName->getValueAtTime(t, name);
     assert( (args.forward && args.last >= args.first) || (!args.forward && args.last <= args.first) );
-    bool showProgress = std::abs(args.last - args.first) > 1;
-    std::optional<ProgressScope> progress;
-    if (showProgress) {
+    std::optional<ProgressScope> progress; // only for more than two frames
+    if (std::abs(args.last - args.first) > 1) {
         progress.emplace(*this, name);
     }
 
@@ -663,7 +663,7 @@ TrackerPMPlugin::trackRange(const TrackArguments& args)
             // set the timeline to a specific time
             timeLineGotoTime(t);
         }
-        if ( showProgress && !progressUpdate( (t - args.first) / (args.last - args.first) ) ) {
+        if ( progress && !progressUpdate( (t - args.first) / (args.last - args.first) ) ) {
             return;
         }
     }

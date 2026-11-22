@@ -35,6 +35,7 @@
 #include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 #include "ofxsNonFinite.h" // finiteSample
+#include "ofxsAnalysisScope.h" // InAnalysisScope
 #ifdef OFX_USE_MULTITHREAD_MUTEX
 namespace {
 typedef MultiThread::Mutex Mutex;
@@ -1687,13 +1688,8 @@ HSVToolPlugin::changedParam(const InstanceChangedArgs &args,
             OfxRectI analysisWindow;
             bool intersect = computeWindow(src.get(), args.renderScale, args.time, &analysisWindow);
             if (intersect) {
-#             ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
-                getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
-#             endif
+                InAnalysisScope inAnalysis(*this); // restored on exit or exception (issue #237)
                 setSrcFromRectangle(src.get(), args.time, analysisWindow, args.renderScale);
-#             ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
-                getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);
-#             endif
             }
         }
     } else if ( (paramName == kParamDstColor) && (args.reason == eChangeUserEdit) ) {

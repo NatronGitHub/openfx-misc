@@ -18,9 +18,9 @@
  * ***** END LICENSE BLOCK ***** */
 
 /*
- * Scope guards for the analysis loops of TrackerPM and ImageStatistics (issue #237): the
- * "in analysis" property and the progress bar are restored when the loop ends, is cancelled, or
- * throws (C++ Core Guidelines R.1, E.6).
+ * Scope guards for the analyses of TrackerPM, ImageStatistics, HSVTool, ColorLookup and
+ * DenoiseSharpen (issue #237): the "in analysis" property and the progress bar are restored when
+ * the analysis ends, is cancelled, or throws (C++ Core Guidelines R.1, E.6).
  */
 
 #ifndef openfx_misc_ofxsAnalysisScope_h
@@ -32,42 +32,37 @@
 
 namespace OFX {
 
-// Sets kOfxImageEffectPropInAnalysis to 1 on the effect, and back to 0 on exit. The property was
-// removed from OFX 1.4 (ofxOld.h): hosts that don't have it ignore it (propSetInt does not throw).
+// Sets kOfxImageEffectPropInAnalysis to 1 on the effect, and to 0 on exit. Scopes must not nest:
+// the inner one would end the outer analysis. The property is in ofxOld.h (it was removed from
+// OFX 1.4, and HostSupport doesn't have it), which the Support headers include: it is set with
+// throwOnFailure=false, so hosts that don't have it ignore it.
 class InAnalysisScope
 {
 public:
     explicit InAnalysisScope(ImageEffect& effect)
         : _effect(effect)
     {
-        set(1);
+        _effect.getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
     }
 
+    // a destructor must not throw (C.36, E.16)
     ~InAnalysisScope()
     {
-        set(0);
+        try {
+            _effect.getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);
+        } catch (...) {
+            // nothing sensible to do: the analysis is over either way
+        }
     }
 
     InAnalysisScope(const InAnalysisScope&) = delete;
     InAnalysisScope& operator=(const InAnalysisScope&) = delete;
 
 private:
-    void set(int value)
-    {
-#ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
-        // Although the property has been there since OFX 1.0, it is not in the HostSupport library:
-        // don't throw if the host doesn't have it.
-        _effect.getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, value, false);
-#else
-        (void)value;
-#endif
-    }
-
     ImageEffect& _effect;
 };
 
 // Starts a progress bar, and ends it on exit, including when the analysis is cancelled or throws.
-// progressEnd() is a host call that must not throw out of the destructor (C.36, E.16).
 class ProgressScope
 {
 public:
@@ -78,6 +73,7 @@ public:
         _effect.progressStart(message);
     }
 
+    // a destructor must not throw (C.36, E.16)
     ~ProgressScope()
     {
         try {
