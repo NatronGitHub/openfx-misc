@@ -300,7 +300,6 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 // basic plugin render function, just a skelington to instantiate templates from
 
-#ifndef NDEBUG
 // make sure components are sane
 static void
 checkComponents(const Image &src,
@@ -315,7 +314,6 @@ checkComponents(const Image &src,
         throwSuiteStatusException(kOfxStatErrImageFormat);
     }
 }
-#endif
 
 // copy the getSources() results to the non-NULL output pointers
 static void
@@ -625,7 +623,6 @@ AppendClipPlugin::setupAndProcess(ImageBlenderBase &processor,
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
-# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -633,6 +630,7 @@ AppendClipPlugin::setupAndProcess(ImageBlenderBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     checkBadRenderScaleOrField(dst, args);
 # endif
     
@@ -657,16 +655,16 @@ AppendClipPlugin::setupAndProcess(ImageBlenderBase &processor,
         //assert(0);
         auto_ptr<const Image> src( ( _srcClip[clip0] && _srcClip[clip0]->isConnected() ) ?
                                         _srcClip[clip0]->fetchImage(t0) : 0 );
-#     ifndef NDEBUG
         if ( src.get() ) {
+#     ifndef NDEBUG
             checkBadRenderScaleOrField(src, args);
+#     endif
             BitDepthEnum srcBitDepth      = src->getPixelDepth();
             PixelComponentEnum srcComponents = src->getPixelComponents();
             if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
                 throwSuiteStatusException(kOfxStatErrImageFormat);
             }
         }
-#     endif
         copyPixels( *this, args.renderWindow, args.renderScale, src.get(), dst.get() );
 
         return;
@@ -678,17 +676,19 @@ AppendClipPlugin::setupAndProcess(ImageBlenderBase &processor,
     auto_ptr<const Image> toImg( ( clip1 != -1 && _srcClip[clip1] && _srcClip[clip1]->isConnected() ) ?
                                       _srcClip[clip1]->fetchImage(t1) : 0 );
 
-# ifndef NDEBUG
     // make sure bit depths are sane
     if ( fromImg.get() ) {
+# ifndef NDEBUG
         checkBadRenderScaleOrField(fromImg, args);
+# endif
         checkComponents(*fromImg, dstBitDepth, dstComponents);
     }
     if ( toImg.get() ) {
+# ifndef NDEBUG
         checkBadRenderScaleOrField(toImg, args);
+# endif
         checkComponents(*toImg, dstBitDepth, dstComponents);
     }
-# endif
 
     // set the images
     processor.setDstImg( dst.get() );

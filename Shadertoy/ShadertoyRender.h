@@ -1066,7 +1066,6 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     }
     OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
-# ifndef NDEBUG
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
          ( dstComponents != _dstClip->getPixelComponents() ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
@@ -1074,6 +1073,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
         return;
     }
+# ifndef NDEBUG
     checkBadRenderScaleOrField(dst, args);
 # endif
 # if defined(USE_OPENGL) && defined(DEBUG)
@@ -1370,7 +1370,12 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     // compile and link the shader if necessary
     bool imageShaderParamsUpdated = false;
     ShadertoyShader *shadertoy;
-    {
+    // The messages of a failed compilation are posted after the lock is released: sendMessage()
+    // may wait for the host's main thread, which may be waiting for this lock in changedParam()
+    // (C++ Core Guidelines CP.22: never call unknown code while holding a lock).
+    std::string compileError; // set on failure; "" if there is no compiler log to show
+    bool compileFailed = false;
+    do {
         AutoMutex lock( _imageShaderMutex.get() );
         bool must_recompile = false;
         bool uniforms_changed = false;
@@ -1385,10 +1390,8 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             // The last compilation of this shader failed on this context, and imageShaderID
             // was already updated, so it will not be recompiled: fail instead of rendering
             // with an invalid program (which would produce garbage that may be cached).
-            setPersistentMessage(OFX::Message::eMessageError, "", "Failed to compile and link program");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
-
-            return;
+            compileFailed = true;
+            break;
         }
         if (must_recompile) {
             if (shadertoy->program) {
@@ -1434,11 +1437,9 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             shadertoy->program = compileAndLinkProgram(vsSource.c_str(), fragmentShader, errstr);
             const GLuint program = shadertoy->program;
             if (shadertoy->program == 0) {
-                setPersistentMessage(OFX::Message::eMessageError, "", "Failed to compile and link program");
-                sendMessage( OFX::Message::eMessageError, "", errstr.c_str() );
-                OFX::throwSuiteStatusException(kOfxStatFailed);
-
-                return;
+                compileFailed = true;
+                compileError = errstr;
+                break;
             }
             shadertoy->iResolutionLoc        = glGetUniformLocation(program, "iResolution");
             shadertoy->iTimeLoc        = glGetUniformLocation(program, "iTime");
@@ -1651,6 +1652,13 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
                 }
             }
         }
+    } while (false);
+    if (compileFailed) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Failed to compile and link program");
+        if ( !compileError.empty() ) {
+            sendMessage( OFX::Message::eMessageError, "", compileError.c_str() );
+        }
+        OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     glCheckError();
 

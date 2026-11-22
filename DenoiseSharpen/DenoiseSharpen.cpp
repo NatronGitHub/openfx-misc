@@ -83,6 +83,7 @@
 #include "ofxsMultiThread.h"
 #include "ofxsCopier.h"
 #include "ofxsNonFinite.h" // finiteSample
+#include "ofxsAnalysisScope.h" // InAnalysisScope, ProgressScope
 #include "ofxOld.h"
 
 #ifdef OFX_USE_MULTITHREAD_MUTEX
@@ -415,14 +416,11 @@ enum ColorModelEnum
 //#define kProgressRender // define to enable progress for render
 
 
+// the analysis progress starts and ends with a ProgressScope (analyzeNoiseLevels())
 #ifdef kProgressAnalysis
-#define progressStartAnalysis(x) progressStart(x)
 #define progressUpdateAnalysis(x) progressUpdate(x)
-#define progressEndAnalysis() progressEnd()
 #else
-#define progressStartAnalysis(x) unused(x)
 #define progressUpdateAnalysis(x) unused(x)
-#define progressEndAnalysis() ( (void)0 )
 #endif
 
 #ifdef kProgressRender
@@ -2488,7 +2486,6 @@ DenoiseSharpenPlugin::setup(const RenderArguments &args,
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
-# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -2496,6 +2493,7 @@ DenoiseSharpenPlugin::setup(const RenderArguments &args,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     checkBadRenderScaleOrField(dst, args);
 # endif
     src.reset( ( _srcClip && _srcClip->isConnected() ) ?
@@ -2503,16 +2501,16 @@ DenoiseSharpenPlugin::setup(const RenderArguments &args,
     if ( !src.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
-# ifndef NDEBUG
     if ( src.get() ) {
+# ifndef NDEBUG
         checkBadRenderScaleOrField(src, args);
+# endif
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-# endif
     p.doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
     mask.reset(p.doMasking ? _maskClip->fetchImage(time) : 0);
     if ( mask.get() ) {
@@ -3150,10 +3148,11 @@ DenoiseSharpenPlugin::analyzeNoiseLevels(const InstanceChangedArgs &args)
 
     assert(args.renderScale.x == 1. && args.renderScale.y == 1.);
 
-    progressStartAnalysis(kPluginName " (noise analysis)");
-# ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
-    getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
-# endif
+    // the progress and the analysis end on return and if the analysis fails (issue #237)
+    InAnalysisScope inAnalysis(*this);
+#ifdef kProgressAnalysis
+    ProgressScope progress(*this, kPluginName " (noise analysis)");
+#endif
     EditBlock eb(*this, kParamAnalyzeNoiseLevels);
 
     // clear the previous warning first: it described another region (or other inputs), and a failed or aborted
@@ -3175,46 +3174,32 @@ DenoiseSharpenPlugin::analyzeNoiseLevels(const InstanceChangedArgs &args)
     assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     assert(dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentRGB /*|| dstComponents == ePixelComponentXY*/ || dstComponents == ePixelComponentAlpha);
     // do the rendering
-    try {
-        switch (dstComponents) {
-        case ePixelComponentRGBA:
-            analyzeNoiseLevelsForComponents<4>(args);
-            break;
-        case ePixelComponentRGB:
-            analyzeNoiseLevelsForComponents<3>(args);
-            break;
+    switch (dstComponents) {
+    case ePixelComponentRGBA:
+        analyzeNoiseLevelsForComponents<4>(args);
+        break;
+    case ePixelComponentRGB:
+        analyzeNoiseLevelsForComponents<3>(args);
+        break;
 #ifdef OFX_EXTENSIONS_NATRON
-        //case ePixelComponentXY:
-        //    renderForComponents<2>(args);
-        //    break;
+    //case ePixelComponentXY:
+    //    renderForComponents<2>(args);
+    //    break;
 #endif
-        case ePixelComponentAlpha:
-            analyzeNoiseLevelsForComponents<1>(args);
-            break;
-        default:
+    case ePixelComponentAlpha:
+        analyzeNoiseLevelsForComponents<1>(args);
+        break;
+    default:
 #ifdef DEBUG_STDOUT
-            std::cout << "components usupported\n";
+        std::cout << "components usupported\n";
 #endif
-            throwSuiteStatusException(kOfxStatErrUnsupported);
-            break;
-        } // switch
-    } catch (...) {
-        // end the progress and the analysis even if the analysis failed
-        progressEndAnalysis();
-# ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
-        getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);
-# endif
-        throw;
-    }
+        throwSuiteStatusException(kOfxStatErrUnsupported);
+        break;
+    } // switch
     _analysisFrame->setValue( (int)args.time );
 
     // lock values
     _analysisLock->setValue(true);
-
-    progressEndAnalysis();
-# ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
-    getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);
-# endif
 
     DBG(cout << "analysis! OK\n");
 }

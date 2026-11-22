@@ -66,6 +66,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
+// version 2.1: with Process A and an opaque Source, Source is mapped to RGBA like the output, so that
+//              an RGB Source is not read as RGBA (out of bounds) (#254)
+// version 3.0: isIdentity also tests the RGB of the colors (version 2 is kept); includes the 2.1 fix
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -521,7 +524,6 @@ RampPlugin::setupAndProcess(RampProcessorBase &processor,
         throwSuiteStatusException(kOfxStatFailed);
     }
     const double time = args.time;
-# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -529,20 +531,21 @@ RampPlugin::setupAndProcess(RampProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     checkBadRenderScaleOrField(dst, args);
 # endif
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(args.time) : 0 );
-# ifndef NDEBUG
     if ( src.get() ) {
+# ifndef NDEBUG
         checkBadRenderScaleOrField(src, args);
+# endif
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-# endif
 
     // auto ptr for the mask.
     bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
@@ -556,7 +559,6 @@ RampPlugin::setupAndProcess(RampProcessorBase &processor,
     }
 
     if ( src.get() && dst.get() ) {
-#     ifndef NDEBUG
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
         BitDepthEnum dstBitDepth       = dst->getPixelDepth();
@@ -566,7 +568,6 @@ RampPlugin::setupAndProcess(RampProcessorBase &processor,
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
-#     endif
     }
 
     // set the images
@@ -741,6 +742,8 @@ RampPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
         // We just set the output components.
         if ( processA && _srcClip && _srcClip->isConnected() && _srcClip->getPreMultiplication() == eImageOpaque) {
             clipPreferences.setClipComponents(*_dstClip, ePixelComponentRGBA);
+            // the processor reads Source with the output's components (as Radial does)
+            clipPreferences.setClipComponents(*_srcClip, ePixelComponentRGBA);
             clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
         }
     }
@@ -908,7 +911,7 @@ RampPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
 // the plugin UID in a static shared by all objects of the same class.
 static RampPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 // version 2: isIdentity only tests the alpha of the colors (deprecated, kept so old projects render the same)
-static RampPluginFactory<2> p2(kPluginIdentifier, 0);
+static RampPluginFactory<2> p2(kPluginIdentifier, 1); // 2.1, see the history above
 mRegisterPluginFactoryInstance(p)
 mRegisterPluginFactoryInstance(p2)
 

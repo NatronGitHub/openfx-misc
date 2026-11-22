@@ -270,7 +270,7 @@ public:
         CImgFilterPluginHelper<CImgConvolveParams, false>::getRegionsOfInterest(args, rois);
         if ( _filterClip && _filterClip->isConnected() ) {
             // use the same (possibly clamped) Filter RoD as getKernelOffsets()
-            CImgConvolveParams params;
+            CImgConvolveParams params{};
             getValuesAtTime(args.time, params);
             if ( !Coords::rectIsEmpty(params.filterRoD) ) {
                 rois.setRegionOfInterest(*_filterClip, params.filterRoD);

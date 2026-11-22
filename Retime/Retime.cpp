@@ -260,7 +260,6 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 // basic plugin render function, just a skelington to instantiate templates from
 
-#ifndef NDEBUG
 // make sure components are sane
 static void
 checkComponents(const Image &src,
@@ -275,7 +274,6 @@ checkComponents(const Image &src,
         throwSuiteStatusException(kOfxStatErrImageFormat);
     }
 }
-#endif
 
 static void
 framesNeeded(double sourceTime,
@@ -327,7 +325,6 @@ RetimePlugin::setupAndProcess(ImageBlenderBase &processor,
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
-# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -335,6 +332,7 @@ RetimePlugin::setupAndProcess(ImageBlenderBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     checkBadRenderScaleOrField(dst, args);
 # endif
 
@@ -347,16 +345,16 @@ RetimePlugin::setupAndProcess(ImageBlenderBase &processor,
             return;
         }
         auto_ptr<const Image> src( srcConnected ? _srcClip->fetchImage(frames.from) : 0 );
-#    ifndef NDEBUG
        if ( src.get() ) {
+#    ifndef NDEBUG
             checkBadRenderScaleOrField(src, args);
+#     endif
             BitDepthEnum srcBitDepth      = src->getPixelDepth();
             PixelComponentEnum srcComponents = src->getPixelComponents();
             if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
                 throwSuiteStatusException(kOfxStatErrImageFormat);
             }
         }
-#     endif
         copyPixels( *this, args.renderWindow, args.renderScale, src.get(), dst.get() );
 
         return;
@@ -368,17 +366,19 @@ RetimePlugin::setupAndProcess(ImageBlenderBase &processor,
     auto_ptr<Image> toImg( (srcConnected && !frames.toBlack) ?
                                 _srcClip->fetchImage(frames.to) : 0 );
 
-# ifndef NDEBUG
     // make sure bit depths are sane
     if ( fromImg.get() ) {
+# ifndef NDEBUG
         checkBadRenderScaleOrField(fromImg, args);
+# endif
         checkComponents(*fromImg, dstBitDepth, dstComponents);
     }
     if ( toImg.get() ) {
+# ifndef NDEBUG
         checkBadRenderScaleOrField(toImg, args);
+# endif
         checkComponents(*toImg, dstBitDepth, dstComponents);
     }
-# endif
 
     // set the images
     processor.setDstImg( dst.get() );

@@ -1762,6 +1762,10 @@ public:
             delete images[i];
         }
     }
+
+    // owns the images: not copyable (C.21)
+    InputImagesHolder_RAII(const InputImagesHolder_RAII&) = delete;
+    InputImagesHolder_RAII& operator=(const InputImagesHolder_RAII&) = delete;
 };
 
 
@@ -2329,7 +2333,6 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
-# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -2337,6 +2340,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     checkBadRenderScaleOrField(dst, args);
 # endif
 
@@ -2344,16 +2348,16 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
 
     auto_ptr<const Image> src( ( (outputMode == eOutputModeImage) && _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(time) : 0 );
-# ifndef NDEBUG
     if ( src.get() ) {
+# ifndef NDEBUG
         checkBadRenderScaleOrField(src, args);
+# endif
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-# endif
 
     InputImagesHolder_RAII imagesHolder;
     std::vector<InputPlaneChannel> planeChannels;
@@ -2404,12 +2408,10 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
                     if (srcBitDepth == eBitDepthNone) {
                         srcBitDepth = p.img->getPixelDepth();
                     } else {
-#                     ifndef NDEBUG
                         // both input must have the same bit depth and components
                         if ( (srcBitDepth != eBitDepthNone) && ( srcBitDepth != p.img->getPixelDepth() ) ) {
                             throwSuiteStatusException(kOfxStatErrImageFormat);
                         }
-#                     endif
                     }
                     // If the channel is unavailabe in the image, fill with 0 (1 for Alpha)
                     // This may happen if the user selected  the hard-coded Alpha channel and the input is RGB

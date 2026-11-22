@@ -179,13 +179,10 @@ endif()
 if(MSVC)
   ADD_COMPILE_OPTIONS(/MP)
   add_compile_definitions(NOMINMAX)
-  # If the build system is at least Windows Vista (6.0),
-  # compile for Windows Vista, to get interruptible CImg plugins (see CImgFilter.h)
+  # If the build system is at least Windows Vista (6.0), compile for Windows Vista. (The CImg
+  # plug-ins no longer need it to be interruptible: they use C++11 thread_local, see CImgFilter.h.)
   IF (NOT ${CMAKE_SYSTEM_VERSION} VERSION_LESS 6.0) # Windows Vista
     add_compile_definitions(_WIN32_WINNT=0x0600 WINVER=0x0600)
-    MESSAGE(STATUS "CImg plugins should be interruptible")
-  ELSE ()
-    MESSAGE(STATUS "CImg plugins may not be interruptible")
   ENDIF ()
 endif()
 

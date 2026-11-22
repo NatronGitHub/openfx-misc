@@ -42,65 +42,6 @@
 #endif
 #include "ofxsThreadSuite.h"
 
-#ifdef thread_local
-# define HAVE_THREAD_LOCAL
-#else
-# if __STDC_VERSION__ >= 201112 && !defined __STDC_NO_THREADS__
-#  define thread_local _Thread_local
-#  define HAVE_THREAD_LOCAL
-# elif defined _WIN32 && ( \
-    defined _MSC_VER || \
-    defined __ICL || \
-    defined __DMC__ || \
-    defined __BORLANDC__ )
-// "For DLLs that are loaded dynamically after the process has started (delay load, COM objects,
-// explicit LoadLibrary, etc) __declspec(thread) does not work on Windows XP, 2003 Server and
-// earlier OSes, but does work on Vista and 2008 Server."
-// https://web.archive.org/web/20121022172711/http://msdn.microsoft.com:80/en-US/library/9w1sdazb(v=vs.80).aspx#1
-// Unfortunately, OFX plugins are loaded using LoadLibrary()
-// _WIN32_WINNT = 0x0600 for Windows Server 2008 and Windows Vista.
-#  if defined(_WIN32_WINNT) && (_WIN32_WINNT >= 0x0600)
-#    define thread_local __declspec(thread)
-#    define HAVE_THREAD_LOCAL
-#  else
-#    pragma message WARN("CImg plugins cannot be aborted when compiled with this compiler. Please use MinGW, GCC or Clang.")
-#  endif
-/* note that ICC (linux) and Clang are covered by __GNUC__ */
-# elif defined __GNUC__ || \
-    defined __SUNPRO_C || \
-    defined __xlC__
-// Clang 3.4 also support SD-6 (feature test macros __cpp_*), but no thread local macro
-#   if defined(__clang__)
-#    if __has_feature(cxx_thread_local)
-// thread_local was added in Clang 3.3
-// Still requires libstdc++ from GCC 4.8
-// For that __GLIBCXX__ isn't good enough
-// Also the MacOS build of clang does *not* support thread local yet.
-#      define thread_local __thread
-#      define HAVE_THREAD_LOCAL
-#    elif __has_feature(c_thread_local) || __has_extension(c_thread_local)
-#      define thread_local _Thread_local
-#      define HAVE_THREAD_LOCAL
-#    endif
-
-#   elif defined(__GNUC__)
-//#    if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 8)
-//// The C++11 thread_local keyword is supported in GCC only since 4.8
-//#      define thread_local __thread
-//#    endif
-//#    define HAVE_THREAD_LOCAL
-// __thread became widely supported with GCC 4.7
-#    if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 7)
-#      define thread_local __thread
-#      define HAVE_THREAD_LOCAL
-#    endif
-#   endif
-# endif
-#endif
-
-#if !defined(HAVE_THREAD_LOCAL)
-#pragma message WARN("Most CImg plugins cannot be aborted when compiled with this compiler. Please use MinGW, GCC or Clang.")
-#endif //!HAVE_THREAD_LOCAL
 
 
 //#define CIMG_DEBUG
@@ -128,11 +69,9 @@
 
 // Abort mechanism:
 // we have a struct with a thread-local storage that holds the OFX::ImageEffect
-// for the thread being rendered
-#if defined(HAVE_THREAD_LOCAL)
+// for the thread being rendered (C++11 thread_local)
 #define cimg_abort_test gImageEffectAbort()
 inline void gImageEffectAbort();
-#endif
 
 
 #ifdef cimg_version
@@ -161,10 +100,10 @@ typedef float cimgpixfloat_t;
 
 #define CIMG_ABORTABLE // use abortable versions of CImg functions
 
-#if defined(HAVE_THREAD_LOCAL)
 struct tls
 {
-    static thread_local OFX::ImageEffect *gImageEffect;
+    // the effect whose abort() the CImg abort test calls in this thread (null: none)
+    static inline thread_local OFX::ImageEffect* gImageEffect = nullptr;
 };
 
 inline void
@@ -196,17 +135,12 @@ public:
         tls::gImageEffect = _prev;
     }
 
+    CImgAbortScope(const CImgAbortScope&) = delete;
+    CImgAbortScope& operator=(const CImgAbortScope&) = delete;
+
 private:
     OFX::ImageEffect* _prev;
 };
-#else
-// without thread-local storage CImg never checks for abort, so there is nothing to set
-class CImgAbortScope
-{
-public:
-    explicit CImgAbortScope(OFX::ImageEffect* /*effect*/) {}
-};
-#endif
 
 
 // set *dst to rect, enlarged by dx pixels on the left and right sides and dy pixels on the bottom and top sides
@@ -226,6 +160,9 @@ cimgPadRect(const OfxRectI& rect,
 #define kCImgFilterBitDepthUnsupportedMessage \
     "This plug-in only supports 32-bit floating-point images, but the host gave it images of another bit depth. " \
     "Please set the pixel format (bit depth) of the host project to 32-bit floating point."
+#define kCImgFilterComponentsUnsupportedMessage \
+    "The source image has other components than the output (e.g. RGB and RGBA), " \
+    "and this plug-in needs them to be the same. Convert the source to the output's components first."
 
 class CImgFilterPluginHelperBase
     : public OFX::ImageEffect
@@ -267,6 +204,21 @@ protected:
     // (the render action doc: "kOfxStatFailed, something wrong, but no error code appropriate,
     // plugin to post message"). A later successful render clears the message.
     void throwBitDepthUnsupported();
+
+    // The source and output components must match (the copies to the temporary image use the
+    // output's). If the host gives other components, post a message and throw kOfxStatFailed,
+    // as throwBitDepthUnsupported() does.
+    void throwComponentsUnsupported();
+
+    // the components a CImg plug-in may declare (describeInContextBegin: RGBA, RGB, XY, Alpha)
+    static bool isSupportedComponents(OFX::PixelComponentEnum c)
+    {
+        return c == OFX::ePixelComponentRGBA || c == OFX::ePixelComponentRGB ||
+#ifdef OFX_EXTENSIONS_NATRON
+               c == OFX::ePixelComponentXY ||
+#endif
+               c == OFX::ePixelComponentAlpha;
+    }
 
 #ifdef CIMG_DEBUG
     static void printRectI(const char*name,
@@ -472,11 +424,12 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         if (src->getPixelDepth() != dstBitDepth) {
             throwBitDepthUnsupported();
         }
-#     ifndef NDEBUG
-        OFX::PixelComponentEnum srcPixelComponents = src->getPixelComponents();
-        if (srcPixelComponents != dstPixelComponents) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+        // tmp is sized with the source components but filled with the output's component count
+        // (createSrcToTmpCopier): a mismatch would overflow it, check in release builds too
+        if (src->getPixelComponents() != dstPixelComponents) {
+            throwComponentsUnsupported();
         }
+#     ifndef NDEBUG
         checkBadRenderScaleOrField(src, args);
 #     endif
     }
@@ -615,7 +568,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     // render posted it (the plug-in may post another message below while processing)
     clearPersistentMessage();
 
-    Params params;
+    Params params{}; // value-initialised: getValuesAtTime() may not set every field
     getValuesAtTime(time, params);
     int srcBoundary = getBoundary(params);
     assert(0 <= srcBoundary && srcBoundary <= 2);
@@ -941,7 +894,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::getRegionsOfInterest(const OFX
         }
     }
 
-    Params params;
+    Params params{}; // value-initialised: getValuesAtTime() may not set every field
     getValuesAtTime(args.time, params);
 
     double pixelaspectratio = ( _srcClip && _srcClip->isConnected() ) ? _srcClip->getPixelAspectRatio() : 1.;
@@ -971,7 +924,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::getRegionOfDefinition(const OF
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 # endif
-    Params params;
+    Params params{}; // value-initialised: getValuesAtTime() may not set every field
     getValuesAtTime(args.time, params);
 
     OfxRectI srcRoDPixel = {0, 0, 0, 0};
@@ -1030,7 +983,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::isIdentity(const OFX::IsIdenti
         }
     }
 
-    Params params;
+    Params params{}; // value-initialised: getValuesAtTime() may not set every field
     getValuesAtTime(time, params);
     if ( isIdentity(args, params) ) {
         identityClip = _srcClip;

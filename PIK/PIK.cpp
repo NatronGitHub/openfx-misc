@@ -1883,7 +1883,6 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
-# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -1891,6 +1890,7 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     checkBadRenderScaleOrField(dst, args);
 # endif
 
@@ -2025,12 +2025,12 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
     if ( fg.get() ) {
 #     ifndef NDEBUG
         checkBadRenderScaleOrField(fg, args);
+#     endif
         BitDepthEnum fgBitDepth      = fg->getPixelDepth();
         //PixelComponentEnum fgComponents = fg->getPixelComponents();
         if (fgBitDepth != dstBitDepth /* || fgComponents != dstComponents*/) { // Keyer outputs RGBA but may have RGB input
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
-#     endif
     } else if (getfg) {
         // Nuke sometimes returns NULL when render is interrupted
         throwSuiteStatusException(kOfxStatFailed);
@@ -2039,23 +2039,23 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
     if ( pfg.get() ) {
 #     ifndef NDEBUG
         checkBadRenderScaleOrField(pfg, args);
+#     endif
         BitDepthEnum pfgBitDepth      = pfg->getPixelDepth();
         //PixelComponentEnum pfgComponents = pfg->getPixelComponents();
         if (pfgBitDepth != dstBitDepth /* || pfgComponents != dstComponents*/) { // Keyer outputs RGBA but may have RGB input
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
-#     endif
     }
 
     if ( c.get() ) {
 #     ifndef NDEBUG
         checkBadRenderScaleOrField(c, args);
+#     endif
         BitDepthEnum cBitDepth      = c->getPixelDepth();
         //PixelComponentEnum cComponents = c->getPixelComponents();
         if (cBitDepth != dstBitDepth /* || cComponents != dstComponents*/) { // Keyer outputs RGBA but may have RGB input
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
-#     endif
     } else if (getc) {
         setPersistentMessage(Message::eMessageError, "", "Clean plate (C input) is required but not available or not connected");
         throwSuiteStatusException(kOfxStatFailed);
@@ -2064,12 +2064,12 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
     if ( bg.get() ) {
 #     ifndef NDEBUG
         checkBadRenderScaleOrField(bg, args);
+#     endif
         BitDepthEnum srcBitDepth      = bg->getPixelDepth();
         //PixelComponentEnum srcComponents = bg->getPixelComponents();
         if (srcBitDepth != dstBitDepth /* || srcComponents != dstComponents*/) {  // Keyer outputs RGBA but may have RGB input
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
-#     endif
     } else if (getbg) {
         setPersistentMessage(Message::eMessageError, "", "Backgroung (Bg input) is required but not available or not connected");
         throwSuiteStatusException(kOfxStatFailed);
@@ -2110,7 +2110,6 @@ PIKPlugin::render(const RenderArguments &args)
     assert( kSupportsMultipleClipDepths || !_cClip || !_cClip->isConnected() || _cClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     assert( kSupportsMultipleClipPARs   || !_bgClip || !_bgClip->isConnected() || _bgClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_bgClip || !_bgClip->isConnected() || _bgClip->getPixelDepth()       == _dstClip->getPixelDepth() );
-# ifndef NDEBUG
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
     if (dstComponents != ePixelComponentRGBA) {
         setPersistentMessage(Message::eMessageError, "", "OFX Host dit not take into account output components");
@@ -2118,7 +2117,6 @@ PIKPlugin::render(const RenderArguments &args)
 
         return;
     }
-# endif
 
     clearPersistentMessage();
     

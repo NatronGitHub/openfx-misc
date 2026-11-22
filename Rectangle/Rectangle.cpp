@@ -90,6 +90,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              (no version change) removed the XY render branch: Output never declares XY, so a
 //              conforming host never gives it; other components give kOfxStatErrFormat (issue #226).
 //              Output is unchanged.
+//              With Process A and an opaque Source, Source is mapped to RGBA like the output, so that an
+//              RGB Source is not read as RGBA (out of bounds) (#254).
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 2 // Increment this when you have fixed a bug or made it faster.
 
@@ -939,7 +941,6 @@ RectanglePlugin::setupAndProcess(RectangleProcessorBase &processor,
         throwSuiteStatusException(kOfxStatFailed);
     }
 
-# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -947,20 +948,21 @@ RectanglePlugin::setupAndProcess(RectangleProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     checkBadRenderScaleOrField(dst, args);
 # endif
     auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
                                     _srcClip->fetchImage(time) : 0 );
-# ifndef NDEBUG
     if ( src.get() ) {
+# ifndef NDEBUG
         checkBadRenderScaleOrField(src, args);
+# endif
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-# endif
     bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
     auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
     if (doMasking) {
@@ -971,7 +973,6 @@ RectanglePlugin::setupAndProcess(RectangleProcessorBase &processor,
     }
 
     if ( src.get() && dst.get() ) {
-#     ifndef NDEBUG
         BitDepthEnum srcBitDepth      = src->getPixelDepth();
         PixelComponentEnum srcComponents = src->getPixelComponents();
         BitDepthEnum dstBitDepth       = dst->getPixelDepth();
@@ -981,7 +982,6 @@ RectanglePlugin::setupAndProcess(RectangleProcessorBase &processor,
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
-#     endif
     }
 
     // set the images
@@ -1165,6 +1165,8 @@ RectanglePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
         // We just set the output components.
         if ( processA && _srcClip && _srcClip->isConnected() && _srcClip->getPreMultiplication() == eImageOpaque) {
             clipPreferences.setClipComponents(*_dstClip, ePixelComponentRGBA);
+            // the processor reads Source with the output's components (as Radial does)
+            clipPreferences.setClipComponents(*_srcClip, ePixelComponentRGBA);
             clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
         }
     }

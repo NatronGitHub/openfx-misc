@@ -37,9 +37,9 @@ CImgOperatorPluginHelperBase::CImgOperatorPluginHelperBase(OfxImageEffectHandle 
     , _ignoreMix(false)
 {
     _srcAClip = fetchClip(_srcAClipName);
-    assert( _srcAClip && (!_srcAClip->isConnected() || _srcAClip->getPixelComponents() == ePixelComponentRGB || _srcAClip->getPixelComponents() == ePixelComponentRGBA) );
+    assert( _srcAClip && (!_srcAClip->isConnected() || isSupportedComponents( _srcAClip->getPixelComponents() ) ) );
     _srcBClip = fetchClip(_srcBClipName);
-    assert( _srcBClip && (!_srcBClip->isConnected() || _srcBClip->getPixelComponents() == ePixelComponentRGB || _srcBClip->getPixelComponents() == ePixelComponentRGBA) );
+    assert( _srcBClip && (!_srcBClip->isConnected() || isSupportedComponents( _srcBClip->getPixelComponents() ) ) );
 }
 
 void
@@ -61,17 +61,16 @@ CImgOperatorPluginHelperBase::getSrcImageData(const Image* img,
 
         return;
     }
-    // the images are accessed as float, check the depth in release builds too
+    // the images are accessed as float with the output's component count: check the depth and
+    // the components in release builds too (a mismatch would read out of bounds)
     if (img->getPixelDepth() != dstBitDepth) {
         throwBitDepthUnsupported();
     }
-# ifndef NDEBUG
     if (img->getPixelComponents() != dstPixelComponents) {
-        throwSuiteStatusException(kOfxStatErrImageFormat);
+        throwComponentsUnsupported();
     }
+# ifndef NDEBUG
     checkBadRenderScaleOrField(img, args);
-# else
-    unused(dstPixelComponents);
 # endif
     data->pixelData = img->getPixelData();
     data->bounds = img->getBounds();

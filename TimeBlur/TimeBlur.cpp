@@ -259,6 +259,10 @@ struct OptionalImagesHolder_RAII
             delete images[i];
         }
     }
+
+    // owns the images: not copyable (C.21)
+    OptionalImagesHolder_RAII(const OptionalImagesHolder_RAII&) = delete;
+    OptionalImagesHolder_RAII& operator=(const OptionalImagesHolder_RAII&) = delete;
 };
 
 /* set up and run a processor */
@@ -273,7 +277,6 @@ TimeBlurPlugin::setupAndProcess(TimeBlurProcessorBase &processor,
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
-# ifndef NDEBUG
     BitDepthEnum dstBitDepth    = dst->getPixelDepth();
     PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
@@ -281,6 +284,7 @@ TimeBlurPlugin::setupAndProcess(TimeBlurProcessorBase &processor,
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
+# ifndef NDEBUG
     checkBadRenderScaleOrField(dst, args);
 # endif
 
@@ -334,16 +338,16 @@ TimeBlurPlugin::setupAndProcess(TimeBlurProcessorBase &processor,
             }
             const Image* src = _srcClip ? _srcClip->fetchImage(range.min + i * interval) : 0;
             //std::printf("TimeBlur: fetchimage(%g)\n", range.min + i * interval);
-#         ifndef NDEBUG
             if (src) {
+#         ifndef NDEBUG
                 checkBadRenderScaleOrField(src, args);
+#         endif
                 BitDepthEnum srcBitDepth      = src->getPixelDepth();
                 PixelComponentEnum srcComponents = src->getPixelComponents();
                 if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
                     throwSuiteStatusException(kOfxStatErrImageFormat);
                 }
             }
-#         endif
             srcImgs.images.push_back(src);
         }
 
