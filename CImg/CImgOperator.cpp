@@ -67,7 +67,7 @@ CImgOperatorPluginHelperBase::getSrcImageData(const Image* img,
         throwBitDepthUnsupported();
     }
     if (img->getPixelComponents() != dstPixelComponents) {
-        throwSuiteStatusException(kOfxStatErrImageFormat);
+        throwComponentsUnsupported();
     }
 # ifndef NDEBUG
     checkBadRenderScaleOrField(img, args);

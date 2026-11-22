@@ -29,7 +29,6 @@
 #include <cmath>
 #include <cfloat> // DBL_MAX
 #include <algorithm>
-#include <optional>
 #include <vector>
 
 #include "ofxsImageEffect.h"
@@ -731,12 +730,6 @@ ZDefocusPlugin::render(const RenderArguments &args)
         b.y2 = (std::max)(b.y2, y + 1);
     }
 
-    // Register this effect so that CImg's abort test (cimg_abort_test, see CImgFilter.h)
-    // can stop the long vanvliet() calls when the host aborts the render.
-    // This plugin has two inputs and its own render loop, so it cannot use CImgFilterPluginHelper,
-    // which does the same thing around its render() call.
-    // The scope is reset after the slice loop, and on any exception.
-    std::optional<CImgAbortScope> abortScope(std::in_place, this);
     // Blur each slice and merge it over the result, from far (most negative) to near.
     // The last channel of result accumulates the slice masks (merged over), and is used to
     // normalize the result: this fills the holes left in the far slices by the near slices,
@@ -750,6 +743,12 @@ ZDefocusPlugin::render(const RenderArguments &args)
     CImg<cimgpix_t> layer;
     bool aborted = false;
     try {
+        // Register this effect so that CImg's abort test (cimg_abort_test, see CImgFilter.h)
+        // can stop the long vanvliet() calls when the host aborts the render.
+        // This plugin has two inputs and its own render loop, so it cannot use CImgFilterPluginHelper,
+        // which does the same thing around its render() call. The scope ends with the try block,
+        // also on any exception.
+        const CImgAbortScope abortScope(this);
         for (int k = -slices; k <= slices && !aborted; ++k) {
             const OfxRectI& box = sliceBox[k + slices];
             if (box.x1 >= box.x2) {
@@ -817,7 +816,6 @@ ZDefocusPlugin::render(const RenderArguments &args)
     } catch (CImgAbortException&) {
         aborted = true;
     }
-    abortScope.reset();
     if (aborted) {
         return;
     }

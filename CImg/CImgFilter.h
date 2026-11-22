@@ -160,6 +160,9 @@ cimgPadRect(const OfxRectI& rect,
 #define kCImgFilterBitDepthUnsupportedMessage \
     "This plug-in only supports 32-bit floating-point images, but the host gave it images of another bit depth. " \
     "Please set the pixel format (bit depth) of the host project to 32-bit floating point."
+#define kCImgFilterComponentsUnsupportedMessage \
+    "The host gave this plug-in a source image whose components differ from the output's. " \
+    "Please report this to the host developers."
 
 class CImgFilterPluginHelperBase
     : public OFX::ImageEffect
@@ -201,6 +204,11 @@ protected:
     // (the render action doc: "kOfxStatFailed, something wrong, but no error code appropriate,
     // plugin to post message"). A later successful render clears the message.
     void throwBitDepthUnsupported();
+
+    // The source and output components must match (the copies to the temporary image use the
+    // output's). If the host gives other components, post a message and throw kOfxStatFailed,
+    // as throwBitDepthUnsupported() does.
+    void throwComponentsUnsupported();
 
     // the components a CImg plug-in may declare (describeInContextBegin: RGBA, RGB, XY, Alpha)
     static bool isSupportedComponents(OFX::PixelComponentEnum c)
@@ -419,7 +427,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         // tmp is sized with the source components but filled with the output's component count
         // (createSrcToTmpCopier): a mismatch would overflow it, check in release builds too
         if (src->getPixelComponents() != dstPixelComponents) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            throwComponentsUnsupported();
         }
 #     ifndef NDEBUG
         checkBadRenderScaleOrField(src, args);
@@ -560,7 +568,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     // render posted it (the plug-in may post another message below while processing)
     clearPersistentMessage();
 
-    Params params;
+    Params params{}; // value-initialised: getValuesAtTime() may not set every field
     getValuesAtTime(time, params);
     int srcBoundary = getBoundary(params);
     assert(0 <= srcBoundary && srcBoundary <= 2);
@@ -886,7 +894,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::getRegionsOfInterest(const OFX
         }
     }
 
-    Params params;
+    Params params{}; // value-initialised: getValuesAtTime() may not set every field
     getValuesAtTime(args.time, params);
 
     double pixelaspectratio = ( _srcClip && _srcClip->isConnected() ) ? _srcClip->getPixelAspectRatio() : 1.;
@@ -916,7 +924,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::getRegionOfDefinition(const OF
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 # endif
-    Params params;
+    Params params{}; // value-initialised: getValuesAtTime() may not set every field
     getValuesAtTime(args.time, params);
 
     OfxRectI srcRoDPixel = {0, 0, 0, 0};
@@ -975,7 +983,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::isIdentity(const OFX::IsIdenti
         }
     }
 
-    Params params;
+    Params params{}; // value-initialised: getValuesAtTime() may not set every field
     getValuesAtTime(time, params);
     if ( isIdentity(args, params) ) {
         identityClip = _srcClip;
