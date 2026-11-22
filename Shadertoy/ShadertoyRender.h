@@ -1659,8 +1659,6 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             sendMessage( OFX::Message::eMessageError, "", compileError.c_str() );
         }
         OFX::throwSuiteStatusException(kOfxStatFailed);
-
-        return;
     }
     glCheckError();
 
