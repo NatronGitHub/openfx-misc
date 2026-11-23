@@ -56,10 +56,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 3.1: fix crashes and failed renders in the filter context, and when the default input (B) is disconnected
 // version 4.0: on hosts without the multiplane suites, the A channels read the A input and the B channels the B input
 //              (version 3 swapped them, which is kept so that version 3 projects render the same)
-// version 4.1: R, G, B from the color plane of an input and A from another plane was taken for an identity:
-//              the alpha was not written
+//              Also: R, G, B from the color plane of an input and A from another plane was taken for an
+//              identity, so the alpha was not written.
+// version 2.2, 3.2: the same identity fix as in 4.0 (the alpha read from another plane was not written)
 #define kPluginVersionMajor 4 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 1// Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -816,29 +817,21 @@ ShufflePlugin::isIdentityInternal(double time,
         }
         
 
+        // The A choice is written only if the output has an alpha channel (RGBA or Alpha).
+        const int dstComponents = dstPlane.getNumComponents();
+        const bool dstHasAlpha = dstPlane.isColorPlane() && (dstComponents == 4 || dstComponents == 1);
+        const int nChannelsChecked = dstHasAlpha ? 4 : 3;
         int expectedIndex = -1;
-        for (int i = 0; i < 4; ++i) {
+        for (int i = 0; i < nChannelsChecked; ++i) {
             MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(_channelParam[i]->getName(), &data[i].clip, &data[i].plane, &data[i].index);
 
             if (stat != MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedChannelInPlane) {
                 return false;
             }
-            if (!data[i].plane.isColorPlane()) {
-                if (i != 3) {
-                    //This is not the color plane, no identity
-                    return false;
-                } else {
-
-                    // The A choice reads a channel of another plane. If the choice is visible, that channel
-                    // is written to the output: this is not an identity, whatever its index in its plane
-                    // (the only channel of a one-channel plane has index 0).
-                    if ( !_channelParam[3]->getIsSecret() ) {
-                        return false;
-                    } else {
-                        ///The A choice is not used: do not do the checks below
-                        continue;
-                    }
-                }
+            if ( !data[i].plane.isColorPlane() ) {
+                // a channel of another plane is written to the output: no identity, whatever its index in
+                // its plane (the only channel of a one-channel plane has index 0)
+                return false;
             }
             if (i > 0) {
                 if ( (data[i].index != expectedIndex) || (data[i].plane != data[0].plane) ||
@@ -2177,11 +2170,11 @@ ShufflePluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
 
 // Each major version needs its own factory class: FactoryMainEntryHelper stores
 // the plugin UID in a static shared by all objects of the same class.
-static ShufflePluginFactory<2> p2(kPluginIdentifier, 0);
+static ShufflePluginFactory<2> p2(kPluginIdentifier, 2);
 mRegisterPluginFactoryInstance(p2)
 
 // version 3: A and B are swapped on hosts without the multiplane suites (deprecated, kept so that old projects render the same)
-static ShufflePluginFactory<3> p3(kPluginIdentifier, 1);
+static ShufflePluginFactory<3> p3(kPluginIdentifier, 2);
 mRegisterPluginFactoryInstance(p3)
 
 static ShufflePluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
