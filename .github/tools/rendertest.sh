@@ -514,6 +514,11 @@ tests=(
     # PIK: a soft screen replace color with zero Rec.709 luminance (was 0/0 = NaN where alpha
     # is raised to 1 by Clip White, or a huge color with FMA contraction, e.g. on arm64): white
     "PIK replace color lum 0|net.sf.openfx.PIK|general|float|comps=RGBA+mean=0.0045,0.0045,0.0045,1||-i Fg=solid:0,0,0.25,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0,0,1 screenClipMax=0.5 screenReplaceColor=0.072175,0,-0.2126729"
+    # Difference: RGB from B, alpha = gain * sum of the squared RGB differences - offset, in an RGBA
+    # output (issue #275: RGB inputs gave an RGB output with the matte in blue; hostDemo's
+    # inputs are RGBA, so only the RGBA output and the alpha matte are checked here)
+    "Difference|net.sf.openfx.DifferencePlugin|general|*|comps=RGBA+mean=0.5,0.5,0.25,0.3125||-i A=solid:0.25,0.5,0.75,1 -i B=solid:0.5,0.5,0.25,0.3"
+    "Difference gain offset|net.sf.openfx.DifferencePlugin|general|*|comps=RGBA+mean=0.5,0.5,0.25,0.525||-i A=solid:0.25,0.5,0.75,1 -i B=solid:0.5,0.5,0.25,0.3 gain=2 offset=0.1"
     # PIK (version 2 unless -m): the Colorspace (1: Rec. 2020, 2: ACES AP0, 3: ACES AP1) also
     # gives the luminance of the Soft Color screen and inside replace colors, and the conversion of
     # Bg for Use Bg Luminance/Chroma; version 1 always used Rec. 709 there, and is kept so that old
