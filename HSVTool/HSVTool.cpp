@@ -122,7 +122,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamHueRotationGainHint "Factor to be applied to the rotation of color hues (in degrees) within the range. A value of 0 will set all values within range to a constant (computed at the center of the range), and a value of 1 will add hueRotation to all values within range."
 #define kParamHueRangeRolloff "hueRangeRolloff"
 #define kParamHueRangeRolloffLabel "Hue Range Rolloff"
-#define kParamHueRangeRolloffHint "Interval (in degrees) around Hue Range, where hue rotation decreases progressively to zero."
+#define kParamHueRangeRolloffHint "Interval (in degrees) around Hue Range, where the modifications decrease progressively to zero."
 
 #define kGroupSaturation "saturation"
 #define kGroupSaturationLabel "Saturation"

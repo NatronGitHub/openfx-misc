@@ -150,7 +150,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "The output of PIK is controlled by the \"Output Mode\" option. For example, if the output is \"Premultiplied\", it should be composited with the background using a Merge-over operation.\n" \
     "\n" \
     "The basic equation used to extract the key in PIK is (in the case of \"green\" keying):\n" \
-    "alpha = 1 if (Ag-Ar*rw-Ab*gbw) or (Bg-Br*rw-Bb*gbw) is zero or negative, else 1-(Ag-Ar*rw-Ab*gbw)/(Bg-Br*rw-Bb*gbw)\n" \
+    "alpha = 1 if Bg, (Ag-Ar*rw-Ab*gbw) or (Bg-Br*rw-Bb*gbw) is zero or negative, else 1-(Ag-Ar*rw-Ab*gbw)/(Bg-Br*rw-Bb*gbw)\n" \
     "A is input PFg and B is input C, rw is the value of \"Red Weight\" and gbw is the value of \"Green/Blue Weight\".\n" \
     "\n" \
     "See also:\n" \

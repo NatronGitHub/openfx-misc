@@ -413,7 +413,7 @@ enum EdgeDetectMultiChannelEnum
 
 #define kParamEdgeDetectErode "erodeSize"
 #define kParamEdgeDetectErodeLabel "Erode Size"
-#define kParamEdgeDetectErodeHint "Size of the erosion performed after edge detection."
+#define kParamEdgeDetectErodeHint "Size of the erosion performed after edge detection. A negative value performs a dilation."
 
 #define kParamEdgeDetectBlur "blurSize"
 #define kParamEdgeDetectBlurLabel "Blur Size"

@@ -65,10 +65,6 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamBoundaryOptionDirichlet "Black", "Dirichlet boundary condition: pixel values out of the image domain are zero.", "black"
 #define kParamBoundaryOptionNeumann "Nearest", "Neumann boundary condition: pixel values out of the image domain are those of the closest pixel location in the image domain.", "nearest"
 #define kParamBoundaryOptionPeriodic "Periodic", "Image is considered to be periodic out of the image domain.", "periodic"
-#define kParamBoundaryDefault eBoundaryDirichlet
-#define kParamBoundaryDefaultLaplacian eBoundaryNeumann
-#define kParamBoundaryDefaultBloom eBoundaryNeumann
-#define kParamBoundaryDefaultEdgeExtend eBoundaryNeumann
 
 #ifdef OFX_EXTENSIONS_NATRON
 #define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentXY || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
