@@ -106,18 +106,47 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamDepthType "depthType"
 #define kParamDepthTypeLabel "Depth Type"
-#define kParamDepthTypeHint "Whether the Depth input contains a depth map (larger values are farther) or a disparity map (proportional to the inverse of depth: larger values are nearer)."
-#define kParamDepthTypeOptionDepth "Depth", "The input is a depth map. Values less than or equal to zero are considered to be at infinity.", "depth"
-#define kParamDepthTypeOptionDisparity "Disparity", "The input is a disparity map (inverse depth, up to a scale factor). A zero disparity is at infinity.", "disparity"
+#define kParamDepthTypeHint "What the Depth input contains: a depth map (larger values are farther), a disparity map (proportional to the inverse of depth: larger values are nearer), or the blur size."
+#define kParamDepthTypeOptionDepth "Depth", "The input is a depth map. Values less than or equal to zero, and NaN values, are at infinity.", "depth"
+#define kParamDepthTypeOptionDisparity "Disparity", "The input is a disparity map (inverse depth, up to a scale factor). Values less than or equal to zero, and NaN values, are at infinity.", "disparity"
+#define kParamDepthTypeOptionDisparityOffset "Disparity with Offset", "The input is a disparity map with an unknown offset, such as the disparity of a converged stereo pair, or the relative inverse depth from a monocular depth estimator. The blur size is Size times the disparity difference to the depth of focus.", "disparityoffset"
+#define kParamDepthTypeOptionNegatedDepth "Negated Depth", "The input is minus a depth map (values less than or equal to zero are in front of the camera), as written by some renderers, with a negated focus.", "negateddepth"
+#define kParamDepthTypeOptionNegatedDisparity "Negated Disparity", "The input is minus a disparity map (-1/depth), with a negated focus.", "negateddisparity"
+#define kParamDepthTypeOptionDirect "Direct", "The input directly controls the blur: the blur radius is Size times the difference between the input and the focus value, and larger values are farther. Subtracting the focus is our extension of the documented 'direct' math, which multiplies the size by the depth value: with a focus of 0, the radius is Size times the value. The Depth of Focus is a dead zone around the focus. For larger values in front, use 'Disparity with Offset', which has the same blur.", "direct"
 enum DepthTypeEnum
 {
     eDepthTypeDepth = 0,
     eDepthTypeDisparity,
+    eDepthTypeDisparityOffset,
+    eDepthTypeDirect,
+    eDepthTypeNegatedDepth,
+    eDepthTypeNegatedDisparity,
 };
+
+// A depth type that is not negated, and the sign of the values for it: Negated Depth is Depth of
+// -v, Negated Disparity is Disparity of -v.
+struct SignedDepthType
+{
+    DepthTypeEnum type;
+    double sign;
+};
+
+SignedDepthType
+unnegatedDepthType(DepthTypeEnum depthType)
+{
+    switch (depthType) {
+    case eDepthTypeNegatedDepth:
+        return {eDepthTypeDepth, -1.};
+    case eDepthTypeNegatedDisparity:
+        return {eDepthTypeDisparity, -1.};
+    default:
+        return {depthType, 1.};
+    }
+}
 
 #define kParamUseFocusPoint "useFocusPoint"
 #define kParamUseFocusPointLabel "Use Focus Point"
-#define kParamUseFocusPointHint "If checked, the focus distance is the value of the Depth input at the Focus Point. Else, the Focus value is used."
+#define kParamUseFocusPointHint "If checked, the focus is the value of the Depth input at the Focus Point (or the Focus value, if that value is NaN or not available). Else, the Focus value is used."
 
 #define kParamFocusPoint "focusPoint"
 #define kParamFocusPointLabel "Focus Point"
@@ -125,19 +154,19 @@ enum DepthTypeEnum
 
 #define kParamFocus "focus"
 #define kParamFocusLabel "Focus"
-#define kParamFocusHint "Focus distance (or focus disparity), in the same units as the Depth input. Used if 'Use Focus Point' is not checked, or if the depth at the focus point is not available."
+#define kParamFocusHint "Focus distance (or focus disparity), in the same units as the Depth input. Used if 'Use Focus Point' is not checked, or if the depth at the focus point is not available or NaN. With a focus of 0, 'Depth' blurs every pixel by Size, and 'Disparity' blurs every pixel with a disparity above 0 by Maximum Size (the ratio disparity/focus is infinite) and the sky by Size. For a sharp sky (a disparity of 0), use 'Disparity with Offset' with a focus of 0."
 
 #define kParamDepthOfFocus "depthOfFocus"
 #define kParamDepthOfFocusLabel "Depth of Focus"
-#define kParamDepthOfFocusHint "Width of the region around the focus distance that is in focus (not blurred), in the same units as the Depth input."
+#define kParamDepthOfFocusHint "Width of the region around the focus that is in focus (not blurred). For 'Depth' and 'Disparity' (and their negated types), it is in units of the normalized defocus |1 - focus/depth| (|1 - disparity/focus|): the blur radius is Size*max(0, |1 - focus/depth| - depthOfFocus/2). For 'Disparity with Offset' and 'Direct', it is in the units of the Depth input. It is a dead zone: it never adds blur."
 
 #define kParamSize "size"
 #define kParamSizeLabel "Size"
-#define kParamSizeHint "Blur size (in pixels at full resolution) for a normalized defocus of 1, i.e. for objects at infinity. The blur size is proportional to the normalized defocus."
+#define kParamSizeHint "Blur radius (in pixels at full resolution) of objects at infinity, if 'Depth of Focus' is 0 (the depth of focus reduces all the blur radii). Size is a radius, the distance from the center of a point's blur to its edge, as for the radius of a circle of confusion; the kernel diameter is twice the Size. For 'Depth', the blur radius is Size*|1 - focus/depth|, and for 'Disparity', Size*|1 - disparity/focus|. For 'Disparity with Offset' and 'Direct', Size is the blur radius per unit of the Depth input: Size*|value - focus|."
 
 #define kParamMaxSize "maxSize"
 #define kParamMaxSizeLabel "Maximum Size"
-#define kParamMaxSizeHint "Maximum blur size (in pixels at full resolution). The focus slices are spread evenly between 0 and this size. Larger values are slower to render, because more of the input around each rendered tile is needed."
+#define kParamMaxSizeHint "Maximum blur radius (in pixels at full resolution). The focus slices are spread evenly between 0 and this size. Larger values are slower to render, because more of the input around each rendered tile is needed."
 
 #define kParamSlices "slices"
 #define kParamSlicesLabel "Focus Slices"
@@ -155,6 +184,10 @@ enum ApertureEnum
     eApertureDisc,
     eApertureCustom,
 };
+
+// Size and Maximum Size are blur radii: the kernel diameter, which the blurs use, is twice the
+// radius.
+constexpr double kRadiusToDiameter = 2.;
 
 // custom kernel pixels below this fraction of the kernel maximum are outside of the bokeh
 constexpr double kKernelThreshold = 1e-3;
@@ -222,31 +255,19 @@ clipPAR(const Clip* clip)
     return (par > 0.) ? par : 1.;
 }
 
-// Convert a depth or disparity value to a signed "normalized defocus":
-// 0 at the focal plane, -1 at infinity, positive for objects nearer than the focal plane.
-// focus must be > 0 for depth maps.
-double
-normalizedDefocus(double v,
-                  double focus,
-                  DepthTypeEnum depthType)
-{
-    if (depthType == eDepthTypeDepth) {
-        if (v <= 0.) {
-            return -1.; // infinity
-        }
-
-        return focus / v - 1.;
-    }
-    // disparity
-    if (focus > 0.) {
-        return v / focus - 1.;
-    }
-
-    return v - focus; // focus at infinity (or beyond): no normalization possible
-}
-
-// The signed blur size of a pixel, as a function of its Depth value: 0 within the depth of focus,
-// negative behind it, positive in front of it, clamped to [-maxSize, maxSize].
+// The slice coordinate of a pixel (see sliceWeight()), as a function of its Depth value v: its
+// signed blur radius times slices/maxSize (slice k has a radius of |k|*maxSize/slices), rounded,
+// clamped to [-slices, slices]. The blur is negative behind the focus, positive in front of it.
+// For depth and disparity maps, the blur radius is Size*max(0, |s| - dof/2), with the signed
+// normalized defocus s = focus/depth - 1 (depth) or disparity/focus - 1 (disparity): the depth
+// of focus is a dead zone, which never adds blur, and Size is the blur at infinity with no depth
+// of focus, whatever the focus. The ratio focus/depth (disparity/focus) is 0 when it is not
+// positive or is NaN: a depth <= 0, a disparity <= 0, and NaN values are at infinity. So with a
+// focus of 0, a depth map is blurred by Size everywhere, and a disparity map by Maximum Size
+// (the ratio is infinite), except at a disparity of 0 (0/0: Size).
+// For disparity maps with an offset, which have no known infinity, the blur is
+// Size*max(0, |v - focus| - dof/2), and so is it for the Direct type, with larger values
+// farther. A NaN value is then in focus.
 class BlurModel
 {
 public:
@@ -256,50 +277,64 @@ public:
               double size,
               double maxSize,
               int slices)
-        : _depthType(depthType)
-        , _focus( ( (depthType == eDepthTypeDepth) && !(focus > 0.) ) ? 1e-6 : focus ) // focus on the nearest possible distance
+        : _depthType( unnegatedDepthType(depthType) ) // a negated type is the type of -v, with -focus
+        , _focus(_depthType.sign * focus)
+        , _halfDoF(depthOfFocus / 2)
         , _size(size)
         , _maxSize(maxSize)
         , _slices(slices)
     {
-        // bounds of the in-focus region, in normalized defocus
-        if (depthType == eDepthTypeDepth) {
-            const double vNear = _focus - depthOfFocus / 2;
-            _focusHi = (vNear > 0.) ? normalizedDefocus(vNear, _focus, depthType) : DBL_MAX;
-            _focusLo = normalizedDefocus(_focus + depthOfFocus / 2, _focus, depthType);
-        } else {
-            _focusHi = normalizedDefocus(_focus + depthOfFocus / 2, _focus, depthType);
-            _focusLo = normalizedDefocus(_focus - depthOfFocus / 2, _focus, depthType);
-        }
     }
 
-    // The slice coordinate of a pixel (see sliceWeight()), as a function of its Depth value v:
-    // its blur size, quantized in steps of maxSize/slices, so that slice k (in [-slices, slices])
-    // has a blur size of |k|*maxSize/slices.
     float sliceCoordinate(double v) const
     {
-        const double blur = blurSize(v);
-        const int k = (_maxSize > 0.) ? static_cast<int>( std::floor(blur * _slices / _maxSize + 0.5) ) : 0;
+        if ( !(_maxSize > 0.) ) {
+            return 0.f;
+        }
+        const double blur = blurRadius(_depthType.sign * v);
+        if ( std::isnan(blur) ) {
+            return 0.f;
+        }
+        // the blur radius is quantized in steps of maxSize/slices
+        const double q = std::floor(blur * _slices / _maxSize + 0.5);
 
-        return static_cast<float>( (std::max)( -_slices, (std::min)(_slices, k) ) );
+        return static_cast<float>( (std::max)( static_cast<double>(-_slices), (std::min)(static_cast<double>(_slices), q) ) );
     }
 
 private:
-    double blurSize(double v) const
+    // the signed blur radius of a (non-negated) Depth value v
+    double blurRadius(double v) const
     {
-        const double u = normalizedDefocus(v, _focus, _depthType);
-        const double defocus = (u < _focusLo) ? (u - _focusLo) : ( (u > _focusHi) ? (u - _focusHi) : 0. );
+        double s = 0.; // the signed defocus, before the depth of focus
+        switch (_depthType.type) {
+        case eDepthTypeDepth:
+        case eDepthTypeDisparity: {
+            const double ratio = (_depthType.type == eDepthTypeDepth) ? ( (v > 0.) ? _focus / v : 0. ) : v / _focus;
+            s = ( (ratio > 0.) ? ratio : 0. ) - 1.; // NaN or <= 0: at infinity
+            break;
+        }
+        case eDepthTypeDisparityOffset:
+            s = v - _focus;
+            break;
+        case eDepthTypeDirect:
+            s = _focus - v; // larger values are farther
+            break;
+        case eDepthTypeNegatedDepth:
+        case eDepthTypeNegatedDisparity:
+            assert(false); // unnegated in the constructor
+            break;
+        }
+        const double d = (std::max)(0., std::abs(s) - _halfDoF);
 
-        return (std::max)( -_maxSize, (std::min)(_maxSize, _size * defocus) );
+        return _size * ( (s < 0.) ? -d : d );
     }
 
-    DepthTypeEnum _depthType;
+    SignedDepthType _depthType; // never a negated type
     double _focus;
+    double _halfDoF;
     double _size;
     double _maxSize;
     int _slices;
-    double _focusLo = 0.;
-    double _focusHi = 0.;
 };
 
 // The weight in slice k of a pixel with the (integer) slice coordinate q: 1 in its slice.
@@ -590,7 +625,8 @@ loadPremultiplied(const Image& src,
 }
 
 // The slice coordinate (see BlurModel) of each pixel of rect, from the Depth image.
-// A pixel without depth has the value 0 (at infinity for depth and disparity maps).
+// A pixel without depth has the value 0: at infinity for Depth and Disparity, and a value of 0 for
+// Disparity with Offset and Direct.
 CImg<float>
 sliceCoordinates(const Image* depth,
                  const OfxRectI& rect,
@@ -748,8 +784,12 @@ ZDefocusPlugin::getFocusValue(double time,
     Coords::toPixel(_focusPoint->getValueAtTime(time), renderScale, clipPAR(_depthClip), &pix);
     const float* pixel = static_cast<const float*>( depth->getPixelAddress(pix.x, pix.y) );
 
-    // depth not available at the focus point (e.g. outside of the Depth RoD): use the focus value
-    return pixel ? cimgKernelValue(pixel, depth->getPixelComponentCount(), depthChannel) : focus;
+    if (!pixel) {
+        return focus; // depth not available at the focus point (e.g. outside of the Depth RoD)
+    }
+    const double v = cimgKernelValue(pixel, depth->getPixelComponentCount(), depthChannel);
+
+    return std::isnan(v) ? focus : v; // a NaN depth is not a usable focus
 }
 
 CImg<cimgpix_t>
@@ -842,7 +882,7 @@ ZDefocusPlugin::render(const RenderArguments &args)
     // get the parameters
     const CImgKernelChannelEnum depthChannel = static_cast<CImgKernelChannelEnum>( _depthChannel->getValueAtTime(time) );
     const DepthTypeEnum depthType = static_cast<DepthTypeEnum>( _depthType->getValueAtTime(time) );
-    const double maxSize = _maxSize->getValueAtTime(time);
+    const double maxSize = kRadiusToDiameter * _maxSize->getValueAtTime(time); // the largest kernel diameter
     const int slices = (std::max)( 1, _slices->getValueAtTime(time) );
     const ApertureEnum paramAperture = static_cast<ApertureEnum>( _aperture->getValueAtTime(time) );
     // in draft mode or proxy mode, always use the fast Gaussian blur
@@ -857,7 +897,7 @@ ZDefocusPlugin::render(const RenderArguments &args)
     const BlurModel blurModel( depthType,
                                getFocusValue(time, args.renderScale, depth.get(), depthChannel),
                                (std::max)( 0., _depthOfFocus->getValueAtTime(time) ),
-                               _size->getValueAtTime(time),
+                               kRadiusToDiameter * _size->getValueAtTime(time),
                                maxSize,
                                slices );
 
@@ -971,7 +1011,7 @@ ZDefocusPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
     const double time = args.time;
     const ApertureEnum aperture = static_cast<ApertureEnum>( _aperture->getValueAtTime(time) );
     // same padding as in render(), converted from pixels to canonical coordinates
-    const OfxPointI pad = renderPadding(_maxSize->getValueAtTime(time), aperture, args.renderScale);
+    const OfxPointI pad = renderPadding(kRadiusToDiameter * _maxSize->getValueAtTime(time), aperture, args.renderScale);
     const double padX = pad.x * clipPAR(_srcClip) / args.renderScale.x;
     const double padY = pad.y / args.renderScale.y;
     OfxRectD roi = args.regionOfInterest;
@@ -1126,6 +1166,14 @@ ZDefocusPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->appendOption(kParamDepthTypeOptionDepth);
         assert(param->getNOptions() == eDepthTypeDisparity);
         param->appendOption(kParamDepthTypeOptionDisparity);
+        assert(param->getNOptions() == eDepthTypeDisparityOffset);
+        param->appendOption(kParamDepthTypeOptionDisparityOffset);
+        assert(param->getNOptions() == eDepthTypeDirect);
+        param->appendOption(kParamDepthTypeOptionDirect);
+        assert(param->getNOptions() == eDepthTypeNegatedDepth);
+        param->appendOption(kParamDepthTypeOptionNegatedDepth);
+        assert(param->getNOptions() == eDepthTypeNegatedDisparity);
+        param->appendOption(kParamDepthTypeOptionNegatedDisparity);
         param->setDefault( static_cast<int>(eDepthTypeDepth) );
         if (page) {
             page->addChild(*param);
@@ -1185,7 +1233,7 @@ ZDefocusPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setHint(kParamSizeHint);
         param->setRange(0., DBL_MAX);
         param->setDisplayRange(0., 100.);
-        param->setDefault(20.);
+        param->setDefault(10.);
         if (page) {
             page->addChild(*param);
         }
@@ -1196,7 +1244,7 @@ ZDefocusPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setHint(kParamMaxSizeHint);
         param->setRange(0., 1000.);
         param->setDisplayRange(0., 100.);
-        param->setDefault(40.);
+        param->setDefault(20.);
         if (page) {
             page->addChild(*param);
         }
