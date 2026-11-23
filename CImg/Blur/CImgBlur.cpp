@@ -2021,21 +2021,6 @@ public:
         return params.alphaThreshold > 0. && hasAlphaChannel;
     }
 
-    // true if the image passed to render() has an alpha channel (the alphaChannel argument of
-    // render() is not -1; see CImgFilterPluginHelper::render())
-    bool renderHasAlphaChannel(double time) const
-    {
-        if (!_supportsComponentRemapping || !_srcClip) {
-            return false;
-        }
-        const PixelComponentEnum components = _srcClip->getPixelComponents();
-        if ( (components != ePixelComponentRGBA) && (components != ePixelComponentAlpha) ) {
-            return false;
-        }
-
-        return !_processA || _processA->getValueAtTime(time);
-    }
-
     virtual bool isIdentity(const IsIdentityArguments &args,
                             const CImgBlurParams& params) OVERRIDE FINAL
     {
@@ -2061,7 +2046,9 @@ public:
 
         // Blur, Bloom: the Alpha Threshold changes the alpha even when the blur does not, unless
         // render() returns before applying it, when blur() is skipped (issue #324)
-        if ( thresholdsAlpha( params, renderHasAlphaChannel(args.time) ) &&
+        // (render() processes all the channels when there is no Process A parameter)
+        const bool processA = !_processA || _processA->getValueAtTime(args.time);
+        if ( thresholdsAlpha( params, renderHasAlphaChannel(_srcClip ? _srcClip->getPixelComponentCount() : 0, processA) ) &&
              !blurIsSkipped(params.filter, sx, params.orderX, sy, params.orderY, 1.) ) {
             return false;
         }
@@ -2078,9 +2065,7 @@ public:
             // the Gaussian filter still returned identity for size < 1.2 (nsigma < 0.5).
             // Now it uses  the Deriche filter, which is a good approximation.
             // Deriche works for size >= 0.24 (nsigma >= 0.1).
-            float sigmax = (float)(sx / 2.4);
-            float sigmay = (float)(sy / 2.4);
-            ret = (sigmax < 0.1 && sigmay < 0.1 && params.orderX == 0 && params.orderY == 0);
+            ret = gaussianIsNoOp(params.filter, sx, params.orderX, sy, params.orderY, 1.);
         } else if ( (params.filter == eFilterBox) || (params.filter == eFilterTriangle) || (params.filter == eFilterQuadratic) ) {
             ret = (sx <= 1 && sy <= 1 && params.orderX == 0 && params.orderY == 0);
         } else {
@@ -2107,14 +2092,24 @@ public:
                        double sy, int orderY,
                        double scale) const
     {
+        return (_blurPlugin != eBlurPluginBloom) && (_blurPlugin != eBlurPluginEdgeExtend) && (_blurPlugin != eBlurPluginLaplacian) &&
+               gaussianIsNoOp(filter, sx, orderX, sy, orderY, scale);
+    }
+
+    // true for a (quasi-)Gaussian filter with a sigma too small to blur (and no derivative). Used by
+    // blurIsSkipped() and isIdentity().
+    static bool gaussianIsNoOp(FilterEnum filter,
+                               double sx, int orderX,
+                               double sy, int orderY,
+                               double scale)
+    {
         if ( (filter != eFilterQuasiGaussian) && (filter != eFilterGaussian) ) {
             return false;
         }
-        const float sigmax = (float)(sx * scale / 2.4);
-        const float sigmay = (float)(sy * scale / 2.4);
+        const float sigmax = static_cast<float>(sx * scale / 2.4);
+        const float sigmay = static_cast<float>(sy * scale / 2.4);
 
-        return (_blurPlugin != eBlurPluginBloom) && (_blurPlugin != eBlurPluginEdgeExtend) && (_blurPlugin != eBlurPluginLaplacian) &&
-               (sigmax < 0.1) && (sigmay < 0.1) && (orderX == 0) && (orderY == 0);
+        return (sigmax < 0.1) && (sigmay < 0.1) && (orderX == 0) && (orderY == 0);
     }
 
     // returns true if the image was actually modified

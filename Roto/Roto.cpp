@@ -43,7 +43,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.0: initial version
 // version 1.1: the over of the shape on the source beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #80),
 //              and infinite inputs of the over are made finite (+-FLT_MAX) instead of giving NaN (SupportExt #82);
-//              RGB and XY images are not a pass-through outside the Roto RoD, where the opaque roto gives 0 (issue #327)
+//              RGB and XY images are not a pass-through outside the Roto RoD, where the opaque roto gives 0 (issue #327);
+//              not a pass-through outside the Roto RoD when Process A is checked and Source is Opaque, since the
+//              Output is then UnPremultiplied (issue #328)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -350,6 +352,9 @@ private:
     virtual void render(const RenderArguments &args) OVERRIDE FINAL;
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
 
+    /** @brief true if Process A is checked and the Source is Opaque (the Output is then UnPremultiplied) */
+    bool outputIsUnpremultipliedFromOpaque() const;
+
     template <int nComponents>
     void renderInternal(const RenderArguments &args, BitDepthEnum dstBitDepth);
 
@@ -575,6 +580,11 @@ RotoPlugin::isIdentity(const IsIdentityArguments &args,
         return true;
     }
 
+    if ( outputIsUnpremultipliedFromOpaque() ) {
+        // the Source is Opaque but the Output is UnPremultiplied (see getClipPreferences()): a
+        // pass-through would keep the Source premultiplication (issue #328)
+        return false;
+    }
     // Without an alpha channel (RGB, XY), the roto is opaque, also outside its RoD, where it is black:
     // the render gives 0 there, not the source (issue #327).
     if ( _rotoClip && _rotoClip->isConnected() && rotoHasAlpha( _dstClip->getPixelComponentCount() ) ) {
@@ -591,16 +601,22 @@ RotoPlugin::isIdentity(const IsIdentityArguments &args,
     return false;
 }
 
+// true if Process A is checked and the Source is Opaque: the output alpha is changed, and the Output
+// is UnPremultiplied. Used by getClipPreferences() and isIdentity().
+bool
+RotoPlugin::outputIsUnpremultipliedFromOpaque() const
+{
+    return _processA->getValue() && _srcClip && _srcClip->isConnected() &&
+           (_srcClip->getPreMultiplication() == eImageOpaque);
+}
+
 void
 RotoPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     if (!_srcClip || !_srcClip->isConnected()) {
         return;
     }
-    PreMultiplicationEnum srcPremult = _srcClip->getPreMultiplication();
-    bool processA;
-    _processA->getValue(processA);
-    if ( (srcPremult == eImageOpaque) && processA ) {
+    if ( outputIsUnpremultipliedFromOpaque() ) {
         // we're changing alpha, the image becomes UnPremultiplied
         clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
     }

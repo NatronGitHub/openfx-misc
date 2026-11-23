@@ -164,7 +164,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              unchanged; the RoD samples each source edge about every 32 pixels (10 to 60 intervals, it was
 //              10, and the old samples are kept), so that the RoD may be slightly larger where every sample
 //              converges;
-//              3DE Anamorphic 4 with zero coefficients is a pass-through for Squeeze 1 (it was for Squeeze 0) (issue #326)
+//              2.1, 3.1 and 4.1: 3DE Anamorphic 4 with zero coefficients is a pass-through for Squeeze 1 (it was for Squeeze 0) (issue #326)
 #define kPluginVersionLensDistortionMajor 4 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionLensDistortionMinor 1 // Increment this when you have fixed a bug or made it faster.
 

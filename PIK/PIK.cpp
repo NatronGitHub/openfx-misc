@@ -180,6 +180,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              weights are kept in [-1.3e270,1.3e270], and the colour parameters in the float
 //              range. A NaN Pick colour component is 0 (it picked Blue). The output for finite
 //              inputs is unchanged where its computation did not overflow.
+// versions 1.1 and 2.0: Clean Plate output with C disconnected (and a screen type other than Pick) is not a
+//              pass-through of the disconnected C: the render reports that C is required (issue #328)
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -2220,7 +2222,9 @@ PIKPlugin::isIdentity(const IsIdentityArguments &args,
     }
     if (outputModeEnum == eOutputModeCleanPlate) {
         ScreenTypeEnum screenType = (ScreenTypeEnum)_screenType->getValueAtTime(time);
-        if (screenType != eScreenTypePick) {
+        // with C disconnected, render() shows the "Clean plate (C input) is required" error, instead of
+        // passing a disconnected clip through (issue #328)
+        if ( (screenType != eScreenTypePick) && _cClip && _cClip->isConnected() ) {
             identityClip = _cClip;
             identityTime = time;
 
