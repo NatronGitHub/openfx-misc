@@ -610,7 +610,11 @@ tests=(
     "FrameBlend one frame mix|net.sf.openfx.FrameBlend|filter|*|notidentity+mean=0.5,0,0,1||-i Source=default -i FgM=none -i Mask=none frameRange=-1,-1 mix=0.5 --frames 1"
     "FrameBlend one frame mask|net.sf.openfx.FrameBlend|filter|*|notidentity+mean=0.5,0,0,1||-i Source=default -i FgM=none -i Mask=solid:0.5,0.5,0.5,0.5 frameRange=-1,-1 --frames 1"
     "FrameBlend one frame no A|net.sf.openfx.FrameBlend|filter|*|notidentity+mean=0.25,0.5,0.75,0.5||-i Source=solid:0.25,0.5,0.75,0.5 -i FgM=none -i Mask=none frameRange=-1,-1 NatronOfxParamProcessA=0"
-    "FrameBlend one frame product|net.sf.openfx.FrameBlend|filter|float|notidentity+mean=0.125,0.25,0.375,0.5||-i Source=solid:0.25,0.5,0.75,1 -i FgM=none -i Mask=none frameRange=-1,-1 operation=Product decay=0.5"
+    "FrameBlend one frame product|net.sf.openfx.FrameBlend|filter|*|notidentity+mean=0.125,0.25,0.375,0.5||-i Source=solid:0.25,0.5,0.75,1 -i FgM=none -i Mask=none frameRange=-1,-1 operation=Product decay=0.5"
+    # Product of one frame with Decay 0: a copy on byte and short images (maxValue * A / maxValue,
+    # issue #335), not on float images (infinite values are made finite)
+    "FrameBlend one frame product no decay|net.sf.openfx.FrameBlend|filter|byte short|identity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i FgM=none -i Mask=none frameRange=-1,-1 operation=Product"
+    "FrameBlend one frame product no decay float|net.sf.openfx.FrameBlend|filter|float|notidentity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i FgM=none -i Mask=none frameRange=-1,-1 operation=Product"
     "FrameBlend one frame min|net.sf.openfx.FrameBlend|filter|*|identity+mean=0.002,0,0,1||-i Source=default -i FgM=none -i Mask=none frameRange=-1,-1 operation=Min --frames 1"
     "FrameBlend one frame average byte|net.sf.openfx.FrameBlend|filter|byte|identity+mean=0.002,0,0,1||-i Source=default -i FgM=none -i Mask=none frameRange=-1,-1 --frames 1"
     "FrameBlend one frame average float|net.sf.openfx.FrameBlend|filter|float|notidentity+mean=0.002,0,0,1||-i Source=default -i FgM=none -i Mask=none frameRange=-1,-1 --frames 1"
@@ -674,6 +678,8 @@ tests=(
     "LensDistortion 3DE b=-2|net.sf.openfx.LensDistortion|general|float|mean=0.5,0.5,1,1||-i Source=checker:16 model=5 tde4_B_Cylindric_Bending=-2 outputMode=STMap"
     # FrameBlend Min/Max where no frame is used (FgM > 0 everywhere): 0 (it was +-infinity)
     "FrameBlend Min no frame|net.sf.openfx.FrameBlend|filter|*|mean=0,0,0,0||-i Source=solid:0.5,0.5,0.5,1 -i FgM=solid:1,1,1,1 -i Mask=none operation=Min"
+    # Product where no frame is used: the initial value, white (it was almost black on byte and short images, issue #335)
+    "FrameBlend Product no frame|net.sf.openfx.FrameBlend|filter|*|mean=1,1,1,1||-i Source=solid:0.5,0.5,0.5,1 -i FgM=solid:1,1,1,1 -i Mask=none operation=Product"
     "FrameBlend Max no frame|net.sf.openfx.FrameBlend|filter|*|mean=0,0,0,0||-i Source=solid:0.5,0.5,0.5,1 -i FgM=solid:1,1,1,1 -i Mask=none operation=Max"
     "FrameBlend Min|net.sf.openfx.FrameBlend|filter|*|mean=0.5,0.25,0.75,1||-i Source=solid:0.5,0.25,0.75,1 -i FgM=none -i Mask=none operation=Min frameRange=-2,0"
     # GodRays with gamma 0 computed pow(x, 1/0) of x = 1 up to rounding: the colors were 1 (or

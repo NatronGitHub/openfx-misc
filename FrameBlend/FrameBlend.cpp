@@ -69,7 +69,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              the operator change it, and the unprocessed channels are the source ones with Mix 1 and no mask (they were 0);
 //              the current frame is in the frames needed when the render reads it (issue #325);
 //              Product is correct on byte and short images (it started at 1 instead of the maximum value,
-//              so it was almost black, issue #335)
+//              so it was almost black, and where no frame is blended it is now white, as on float images),
+//              and one frame with Decay 0 is passed through on byte and short images (issue #335)
 // version 2.1 (kept for backward compatibility, frames aligned on the last frame of the range): the fixes of 3.1
 //              (the NaN audit ones also applied to version 2, which was still registered as 2.0, SupportExt #80 and #82,
 //              and issue #220), and the issue #325 fixes (identity, frames needed, and render: Natron 2.5.0 projects
@@ -256,7 +257,7 @@ public:
         _mix = mix;
     }
 
-    virtual OperationEnum getOperation() = 0;
+    virtual OperationEnum getOperation() const = 0;
 
     // the initial value of the accumulator, in [0, maxValue] (the output where no frame has a source pixel)
     virtual float getInitialValue() const = 0;
@@ -277,7 +278,7 @@ public:
 
 private:
 
-    virtual OperationEnum getOperation() OVERRIDE FINAL { return operation; };
+    virtual OperationEnum getOperation() const OVERRIDE FINAL { return operation; }
 
     // Min and Max take the first source pixel as is (see touched), and multiplyFunc divides the
     // product by maxValue, so Product starts at maxValue, not 1 (issue #335)
@@ -628,6 +629,9 @@ private:
     /** @brief true if render() applies the mask */
     bool getDoMasking(double time) const;
 
+    /** @brief the Decay used by render(), clamped to its range [0,1] (NaN gives 0) */
+    double getDecay(double time) const;
+
     /** @brief true if render() mixes the result with Source at the current time (mask or Mix) */
     static bool mixesWithSource(bool doMasking, double mix)
     {
@@ -765,8 +769,7 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor,
 
     double mix = 1.;
     _mix->getValueAtTime(time, mix);
-    // the range of Decay is [0,1], which hosts may not enforce: outside, sumWeights could be 0 with count > 0
-    double decay = (std::max)( 0., (std::min)(_decay->getValueAtTime(time), 1.) );
+    double decay = getDecay(time);
     bool outputCount = false;
     if ( (dstComponents == ePixelComponentRGBA) || (dstComponents == ePixelComponentAlpha) ) {
         _outputCount->getValueAtTime(time, outputCount);
@@ -966,6 +969,13 @@ FrameBlendPlugin::getDoMasking(double time) const
     return ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected();
 }
 
+double
+FrameBlendPlugin::getDecay(double time) const
+{
+    // the range of Decay is [0,1], which hosts may not enforce: outside, sumWeights could be 0 with count > 0
+    return (std::max)( 0., (std::min)(_decay->getValueAtTime(time), 1.) );
+}
+
 // the overridden render function
 void
 FrameBlendPlugin::render(const RenderArguments &args)
@@ -1113,10 +1123,12 @@ FrameBlendPlugin::isIdentity(const IsIdentityArguments &args,
             copiesFrame = ( _srcClip->getPixelDepth() != eBitDepthFloat );
             break;
         case eOperationProduct:
-        default:
             // the initial value maxValue is multiplied by 1 - Decay, then by the pixel divided by
-            // maxValue (issue #335), and the merge operators make the infinite float values finite:
-            // a copy only on byte and short images with Decay 0, which is not worth a special case
+            // maxValue (issue #335): with Decay 0, a copy on byte and short images (maxValue * A /
+            // maxValue is exact); on float images, the merge operators make the infinite values finite
+            copiesFrame = ( _srcClip->getPixelDepth() != eBitDepthFloat ) && (getDecay(time) <= 0.);
+            break;
+        default:
             copiesFrame = false;
             break;
         }
