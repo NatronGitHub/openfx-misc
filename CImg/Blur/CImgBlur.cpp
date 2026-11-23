@@ -225,13 +225,14 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 4.0: the default is to blur all channels including alpha (see processAlpha in describeInContext)
 // version 4.0: added cropToFormat parameter on Natron (this line said 4.1, but the minor version was not incremented)
 // versions 3.1 (kept for Blur, Laplacian, ChromaBlur, Bloom) and 4.1: premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79);
-//              EdgeExtend has no premult parameter and stays 4.0
+//              EdgeExtend has no premult parameter and stayed 4.0 for these
 // versions 3.1 (Blur, Bloom) and 4.1 (Blur, Bloom, ErodeBlur): not an identity (pass-through) when the Alpha Threshold changes the alpha, or when ErodeBlur remaps or clamps the values, even with a small size (issue #324);
+// EdgeExtend version 4.1: not an identity (pass-through) with a small size, since the render merges the image over itself (issue #337);
 // EdgeDetect version 5.0: fix the gradient direction in RMS multichannel mode (only EdgeDetect has version 5);
 //              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79)
 #define kPluginVersionMajorEdgeDetect 5
 #define kPluginVersionMinorOld 1 // version 3, kept for backward compatibility
-#define kPluginVersionMinorEdgeExtend 0
+#define kPluginVersionMinorEdgeExtend 1
 #define kPluginVersionMajor 4 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -2025,6 +2026,13 @@ public:
                             const CImgBlurParams& params) OVERRIDE FINAL
     {
         if (_blurPlugin == eBlurPluginLaplacian) {
+            return false;
+        }
+        if (_blurPlugin == eBlurPluginEdgeExtend) {
+            // EdgeExtend merges the image over its blurred version Slices times, even when the blur
+            // does nothing (blur() is not skipped for EdgeExtend): where alpha is below 1, A over A
+            // is not A, so the render is not a copy at any size (issue #337). This keeps the output
+            // continuous when Size goes to 0 (on a flat area, the blur does nothing at any size).
             return false;
         }
         if (_blurPlugin == eBlurPluginErodeBlur) {

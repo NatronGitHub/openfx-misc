@@ -598,6 +598,9 @@ tests=(
     "ErodeBlur small|eu.cimg.ErodeBlur|filter|float|notidentity+mean=0.5,0.5,0.5,0.4286||-i Source=solid:0.5,0.5,0.5,0.5 -i Mask=none size=0.25"
     "CImgBlur alpha threshold|net.sf.cimg.CImgBlur|filter|float|notidentity+mean=0.25,0.5,0.75,0||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none alphaThreshold=0.6 filter=2"
     "CImgBlur size 0|net.sf.cimg.CImgBlur|filter|float|identity+mean=0.25,0.5,0.75,0.5||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none alphaThreshold=0.6"
+    # EdgeExtend merges the image over its blurred version even when the size is too small to blur:
+    # A over A is not A where alpha < 1 (5 slices: alpha 1 - 0.5^32, RGB 0.5 * alpha), not an identity (issue #337)
+    "EdgeExtend small|eu.cimg.EdgeExtend|filter|float|notidentity+mean=0.5,1,1.5,1||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none edgeExtendSize=0.1"
     # FrameBlend, one frame (relative range -1..-1, at t=1: frame 0 of the default pattern, which
     # changes with time, so that the render reads the right frame; view 0 is red): not a copy of that frame with Mix, a mask, an unprocessed channel (from
     # the current frame; with Mix 1 and no mask, it was 0), Product with Decay (the frame times
@@ -611,6 +614,8 @@ tests=(
     "FrameBlend one frame min|net.sf.openfx.FrameBlend|filter|*|identity+mean=0.002,0,0,1||-i Source=default -i FgM=none -i Mask=none frameRange=-1,-1 operation=Min --frames 1"
     "FrameBlend one frame average byte|net.sf.openfx.FrameBlend|filter|byte|identity+mean=0.002,0,0,1||-i Source=default -i FgM=none -i Mask=none frameRange=-1,-1 --frames 1"
     "FrameBlend one frame average float|net.sf.openfx.FrameBlend|filter|float|notidentity+mean=0.002,0,0,1||-i Source=default -i FgM=none -i Mask=none frameRange=-1,-1 --frames 1"
+    # Product of 2 frames of 0.5: 0.25 at all depths (it was almost 0 on byte and short images, issue #335)
+    "FrameBlend Product|net.sf.openfx.FrameBlend|filter|*|notidentity+mean=0.25,0.25,0.25,0.25||-i Source=solid:0.5,0.5,0.5,0.5 -i FgM=none -i Mask=none operation=Product frameRange=-1,0"
     "FrameBlend 2 one frame interval 2|net.sf.openfx.FrameBlend|filter|*|mean=0.998,0,0,1||-m 2 -i Source=default -i FgM=none -i Mask=none frameRange=-1,-1 frameInterval=2 --frames 2"
     # LensDistortion 3DE Anamorphic 4 with zero coefficients: Squeeze 1 (the default) is an
     # identity, another squeeze is not (issue #326; it tested Squeeze 0)

@@ -67,13 +67,16 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              a NaN Foreground Matte sample is 0, as in the mask mix (the frame was skipped, as under a matte) (issue #220)
 //              Not an identity (pass-through of the only frame blended) where Mix, the mask, unprocessed channels or
 //              the operator change it, and the unprocessed channels are the source ones with Mix 1 and no mask (they were 0);
-//              the current frame is in the frames needed when the render reads it (issue #325)
+//              the current frame is in the frames needed when the render reads it (issue #325);
+//              Product is correct on byte and short images (it started at 1 instead of the maximum value,
+//              so it was almost black, issue #335)
 // version 2.1 (kept for backward compatibility, frames aligned on the last frame of the range): the fixes of 3.1
 //              (the NaN audit ones also applied to version 2, which was still registered as 2.0, SupportExt #80 and #82,
 //              and issue #220), and the issue #325 fixes (identity, frames needed, and render: Natron 2.5.0 projects
 //              with an unchecked channel, Mix 1 and no mask now get the source channel instead of 0, to be noted in the
 //              Natron changelog); a one-frame range with a Frame Interval larger than 1 blends that frame (it was
-//              passed through by isIdentity, and the render was black)
+//              passed through by isIdentity, and the render was black), and the issue #335 fix (Product on byte
+//              and short images)
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -255,6 +258,9 @@ public:
 
     virtual OperationEnum getOperation() = 0;
 
+    // the initial value of the accumulator, in [0, maxValue] (the output where no frame has a source pixel)
+    virtual float getInitialValue() const = 0;
+
 private:
 };
 
@@ -272,6 +278,13 @@ public:
 private:
 
     virtual OperationEnum getOperation() OVERRIDE FINAL { return operation; };
+
+    // Min and Max take the first source pixel as is (see touched), and multiplyFunc divides the
+    // product by maxValue, so Product starts at maxValue, not 1 (issue #335)
+    virtual float getInitialValue() const OVERRIDE FINAL
+    {
+        return (operation == eOperationProduct) ? static_cast<float>(maxValue) : 0.f;
+    }
 
     void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
@@ -355,27 +368,7 @@ private:
         // Min and Max take the first source pixel as is (no infinite initial value, which the decay would
         // multiply and which would be output where no frame has a pixel): touched tells if there was one.
         const bool minMax = (operation == eOperationMin) || (operation == eOperationMax);
-        float initVal = 0.;
-        if (!_accumulatorData) {
-            switch (operation) {
-            case eOperationAverage:
-                initVal = 0.;
-                break;
-            case eOperationMin:
-            case eOperationMax:
-                initVal = 0.; // the output where no frame has a source pixel
-                break;
-            case eOperationSum:
-                initVal = 0.;
-                break;
-            case eOperationProduct:
-                initVal = 1.;
-                break;
-            case eOperationOver:
-                initVal = 0.;
-                break;
-            }
-        }
+        const float initVal = getInitialValue();
 
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if ( _effect.abort() ) {
@@ -836,18 +829,7 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor,
                 int dstNComponents = _dstClip->getPixelComponentCount();
                 accumulator.reset( new ImageMemory(nPixels * dstNComponents * sizeof(float), this) );
                 accumulatorData = (float*)accumulator->lock();
-                switch (operation) {
-                case eOperationAverage:
-                case eOperationSum:
-                case eOperationOver:
-                case eOperationMin: // see touchedData
-                case eOperationMax:
-                    std::fill(accumulatorData, accumulatorData + nPixels * dstNComponents, 0.);
-                    break;
-                case eOperationProduct:
-                    std::fill(accumulatorData, accumulatorData + nPixels * dstNComponents, 1.);
-                    break;
-                }
+                std::fill(accumulatorData, accumulatorData + nPixels * dstNComponents, processor.getInitialValue());
             }
             // Initialize count image if operator is average or outputCount is true and output has alpha (use short)
             if ( !countData && ( (operation == eOperationAverage) || outputCount ) ) {
@@ -1132,8 +1114,9 @@ FrameBlendPlugin::isIdentity(const IsIdentityArguments &args,
             break;
         case eOperationProduct:
         default:
-            // the initial value 1 is multiplied by 1 - Decay, then by the pixel divided by maxValue
-            // (the pixel itself only on float images): not a copy
+            // the initial value maxValue is multiplied by 1 - Decay, then by the pixel divided by
+            // maxValue (issue #335), and the merge operators make the infinite float values finite:
+            // a copy only on byte and short images with Decay 0, which is not worth a special case
             copiesFrame = false;
             break;
         }
