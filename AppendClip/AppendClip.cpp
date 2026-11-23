@@ -47,8 +47,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Time"
 #define kPluginDescription \
     "Append one clip to another.\n" \
-    "The first frame of the first clip is shown at First Frame, and each clip starts right after the previous one, " \
-    "or Cross Dissolve frames before its end. " \
+    "The first frame of the first clip is shown at First Frame, and each clip starts right after the previous one; " \
+    "with a Cross Dissolve of N frames, the last N frames of a clip overlap the first N frames of the next one (fewer if a clip is shorter). " \
     "The fades and the cross-dissolve are linear: with N frames, they weight the faded clip by 1/(N+1), 2/(N+1)... N/(N+1), " \
     "so that no faded frame is entirely black, and every frame of a cross-dissolve shows both clips.\n" \
     "See also: https://web.archive.org/web/20220627030729/http://www.opticalenquiry.com/nuke/index.php?title=AppendClip"
@@ -80,7 +80,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamCrossDissolve "crossDissolve"
 #define kParamCrossDissolveLabel "Cross Dissolve"
-#define kParamCrossDissolveHint "Number of frames to cross-dissolve between clips: each clip starts N frames before the end of the previous one. " \
+#define kParamCrossDissolveHint "Number of frames to cross-dissolve between clips: the last N frames of a clip overlap the first N frames of the next one (fewer if a clip is shorter). " \
     "Over these N frames, the previous clip is weighted by N/(N+1)... 1/(N+1), and the next one by 1/(N+1)... N/(N+1)."
 
 #define kParamFirstFrame "firstFrame"
