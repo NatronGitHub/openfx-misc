@@ -306,7 +306,7 @@ These plugins are compatible with the Sony Vegas and Nuke [multiview extensions]
 * OneViewOFX: Takes one view from the input.
 * Stereo/AnaglyphOFX: Make an anaglyph image out of the two views of the input.
 * Stereo/MixViewsOFX: Mix two views together. 
-* Stereo/ReConvergeOFX: Shift convergence so that a tracked point appears at screen-depth.
+* Stereo/ReConvergeOFX: Shift convergence so that a tracked point appears at screen-depth, using a disparity input.
 * Stereo/SideBySideOFX: Put the left and right view of the input next to each other.
 
 ### Other
@@ -338,7 +338,6 @@ This is because Resolve does not support the `kOfxParamPropDefaultCoordinateSyst
 - ofxsPositionInteract
 - ofxsTransformInteract
 - Position
-- ReConverge
 - TestPosition
 - TrackerPM
 
@@ -573,7 +572,7 @@ in Visual Studio) to copy the bundles into `<prefix>/OFX/Plugins`; or, from a sh
 Installing into `/Library` needs `sudo`, and into `C:/Program Files` an elevated prompt.
 
 The IDE projects never build the debug-only bundles, even in their Debug configuration:
-ReConverge, TimeBuffer and TestRender are only built with a single-configuration Debug
+TimeBuffer and TestRender are only built with a single-configuration Debug
 build (`-DCMAKE_BUILD_TYPE=Debug` with Ninja or Makefiles). Test and DebugProxy need
 `-DBUILD_TESTING=ON -DBUILD_DEBUGPROXY=ON`.
 
