@@ -32,8 +32,8 @@
 #   normalized to [0,1], within 0.01 or within the tolerance given by tol=),
 #   the effect is not an identity at all times though it should be (identity:
 #   the isIdentity action), is an identity at some time though its render changes
-#   the input (notidentity: a host would pass the input through), does not have the expected components (comps=RGBA,
-#   RGB or Alpha), is constant though it should not be (nonconst), or
+#   the input (notidentity: a host would pass the input through), does not have
+#   the expected components (comps=RGBA, RGB or Alpha), is constant though it should not be (nonconst), or
 #   is not the same region of the full render (tile: for a --window render),
 #   renders the same image at different times (framesdiffer: --frames), or
 #   is the same image as an input (changed:Clip: the CRC32 of the output
@@ -570,27 +570,6 @@ tests=(
     # inputs differ, so that reading A for B (or B for A) fails.
     "Shuffle|net.sf.openfx.ShufflePlugin|general|*|mean=0.75,0.5,0.25,1||-i A=solid:0.25,0.5,0.75,1 -i B=solid:0.25,0.5,0.75,1 outputR=8 outputB=6"
     "Shuffle B|net.sf.openfx.ShufflePlugin|general|float|mean=0.75,0.5,0.25,1||-i A=ramp -i B=solid:0.25,0.5,0.75,1 outputR=8 outputB=6"
-    # isIdentity is false where the render does not copy the input (a host would pass the input
-    # through instead of rendering). KeyMix: out of A, but in the mask, the output is
-    # B * (1 - mask * mix), here 0, not B (issue #321).
-    "KeyMix out of A|net.sf.openfx.KeyMix|filter|*|notidentity+mean=0,0,0,0||-i A=file:autocrop.pfm -i Source=solid:0.25,0.5,0.75,1 -i Mask=solid:1,1,1,1 --frames 0 --window 100,100,200,200"
-    "KeyMix out of mask|net.sf.openfx.KeyMix|filter|*|identity+mean=0.25,0.5,0.75,1||-i A=solid:1,1,1,1 -i Source=solid:0.25,0.5,0.75,1 -i Mask=file:autocrop.pfm --frames 0 --window 100,100,200,200"
-    # HSVTool (issue #322): the default Output Alpha (Hue, full range) sets alpha to 1, even with Mix
-    # 0; Clamp Black (on by default) clamps float images; a gain other than 1 adjusts (saturation
-    # 2/3 -> 0.5 here); outside the mask, a non-Source Output Alpha is 0. With Output Alpha = Source,
-    # the alpha is the source alpha (it was 0), also with Premultiply.
-    "HSVTool default alpha|net.sf.openfx.HSVToolPlugin|filter|*|notidentity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none"
-    "HSVTool mix 0 alpha|net.sf.openfx.HSVToolPlugin|filter|*|notidentity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none mix=0"
-    "HSVTool clamp black|net.sf.openfx.HSVToolPlugin|filter|float|notidentity+mean=0,0.5,0.75,1||-i Source=solid:-0.25,0.5,0.75,1 -i Mask=none outputAlpha=0"
-    "HSVTool gain|net.sf.openfx.HSVToolPlugin|filter|*|notidentity+mean=0.375,0.5625,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none outputAlpha=0 clampBlack=0 saturationAdjustmentGain=0"
-    "HSVTool out of mask|net.sf.openfx.HSVToolPlugin|filter|*|notidentity+mean=0.25,0.5,0.75,0||-i Source=solid:0.25,0.5,0.75,1 -i Mask=file:autocrop.pfm hueRotation=120 --frames 0 --window 100,100,200,200"
-    # no adjustment, Output Alpha = Source: an identity (Clamp Black does not change byte images)
-    "HSVTool no clamp|net.sf.openfx.HSVToolPlugin|filter|*|identity+mean=0.25,0.5,0.75,0.5||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none outputAlpha=0 clampBlack=0"
-    "HSVTool clamp byte|net.sf.openfx.HSVToolPlugin|filter|byte|identity+mean=0.25,0.5,0.75,0.5||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none outputAlpha=0"
-    "HSVTool source alpha|net.sf.openfx.HSVToolPlugin|filter|*|mean=0.75,0.25,0.5,0.5||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none outputAlpha=0 clampBlack=0 hueRotation=120"
-    "HSVTool premult|net.sf.openfx.HSVToolPlugin|filter|*|mean=0.375,0.125,0.25,0.5||-i Source=solid:0.125,0.25,0.375,0.5 -i Mask=none outputAlpha=0 clampBlack=0 premult=1 hueRotation=120"
-    # DenoiseSharpen, RGB color model, R unchecked: B is denoised (issue #323)
-    "DenoiseSharpen B, not R|net.sf.openfx.DenoiseSharpen|filter|float|notidentity+changed:Source||--frames 0 -i Source=file:convsrc.pfm -i Mask=none analysisLock=1 colorModel=3 NatronOfxParamProcessR=0 crbbNoiseLevelHigh=0.02"
     # the default: the B input (identity)
     "Shuffle default|net.sf.openfx.ShufflePlugin|general|*|mean=0.5,0.6,0.7,0.8||-i A=solid:0.1,0.2,0.3,0.4 -i B=solid:0.5,0.6,0.7,0.8"
     "Shuffle A and B|net.sf.openfx.ShufflePlugin|general|*|mean=0.3,0.6,0.1,0.8||-i A=solid:0.1,0.2,0.3,0.4 -i B=solid:0.5,0.6,0.7,0.8 outputR=2 outputG=7 outputB=0 outputA=9"
@@ -613,6 +592,37 @@ tests=(
     "Shuffle 3 filter|net.sf.openfx.ShufflePlugin|filter|float|mean=0.75,0.5,0.25,1||-m 3 -i Source=solid:0.25,0.5,0.75,1 outputR=8 outputB=6"
     "Shuffle 2 filter|net.sf.openfx.ShufflePlugin|filter|float|mean=0.75,0.5,0.25,1||-m 2 -i Source=solid:0.25,0.5,0.75,1 outputR=2 outputB=0"
     "Shuffle filter comps|net.sf.openfx.ShufflePlugin|filter|*|comps=RGBA+mean=0.75,0.5,0.25,1||-i Source=solid:0.25,0.5,0.75,1 outputComponents=1 outputR=8 outputB=6"
+    # isIdentity is false where the render does not copy the input (a host would pass the input
+    # through instead of rendering). KeyMix: out of A, but in the mask, the output is
+    # B * (1 - mask * mix), here 0, not B (issue #321).
+    "KeyMix out of A|net.sf.openfx.KeyMix|filter|*|notidentity+mean=0,0,0,0||-i A=file:autocrop.pfm -i Source=solid:0.25,0.5,0.75,1 -i Mask=solid:1,1,1,1 --frames 0 --window 100,100,200,200"
+    # no mask (Mask disconnected): the mask is 0, the output is B
+    "KeyMix no mask|net.sf.openfx.KeyMix|filter|*|identity+mean=0.25,0.5,0.75,1||-i A=solid:1,1,1,1 -i Source=solid:0.25,0.5,0.75,1 -i Mask=none"
+    # A disconnected, inverted mask 0.5: B * 0.5; inverted mask, out of its RoD: the mask is 1, A
+    "KeyMix no A inverted|net.sf.openfx.KeyMix|filter|*|notidentity+mean=0.125,0.25,0.375,0.5||-i A=none -i Source=solid:0.25,0.5,0.75,1 -i Mask=solid:0.5,0.5,0.5,0.5 maskInvert=1"
+    "KeyMix inverted out of mask|net.sf.openfx.KeyMix|filter|*|notidentity+mean=1,1,1,1||-i A=solid:1,1,1,1 -i Source=solid:0.25,0.5,0.75,1 -i Mask=file:autocrop.pfm maskInvert=1 --frames 0 --window 100,100,200,200"
+    "KeyMix out of mask|net.sf.openfx.KeyMix|filter|*|identity+mean=0.25,0.5,0.75,1||-i A=solid:1,1,1,1 -i Source=solid:0.25,0.5,0.75,1 -i Mask=file:autocrop.pfm --frames 0 --window 100,100,200,200"
+    # HSVTool (issue #322): the default Output Alpha (Hue, full range) sets alpha to 1, even with Mix
+    # 0; Clamp Black (on by default) clamps float images; a gain other than 1 adjusts (saturation
+    # 2/3 -> 0.5 here); outside the mask, a non-Source Output Alpha is 0. With Output Alpha = Source,
+    # the alpha is the source alpha (it was 0), also with Premultiply.
+    "HSVTool default alpha|net.sf.openfx.HSVToolPlugin|filter|*|notidentity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none"
+    "HSVTool mix 0 alpha|net.sf.openfx.HSVToolPlugin|filter|*|notidentity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none mix=0"
+    "HSVTool clamp black|net.sf.openfx.HSVToolPlugin|filter|float|notidentity+mean=0,0.5,0.75,1||-i Source=solid:-0.25,0.5,0.75,1 -i Mask=none outputAlpha=0"
+    "HSVTool gain|net.sf.openfx.HSVToolPlugin|filter|*|notidentity+mean=0.375,0.5625,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none outputAlpha=0 clampBlack=0 saturationAdjustmentGain=0"
+    "HSVTool out of mask|net.sf.openfx.HSVToolPlugin|filter|*|notidentity+mean=0.25,0.5,0.75,0||-i Source=solid:0.25,0.5,0.75,1 -i Mask=file:autocrop.pfm hueRotation=120 --frames 0 --window 100,100,200,200"
+    # no adjustment, Output Alpha = Source: an identity (Clamp Black does not change byte images)
+    "HSVTool no clamp|net.sf.openfx.HSVToolPlugin|filter|*|identity+mean=0.25,0.5,0.75,0.5||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none outputAlpha=0 clampBlack=0"
+    "HSVTool clamp byte|net.sf.openfx.HSVToolPlugin|filter|byte|identity+mean=0.25,0.5,0.75,0.5||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none outputAlpha=0"
+    # Output Alpha = Source: an identity with Mix 0 (even with Clamp Black on float), or outside the mask
+    "HSVTool source mix 0|net.sf.openfx.HSVToolPlugin|filter|*|identity+mean=0.25,0.5,0.75,0.5||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none outputAlpha=0 hueRotation=120 mix=0"
+    "HSVTool source out of mask|net.sf.openfx.HSVToolPlugin|filter|*|identity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=file:autocrop.pfm outputAlpha=0 hueRotation=120 --frames 0 --window 100,100,200,200"
+    # byte, Premultiply, Clamp White: a colour above its alpha is clamped (R 0.5 / 0.25 = 2 -> 1)
+    "HSVTool clamp white premult|net.sf.openfx.HSVToolPlugin|filter|byte|notidentity+mean=0.25,0.25,0.25,0.25||-i Source=solid:0.5,0.25,0.25,0.25 -i Mask=none outputAlpha=0 clampBlack=0 clampWhite=1 premult=1"
+    "HSVTool source alpha|net.sf.openfx.HSVToolPlugin|filter|*|mean=0.75,0.25,0.5,0.5||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none outputAlpha=0 clampBlack=0 hueRotation=120"
+    "HSVTool premult|net.sf.openfx.HSVToolPlugin|filter|*|mean=0.375,0.125,0.25,0.5||-i Source=solid:0.125,0.25,0.375,0.5 -i Mask=none outputAlpha=0 clampBlack=0 premult=1 hueRotation=120"
+    # DenoiseSharpen, RGB color model, R unchecked: B is denoised (issue #323)
+    "DenoiseSharpen B, not R|net.sf.openfx.DenoiseSharpen|filter|float|notidentity+changed:Source||--frames 0 -i Source=file:convsrc.pfm -i Mask=none analysisLock=1 colorModel=3 NatronOfxParamProcessR=0 crbbNoiseLevelHigh=0.02"
     # ImageStatistics: the analysis buttons (pressed with -s, instanceChanged with
     # kOfxChangeUserEdited) set keys at the analyzed frames; the output is the input.
     # hostDemo's input frame range is 0..25. HSVL: hue in degrees, L=(min+max)/2. The ramp is (x+0.5)/720.

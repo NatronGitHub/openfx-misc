@@ -159,7 +159,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.1: warn when the noise analysis region is unsuitable (clipped values, details, too few pixels),
 //              with the analysisWarning status parameter (the analysis and the render are unchanged);
 //              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79);
-//              a NaN Mask sample is outside the analysis mask, as a 0 sample (issue #220)
+//              a NaN Mask sample is outside the analysis mask, as a 0 sample (issue #220);
 //              (1.1 is unreleased, fixed in place) with the R'G'B' or RGB color model and R unchecked, the
 //              blue channel is denoised: isIdentity tested processR instead of processB for it (issue #323)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.

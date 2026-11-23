@@ -63,7 +63,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //      clip (it had no Source clip), and Source is not remapped there (Output has the components of Source);
 //      the general context is unchanged (issue #217)
 // 1.1 and 2.0 (unreleased, fixed in place): isIdentity no longer returns B where the render window misses
-//      the A RoD: there, the output is B * (1 - mask * mix), not B (issue #321)
+//      the A RoD: there, the output is B * (1 - mask * mix), not B; it returns B without a mask (Mask
+//      disconnected or Apply Mask off), where the render gives B (issue #321)
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -267,6 +268,12 @@ private:
     void setupAndProcess(KeyMixProcessorBase &, const RenderArguments &args);
 
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
+
+    /* is the Mask image used at time (connected, and Apply Mask on)? */
+    bool maskApplied(double time) const
+    {
+        return ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected();
+    }
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
 private:
@@ -377,7 +384,7 @@ KeyMixPlugin::setupAndProcess(KeyMixProcessorBase &processor,
     }
 
     // auto ptr for the mask.
-    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
+    const bool doMasking = maskApplied(time);
     auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
 
     // do we do masking
@@ -442,10 +449,10 @@ KeyMixPlugin::render(const RenderArguments &args)
     // instantiate the render code based on the pixel depth of the dst clip
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-    assert( kSupportsMultipleClipPARs   || _srcClipA->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
-    assert( kSupportsMultipleClipDepths || _srcClipA->getPixelDepth()       == _dstClip->getPixelDepth() );
-    assert( kSupportsMultipleClipPARs   || _srcClipB->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
-    assert( kSupportsMultipleClipDepths || _srcClipB->getPixelDepth()       == _dstClip->getPixelDepth() );
+    assert( kSupportsMultipleClipPARs   || !_srcClipA->isConnected() || _srcClipA->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClipA->isConnected() || _srcClipA->getPixelDepth()       == _dstClip->getPixelDepth() );
+    assert( kSupportsMultipleClipPARs   || !_srcClipB->isConnected() || _srcClipB->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClipB->isConnected() || _srcClipB->getPixelDepth()       == _dstClip->getPixelDepth() );
     if (dstComponents == ePixelComponentRGBA) {
         renderForComponents<4>(args);
     } else if (dstComponents == ePixelComponentRGB) {
@@ -519,11 +526,20 @@ KeyMixPlugin::isIdentity(const IsIdentityArguments &args,
         return true;
     }
 
+    // render() always mixes through the mask (domask is true in multiThreadProcessImages): without a
+    // mask image (Mask disconnected, or Apply Mask off), the mask is 0 and the output is B, as
+    // getRegionOfDefinition() assumes.
+    if ( !maskApplied(time) ) {
+        identityClip = _srcClipB;
+
+        return true;
+    }
+
     // Outside the mask RoD, the mask is 0 and render() gives B. Everywhere else, it gives
     // A * m * mix + B * (1 - m * mix), with A black and transparent outside the A RoD (render sets
     // tmpPix to 0 there): even out of A, B is attenuated where the mask is non-zero, so the A RoD
-    // cannot make the effect an identity. ofxsMaskGetRoDPixel returns false if the mask is not applied
-    // (then m = 1) or inverted (then m = 1 outside the mask RoD).
+    // cannot make the effect an identity. With Invert Mask, ofxsMaskGetRoDPixel returns false (m = 1
+    // outside the mask RoD).
     OfxRectI maskRoD;
     if ( ofxsMaskGetRoDPixel(_maskClip, _maskApply, _maskInvert, time, args.renderScale, &maskRoD) &&
          !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {

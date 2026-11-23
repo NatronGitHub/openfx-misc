@@ -80,11 +80,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              with an Output Alpha other than Source, a NaN Mask sample is 0 (it was ignored) and +-inf is
 //              +-FLT_MAX (-inf gave a -inf alpha), as in the mask mix (issue #220);
 //              (1.1 is unreleased, fixed in place, issue #322) with Output Alpha = Source, the output alpha
-//              of RGBA images is the source alpha (it was 0, or mixed with 0, and Premultiply multiplied
-//              the colours by 0); without adjustments, the colours are copied (the HSV round trip changed
-//              them by rounding); isIdentity no longer passes the source through when the render sets the
-//              alpha (Output Alpha other than Source, even with Mix 0 or outside the mask), clamps float
-//              images (Clamp Black, on by default, or Clamp White), or applies a gain other than 1
+//              of RGBA images is the source alpha (it was 0, or mixed with 0), and Premultiply no longer
+//              multiplies the colours by 0 (RGBA and RGB images were black); without adjustments, the
+//              colours are copied (the HSV round trip changed them by rounding, and a negative saturation
+//              in a range that includes it was set to 0); isIdentity no longer passes the source through
+//              when the render sets the alpha (Output Alpha other than Source, even with Mix 0 or outside the
+//              mask), clamps float images (Clamp Black, on by default, or Clamp White), or applies a gain
+//              other than 1
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -453,6 +455,7 @@ public:
         , _doMasking(false)
         , _mix(1.)
         , _maskInvert(false)
+        , _adjustsColor(false)
         , _clampBlack(true)
         , _clampWhite(true)
     {
@@ -533,6 +536,7 @@ public:
         if (_values.valRolloff < 0.) {
             _values.valRolloff = 0.;
         }
+        _adjustsColor = _values.adjustsColor();
         _clampBlack = clampBlack;
         _clampWhite = clampWhite;
         _outputAlpha = outputAlpha;
@@ -605,7 +609,7 @@ public:
         // of 0, so coeff is 0 and the pixel is left unchanged (NaN)
         float coeff = (std::min)((std::min)(*hcoeff, *scoeff), *vcoeff);
         // without adjustments, copy the pixel: the HSV round trip is not exact (isIdentity relies on this)
-        if ( (coeff <= 0.) || !_values.adjustsColor() ) {
+        if ( (coeff <= 0.) || !_adjustsColor ) {
             *rout = r;
             *gout = g;
             *bout = b;
@@ -634,6 +638,7 @@ public:
 
 private:
     HSVToolValues _values;
+    bool _adjustsColor; // _values.adjustsColor()
     bool _clampBlack;
     bool _clampWhite;
 };
@@ -1461,8 +1466,9 @@ HSVToolPlugin::isIdentity(const IsIdentityArguments &args,
 
     // Without adjustments, hsvtool() copies every pixel (the range coefficients do not matter). With
     // Premultiply, the unpremultiply/premultiply round trip is taken as a copy, as in the other masked
-    // plug-ins: it differs only by rounding, and where alpha is 0 but the colour is not (which is not
-    // a premultiplied colour).
+    // plug-ins: it differs only by rounding, where alpha is 0 but the colour is not (which is not a
+    // premultiplied colour), and where 0 < alpha <= FLT_EPSILON (ofxsUnPremult does not unpremultiply
+    // there, but the colour is premultiplied again).
     if ( !getValuesAtTime(time).adjustsColor() ) {
         identityClip = _srcClip;
 
