@@ -77,6 +77,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //     the key colour axis was |fg|), and the despill of the Screen and None modes was skipped. It is
 //     now computed in double when the float one overflows. A key colour beyond the float range is
 //     clamped to it. The output is unchanged for the key colours whose float squared norm is finite.
+//     New "Invert" parameter (issue #280), off by default: it inverts the key computed from the
+//     foreground key, before the inside and outside masks are applied, so that the pixels whose
+//     foreground key is between B and C become opaque, as with Foundry's Keyer node. Existing
+//     projects render the same.
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -164,6 +168,12 @@ enum KeyerModeEnum
 #define kParamSourceAlphaOptionAddToInsideMask "Add to Inside Mask", "Source alpha is added to the inside mask. Use for multi-pass keying.", "inside"
 #define kParamSourceAlphaOptionNormal "Normal", "Foreground key is multiplied by source alpha when compositing.", "normal"
 
+#define kParamInvert "invert"
+#define kParamInvertLabel "Invert"
+#define kParamInvertHint \
+    "Invert the matte computed from the foreground key: the output alpha is 1 (opaque) between B and C and 0 (transparent) below A and above D, " \
+    "as with Foundry's Keyer node. The Inside Mask and Outside Mask are applied after the inversion, and keep their meaning. Ignored in None keyer mode."
+
 #define kClipSourceHint "The foreground image to key."
 #define kClipBg "Bg"
 #define kClipBgHint "The background image to replace the blue/green screen in the foreground."
@@ -207,6 +217,7 @@ protected:
     double _despillClosing;
     OutputModeEnum _outputMode;
     SourceAlphaEnum _sourceAlpha;
+    bool _invert;
 
 public:
 
@@ -227,6 +238,7 @@ public:
         , _despillClosing(0.)
         , _outputMode(eOutputModeComposite)
         , _sourceAlpha(eSourceAlphaIgnore)
+        , _invert(false)
     {
         _keyColor.r = _keyColor.g = _keyColor.b = 0.;
     }
@@ -253,7 +265,8 @@ public:
                    double despill,
                    double despillAngle,
                    OutputModeEnum outputMode,
-                   SourceAlphaEnum sourceAlpha)
+                   SourceAlphaEnum sourceAlpha,
+                   bool invert)
     {
         _keyColor = keyColor;
         _keyerMode = keyerMode;
@@ -274,6 +287,7 @@ public:
         }
         _outputMode = outputMode;
         _sourceAlpha = sourceAlpha;
+        _invert = invert;
     }
 
     double key_bg(double Kfg)
@@ -465,6 +479,10 @@ private:
                     } else {
                         // in [0,1] (NaN would give 0, but Kfg is finite: the samples are)
                         Kbg = clampToUnit( key_bg(Kfg) );
+                        if (_invert) {
+                            // invert the key, not the masks, which are applied below
+                            Kbg = 1. - Kbg;
+                        }
                     }
                     // nonadditive mix between the key generator and the garbage matte (outMask)
                     // note that in Chromakeyer this is done before on Kfg instead of Kbg.
@@ -582,6 +600,7 @@ public:
         , _despillAngle(NULL)
         , _outputMode(NULL)
         , _sourceAlpha(NULL)
+        , _invert(NULL)
     {
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -610,7 +629,8 @@ public:
         assert(_keyColor && _keyerMode && _luminanceMath && _softnessLower && _toleranceLower && _center && _toleranceUpper && _softnessUpper && _despill && _despillAngle);
         _outputMode = fetchChoiceParam(kParamOutputMode);
         _sourceAlpha = fetchChoiceParam(kParamSourceAlpha);
-        assert(_outputMode && _sourceAlpha);
+        _invert = fetchBooleanParam(kParamInvert);
+        assert(_outputMode && _sourceAlpha && _invert);
 
         // finally
         syncPrivateData();
@@ -648,6 +668,7 @@ private:
         _softnessUpper->setIsSecretAndDisabled(keyerMode == eKeyerModeNone || keyerMode == eKeyerModeScreen);
         _despill->setIsSecretAndDisabled( !(keyerMode == eKeyerModeNone || keyerMode == eKeyerModeScreen) );
         _despillAngle->setIsSecretAndDisabled( !(keyerMode == eKeyerModeNone || keyerMode == eKeyerModeScreen) );
+        _invert->setIsSecretAndDisabled(keyerMode == eKeyerModeNone);
 
         std::string keyerModeString;
         _keyerMode->getOption( (int)keyerMode, keyerModeString );
@@ -674,6 +695,7 @@ private:
     DoubleParam* _despillAngle;
     ChoiceParam* _outputMode;
     ChoiceParam* _sourceAlpha;
+    BooleanParam* _invert;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -760,7 +782,8 @@ KeyerPlugin::setupAndProcess(KeyerProcessorBase &processor,
     double despillAngle = _despillAngle->getValueAtTime(time);
     OutputModeEnum outputMode = (OutputModeEnum)_outputMode->getValueAtTime(time);
     SourceAlphaEnum sourceAlpha = (SourceAlphaEnum)_sourceAlpha->getValueAtTime(time);
-    processor.setValues(keyColorF, keyerMode, luminanceMath, softnessLower, toleranceLower, center, toleranceUpper, softnessUpper, despill, despillAngle, outputMode, sourceAlpha);
+    const bool invert = _invert->getValueAtTime(time);
+    processor.setValues(keyColorF, keyerMode, luminanceMath, softnessLower, toleranceLower, center, toleranceUpper, softnessUpper, despill, despillAngle, outputMode, sourceAlpha, invert);
     processor.setDstImg( dst.get() );
     processor.setSrcImgs( src.get(), bg.get(), inMask.get(), outMask.get() );
     processor.setRenderWindow(args.renderWindow, args.renderScale);
@@ -1188,6 +1211,18 @@ KeyerPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         assert(param->getNOptions() == (int)eSourceAlphaNormal);
         param->appendOption(kParamSourceAlphaOptionNormal);
         param->setDefault( (int)eSourceAlphaIgnore );
+        param->setAnimates(true);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    // invert (last: added in version 1.1, issue #280; off, so that existing projects render the same)
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamInvert);
+        param->setLabel(kParamInvertLabel);
+        param->setHint(kParamInvertHint);
+        param->setDefault(false);
         param->setAnimates(true);
         if (page) {
             page->addChild(*param);
