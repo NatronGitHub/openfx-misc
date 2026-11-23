@@ -833,7 +833,12 @@ ShufflePlugin::isIdentityInternal(double time,
                 // its plane (the only channel of a one-channel plane has index 0)
                 return false;
             }
-            if (i > 0) {
+            if (i == 0) {
+                if (data[0].index != 0) {
+                    // e.g. R, G, B read G, B, A: the channels are shifted
+                    return false;
+                }
+            } else {
                 if ( (data[i].index != expectedIndex) || (data[i].plane != data[0].plane) ||
                      ( data[i].clip != data[0].clip) ) {
                     return false;
