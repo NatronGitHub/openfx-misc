@@ -174,10 +174,10 @@ unnegatedDepthType(DepthTypeEnum depthType)
 
 #define kParamAperture "aperture"
 #define kParamApertureLabel "Aperture"
-#define kParamApertureHint "Shape of the aperture (the blur kernel). Draft renders and renders at a reduced scale (proxy) always use Gaussian."
-#define kParamApertureOptionGaussian "Gaussian", "Gaussian aperture, computed using a fast recursive filter. The blur size is the same as in the Blur plugin.", "gaussian"
-#define kParamApertureOptionDisc "Disc", "Disc (circular) aperture with an antialiased edge, giving a bokeh effect. The blur size is the disc diameter. Slower than Gaussian.", "disc"
-#define kParamApertureOptionCustom "Custom", "Custom aperture given by the Filter input, scaled so that its larger dimension is the blur size. Large kernels use the FFT, which is slower than Disc. If the Filter input is not connected or empty, Disc is used.", "custom"
+#define kParamApertureHint "Shape of the aperture (the blur kernel). Draft renders and renders at a reduced scale (proxy) always use the Gaussian."
+#define kParamApertureOptionGaussian "Gaussian", "Gaussian aperture of standard deviation radius/sqrt(8), truncated at the blur radius horizontally and vertically. At the radius, this Gaussian is exp(-4) = 1.8% of its peak, so the truncation, which gives it the support of the disc, changes it little. Large kernels use the FFT.", "gaussian"
+#define kParamApertureOptionDisc "Disc", "Disc (circular) aperture with an antialiased edge, giving a bokeh effect: a pixel at a distance d from the center has the weight clamp(radius - d, 0, 1), a linear antialiasing over the last pixel inside the radius, so that the disc never reaches beyond its radius, and a radius of 1 pixel or less is sharp.", "disc"
+#define kParamApertureOptionCustom "Custom", "Custom aperture given by the Filter input, scaled so that its larger dimension is twice the blur radius. Large kernels use the FFT, which is slower than Disc. If the Filter input is not connected or empty, Disc is used.", "custom"
 enum ApertureEnum
 {
     eApertureGaussian = 0,
@@ -195,55 +195,40 @@ constexpr double kKernelThreshold = 1e-3;
 // Below this, a blurred weight (the blurred all-ones image, the coverage, 1 - a slice mask) is 0.
 constexpr float kMinWeight = 1e-6f;
 
-// ratio between the size and the Gaussian standard deviation (same as CImgBlur)
-constexpr double kSizeToSigma = 1. / 2.4;
-// extra margin for the Gaussian, relative to size (same as CImgBlur)
-constexpr double kGaussianMargin = 1.5;
+// The cost of the FFT of the Gaussian aperture, in direct convolution taps per pixel of the padded
+// FFT image (see truncatedGaussianBlur())
+constexpr double kGaussianFFTCost = 100.; // measured with pocketfft on 1920x1080 frames
 
-// Number of pixels read on each side of a pixel to blur it by sizePixels with the given aperture
-// (the kernel half-size). Used for the render window padding, which must be the same in render()
-// and getRegionsOfInterest(), and for the slice bounding boxes.
+// The standard deviation of the Gaussian aperture of blur radius r is r/sqrt(8), and the kernel
+// is truncated to |dx|, |dy| <= r.
+constexpr double kGaussianSigmaPerRadius = 0.35355339059327376; // 1/sqrt(8)
+
+// Number of pixels read on each side of a pixel to blur it with a kernel of diameter sizePixels
+// (the kernel half-size), for all the apertures. Used for the render window padding, which must
+// be the same in render() and getRegionsOfInterest(), and for the slice bounding boxes.
 int
-blurPadding(double sizePixels,
-            ApertureEnum aperture)
+blurPadding(double sizePixels)
 {
-    if (aperture == eApertureGaussian) {
-        return static_cast<int>( std::ceil(sizePixels * kGaussianMargin) ) + 3; // Gaussian tails, as in CImgBlur
-    }
-
-    return static_cast<int>( std::ceil(sizePixels / 2) ) + 1; // the disc and custom kernels have a diameter of sizePixels
+    return static_cast<int>( std::ceil(sizePixels / 2) ) + 1;
 }
 
-// Whether the render uses the fast Gaussian aperture whatever the Aperture parameter:
-// draft renders and renders at a reduced scale (proxy).
+// Whether the render scale is reduced (proxy). These renders, as the draft renders, use the
+// Gaussian aperture whatever the Aperture parameter.
 bool
 isProxyScale(const OfxPointD& renderScale)
 {
     return (renderScale.x < 1.) || (renderScale.y < 1.);
 }
 
-// The aperture that determines the padding (see blurPadding()).
-// At a reduced render scale (proxy), the Gaussian is always used. Draft mode is only known at
-// render time ("Property Set - render calls" for kOfxImageEffectPropRenderQualityDraft), so a
-// draft render may use the Gaussian with a smaller padding: only the far Gaussian tails are cut.
-ApertureEnum
-paddingAperture(ApertureEnum aperture,
-                const OfxPointD& renderScale)
-{
-    return isProxyScale(renderScale) ? eApertureGaussian : aperture;
-}
-
 // The render window padding, in pixels at the render scale: the kernel half-size of the
-// maximum blur size. render() and getRegionsOfInterest() must use the same padding.
+// maximum blur size (a kernel diameter). render() and getRegionsOfInterest() must use the same padding.
 OfxPointI
 renderPadding(double maxSize,
-              ApertureEnum aperture,
               const OfxPointD& renderScale)
 {
-    const ApertureEnum padAperture = paddingAperture(aperture, renderScale);
     const double size = (std::max)(0., maxSize);
 
-    return { blurPadding(size * renderScale.x, padAperture), blurPadding(size * renderScale.y, padAperture) };
+    return { blurPadding(size * renderScale.x), blurPadding(size * renderScale.y) };
 }
 
 // Pixel aspect ratio of a clip, falling back to 1 if the host returns an invalid value.
@@ -370,25 +355,78 @@ setWeightedImage(CImg<cimgpix_t>& layer,
     }
 }
 
-// Gaussian blur of all channels, with zero boundary conditions (as the other apertures)
-void
-gaussianBlur(CImg<cimgpix_t>& img,
-             double sx,
-             double sy,
-             const ImageEffect& effect)
+// The 1D Gaussian kernel of standard deviation sigma, truncated to |x| <= half, normalized.
+CImg<cimgpix_t>
+truncatedGaussianKernel(double sigma,
+                        int half)
 {
-    const float sigmax = static_cast<float>(sx * kSizeToSigma);
-    const float sigmay = static_cast<float>(sy * kSizeToSigma);
-
-    if (sigmax >= 0.1) {
-        img.vanvliet(sigmax, 0, 'x', 0);
+    CImg<cimgpix_t> k(2 * half + 1, 1, 1, 1, 0.f);
+    cimg_forX(k, x) {
+        const double d = x - half;
+        k(x) = static_cast<cimgpix_t>( std::exp( -d * d / (2 * sigma * sigma) ) );
     }
-    if ( effect.abort() ) {
+    k /= static_cast<cimgpix_t>( k.sum() );
+
+    return k;
+}
+
+// In-place separable Gaussian blur of all channels of img, of standard deviations (sigmaX,
+// sigmaY), truncated to |dx| <= halfX and |dy| <= halfY, with zero boundary conditions (as the
+// other apertures). Large kernels use the FFT, whose cost does not depend on the kernel size,
+// with the same (separable) kernel; small ones a direct convolution along each axis.
+void
+truncatedGaussianBlur(CImg<cimgpix_t>& img,
+                      double sigmaX,
+                      double sigmaY,
+                      int halfX,
+                      int halfY,
+                      const ImageEffect& effect)
+{
+    const bool blurX = (halfX > 0) && (sigmaX > 0.);
+    const bool blurY = (halfY > 0) && (sigmaY > 0.);
+    if (!blurX && !blurY) {
         return;
     }
-    if (sigmay >= 0.1) {
-        img.vanvliet(sigmay, 0, 'y', 0);
+    const CImg<cimgpix_t> kx = blurX ? truncatedGaussianKernel(sigmaX, halfX) : CImg<cimgpix_t>(1, 1, 1, 1, 1.f);
+    const CImg<cimgpix_t> ky = blurY ? truncatedGaussianKernel(sigmaY, halfY).get_transpose() : CImg<cimgpix_t>(1, 1, 1, 1, 1.f);
+    // the direct convolution costs one tap per pixel and kernel pixel along each axis, the FFT
+    // about kGaussianFFTCost taps per pixel of the padded FFT image
+    const double fftArea = static_cast<double>( cimgFFTSize( static_cast<unsigned int>(img.width() + kx.width() - 1) ) ) *
+                           cimgFFTSize( static_cast<unsigned int>(img.height() + ky.height() - 1) );
+    if ( static_cast<double>( kx.width() + ky.height() ) * img.width() * img.height() > kGaussianFFTCost * fftArea ) {
+        CImg<cimgpix_t> k( kx.width(), ky.height() );
+        cimg_forXY(k, x, y) {
+            k(x, y) = kx(x) * ky(0, y);
+        }
+        std::vector<int> chans( img.spectrum() );
+        for (int c = 0; c < img.spectrum(); ++c) {
+            chans[c] = c;
+        }
+        cimgConvolveFFT( img, chans, k, 1., -(k.width() / 2), -(k.height() / 2), effect );
+
+        return;
     }
+    for (int c = 0; c < img.spectrum() && !effect.abort(); ++c) {
+        CImg<cimgpix_t> channel = img.get_shared_channel(c);
+        if (blurX) {
+            channel.convolve(kx, 0);
+        }
+        if (blurY) {
+            channel.convolve(ky, 0);
+        }
+    }
+}
+
+// In-place Gaussian blur of all channels of img for the blur radii (rx, ry) (see
+// kGaussianSigmaPerRadius).
+void
+gaussianBlur(CImg<cimgpix_t>& img,
+             double rx,
+             double ry,
+             const ImageEffect& effect)
+{
+    truncatedGaussianBlur( img, rx * kGaussianSigmaPerRadius, ry * kGaussianSigmaPerRadius,
+                           static_cast<int>( std::floor(rx) ), static_cast<int>( std::floor(ry) ), effect );
 }
 
 // In-place disc blur of all channels of a planar image, with elliptic radii rx, ry (in pixels).
@@ -528,10 +566,12 @@ apertureBlur(CImg<cimgpix_t>& img,
         customBlur(img, kernel, sx, sy, effect);
         break;
     case eApertureDisc:
-        discBlur(img, sx / 2, sy / 2, effect);
+        // a pixel at distance d from the center has the weight clamp(r - d, 0, 1) for a radius r:
+        // the disc of discBlur() with a radius of r - 0.5
+        discBlur(img, sx / 2 - 0.5, sy / 2 - 0.5, effect);
         break;
     case eApertureGaussian:
-        gaussianBlur(img, sx, sy, effect);
+        gaussianBlur(img, sx / 2, sy / 2, effect);
         break;
     }
 
@@ -885,7 +925,7 @@ ZDefocusPlugin::render(const RenderArguments &args)
     const double maxSize = kRadiusToDiameter * _maxSize->getValueAtTime(time); // the largest kernel diameter
     const int slices = (std::max)( 1, _slices->getValueAtTime(time) );
     const ApertureEnum paramAperture = static_cast<ApertureEnum>( _aperture->getValueAtTime(time) );
-    // in draft mode or proxy mode, always use the fast Gaussian blur
+    // in draft mode or proxy mode, always use the Gaussian aperture
     ApertureEnum aperture = ( args.renderQualityDraft || isProxyScale(args.renderScale) ) ? eApertureGaussian : paramAperture;
     CImg<cimgpix_t> kernel;
     if (aperture == eApertureCustom) {
@@ -902,8 +942,7 @@ ZDefocusPlugin::render(const RenderArguments &args)
                                slices );
 
     // compute the region to process: the render window, padded by the maximum blur size
-    // (getRegionsOfInterest() does not know about draft mode: use the aperture parameter)
-    const OfxPointI pad = renderPadding(maxSize, paramAperture, args.renderScale);
+    const OfxPointI pad = renderPadding(maxSize, args.renderScale);
     OfxRectI procRect = { renderWindow.x1 - pad.x, renderWindow.y1 - pad.y, renderWindow.x2 + pad.x, renderWindow.y2 + pad.y };
     if ( !Coords::rectIntersection(procRect, src->getBounds(), &procRect) ) {
         return;
@@ -929,7 +968,7 @@ ZDefocusPlugin::render(const RenderArguments &args)
     CImg<cimgpix_t> layer;
     try {
         // Register this effect so that CImg's abort test (cimg_abort_test, see CImgFilter.h)
-        // can stop the long vanvliet() calls when the host aborts the render.
+        // can stop the long convolutions when the host aborts the render.
         // This plugin has two inputs and its own render loop, so it cannot use CImgFilterPluginHelper,
         // which does the same thing around its render() call. The scope ends with the try block,
         // also on any exception.
@@ -948,8 +987,8 @@ ZDefocusPlugin::render(const RenderArguments &args)
             // Only process the slice bounding box, grown by the kernel half-size (where the blurred
             // slice is non-zero) and by the kernel half-size again (the pixels read to blur it,
             // used by the normalization), so that small slices are cheap.
-            const int hx = blurPadding(sx, aperture);
-            const int hy = blurPadding(sy, aperture);
+            const int hx = blurPadding(sx);
+            const int hy = blurPadding(sy);
             OfxRectI crop = {box.x1 - 2 * hx, box.y1 - 2 * hy, box.x2 + 2 * hx, box.y2 + 2 * hy};
             Coords::rectIntersection(crop, procBox, &crop);
             // the layer channels: the premultiplied slice image, the slice mask and the all-ones image
@@ -1011,7 +1050,7 @@ ZDefocusPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
     const double time = args.time;
     const ApertureEnum aperture = static_cast<ApertureEnum>( _aperture->getValueAtTime(time) );
     // same padding as in render(), converted from pixels to canonical coordinates
-    const OfxPointI pad = renderPadding(kRadiusToDiameter * _maxSize->getValueAtTime(time), aperture, args.renderScale);
+    const OfxPointI pad = renderPadding(kRadiusToDiameter * _maxSize->getValueAtTime(time), args.renderScale);
     const double padX = pad.x * clipPAR(_srcClip) / args.renderScale.x;
     const double padY = pad.y / args.renderScale.y;
     OfxRectD roi = args.regionOfInterest;
@@ -1035,9 +1074,11 @@ ZDefocusPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
     // The custom aperture needs the whole Filter image. Else, the Filter is not used: set an empty
     // RoI, since the default RoI is the output RoI ("The default RoI is simply the value passed in
     // on the kOfxImageEffectPropRegionOfInterest inArgs property set"), so that the host does not
-    // render the kernel generator for nothing. Draft mode is not known here (see paddingAperture()).
+    // render the kernel generator for nothing. At a reduced render scale (proxy), the Gaussian is
+    // used. Draft mode is only known at render time ("Property Set - render calls" for
+    // kOfxImageEffectPropRenderQualityDraft), so a draft render may ask for the Filter for nothing.
     OfxRectD filterRoI = {0., 0., 0., 0.};
-    if ( (paddingAperture(aperture, args.renderScale) == eApertureCustom) && _filterClip->isConnected() ) {
+    if ( (aperture == eApertureCustom) && !isProxyScale(args.renderScale) && _filterClip->isConnected() ) {
         OfxPointD formatCenter;
         cimgGetFilterRoD(*this, _filterClip, time, &filterRoI, &formatCenter);
     }
