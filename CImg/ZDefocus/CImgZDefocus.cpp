@@ -34,6 +34,7 @@
 #include "ofxsImageEffect.h"
 #include "ofxsMacros.h"
 #include "ofxsCoords.h"
+#include "ofxsCopier.h" // fillBlack
 #ifdef OFX_EXTENSIONS_NATRON
 #include "ofxNatron.h"
 #endif
@@ -162,66 +163,66 @@ enum ApertureEnum
 };
 
 // custom kernel pixels below this fraction of the kernel maximum are outside of the bokeh
-#define kKernelThreshold 1e-3
+constexpr double kKernelThreshold = 1e-3;
 
 // Rec.709 luminance coefficients
-#define kLumR 0.2126f
-#define kLumG 0.7152f
-#define kLumB 0.0722f
+constexpr float kLumR = 0.2126f;
+constexpr float kLumG = 0.7152f;
+constexpr float kLumB = 0.0722f;
 
 // ratio between the size and the Gaussian standard deviation (same as CImgBlur)
-#define kSizeToSigma (1. / 2.4)
+constexpr double kSizeToSigma = 1. / 2.4;
 // extra margin for the Gaussian, relative to size (same as CImgBlur)
-#define kGaussianMargin 1.5
+constexpr double kGaussianMargin = 1.5;
 
 // Number of pixels read on each side of a pixel to blur it by sizePixels with the given aperture
 // (the kernel half-size). Used for the render window padding, which must be the same in render()
 // and getRegionsOfInterest(), and for the slice bounding boxes.
-static inline int
+int
 blurPadding(double sizePixels,
             ApertureEnum aperture)
 {
     if (aperture == eApertureGaussian) {
-        return (int)std::ceil(sizePixels * kGaussianMargin) + 3; // Gaussian tails, as in CImgBlur
+        return static_cast<int>( std::ceil(sizePixels * kGaussianMargin) ) + 3; // Gaussian tails, as in CImgBlur
     }
 
-    return (int)std::ceil(sizePixels / 2) + 1; // the disc and custom kernels have a diameter of sizePixels
+    return static_cast<int>( std::ceil(sizePixels / 2) ) + 1; // the disc and custom kernels have a diameter of sizePixels
+}
+
+// Whether the render uses the fast Gaussian aperture whatever the Aperture parameter:
+// draft renders and renders at a reduced scale (proxy).
+bool
+isProxyScale(const OfxPointD& renderScale)
+{
+    return (renderScale.x < 1.) || (renderScale.y < 1.);
 }
 
 // The aperture that determines the padding (see blurPadding()).
 // At a reduced render scale (proxy), the Gaussian is always used. Draft mode is only known at
 // render time ("Property Set - render calls" for kOfxImageEffectPropRenderQualityDraft), so a
 // draft render may use the Gaussian with a smaller padding: only the far Gaussian tails are cut.
-static inline ApertureEnum
+ApertureEnum
 paddingAperture(ApertureEnum aperture,
                 const OfxPointD& renderScale)
 {
-    return ( (renderScale.x < 1.) || (renderScale.y < 1.) ) ? eApertureGaussian : aperture;
+    return isProxyScale(renderScale) ? eApertureGaussian : aperture;
 }
 
-// Gaussian blur of all channels, with zero boundary conditions (as the other apertures)
-static void
-gaussianBlur(CImg<cimgpix_t>& img,
-             double sx,
-             double sy,
-             const ImageEffect& effect)
+// The render window padding, in pixels at the render scale: the kernel half-size of the
+// maximum blur size. render() and getRegionsOfInterest() must use the same padding.
+OfxPointI
+renderPadding(double maxSize,
+              ApertureEnum aperture,
+              const OfxPointD& renderScale)
 {
-    const float sigmax = (float)(sx * kSizeToSigma);
-    const float sigmay = (float)(sy * kSizeToSigma);
+    const ApertureEnum padAperture = paddingAperture(aperture, renderScale);
+    const double size = (std::max)(0., maxSize);
 
-    if (sigmax >= 0.1) {
-        img.vanvliet(sigmax, 0, 'x', 0);
-    }
-    if ( effect.abort() ) {
-        return;
-    }
-    if (sigmay >= 0.1) {
-        img.vanvliet(sigmay, 0, 'y', 0);
-    }
+    return { blurPadding(size * renderScale.x, padAperture), blurPadding(size * renderScale.y, padAperture) };
 }
 
 // Pixel aspect ratio of a clip, falling back to 1 if the host returns an invalid value.
-static inline double
+double
 clipPAR(const Clip* clip)
 {
     const double par = clip ? clip->getPixelAspectRatio() : 1.;
@@ -229,43 +230,33 @@ clipPAR(const Clip* clip)
     return (par > 0.) ? par : 1.;
 }
 
-
-// Read the depth value from a (non-NULL) pixel with nComps components.
+// Read the depth value from a (non-null) pixel with nComps components.
 // Channels that the pixel does not have read as 0 (or 1 for a missing alpha).
-static inline float
+float
 getDepthValue(const float* p,
               int nComps,
               DepthChannelEnum channel)
 {
-    switch (nComps) {
-    case 1:
-
+    if (nComps == 1) {
         return p[0];
-    case 2:
-
+    }
+    if (nComps == 2) {
         return (channel == eDepthChannelR) ? p[0] : ( (channel == eDepthChannelG) ? p[1] : 0.f );
-    case 3:
-    case 4:
-        switch (channel) {
-        case eDepthChannelR:
-
-            return p[0];
-        case eDepthChannelG:
-
-            return p[1];
-        case eDepthChannelB:
-
-            return p[2];
-        case eDepthChannelA:
-
-            return (nComps == 4) ? p[3] : 1.f;
-        case eDepthChannelLuminance:
-
-            return kLumR * p[0] + kLumG * p[1] + kLumB * p[2];
-        }
-        break;
-    default:
-        break;
+    }
+    if ( (nComps != 3) && (nComps != 4) ) {
+        return 0.f;
+    }
+    switch (channel) {
+    case eDepthChannelR:
+        return p[0];
+    case eDepthChannelG:
+        return p[1];
+    case eDepthChannelB:
+        return p[2];
+    case eDepthChannelA:
+        return (nComps == 4) ? p[3] : 1.f;
+    case eDepthChannelLuminance:
+        return kLumR * p[0] + kLumG * p[1] + kLumB * p[2];
     }
 
     return 0.f;
@@ -274,7 +265,7 @@ getDepthValue(const float* p,
 // Convert a depth or disparity value to a signed "normalized defocus":
 // 0 at the focal plane, -1 at infinity, positive for objects nearer than the focal plane.
 // focus must be > 0 for depth maps.
-static inline double
+double
 normalizedDefocus(double v,
                   double focus,
                   DepthTypeEnum depthType)
@@ -294,6 +285,82 @@ normalizedDefocus(double v,
     return v - focus; // focus at infinity (or beyond): no normalization possible
 }
 
+// The signed blur size of a pixel, as a function of its Depth value: 0 within the depth of focus,
+// negative behind it, positive in front of it, clamped to [-maxSize, maxSize].
+class BlurModel
+{
+public:
+    BlurModel(DepthTypeEnum depthType,
+              double focus,
+              double depthOfFocus,
+              double size,
+              double maxSize)
+        : _depthType(depthType)
+        , _focus( ( (depthType == eDepthTypeDepth) && !(focus > 0.) ) ? 1e-6 : focus ) // focus on the nearest possible distance
+        , _size(size)
+        , _maxSize(maxSize)
+    {
+        // bounds of the in-focus region, in normalized defocus
+        if (depthType == eDepthTypeDepth) {
+            const double vNear = _focus - depthOfFocus / 2;
+            _focusHi = (vNear > 0.) ? normalizedDefocus(vNear, _focus, depthType) : DBL_MAX;
+            _focusLo = normalizedDefocus(_focus + depthOfFocus / 2, _focus, depthType);
+        } else {
+            _focusHi = normalizedDefocus(_focus + depthOfFocus / 2, _focus, depthType);
+            _focusLo = normalizedDefocus(_focus - depthOfFocus / 2, _focus, depthType);
+        }
+    }
+
+    double blurSize(double v) const
+    {
+        const double u = normalizedDefocus(v, _focus, _depthType);
+        const double defocus = (u < _focusLo) ? (u - _focusLo) : ( (u > _focusHi) ? (u - _focusHi) : 0. );
+
+        return (std::max)( -_maxSize, (std::min)(_maxSize, _size * defocus) );
+    }
+
+private:
+    DepthTypeEnum _depthType;
+    double _focus;
+    double _size;
+    double _maxSize;
+    double _focusLo = 0.;
+    double _focusHi = 0.;
+};
+
+// The focus slice of a pixel with the given blur size: the blur size is quantized in steps of
+// maxSize/slices, so that slice k (in [-slices, slices]) has a blur size of |k|*maxSize/slices.
+int
+sliceIndexOf(double blurSize,
+             double maxSize,
+             int slices)
+{
+    const int k = (maxSize > 0.) ? static_cast<int>( std::floor(blurSize * slices / maxSize + 0.5) ) : 0;
+
+    return (std::max)( -slices, (std::min)(slices, k) );
+}
+
+// Gaussian blur of all channels, with zero boundary conditions (as the other apertures)
+void
+gaussianBlur(CImg<cimgpix_t>& img,
+             double sx,
+             double sy,
+             const ImageEffect& effect)
+{
+    const float sigmax = static_cast<float>(sx * kSizeToSigma);
+    const float sigmay = static_cast<float>(sy * kSizeToSigma);
+
+    if (sigmax >= 0.1) {
+        img.vanvliet(sigmax, 0, 'x', 0);
+    }
+    if ( effect.abort() ) {
+        return;
+    }
+    if (sigmay >= 0.1) {
+        img.vanvliet(sigmay, 0, 'y', 0);
+    }
+}
+
 // In-place disc blur of all channels of a planar image, with elliptic radii rx, ry (in pixels).
 // Pixels outside of the image are zero, as with the other apertures (see render()).
 // The disc is antialiased: a pixel at distance d from the center of a disc of radius r is covered
@@ -301,7 +368,7 @@ normalizedDefocus(double v,
 // the row has a weight v (the coverage of its center pixel), and is a box filter whose two end
 // pixels have a fractional weight f, so that each row is computed in O(1) using row prefix sums:
 // O(width*height*(2*ry+1)) per channel. Exact along the two axes of the ellipse.
-static void
+void
 discBlur(CImg<cimgpix_t>& img,
          double rx,
          double ry,
@@ -309,14 +376,13 @@ discBlur(CImg<cimgpix_t>& img,
 {
     const int W = img.width();
     const int H = img.height();
-    const int C = img.spectrum();
     if ( (W <= 0) || (H <= 0) || ( (rx < 0.5) && (ry < 0.5) ) ) {
         return;
     }
     // row dy: pixels |dx| < hw have weight v, pixels |dx| == hw have weight v*f
     // (hw == 0: only the center pixel, with weight v)
     struct KernelRow { int hw; float f; float v; };
-    const int Ry = (int)std::floor(ry + 0.5);
+    const int Ry = static_cast<int>( std::floor(ry + 0.5) );
     std::vector<KernelRow> rows(2 * Ry + 1);
     double total = 0.; // sum of the kernel weights
     for (int dy = -Ry; dy <= Ry; ++dy) {
@@ -324,15 +390,15 @@ discBlur(CImg<cimgpix_t>& img,
         const double t = dy / (ry + 0.5);
         const double a = (rx + 0.5) * std::sqrt( (std::max)(0., 1. - t * t) );
         KernelRow& r = rows[dy + Ry];
-        r.hw = (int)std::floor(a);
-        r.f = (float)(a - r.hw);
-        r.v = (float)(std::min)( 1., ry + 0.5 - std::abs(dy) );
+        r.hw = static_cast<int>( std::floor(a) );
+        r.f = static_cast<float>(a - r.hw);
+        r.v = static_cast<float>( (std::min)( 1., ry + 0.5 - std::abs(dy) ) );
         total += r.v * ( (r.hw == 0) ? 1. : (2 * r.hw - 1 + 2 * r.f) );
     }
     const double norm = 1. / total;
     CImg<double> prefix(W + 1, H);
     CImg<cimgpix_t> res(W, H);
-    for (int c = 0; c < C; ++c) {
+    for (int c = 0; c < img.spectrum(); ++c) {
         if ( effect.abort() ) {
             return;
         }
@@ -367,18 +433,15 @@ discBlur(CImg<cimgpix_t>& img,
                 }
                 sum += r.v * rowSum;
             }
-            res(x, y) = (cimgpix_t)(sum * norm);
+            res(x, y) = static_cast<cimgpix_t>(sum * norm);
         }
-        cimg_forXY(res, x, y) {
-            img(x, y, 0, c) = res(x, y);
-        }
+        img.get_shared_channel(c) = res;
     }
 } // discBlur
 
 // In-place blur of all channels of a planar image by the custom aperture kernel, scaled so that
 // its larger dimension is the blur size (sx, sy in pixels). Pixels outside of the image are zero.
-// Returns false if the effect was aborted.
-static bool
+void
 customBlur(CImg<cimgpix_t>& img,
            const CImg<cimgpix_t>& kernel,
            double sx,
@@ -389,40 +452,106 @@ customBlur(CImg<cimgpix_t>& img,
     const int kh = kernel.height();
     const double scale = 1. / (std::max)(kw, kh);
     // odd kernel sizes, so that the kernel center is a pixel center: all slices are aligned
-    const int nx = 2 * (int)std::floor( (kw * sx * scale - 1.) / 2. + 0.5 ) + 1;
-    const int ny = 2 * (int)std::floor( (kh * sy * scale - 1.) / 2. + 0.5 ) + 1;
+    const int nx = 2 * static_cast<int>( std::floor( (kw * sx * scale - 1.) / 2. + 0.5 ) ) + 1;
+    const int ny = 2 * static_cast<int>( std::floor( (kh * sy * scale - 1.) / 2. + 0.5 ) ) + 1;
     if ( (nx <= 1) && (ny <= 1) ) {
-        return true; // less than a pixel: no blur
+        return; // less than a pixel: no blur
     }
     // moving average (antialiased) to shrink the kernel; it is nearest-neighbor when enlarging, so use linear then
     const int interpolation = ( (nx <= kw) && (ny <= kh) ) ? 2 : 3;
     const CImg<cimgpix_t> k = kernel.get_resize( (std::max)(1, nx), (std::max)(1, ny), 1, 1, interpolation );
     const double sum = k.sum();
     if ( !(sum > 0.) ) {
-        return true;
+        return;
     }
     // Direct convolution costs about 1 ns per pixel and kernel pixel, and the FFT about 100 ns per
     // pixel of the zero-padded power-of-two image (measured with CImg 3.x without FFTW).
-    const double fftArea = (double)cimg::nearest_pow2( (unsigned int)(img.width() + k.width() - 1) ) *
-                           cimg::nearest_pow2( (unsigned int)(img.height() + k.height() - 1) );
-    if ( (double)k.size() * img.width() * img.height() < 100. * fftArea ) {
-        const CImg<cimgpix_t> kn = k / (cimgpix_t)sum;
-        for (int c = 0; c < img.spectrum(); ++c) {
-            if ( effect.abort() ) {
-                return false;
-            }
+    const double fftArea = static_cast<double>( cimg::nearest_pow2( static_cast<unsigned int>(img.width() + k.width() - 1) ) ) *
+                           cimg::nearest_pow2( static_cast<unsigned int>(img.height() + k.height() - 1) );
+    if ( static_cast<double>( k.size() ) * img.width() * img.height() < 100. * fftArea ) {
+        const CImg<cimgpix_t> kn = k / static_cast<cimgpix_t>(sum);
+        for (int c = 0; c < img.spectrum() && !effect.abort(); ++c) {
             img.get_shared_channel(c).convolve(kn, 0); // zero boundary conditions, centered kernel
         }
 
-        return true;
+        return;
     }
     std::vector<int> chans( img.spectrum() );
     for (int c = 0; c < img.spectrum(); ++c) {
         chans[c] = c;
     }
-
-    return cimgConvolveFFT( img, chans, k, 1. / sum, -(k.width() / 2), -(k.height() / 2), effect );
+    cimgConvolveFFT( img, chans, k, 1. / sum, -(k.width() / 2), -(k.height() / 2), effect );
 } // customBlur
+
+// In-place blur of all channels of img by the aperture, with a blur size of (sx, sy) pixels.
+// The custom kernel is only used by eApertureCustom. Returns false if the effect was aborted.
+bool
+apertureBlur(CImg<cimgpix_t>& img,
+             ApertureEnum aperture,
+             const CImg<cimgpix_t>& kernel,
+             double sx,
+             double sy,
+             const ImageEffect& effect)
+{
+    switch (aperture) {
+    case eApertureCustom:
+        customBlur(img, kernel, sx, sy, effect);
+        break;
+    case eApertureDisc:
+        discBlur(img, sx / 2, sy / 2, effect);
+        break;
+    case eApertureGaussian:
+        gaussianBlur(img, sx, sy, effect);
+        break;
+    }
+
+    return !effect.abort();
+}
+
+// A rectangle that bounds nothing, for rectBoundingBox().
+OfxRectI
+emptyRect(int W,
+          int H)
+{
+    return {W, H, 0, 0};
+}
+
+// Grow b so that it contains the pixel (x, y).
+void
+addPixel(OfxRectI& b,
+         int x,
+         int y)
+{
+    b.x1 = (std::min)(b.x1, x);
+    b.x2 = (std::max)(b.x2, x + 1);
+    b.y1 = (std::min)(b.y1, y);
+    b.y2 = (std::max)(b.y2, y + 1);
+}
+
+// Merge the blurred slice layer (the slice color, the slice mask and the blurred all-ones image,
+// see render()) over result, at the offset (crop.x1, crop.y1). The slice is first normalized by
+// the blurred all-ones image (normalized convolution).
+void
+mergeOver(CImg<cimgpix_t>& result,
+          const CImg<cimgpix_t>& layer,
+          const OfxRectI& crop,
+          int nComps)
+{
+    cimg_forXY(layer, x, y) {
+        const float ones = layer(x, y, 0, nComps + 1);
+        if ( !(ones > 1e-6f) ) {
+            continue;
+        }
+        // clamp the mask: it may have small negative values (ringing) after the FFT
+        const float a = (std::max)( 0.f, (std::min)(1.f, layer(x, y, 0, nComps) / ones) );
+        for (int c = 0; c < nComps; ++c) {
+            float& r = result(crop.x1 + x, crop.y1 + y, 0, c);
+            r = layer(x, y, 0, c) / ones + (1.f - a) * r;
+        }
+        float& coverage = result(crop.x1 + x, crop.y1 + y, 0, nComps);
+        coverage = a + (1.f - a) * coverage;
+    }
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -430,47 +559,30 @@ class ZDefocusPlugin
     : public ImageEffect
 {
 public:
-    /** @brief ctor */
-    ZDefocusPlugin(OfxImageEffectHandle handle)
+    explicit ZDefocusPlugin(OfxImageEffectHandle handle)
         : ImageEffect(handle)
-        , _dstClip(NULL)
-        , _srcClip(NULL)
-        , _depthClip(NULL)
-        , _filterClip(NULL)
-        , _depthChannel(NULL)
-        , _depthType(NULL)
-        , _useFocusPoint(NULL)
-        , _focusPoint(NULL)
-        , _focus(NULL)
-        , _depthOfFocus(NULL)
-        , _size(NULL)
-        , _maxSize(NULL)
-        , _slices(NULL)
-        , _aperture(NULL)
+        , _dstClip( fetchClip(kOfxImageEffectOutputClipName) )
+        , _srcClip( fetchClip(kOfxImageEffectSimpleSourceClipName) )
+        , _depthClip( fetchClip(kClipDepth) )
+        , _filterClip( fetchClip(kClipFilter) )
+        , _depthChannel( fetchChoiceParam(kParamDepthChannel) )
+        , _depthType( fetchChoiceParam(kParamDepthType) )
+        , _useFocusPoint( fetchBooleanParam(kParamUseFocusPoint) )
+        , _focusPoint( fetchDouble2DParam(kParamFocusPoint) )
+        , _focus( fetchDoubleParam(kParamFocus) )
+        , _depthOfFocus( fetchDoubleParam(kParamDepthOfFocus) )
+        , _size( fetchDoubleParam(kParamSize) )
+        , _maxSize( fetchDoubleParam(kParamMaxSize) )
+        , _slices( fetchIntParam(kParamSlices) )
+        , _aperture( fetchChoiceParam(kParamAperture) )
     {
-        _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGBA ||
                              _dstClip->getPixelComponents() == ePixelComponentRGB ||
                              _dstClip->getPixelComponents() == ePixelComponentAlpha) );
-        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() == ePixelComponentRGBA ||
                              _srcClip->getPixelComponents() == ePixelComponentRGB ||
                              _srcClip->getPixelComponents() == ePixelComponentAlpha) );
-        _depthClip = fetchClip(kClipDepth);
-        assert(_depthClip);
-        _filterClip = fetchClip(kClipFilter);
-        assert(_filterClip);
-
-        _depthChannel = fetchChoiceParam(kParamDepthChannel);
-        _depthType = fetchChoiceParam(kParamDepthType);
-        _useFocusPoint = fetchBooleanParam(kParamUseFocusPoint);
-        _focusPoint = fetchDouble2DParam(kParamFocusPoint);
-        _focus = fetchDoubleParam(kParamFocus);
-        _depthOfFocus = fetchDoubleParam(kParamDepthOfFocus);
-        _size = fetchDoubleParam(kParamSize);
-        _maxSize = fetchDoubleParam(kParamMaxSize);
-        _slices = fetchIntParam(kParamSlices);
-        _aperture = fetchChoiceParam(kParamAperture);
+        assert(_depthClip && _filterClip);
         assert(_depthChannel && _depthType && _useFocusPoint && _focusPoint && _focus && _depthOfFocus &&
                _size && _maxSize && _slices && _aperture);
 
@@ -478,20 +590,19 @@ public:
     }
 
 private:
-    /* Override the render */
-    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
-    virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
-    virtual void getRegionsOfInterest(const RegionsOfInterestArguments &args, RegionOfInterestSetter &rois) OVERRIDE FINAL;
-    virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+    void render(const RenderArguments &args) OVERRIDE FINAL;
+    bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
+    bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+    void getRegionsOfInterest(const RegionsOfInterestArguments &args, RegionOfInterestSetter &rois) OVERRIDE FINAL;
+    void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
     void updateGUI();
 
-    // get the focus value at the given time, reading the depth at the focus point if necessary
-    double getFocusValue(double time, const OfxPointD& renderScale, const Image* depth, DepthChannelEnum depthChannel);
+    // the focus value at the given time, read from the depth at the focus point if necessary
+    double getFocusValue(double time, const OfxPointD& renderScale, const Image* depth, DepthChannelEnum depthChannel) const;
 
-    // get the custom aperture kernel from the Filter input; returns false if it is not available or empty
-    bool getCustomKernel(const RenderArguments &args, CImg<cimgpix_t>* kernel);
+    // the custom aperture kernel from the Filter input; empty if it is not available
+    CImg<cimgpix_t> getCustomKernel(const RenderArguments &args);
 
     // only float images are supported: post an error message and throw kOfxStatFailed
     // (see CImgFilterPluginHelperBase::throwBitDepthUnsupported())
@@ -501,22 +612,21 @@ private:
         throwSuiteStatusException(kOfxStatFailed);
     }
 
-private:
-    // do not need to delete these, the ImageEffect is managing them for us
-    Clip *_dstClip;
-    Clip *_srcClip;
-    Clip *_depthClip;
-    Clip *_filterClip;
-    ChoiceParam* _depthChannel;
-    ChoiceParam* _depthType;
-    BooleanParam* _useFocusPoint;
-    Double2DParam* _focusPoint;
-    DoubleParam* _focus;
-    DoubleParam* _depthOfFocus;
-    DoubleParam* _size;
-    DoubleParam* _maxSize;
-    IntParam* _slices;
-    ChoiceParam* _aperture;
+    // the ImageEffect owns these
+    Clip* const _dstClip;
+    Clip* const _srcClip;
+    Clip* const _depthClip;
+    Clip* const _filterClip;
+    ChoiceParam* const _depthChannel;
+    ChoiceParam* const _depthType;
+    BooleanParam* const _useFocusPoint;
+    Double2DParam* const _focusPoint;
+    DoubleParam* const _focus;
+    DoubleParam* const _depthOfFocus;
+    DoubleParam* const _size;
+    DoubleParam* const _maxSize;
+    IntParam* const _slices;
+    ChoiceParam* const _aperture;
 };
 
 
@@ -525,36 +635,32 @@ double
 ZDefocusPlugin::getFocusValue(double time,
                               const OfxPointD& renderScale,
                               const Image* depth,
-                              DepthChannelEnum depthChannel)
+                              DepthChannelEnum depthChannel) const
 {
-    double focus = _focus->getValueAtTime(time);
+    const double focus = _focus->getValueAtTime(time);
 
-    if ( !_useFocusPoint->getValueAtTime(time) ) {
+    if ( !_useFocusPoint->getValueAtTime(time) || !depth ) {
         return focus;
     }
-    OfxPointD p = _focusPoint->getValueAtTime(time);
     OfxPointI pix;
-    Coords::toPixel(p, renderScale, clipPAR(_depthClip), &pix);
-    if (depth) {
-        const float* pixel = (const float*)depth->getPixelAddress(pix.x, pix.y);
-        if (pixel) {
-            return getDepthValue(pixel, depth->getPixelComponentCount(), depthChannel);
-        }
-    }
+    Coords::toPixel(_focusPoint->getValueAtTime(time), renderScale, clipPAR(_depthClip), &pix);
+    const float* pixel = static_cast<const float*>( depth->getPixelAddress(pix.x, pix.y) );
+
     // depth not available at the focus point (e.g. outside of the Depth RoD): use the focus value
-    return focus;
+    return pixel ? getDepthValue(pixel, depth->getPixelComponentCount(), depthChannel) : focus;
 }
 
-bool
-ZDefocusPlugin::getCustomKernel(const RenderArguments &args,
-                                CImg<cimgpix_t>* kernel)
+CImg<cimgpix_t>
+ZDefocusPlugin::getCustomKernel(const RenderArguments &args)
 {
+    CImg<cimgpix_t> kernel;
+
     if ( !_filterClip->isConnected() ) {
-        return false;
+        return kernel;
     }
     auto_ptr<const Image> filter( _filterClip->fetchImage(args.time) );
     if ( !filter.get() ) {
-        return false;
+        return kernel;
     }
     checkBadRenderScaleOrField(filter, args);
     if (filter->getPixelDepth() != eBitDepthFloat) {
@@ -567,29 +673,26 @@ ZDefocusPlugin::getCustomKernel(const RenderArguments &args,
     OfxRectI kernelRect;
     Coords::toPixelEnclosing(rod, args.renderScale, _filterClip->getPixelAspectRatio(), &kernelRect);
     if ( !Coords::rectIntersection(kernelRect, filter->getBounds(), &kernelRect) ) {
-        return false;
+        return kernel;
     }
     // alpha, or luminance if there is no alpha (single-channel filters are alpha)
     const int key = (filter->getPixelComponentCount() == 4) ? eCImgKernelA : eCImgKernelLuminance;
-    cimgExtractKernel(*filter, kernelRect, key, kernel);
+    cimgExtractKernel(*filter, kernelRect, key, &kernel);
     // The bokeh is the bounding box of the significant kernel pixels: ignore faint tails
     // (e.g. a soft edge, or noise), which would make the bokeh smaller than the blur size.
-    const cimgpix_t threshold = kKernelThreshold * kernel->max();
+    const cimgpix_t threshold = kKernelThreshold * kernel.max();
     if ( !(threshold > 0) ) {
-        return false;
+        return CImg<cimgpix_t>();
     }
-    int x1 = kernel->width(), x2 = -1, y1 = kernel->height(), y2 = -1;
-    cimg_forXY(*kernel, x, y) {
-        if ( (*kernel)(x, y) > threshold ) {
-            x1 = (std::min)(x1, x);
-            x2 = (std::max)(x2, x);
-            y1 = (std::min)(y1, y);
-            y2 = (std::max)(y2, y);
+    OfxRectI box = emptyRect( kernel.width(), kernel.height() );
+    cimg_forXY(kernel, x, y) {
+        if (kernel(x, y) > threshold) {
+            addPixel(box, x, y);
         }
     }
-    kernel->crop(x1, y1, x2, y2);
+    kernel.crop(box.x1, box.y1, box.x2 - 1, box.y2 - 1);
 
-    return kernel->sum() > 0.;
+    return (kernel.sum() > 0.) ? kernel : CImg<cimgpix_t>();
 }
 
 void
@@ -603,16 +706,15 @@ ZDefocusPlugin::render(const RenderArguments &args)
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
-    const BitDepthEnum dstBitDepth = dst->getPixelDepth();
     const int nComps = dst->getPixelComponentCount();
-    if (dstBitDepth != eBitDepthFloat) {
+    if (dst->getPixelDepth() != eBitDepthFloat) {
         throwBitDepthUnsupported();
     }
 
     auto_ptr<const Image> src( _srcClip->isConnected() ?
-                               _srcClip->fetchImage(time) : 0 );
+                               _srcClip->fetchImage(time) : nullptr );
     if ( src.get() ) {
-        if (src->getPixelDepth() != dstBitDepth) {
+        if (src->getPixelDepth() != eBitDepthFloat) {
             throwBitDepthUnsupported();
         }
         if (src->getPixelComponentCount() != nComps) {
@@ -620,8 +722,8 @@ ZDefocusPlugin::render(const RenderArguments &args)
         }
         checkBadRenderScaleOrField(src, args);
     }
-    auto_ptr<const Image> depth( ( _depthClip && _depthClip->isConnected() ) ?
-                                 _depthClip->fetchImage(time) : 0 );
+    auto_ptr<const Image> depth( _depthClip->isConnected() ?
+                                 _depthClip->fetchImage(time) : nullptr );
     if ( depth.get() && (depth->getPixelDepth() != eBitDepthFloat) ) {
         throwBitDepthUnsupported();
     }
@@ -629,105 +731,63 @@ ZDefocusPlugin::render(const RenderArguments &args)
     // render posted it (the Filter image is checked below, in getCustomKernel())
     clearPersistentMessage();
 
-    // fill the render window with black first
-    for (int y = renderWindow.y1; y < renderWindow.y2; ++y) {
-        float* d = (float*)dst->getPixelAddress(renderWindow.x1, y);
-        if (!d) {
-            continue;
-        }
-        std::fill(d, d + (size_t)(renderWindow.x2 - renderWindow.x1) * nComps, 0.f);
-    }
+    // the pixels that are not rendered below (outside of the Source) are black
+    fillBlack(*this, renderWindow, args.renderScale, dst.get());
     if ( !src.get() ) {
         return;
     }
 
     // get the parameters
-    const DepthChannelEnum depthChannel = (DepthChannelEnum)_depthChannel->getValueAtTime(time);
-    const DepthTypeEnum depthType = (DepthTypeEnum)_depthType->getValueAtTime(time);
-    const double depthOfFocus = (std::max)(0., _depthOfFocus->getValueAtTime(time));
-    const double size = _size->getValueAtTime(time);
+    const DepthChannelEnum depthChannel = static_cast<DepthChannelEnum>( _depthChannel->getValueAtTime(time) );
+    const DepthTypeEnum depthType = static_cast<DepthTypeEnum>( _depthType->getValueAtTime(time) );
     const double maxSize = _maxSize->getValueAtTime(time);
-    const int slices = (std::max)(1, _slices->getValueAtTime(time));
-    ApertureEnum aperture = (ApertureEnum)_aperture->getValueAtTime(time);
-    // same padding as getRegionsOfInterest(), which does not know about draft mode
-    const ApertureEnum padAperture = paddingAperture(aperture, args.renderScale);
+    const int slices = (std::max)( 1, _slices->getValueAtTime(time) );
+    const ApertureEnum paramAperture = static_cast<ApertureEnum>( _aperture->getValueAtTime(time) );
     // in draft mode or proxy mode, always use the fast Gaussian blur
-    if ( args.renderQualityDraft || (args.renderScale.x < 1.) || (args.renderScale.y < 1.) ) {
-        aperture = eApertureGaussian;
-    }
+    ApertureEnum aperture = ( args.renderQualityDraft || isProxyScale(args.renderScale) ) ? eApertureGaussian : paramAperture;
     CImg<cimgpix_t> kernel;
-    if ( (aperture == eApertureCustom) && !getCustomKernel(args, &kernel) ) {
-        aperture = eApertureDisc;
-    }
-
-    double focus = getFocusValue(time, args.renderScale, depth.get(), depthChannel);
-    if ( (depthType == eDepthTypeDepth) && !(focus > 0.) ) {
-        focus = 1e-6; // focus on the nearest possible distance
-    }
-    // bounds of the in-focus region, in normalized defocus
-    double focusLo, focusHi;
-    {
-        double vNear, vFar; // values of the near and far limit of the depth of focus
-        if (depthType == eDepthTypeDepth) {
-            vNear = focus - depthOfFocus / 2;
-            vFar = focus + depthOfFocus / 2;
-            focusHi = (vNear > 0.) ? normalizedDefocus(vNear, focus, depthType) : DBL_MAX;
-        } else {
-            vNear = focus + depthOfFocus / 2;
-            vFar = focus - depthOfFocus / 2;
-            focusHi = normalizedDefocus(vNear, focus, depthType);
+    if (aperture == eApertureCustom) {
+        kernel = getCustomKernel(args);
+        if ( kernel.is_empty() ) {
+            aperture = eApertureDisc;
         }
-        focusLo = normalizedDefocus(vFar, focus, depthType);
     }
+    const BlurModel blurModel( depthType,
+                               getFocusValue(time, args.renderScale, depth.get(), depthChannel),
+                               (std::max)( 0., _depthOfFocus->getValueAtTime(time) ),
+                               _size->getValueAtTime(time),
+                               maxSize );
 
     // compute the region to process: the render window, padded by the maximum blur size
-    const int padX = blurPadding(maxSize * args.renderScale.x, padAperture);
-    const int padY = blurPadding(maxSize * args.renderScale.y, padAperture);
-    OfxRectI procRect = { renderWindow.x1 - padX, renderWindow.y1 - padY, renderWindow.x2 + padX, renderWindow.y2 + padY };
-    OfxRectI srcBounds = src->getBounds();
-    if ( !Coords::rectIntersection(procRect, srcBounds, &procRect) ) {
+    // (getRegionsOfInterest() does not know about draft mode: use the aperture parameter)
+    const OfxPointI pad = renderPadding(maxSize, paramAperture, args.renderScale);
+    OfxRectI procRect = { renderWindow.x1 - pad.x, renderWindow.y1 - pad.y, renderWindow.x2 + pad.x, renderWindow.y2 + pad.y };
+    if ( !Coords::rectIntersection(procRect, src->getBounds(), &procRect) ) {
         return;
     }
     const int W = procRect.x2 - procRect.x1;
     const int H = procRect.y2 - procRect.y1;
     const bool unpremultiplied = ( nComps == 4 && src->getPreMultiplication() == eImageUnPreMultiplied );
 
-    // load the source image (premultiplied) and compute the slice index of each pixel
+    // load the source image (premultiplied), and compute the slice index of each pixel and the
+    // bounding box of each slice (empty if x1 >= x2)
     CImg<cimgpix_t> img(W, H, 1, nComps, 0.f);
     CImg<int> sliceIndex(W, H, 1, 1, 0);
+    std::vector<OfxRectI> sliceBox( 2 * slices + 1, emptyRect(W, H) );
     const int depthComps = depth.get() ? depth->getPixelComponentCount() : 0;
-    for (int y = 0; y < H; ++y) {
-        for (int x = 0; x < W; ++x) {
-            const float* s = (const float*)src->getPixelAddress(procRect.x1 + x, procRect.y1 + y);
-            if (s) {
-                const float a = unpremultiplied ? s[3] : 1.f;
-                for (int c = 0; c < nComps; ++c) {
-                    img(x, y, 0, c) = (unpremultiplied && c < 3) ? s[c] * a : s[c];
-                }
-            }
-            const float* dp = depth.get() ? (const float*)depth->getPixelAddress(procRect.x1 + x, procRect.y1 + y) : 0;
-            // no depth: consider that the pixel is at infinity (zero depth or disparity)
-            const double u = normalizedDefocus(dp ? getDepthValue(dp, depthComps, depthChannel) : 0., focus, depthType);
-            const double defocus = (u < focusLo) ? (u - focusLo) : ( (u > focusHi) ? (u - focusHi) : 0. );
-            double blurSize = (std::max)( -maxSize, (std::min)(maxSize, size * defocus) );
-            int k = (maxSize > 0.) ? (int)std::floor(blurSize * slices / maxSize + 0.5) : 0;
-            sliceIndex(x, y) = (std::max)( -slices, (std::min)(slices, k) );
-        }
-    }
-
-    // bounding box of each slice (empty if x1 >= x2)
-    std::vector<OfxRectI> sliceBox(2 * slices + 1);
-    for (std::size_t i = 0; i < sliceBox.size(); ++i) {
-        sliceBox[i].x1 = W;
-        sliceBox[i].y1 = H;
-        sliceBox[i].x2 = sliceBox[i].y2 = 0;
-    }
     cimg_forXY(sliceIndex, x, y) {
-        OfxRectI& b = sliceBox[sliceIndex(x, y) + slices];
-        b.x1 = (std::min)(b.x1, x);
-        b.x2 = (std::max)(b.x2, x + 1);
-        b.y1 = (std::min)(b.y1, y);
-        b.y2 = (std::max)(b.y2, y + 1);
+        const float* s = static_cast<const float*>( src->getPixelAddress(procRect.x1 + x, procRect.y1 + y) );
+        if (s) {
+            const float a = unpremultiplied ? s[3] : 1.f;
+            for (int c = 0; c < nComps; ++c) {
+                img(x, y, 0, c) = (unpremultiplied && c < 3) ? s[c] * a : s[c];
+            }
+        }
+        const float* dp = depth.get() ? static_cast<const float*>( depth->getPixelAddress(procRect.x1 + x, procRect.y1 + y) ) : nullptr;
+        // no depth: consider that the pixel is at infinity (zero depth or disparity)
+        const int k = sliceIndexOf(blurModel.blurSize( dp ? getDepthValue(dp, depthComps, depthChannel) : 0. ), maxSize, slices);
+        sliceIndex(x, y) = k;
+        addPixel(sliceBox[k + slices], x, y);
     }
 
     // Blur each slice and merge it over the result, from far (most negative) to near.
@@ -741,7 +801,6 @@ ZDefocusPlugin::render(const RenderArguments &args)
     const OfxRectI procBox = {0, 0, W, H};
     CImg<cimgpix_t> result(W, H, 1, nComps + 1, 0.f);
     CImg<cimgpix_t> layer;
-    bool aborted = false;
     try {
         // Register this effect so that CImg's abort test (cimg_abort_test, see CImgFilter.h)
         // can stop the long vanvliet() calls when the host aborts the render.
@@ -749,14 +808,13 @@ ZDefocusPlugin::render(const RenderArguments &args)
         // which does the same thing around its render() call. The scope ends with the try block,
         // also on any exception.
         const CImgAbortScope abortScope(this);
-        for (int k = -slices; k <= slices && !aborted; ++k) {
+        for (int k = -slices; k <= slices; ++k) {
             const OfxRectI& box = sliceBox[k + slices];
             if (box.x1 >= box.x2) {
                 continue; // empty slice
             }
             if ( abort() ) {
-                aborted = true;
-                break;
+                return;
             }
             const double sliceSize = std::abs(k) * maxSize / slices;
             const double sx = sliceSize * args.renderScale.x;
@@ -769,9 +827,7 @@ ZDefocusPlugin::render(const RenderArguments &args)
             OfxRectI crop = {box.x1 - 2 * hx, box.y1 - 2 * hy, box.x2 + 2 * hx, box.y2 + 2 * hy};
             Coords::rectIntersection(crop, procBox, &crop);
             // premultiplied slice image, with the slice mask and the all-ones image as last channels
-            const int cw = crop.x2 - crop.x1;
-            const int ch = crop.y2 - crop.y1;
-            layer.assign(cw, ch, 1, nComps + 2, 0.f);
+            layer.assign(crop.x2 - crop.x1, crop.y2 - crop.y1, 1, nComps + 2, 0.f);
             layer.get_shared_channel(nComps + 1).fill(1.f);
             cimg_forXY(layer, x, y) {
                 if (sliceIndex(crop.x1 + x, crop.y1 + y) == k) {
@@ -781,52 +837,22 @@ ZDefocusPlugin::render(const RenderArguments &args)
                     layer(x, y, 0, nComps) = 1.f;
                 }
             }
-            if (aperture == eApertureCustom) {
-                if ( !customBlur(layer, kernel, sx, sy, *this) ) {
-                    aborted = true;
-                    break;
-                }
-            } else if (aperture == eApertureDisc) {
-                discBlur(layer, sx / 2, sy / 2, *this);
-            } else {
-                gaussianBlur(layer, sx, sy, *this);
+            if ( !apertureBlur(layer, aperture, kernel, sx, sy, *this) ) {
+                return;
             }
-            if ( abort() ) {
-                aborted = true;
-                break;
-            }
-            // normalize, and merge over
-            for (int y = 0; y < ch; ++y) {
-                for (int x = 0; x < cw; ++x) {
-                    const float ones = layer(x, y, 0, nComps + 1);
-                    if ( !(ones > 1e-6f) ) {
-                        continue;
-                    }
-                    // clamp the mask: it may have small negative values (ringing) after the FFT
-                    const float a = (std::max)( 0.f, (std::min)(1.f, layer(x, y, 0, nComps) / ones) );
-                    for (int c = 0; c < nComps; ++c) {
-                        float& r = result(crop.x1 + x, crop.y1 + y, 0, c);
-                        r = layer(x, y, 0, c) / ones + (1.f - a) * r;
-                    }
-                    float& r = result(crop.x1 + x, crop.y1 + y, 0, nComps);
-                    r = a + (1.f - a) * r;
-                }
-            }
+            mergeOver(result, layer, crop, nComps);
         }
     } catch (CImgAbortException&) {
-        aborted = true;
-    }
-    if (aborted) {
         return;
     }
 
-    // write the result to the render window
+    // write the result, divided by the coverage, to the render window
     OfxRectI outRect;
     if ( !Coords::rectIntersection(renderWindow, procRect, &outRect) ) {
         return;
     }
     for (int y = outRect.y1; y < outRect.y2; ++y) {
-        float* d = (float*)dst->getPixelAddress(outRect.x1, y);
+        float* d = static_cast<float*>( dst->getPixelAddress(outRect.x1, y) );
         if (!d) {
             continue;
         }
@@ -838,13 +864,11 @@ ZDefocusPlugin::render(const RenderArguments &args)
             for (int c = 0; c < nComps; ++c) {
                 d[c] = result(ix, iy, 0, c) * norm;
             }
-            if (unpremultiplied) {
+            if ( unpremultiplied && (d[3] > 0.f) ) {
                 const float a = d[3];
-                if (a > 0.f) {
-                    d[0] /= a;
-                    d[1] /= a;
-                    d[2] /= a;
-                }
+                d[0] /= a;
+                d[1] /= a;
+                d[2] /= a;
             }
         }
     }
@@ -888,12 +912,11 @@ ZDefocusPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
                                      RegionOfInterestSetter &rois)
 {
     const double time = args.time;
-    const double maxSize = (std::max)(0., _maxSize->getValueAtTime(time));
-    const ApertureEnum aperture = (ApertureEnum)_aperture->getValueAtTime(time);
+    const ApertureEnum aperture = static_cast<ApertureEnum>( _aperture->getValueAtTime(time) );
     // same padding as in render(), converted from pixels to canonical coordinates
-    const ApertureEnum padAperture = paddingAperture(aperture, args.renderScale);
-    const double padX = blurPadding(maxSize * args.renderScale.x, padAperture) * clipPAR(_srcClip) / args.renderScale.x;
-    const double padY = blurPadding(maxSize * args.renderScale.y, padAperture) / args.renderScale.y;
+    const OfxPointI pad = renderPadding(_maxSize->getValueAtTime(time), aperture, args.renderScale);
+    const double padX = pad.x * clipPAR(_srcClip) / args.renderScale.x;
+    const double padY = pad.y / args.renderScale.y;
     OfxRectD roi = args.regionOfInterest;
     roi.x1 -= padX;
     roi.x2 += padX;
@@ -917,7 +940,7 @@ ZDefocusPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
     // on the kOfxImageEffectPropRegionOfInterest inArgs property set"), so that the host does not
     // render the kernel generator for nothing. Draft mode is not known here (see paddingAperture()).
     OfxRectD filterRoI = {0., 0., 0., 0.};
-    if ( (padAperture == eApertureCustom) && _filterClip->isConnected() ) {
+    if ( (paddingAperture(aperture, args.renderScale) == eApertureCustom) && _filterClip->isConnected() ) {
         OfxPointD formatCenter;
         cimgGetFilterRoD(*this, _filterClip, time, &filterRoI, &formatCenter);
     }
