@@ -123,17 +123,18 @@ CImgFilterPluginHelperBase::CImgFilterPluginHelperBase(OfxImageEffectHandle hand
 // effect has any inputs" (A for an RGB Source with the Alpha Mask); HostSupport-based hosts give
 // RGBA when an Alpha and a non-Alpha input are connected (an RGB Source with the Mask); Natron
 // gives the most components of all the inputs (RGBA for CImgConvolve with an RGB Source and an
-// RGBA Filter). The output follows Source, as with a filter: give both the unmapped components of
-// Source (read the unmapped ones: the mapped ones may still be those of the previous clip
-// preferences). Every CImgFilterPluginHelper plug-in supports all the components that
-// isSupportedComponents() accepts, on Source and Output (issue #251).
+// RGBA Filter). The output follows Source, as with a filter: give both the components the host
+// mapped Source to, which the plug-in declares on Source, and so on Output, which declares the same
+// ones (e.g. RGBA for an RGB Source on EdgeExtend, which only declares RGBA). The unmapped
+// components may not be declared. Natron and HostSupport set the default mapping on the clips
+// before calling this action (issue #251).
 void
 CImgFilterPluginHelperBase::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     if ( (getContext() != eContextGeneral) || !_srcClip || !_srcClip->isConnected() ) {
         return;
     }
-    const PixelComponentEnum srcComponents = _srcClip->getUnmappedPixelComponents();
+    const PixelComponentEnum srcComponents = _srcClip->getPixelComponents();
     if ( isSupportedComponents(srcComponents) ) {
         clipPreferences.setClipComponents(*_srcClip, srcComponents);
         clipPreferences.setClipComponents(*_dstClip, srcComponents);
