@@ -135,10 +135,15 @@ jobs:
           PATH=$(printf '%s' "$PATH" | tr ':' '\n' | grep -v -e '^/opt/homebrew' -e '^/usr/local/' | paste -sd: -)
           echo "PATH=/opt/local/bin:/opt/local/sbin:$PATH" >> "$GITHUB_ENV"
       - name: Target the runner's macOS
-        # CI builds are not shipped, so they target the runner's macOS major version (e.g. 15.0
-        # on macos-15), not CMakeLists.txt's default 14.0. CMake reads MACOSX_DEPLOYMENT_TARGET
-        # at the first configure. The binary releases (release.yml) still target macOS 14.0.
-        run: echo "MACOSX_DEPLOYMENT_TARGET=$(sw_vers -productVersion | cut -d. -f1).0" >> "$GITHUB_ENV"
+        # These builds are not uploaded, so they target the runner's macOS major version (e.g.
+        # 15.0 on macos-15), not CMakeLists.txt's default 14.0. CMake reads
+        # MACOSX_DEPLOYMENT_TARGET at the first configure. The uploaded builds of ci.yml and the
+        # binary releases (release.yml) keep 14.0.
+        run: |
+          v=$(sw_vers -productVersion)
+          m=${v%%.*}
+          case $m in ''|*[!0-9]*) echo "bad macOS version $v"; exit 1;; esac
+          echo "MACOSX_DEPLOYMENT_TARGET=$m.0" >> "$GITHUB_ENV"
       - name: Build
         # The bundles are installed in install-<config>/OFX/Plugins.
         run: |
