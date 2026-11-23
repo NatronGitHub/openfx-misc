@@ -160,6 +160,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              with the analysisWarning status parameter (the analysis and the render are unchanged);
 //              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79);
 //              a NaN Mask sample is outside the analysis mask, as a 0 sample (issue #220)
+//              (1.1 is unreleased, fixed in place) with the R'G'B' or RGB color model and R unchecked, the
+//              blue channel is denoised: isIdentity tested processR instead of processB for it (issue #323)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -3014,7 +3016,7 @@ DenoiseSharpenPlugin::isIdentity(const IsIdentityArguments &args,
     } else if ( ( (colorModel == eColorModelRGB) || (colorModel == eColorModelLinearRGB) ) &&
                 (!processR || !denoise[0]) &&
                 (!processG || !denoise[1]) &&
-                (!processR || !denoise[2]) &&
+                (!processB || !denoise[2]) &&
                 (!processA || !denoise[3]) &&
                 (sharpenAmount <= 0.) ) {
         identityClip = _srcClip;

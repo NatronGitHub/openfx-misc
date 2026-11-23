@@ -62,6 +62,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // 1.1 and 2.0 (2.0 is unreleased, fixed in place): in the filter context, the B input is the mandated Source
 //      clip (it had no Source clip), and Source is not remapped there (Output has the components of Source);
 //      the general context is unchanged (issue #217)
+// 1.1 and 2.0 (unreleased, fixed in place): isIdentity no longer returns B where the render window misses
+//      the A RoD: there, the output is B * (1 - mask * mix), not B (issue #321)
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -517,39 +519,20 @@ KeyMixPlugin::isIdentity(const IsIdentityArguments &args,
         return true;
     }
 
+    // Outside the mask RoD, the mask is 0 and render() gives B. Everywhere else, it gives
+    // A * m * mix + B * (1 - m * mix), with A black and transparent outside the A RoD (render sets
+    // tmpPix to 0 there): even out of A, B is attenuated where the mask is non-zero, so the A RoD
+    // cannot make the effect an identity. ofxsMaskGetRoDPixel returns false if the mask is not applied
+    // (then m = 1) or inverted (then m = 1 outside the mask RoD).
     OfxRectI maskRoD;
-    bool maskRoDValid = ofxsMaskGetRoDPixel(_maskClip, _maskApply, _maskInvert, time, args.renderScale, &maskRoD);
-    // effect is identity if the renderWindow doesn't intersect the mask RoD
-    if ( maskRoDValid && !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
+    if ( ofxsMaskGetRoDPixel(_maskClip, _maskApply, _maskInvert, time, args.renderScale, &maskRoD) &&
+         !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
         identityClip = _srcClipB;
 
         return true;
     }
 
-    // The region of effect is only the set of the intersections between the A inputs and the mask.
-    // If at least one of these regions intersects the renderwindow, the effect is not identity.
-
-    if ( _srcClipA->isConnected() ) {
-        OfxRectD srcARoD = _srcClipA->getRegionOfDefinition(time);
-        if ( !Coords::rectIsEmpty(srcARoD) ) {
-            OfxRectI srcARoDPixel;
-            Coords::toPixelEnclosing(srcARoD, args.renderScale, _srcClipA->getPixelAspectRatio(), &srcARoDPixel);
-            bool srcARoDValid = true;
-            if (maskRoDValid) {
-                // mask the srcARoD with the mask RoD. The result may be empty
-                srcARoDValid = Coords::rectIntersection<OfxRectI>(srcARoDPixel, maskRoD, &srcARoDPixel);
-            }
-            if ( srcARoDValid && Coords::rectIntersection<OfxRectI>(args.renderWindow, srcARoDPixel, 0) ) {
-                // renderWindow intersects one of the effect areas
-                return false;
-            }
-        }
-    }
-
-    // renderWindow intersects no area where a "A" source is applied
-    identityClip = _srcClipB;
-
-    return true;
+    return false;
 } // KeyMixPlugin::isIdentity
 
 mDeclarePluginFactoryVersioned(KeyMixPluginFactory, {ofxsThreadSuiteCheck();}, {});
