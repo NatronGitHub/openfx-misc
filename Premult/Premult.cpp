@@ -68,6 +68,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              (this line said 2.1, but the minor version was not incremented)
 // version 2.1: describes on hosts that are not multi-planar (e.g. OFX 1.4 hosts), with a fixed channel menu
 //              (R, G, B, A, 0, 1); describeInContext failed there (issue #166)
+//              New "Invert" parameter (issue #295), off by default: use 1 - alpha (or 1 minus the
+//              selected channel; the constants 0 and 1 are swapped). Existing projects render the same.
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -126,6 +128,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamPremultChanged "premultChanged" // left for backward compatibility
 
+#define kParamInvert "invert"
+#define kParamInvertLabel "Invert"
+#define kParamInvertHint "Use 1 minus the selected channel instead of the channel itself (the constants 0 and 1 are swapped)."
+
 static bool gIsMultiplanar = false;
 
 // TODO: sRGB conversions for short and byte types
@@ -145,6 +151,7 @@ protected:
     bool _processG;
     bool _processB;
     bool _processA;
+    bool _invert;
 
 public:
     /** @brief no arg ctor */
@@ -159,6 +166,7 @@ public:
         , _processG(true)
         , _processB(true)
         , _processA(false)
+        , _invert(false)
     {
     }
 
@@ -177,6 +185,10 @@ public:
         _processB = processB;
         _processA = processA;
     }
+
+    // Use maxValue minus the sampled premult channel. The constants (no premult channel image)
+    // are not inverted here: setupAndProcess() swaps them.
+    void setInvert(bool invert) { _invert = invert; }
 };
 
 template <class PIX, int maxValue>
@@ -303,6 +315,9 @@ private:
                 if (srcPix) {
                     if ( (_premultChanIndex >= 0 || !_premultWith1IfNoImage) && (processR || processG || processB || processA) ) {
                         PIX alpha = premultPix ? premultPix[_premultChanIndex] : 0.;
+                        if (_invert && premultPix) {
+                            alpha = (PIX)(maxValue - alpha);
+                        }
                         for (int c = 0; c < nComponents; c++) {
                             PIX srcPixVal = c < _srcNComps ? srcPix[c] : 0;
                             if (isPremult) {
@@ -355,6 +370,7 @@ public:
         , _premult(NULL)
         , _inputPlane(NULL)
         //, _premultChanged(NULL)
+        , _invert(NULL)
     {
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -377,6 +393,8 @@ public:
         _inputPlane = gIsMultiplanar ? fetchChoiceParam(kParamInputPlane) : NULL;
         //_premultChanged = fetchBooleanParam(kParamPremultChanged);
         //assert(_premultChanged);
+        _invert = fetchBooleanParam(kParamInvert);
+        assert(_invert);
 
         if (gIsMultiplanar) {
 
@@ -429,6 +447,7 @@ private:
     ChoiceParam* _premult;
     ChoiceParam* _inputPlane;
     //BooleanParam* _premultChanged; // set to true the first time the user connects src
+    BooleanParam* _invert;
 };
 
 
@@ -679,6 +698,13 @@ PremultPlugin<isPremult>::setupAndProcess(PremultBase &processor,
             }
         }
     }
+    const bool invert = _invert->getValueAtTime(args.time);
+    if (invert && !premultImg) {
+        // a constant (0, 1, or the opaque alpha of an image without alpha): 1 - constant
+        premultChannelIndex = -1;
+        premultWith1IfNoImage = !premultWith1IfNoImage;
+    }
+    processor.setInvert(invert);
     processor.setPremultChannelImg(premultImg, premultChannelIndex, premultWith1IfNoImage);
     // set the render window
     processor.setRenderWindow(args.renderWindow, args.renderScale);
@@ -850,14 +876,21 @@ PremultPlugin<isPremult>::isIdentity(const IsIdentityArguments &args,
         OFX::Clip* clip = 0;
         int premultChanIndex;
         MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(_premult->getName(), &clip, &premultPlane, &premultChanIndex);
-        premultByOne = (stat == MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedConstant1);
+        const bool invert = _invert->getValueAtTime(args.time);
+        // with invert, the constant 0 is used as 1
+        premultByOne = (stat == (invert ? MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedConstant0 :
+                                 MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedConstant1) );
     } else {
         // getPlaneNeeded() can only be used when multiplanar
         int premultChanIndex;
-        if ( !getPremultChannelNonMultiplanar(args.time, &premultChanIndex, &premultByOne) ) {
+        bool fillWith1;
+        if ( !getPremultChannelNonMultiplanar(args.time, &premultChanIndex, &fillWith1) ) {
             // channel not available: render reports the error
             return false;
         }
+        const bool invert = _invert->getValueAtTime(args.time);
+        // with invert, the constant 0 is used as 1
+        premultByOne = invert ? (premultChanIndex < 0 && !fillWith1) : fillWith1;
     }
     if ( premultByOne || (!processR && !processG && !processB && !processA) ) {
         // no processing: identity
@@ -1135,6 +1168,18 @@ PremultPluginFactory<isPremult>::describeInContext(ImageEffectDescriptor &desc,
         param->setIsSecretAndDisabled(true);
         param->setAnimates(false);
         param->setEvaluateOnChange(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    // invert (last: added in version 2.1, issue #295; off, so that existing projects render the same)
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamInvert);
+        param->setLabel(kParamInvertLabel);
+        param->setHint(kParamInvertHint);
+        param->setDefault(false);
+        param->setAnimates(true);
         if (page) {
             page->addChild(*param);
         }
