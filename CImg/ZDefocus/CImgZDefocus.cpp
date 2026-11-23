@@ -176,6 +176,10 @@ unnegatedDepthType(DepthTypeEnum depthType)
 #define kParamFillBackgroundLabel "Fill Background"
 #define kParamFillBackgroundHint "Fill the background hidden by each slice in front of the focal plane with the farther pixels around it, so that a blurred foreground object becomes transparent near its edges and shows the background behind it, instead of having a hard inner edge. The filled background may show smeared detail. Slower."
 
+#define kParamBlurInside "blurInside"
+#define kParamBlurInsideLabel "Blur Inside"
+#define kParamBlurInsideHint "Slightly blur the pixels that are in focus (with no blur: within the Depth of Focus, or exactly at the focus), as the documented 'blur inside', with a 3x3 separable kernel [0.125, 0.75, 0.125] of variance 0.25 (a standard deviation of 0.5 pixel), the smallest blur that softens one-pixel edges. By design, only the in-focus region is blurred: the pixels that are out of focus are not affected, even slightly."
+
 #define kParamAperture "aperture"
 #define kParamApertureLabel "Aperture"
 #define kParamApertureHint "Shape of the aperture (the blur kernel). Draft renders and renders at a reduced scale (proxy) always use the Gaussian."
@@ -577,6 +581,29 @@ customBlur(CImg<cimgpix_t>& img,
     cimgConvolveFFT( img, chans, k, 1. / sum, -(k.width() / 2), -(k.height() / 2), effect );
 } // customBlur
 
+// The Blur Inside kernel: a separable [a, b, a] of variance 2a = 0.25 (a standard deviation of
+// 0.5 pixel), so a = 0.125 and b = 0.75, whatever the aperture.
+constexpr float kInsideCenter = 0.75f;
+constexpr float kInsideSide = (1.f - kInsideCenter) / 2;
+
+// In-place "blur inside" of all channels of img (see kInsideCenter), at the render scale: a
+// Gaussian with the same standard deviation at a reduced scale.
+void
+insideBlur(CImg<cimgpix_t>& img,
+           const OfxPointD& renderScale,
+           const ImageEffect& effect)
+{
+    if ( isProxyScale(renderScale) ) {
+        truncatedGaussianBlur(img, 0.5 * renderScale.x, 0.5 * renderScale.y, 1, 1, effect);
+        return;
+    }
+    const CImg<cimgpix_t> kx(3, 1, 1, 1, kInsideSide, kInsideCenter, kInsideSide);
+    const CImg<cimgpix_t> ky(1, 3, 1, 1, kInsideSide, kInsideCenter, kInsideSide);
+    for (int c = 0; c < img.spectrum() && !effect.abort(); ++c) {
+        img.get_shared_channel(c).convolve(kx, 0).convolve(ky, 0); // zero boundary conditions
+    }
+}
+
 // In-place blur of all channels of img by the aperture, with a blur size of (sx, sy) pixels.
 // The custom kernel is only used by eApertureCustom. Returns false if the effect was aborted.
 bool
@@ -832,6 +859,7 @@ public:
         , _slices( fetchIntParam(kParamSlices) )
         , _aperture( fetchChoiceParam(kParamAperture) )
         , _fillBackground( fetchBooleanParam(kParamFillBackground) )
+        , _blurInside( fetchBooleanParam(kParamBlurInside) )
     {
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGBA ||
                              _dstClip->getPixelComponents() == ePixelComponentRGB ||
@@ -841,7 +869,7 @@ public:
                              _srcClip->getPixelComponents() == ePixelComponentAlpha) );
         assert(_depthClip && _filterClip);
         assert(_depthChannel && _depthType && _useFocusPoint && _focusPoint && _focus && _depthOfFocus &&
-               _size && _maxSize && _slices && _aperture && _fillBackground);
+               _size && _maxSize && _slices && _aperture && _fillBackground && _blurInside);
 
         updateGUI();
     }
@@ -877,6 +905,7 @@ private:
     IntParam* _slices;
     ChoiceParam* _aperture;
     BooleanParam* _fillBackground;
+    BooleanParam* _blurInside;
 };
 
 
@@ -997,6 +1026,7 @@ ZDefocusPlugin::render(const RenderArguments &args)
     const double maxSize = kRadiusToDiameter * _maxSize->getValueAtTime(time); // the largest kernel diameter
     const int slices = (std::max)( 1, _slices->getValueAtTime(time) );
     const bool fillBackground = _fillBackground->getValueAtTime(time);
+    const bool blurInside = _blurInside->getValueAtTime(time);
     const ApertureEnum paramAperture = static_cast<ApertureEnum>( _aperture->getValueAtTime(time) );
     // in draft mode or proxy mode, always use the Gaussian aperture
     ApertureEnum aperture = ( args.renderQualityDraft || isProxyScale(args.renderScale) ) ? eApertureGaussian : paramAperture;
@@ -1067,9 +1097,12 @@ ZDefocusPlugin::render(const RenderArguments &args)
             // The layer channels: the premultiplied slice image, the slice mask, the all-ones image,
             // and, to fill the background hidden by the slices in front of the focal plane, the
             // premultiplied background behind the slice and its mask. They are blurred together.
+            // With Blur Inside, the in-focus pixels (q = 0) are left out of slice 0, and blurred below.
             const bool fill = fillBackground && (k > 0);
+            const bool inside = blurInside && (k == 0);
             layer.assign(crop.x2 - crop.x1, crop.y2 - crop.y1, 1, fill ? channels.fillCount() : channels.sliceCount(), 0.f);
-            setWeightedImage(layer, 0, img, sliceCoord, crop, [k](float q) { return sliceWeight(q, k); });
+            setWeightedImage(layer, 0, img, sliceCoord, crop,
+                             [k, inside](float q) { return (inside && q == 0.f) ? 0.f : sliceWeight(q, k); });
             layer.get_shared_channel( channels.ones() ).fill(1.f);
             if (fill) {
                 setWeightedImage(layer, channels.behind(), img, sliceCoord, crop, [k](float q) { return behindWeight(q, k); });
@@ -1083,6 +1116,13 @@ ZDefocusPlugin::render(const RenderArguments &args)
                 fillHiddenBackground( result, layer, crop, channels, static_cast<float>(kFillMinPixelMask / kernelArea) );
             }
             mergeOver(result, layer, crop, channels);
+            if (inside) {
+                layer.assign(crop.x2 - crop.x1, crop.y2 - crop.y1, 1, channels.sliceCount(), 0.f);
+                setWeightedImage(layer, 0, img, sliceCoord, crop, [](float q) { return (q == 0.f) ? 1.f : 0.f; });
+                layer.get_shared_channel( channels.ones() ).fill(1.f);
+                insideBlur(layer, args.renderScale, *this);
+                mergeOver(result, layer, crop, channels);
+            }
         }
     } catch (CImgAbortException&) {
         return;
@@ -1103,9 +1143,9 @@ ZDefocusPlugin::isIdentity(const IsIdentityArguments &args,
 {
     const double time = args.time;
 
-    if ( !_depthClip->isConnected() ||
-         (_size->getValueAtTime(time) <= 0.) ||
-         (_maxSize->getValueAtTime(time) <= 0.) ) {
+    // with no blur, Blur Inside still blurs every pixel (they are all in focus)
+    const bool noBlur = (_size->getValueAtTime(time) <= 0.) || (_maxSize->getValueAtTime(time) <= 0.);
+    if ( !_depthClip->isConnected() || ( noBlur && !_blurInside->getValueAtTime(time) ) ) {
         identityClip = _srcClip;
 
         return true;
@@ -1404,6 +1444,15 @@ ZDefocusPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamFillBackground);
         param->setLabel(kParamFillBackgroundLabel);
         param->setHint(kParamFillBackgroundHint);
+        param->setDefault(true);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamBlurInside);
+        param->setLabel(kParamBlurInsideLabel);
+        param->setHint(kParamBlurInsideHint);
         param->setDefault(true);
         if (page) {
             page->addChild(*param);
