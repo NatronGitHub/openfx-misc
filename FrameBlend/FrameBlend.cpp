@@ -69,7 +69,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              the operator change it, and the unprocessed channels are the source ones with Mix 1 and no mask (they were 0);
 //              the current frame is in the frames needed when the render reads it (issue #325);
 //              Product is correct on byte and short images (it started at 1 instead of the maximum value,
-//              so it was almost black, and where no frame is blended it is now white, as on float images),
+//              so it was almost black, and where every frame is under the Foreground Matte it is now white, as on float images),
 //              and one frame with Decay 0 is passed through on byte and short images (issue #335)
 // version 2.1 (kept for backward compatibility, frames aligned on the last frame of the range): the fixes of 3.1
 //              (the NaN audit ones also applied to version 2, which was still registered as 2.0, SupportExt #80 and #82,
