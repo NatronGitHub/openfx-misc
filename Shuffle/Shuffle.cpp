@@ -2073,18 +2073,15 @@ ShufflePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &des
         }
     }
 
-    std::vector<std::string> clipsForChannels(2);
-    clipsForChannels[0] = kClipA; //this->getMajorVersion() < 3 ? kClipA : kClipB;
-    clipsForChannels[1] = kClipB; //this->getMajorVersion() < 3 ? kClipB : kClipA;
     // With the multiplane suites, the options of the channel choices are matched with the clips that the
     // instance gives (fetchDynamicMultiplaneChoiceParameter): with several clips they have a clip prefix
     // ("A.", "B."), with one clip they have none. The filter context only has Source, which the instance
     // gives as its only clip (issue #255): list Source only, so that the options are those of that clip.
     // The A channels are its first options (R, G, B, A, as in the A.r to A.a options of two clips).
     const bool channelsFromSourceOnly = (context == eContextFilter) && (gIsMultiPlanarV1 || gIsMultiPlanarV2);
-    if (channelsFromSourceOnly) {
-        clipsForChannels.assign(1, kOfxImageEffectSimpleSourceClipName);
-    }
+    const std::vector<std::string> clipsForChannels = channelsFromSourceOnly ?
+        std::vector<std::string>{kOfxImageEffectSimpleSourceClipName} :
+        std::vector<std::string>{kClipA, kClipB};
     const bool defaultIsA = (this->getMajorVersion() < 3) || channelsFromSourceOnly;
 
     if (gSupportsRGB || gSupportsRGBA) {
