@@ -75,7 +75,9 @@ build() {
 rm -rf "$out/build" "$out/build-arm64" "$out/build-arm64x" "$out/install" "$out/install-denoisesharpen" "$out/install-noop" "$out/symbols"
 mkdir -p "$out/install-denoisesharpen" "$out/install-noop" # (empty with --no-standalone)
 if [ "$arch" = x64 ]; then
-    build "$out/build" "$out/install" Win64
+    # DIAGNOSTIC (#66): DEBUG turns on the Support library's log of every action and property access,
+    # written to the file named by OFX_PLUGIN_LOGFILE (default: ofxTestLog.txt in the host's directory)
+    CXXFLAGS="${CXXFLAGS:-} /DDEBUG" build "$out/build" "$out/install" Win64
 else
     rm -rf "$out/install-arm64" "$out/install-arm64-denoisesharpen" "$out/install-arm64-noop" "$out/arm64x"
     build "$out/build-arm64" "$out/install-arm64" Win-arm64 \
