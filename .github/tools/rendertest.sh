@@ -544,6 +544,15 @@ tests=(
     # their tiles differ slightly (up to 0.003) from the full render.
     "CImgBlur tile|net.sf.cimg.CImgBlur|filter|float|nonconst+tile||-i Source=checker:8 -i Mask=none size=5,5 expandRoD=0 filter=2 --frames 0 --window 100,100,300,250"
     "Merge tile|net.sf.openfx.MergePlugin|filter|float|nonconst+tile||-i A=checker:16 -i Source=ramp -i Mask=none --frames 0 --window 50,60,250,200"
+    # ReConverge (checked on view 0, the left view): Shift Both, disparity 11 and offset 3: each
+    # half is truncated separately (trunc(5.5) + trunc(1.5) = 6, where
+    # trunc((11 + 3) / 2) would give 7), so the left view is shifted right by 6 pixels: the first
+    # 6 of the 10 columns are black (mean 0.3 with 7). The disparity is a float image. Then tiles,
+    # with a disparity (the source RoI is the horizontal band) and without one (the RoI is the
+    # shifted render window).
+    "ReConverge both per half|net.sf.openfx.reConvergePlugin|general|float|mean=0.4,0.4,0.4,0.4||-i Source=solid:1,1,1,1 -i Disparity=solid:11,0,0,1 convergeMode=2 offset=3 --frames 0 --window 0,0,10,10"
+    "ReConverge tile|net.sf.openfx.reConvergePlugin|general|float|nonconst+tile||-i Source=ramp -i Disparity=solid:-2.75,0,0,1 convergeMode=2 offset=-3 --frames 0 --window 100,60,300,200"
+    "ReConverge tile no disparity|net.sf.openfx.reConvergePlugin|general|*|nonconst+tile||-i Source=ramp -i Disparity=none convergeMode=1 offset=37.5 --frames 0 --window 100,60,300,200"
     "Rand t=0,0.5|net.sf.openfx.Noise|general|float|nonconst+framesdiffer||-i Source=none --frames 0,0.5"
     # Shuffle (version 4 unless -m) swaps R and B (outputR=8: B.b, outputB=6:
     # B.r; 0-3: A.r-A.a, 6-9: B.r-B.a). After the first test, the A and B

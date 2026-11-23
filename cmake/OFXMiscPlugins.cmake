@@ -144,7 +144,7 @@ function(ofxmisc_check_makefiles)
   set(_cimg ${_dirs})
   list(FILTER _cimg INCLUDE REGEX "^CImg/")
   # make nomulti: the DEBUG_ONLY directories are added in debug builds only
-  # (SUBDIRS_NOMULTI += ReConverge TimeBuffer); CImg/Inpaint has no Info.plist and CImg/Matrix no
+  # (SUBDIRS_NOMULTI += TimeBuffer); CImg/Inpaint has no Info.plist and CImg/Matrix no
   # Makefile: they have no make nomulti bundle (only CMake's SEPARATE builds them)
   _ofxmisc_make_var(Makefile SUBDIRS_NOMULTI _nomulti)
   _ofxmisc_check_set("the top-level Makefile's SUBDIRS_NOMULTI" _dirs _nomulti CImg/Inpaint CImg/Matrix)
@@ -244,7 +244,7 @@ ofxmisc_plugin(Quantize ID net.sf.openfx.Quantize COMPONENTS THREADS SOURCES Mis
 ofxmisc_plugin(Radial ID net.sf.openfx.Radial COMPONENTS THREADS GENERATOR RECTANGLE_INTERACT)
 ofxmisc_plugin(Ramp ID net.sf.openfx.Ramp COMPONENTS THREADS TEXT RAMP)
 ofxmisc_plugin(Rand ID net.sf.openfx.Noise COMPONENTS THREADS GENERATOR RECTANGLE_INTERACT SOURCES Misc/randomGenerator.cpp)
-ofxmisc_plugin(ReConverge ID net.sf.openfx.reConvergePlugin COMPONENTS THREADS TEXT DEBUG_ONLY)
+ofxmisc_plugin(ReConverge ID net.sf.openfx.reConvergePlugin COMPONENTS THREADS TEXT)
 ofxmisc_plugin(Rectangle ID net.sf.openfx.Rectangle COMPONENTS THREADS GENERATOR RECTANGLE_INTERACT)
 ofxmisc_plugin(Reformat ID net.sf.openfx.Reformat COMPONENTS THREADS TRANSFORM3X3 TRANSFORM_INTERACT SHUTTER)
 ofxmisc_plugin(Retime ID net.sf.openfx.Retime COMPONENTS THREADS)

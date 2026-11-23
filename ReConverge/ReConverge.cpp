@@ -19,15 +19,17 @@
 
 /*
  * OFX ReConverge plugin.
- * Shift convergence so that tracked point appears at screen-depth.
+ * Shift convergence so that a tracked point appears at screen-depth.
  * The ReConverge node only shifts views horizontally, not vertically.
  */
 
-#ifdef DEBUG
-
-#include <cstdio>
-#include <cstdlib>
+#include <algorithm> // std::copy, std::fill, std::max, std::min
+#include <atomic>
 #include <cfloat> // DBL_MAX
+#include <cmath> // std::lround
+#include <memory> // std::unique_ptr
+#include <optional>
+#include <string>
 
 #include "ofxsProcessing.H"
 #include "ofxsPositionInteract.h"
@@ -41,14 +43,30 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginName "ReConvergeOFX"
 #define kPluginGrouping "Views/Stereo"
-#define kPluginDescription "Shift convergence so that a tracked point appears at screen-depth. " \
-    "Horizontal disparity may be provided in the red channel of the " \
-    "disparity input if it has RGBA components, or the Alpha channel " \
-    "if it only has Alpha. " \
-    "If no disparity is given, only the offset is taken into account. " \
-    "The amount of shift in pixels is rounded to the closest integer. " \
-    "The ReConverge node only shifts views horizontally, not vertically."
+#define kPluginDescription \
+    "Shift convergence so that a tracked point appears at screen-depth.\n" \
+    "The views are shifted horizontally so that the point at \"Converge Upon\" gets a zero disparity " \
+    "(it appears at screen depth), and then by the Convergence Offset. Mode selects the view that is shifted.\n" \
+    "The horizontal disparity is read in the first channel of the Disparity input (red, or alpha if it " \
+    "only has alpha), in the left view, at the Converge Upon point (at the nearest edge pixel if the point " \
+    "is outside the disparity image). It is the position of the matching point in the right view minus " \
+    "its position in the left view, in pixels at full resolution. The disparity must be a float image (all the clips then get the float depth): an 8- or " \
+    "16-bit disparity cannot hold a disparity in pixels, so it is ignored (with a warning). Without a " \
+    "Disparity input, only the offset is applied.\n" \
+    "The disparity and the offset are each truncated to an integer number of pixels (in " \
+    "\"Shift Both\" mode, each half is truncated), so that the image is never resampled. The pixels shifted " \
+    "in are black and transparent, and the region of definition is the one of the source.\n" \
+    "The views are identified by their index: the first view is the left view and the second " \
+    "one the right view. Shift Right only shifts the right view, Shift Left only the left view, and Shift " \
+    "Both shifts the left view one way and every other view the other way. On a host without multiview, " \
+    "the only view is the left view.\n" \
+    "At a render scale below 1 (proxy), the shift is scaled and rounded to the nearest pixel. Only the " \
+    "Source channels are output: other planes, such as a disparity, are not shifted."
 #define kPluginIdentifier "net.sf.openfx.reConvergePlugin"
+// version 1.0: the first working version: the offset became a double param (truncated in
+// render), and the converge point defaults to (0,0). An early,
+// unfinished version 1.0 (with an Int offset) was built in release in 2013-14, before Natron 1.0;
+// it was then only built in Debug.
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -61,7 +79,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamConvergePoint "convergePoint"
 #define kParamConvergePointLabel "Converge Upon"
-#define kParamConvergePointHint "Position of the tracked point when the convergence is set"
+#define kParamConvergePointHint \
+    "The point that appears at screen depth: the views are shifted so that its disparity is zero. " \
+    "Link it to a tracker to keep a moving element at screen depth. Only used with a Disparity input " \
+    "(in the general context)."
 
 #define kParamInteractive "interactive"
 #define kParamInteractiveLabel "Interactive"
@@ -70,88 +91,196 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamOffset "offset"
 #define kParamOffsetLabel "Convergence Offset"
-#define kParamOffsetHint "The disparity of the tracked point will be set to this"
+#define kParamOffsetHint \
+    "Disparity added after the convergence, in pixels at full resolution (truncated to an integer). " \
+    "Positive values bring the elements forward from the screen, negative values push them back."
 
 #define kParamConvergeMode "convergeMode"
 #define kParamConvergeModeLabel "Mode"
-#define kParamConvergeModeHint "Select to view to be shifted in order to set convergence"
-#define kParamConvergeModeOptionShiftRight "Shift Right", "Shift right view.", "right"
-#define kParamConvergeModeOptionShiftLeft "Shift Left", "Shift left view.", "left"
-#define kParamConvergeModeOptionShiftBoth "Shift Both", "Shift both views in opposite directions.", "both"
+#define kParamConvergeModeHint "The view that is shifted to set the convergence."
+#define kParamConvergeModeOptionShiftRight "Shift Right", "Shift the right view.", "right"
+#define kParamConvergeModeOptionShiftLeft "Shift Left", "Shift the left view.", "left"
+#define kParamConvergeModeOptionShiftBoth "Shift Both", "Shift the left view one way and the other views the other way, by half the shift each.", "both"
+
+// the options of kParamConvergeMode, in order
+enum ConvergeModeEnum
+{
+    eConvergeModeShiftRight = 0,
+    eConvergeModeShiftLeft,
+    eConvergeModeShiftBoth,
+};
 
 #define kClipDisparity "Disparity"
 
+// The role of a view, by its index: the first view is the left view, the second
+// one the right view. Shift Right only shifts the right view, Shift Left only the left view, and
+// Shift Both shifts the left view one way and every other view the other way.
+enum class ViewRole
+{
+    left,
+    right,
+    other, // a third view or more
+};
 
-// Base class for the RGBA and the Alpha processor
-// This class performs a translation by an integer number of pixels (x,y)
-class TranslateBase
+constexpr int kLeftView = 0; // the index of the left view, where the disparity is read
+constexpr int kRightView = 1;
+
+ViewRole
+viewRole(int view)
+{
+    return view == kLeftView ? ViewRole::left : (view == kRightView ? ViewRole::right : ViewRole::other);
+}
+
+// shifts are clamped to +-kMaxShift pixels: more than any image width, and far from the int limits
+constexpr int kMaxShift = 1 << 24;
+
+// v truncated towards zero, as the disparity and the offset are (NaN gives 0)
+int
+truncToShift(double v)
+{
+    if ( OFX::IsNaN(v) ) {
+        return 0;
+    }
+
+    return static_cast<int>( std::max( -double(kMaxShift), std::min(double(kMaxShift), v) ) );
+}
+
+// The horizontal shift of a view, in pixels at full resolution: the output pixel x is the source
+// pixel x + shift. The disparity and the offset are truncated separately, and in "Shift Both"
+// mode each half is truncated (a disparity of 11 shifts each view by 5 pixels).
+int
+viewShift(ConvergeModeEnum mode,
+          ViewRole role,
+          double disparity,
+          double offset)
+{
+    switch (mode) {
+    case eConvergeModeShiftRight:
+
+        return role == ViewRole::right ? truncToShift(disparity) + truncToShift(offset) : 0;
+    case eConvergeModeShiftLeft:
+
+        return role == ViewRole::left ? -( truncToShift(disparity) + truncToShift(offset) ) : 0;
+    case eConvergeModeShiftBoth: {
+        const int half = truncToShift(disparity / 2) + truncToShift(offset / 2);
+
+        return role == ViewRole::left ? -half : half;
+    }
+    }
+
+    return 0;
+}
+
+// Is the view passed to isIdentity and getRegionsOfInterest? Hosts with the Nuke multiview plane
+// suite (V2) pass it (the plug-in is view aware), and hosts without views (OFX 1.4: neither that
+// suite nor the Vegas stereoscopic suite) only have view 0. A Vegas host may not pass it.
+// Computed once: fetchSuite logs the missing suites.
+bool
+hostPassesViewToActions()
+{
+    static const bool passesView = fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true) ||
+                                   !fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true);
+
+    return passesView;
+}
+
+// The pixel, at the render scale, where the disparity is read: the one that contains the converge
+// point, or the nearest one in dispBounds (the pixels of the disparity RoD) if the point is
+// outside. None if dispBounds is empty.
+std::optional<OfxPointI>
+convergePixel(const OfxPointD& convergePoint,
+              const OfxRectI& dispBounds,
+              const OfxPointD& renderScale,
+              double par)
+{
+    if ( Coords::rectIsEmpty(dispBounds) ) {
+        return std::nullopt;
+    }
+    OfxPointI pixel;
+    Coords::toPixel(convergePoint, renderScale, par, &pixel);
+    pixel.x = std::max( dispBounds.x1, std::min(dispBounds.x2 - 1, pixel.x) );
+    pixel.y = std::max( dispBounds.y1, std::min(dispBounds.y2 - 1, pixel.y) );
+
+    return pixel;
+}
+
+// The disparity at pixel p of a float disparity image: its first component (alpha for an Alpha
+// image), 0 outside the image.
+double
+disparityAt(const Image& disp,
+            const OfxPointI& p)
+{
+    assert(disp.getPixelDepth() == eBitDepthFloat);
+    const float* pix = static_cast<const float*>( disp.getPixelAddress(p.x, p.y) );
+
+    return pix ? *pix : 0.;
+}
+
+// Base class of the processors: the output pixel (x, y) is the source pixel (x + shift, y), or
+// black and transparent outside the source image.
+class ShiftBase
     : public ImageProcessor
 {
 protected:
-    const Image *_srcImg;
-    int _translateX;
-    int _translateY;
+    const Image *_srcImg = nullptr;
+    int _shift = 0;
 
 public:
-    /** @brief no arg ctor */
-    TranslateBase(ImageEffect &instance)
+    explicit ShiftBase(ImageEffect &instance)
         : ImageProcessor(instance)
-        , _srcImg(NULL)
-        , _translateX(0)
-        , _translateY(0)
     {
     }
 
-    /** @brief set the src image */
-    void setSrcImg(const Image *v) {_srcImg = v; }
+    void setSrcImg(const Image *v) { _srcImg = v; }
 
-    /** @brief set the translation vector */
-    void setTranslate(int x,
-                      int y) {_translateX = x; _translateY = y; }
+    void setShift(int shift) { _shift = shift; }
 };
 
-// template to do the RGBA processing
-template <class PIX, int nComponents, int max>
-class ImageTranslator
-    : public TranslateBase
+template <class PIX, int nComponents>
+class ImageShifter
+    : public ShiftBase
 {
 public:
-    // ctor
-    ImageTranslator(ImageEffect &instance)
-        : TranslateBase(instance)
-    {}
+    explicit ImageShifter(ImageEffect &instance)
+        : ShiftBase(instance)
+    {
+    }
 
 private:
-    // and do some processing
     void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
         unused(rs);
-        for (int y = procWindow.y1; y < procWindow.y2; y++) {
+        // [x1, x2): the output columns whose source column x + _shift is in the source image
+        int x1 = procWindow.x1;
+        int x2 = procWindow.x1;
+        if (_srcImg) {
+            const OfxRectI& srcBounds = _srcImg->getBounds();
+            x1 = std::max(procWindow.x1, srcBounds.x1 - _shift);
+            x2 = std::min(procWindow.x2, srcBounds.x2 - _shift);
+            if (x2 <= x1) {
+                x1 = x2 = procWindow.x1;
+            }
+        }
+        const int width = procWindow.x2 - procWindow.x1;
+        for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if ( _effect.abort() ) {
                 break;
             }
 
-            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
-
-            for (int x = procWindow.x1; x < procWindow.x2; x++) {
-                const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-
-                // do we have a source image to scale up
-                if (srcPix) {
-                    for (int c = 0; c < nComponents; c++) {
-#pragma message WARN("TODO")
-                        dstPix[c] = max - srcPix[c];
-                    }
-                } else {
-                    // no src pixel here, be black and transparent
-                    for (int c = 0; c < nComponents; c++) {
-                        dstPix[c] = 0;
-                    }
-                }
-
-                // increment the dst pixel
-                dstPix += nComponents;
+            PIX *dstPix = static_cast<PIX *>( _dstImg->getPixelAddress(procWindow.x1, y) );
+            assert(dstPix);
+            if (!dstPix) {
+                continue;
             }
+            const PIX *srcPix = (x1 < x2) ? static_cast<const PIX *>( _srcImg->getPixelAddress(x1 + _shift, y) ) : nullptr;
+            if (!srcPix) {
+                // no source pixel on this row: black and transparent
+                std::fill(dstPix, dstPix + width * nComponents, PIX());
+                continue;
+            }
+            dstPix = std::fill_n(dstPix, (x1 - procWindow.x1) * nComponents, PIX());
+            dstPix = std::copy(srcPix, srcPix + (x2 - x1) * nComponents, dstPix);
+            std::fill_n(dstPix, (procWindow.x2 - x2) * nComponents, PIX());
         }
     }
 };
@@ -163,160 +292,299 @@ class ReConvergePlugin
     : public ImageEffect
 {
 public:
-    /** @brief ctor */
-    ReConvergePlugin(OfxImageEffectHandle handle)
+    explicit ReConvergePlugin(OfxImageEffectHandle handle)
         : ImageEffect(handle)
-        , _dstClip(NULL)
-        , _srcClip(NULL)
-        , _dispClip(NULL)
-        , _convergepoint(NULL)
-        , _offset(NULL)
-        , _convergemode(NULL)
     {
-
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentAlpha ||
                              _dstClip->getPixelComponents() == ePixelComponentRGB ||
+#ifdef OFX_EXTENSIONS_NATRON
+                             _dstClip->getPixelComponents() == ePixelComponentXY ||
+#endif
                              _dstClip->getPixelComponents() == ePixelComponentRGBA) );
-        _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert( (!_srcClip && getContext() == eContextGenerator) ||
-                ( _srcClip && (!_srcClip->isConnected() || _srcClip->getPixelComponents() ==  ePixelComponentAlpha ||
-                               _srcClip->getPixelComponents() == ePixelComponentRGB ||
-                               _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
-        _dispClip = getContext() == eContextFilter ? NULL : fetchClip(kClipDisparity);
-        assert( !_dispClip || (_dispClip->getPixelComponents() == ePixelComponentAlpha || _dispClip->getPixelComponents() == ePixelComponentRGB || _dispClip->getPixelComponents() == ePixelComponentRGBA) );
-
-        if (getContext() == eContextGeneral) {
-            _convergepoint = fetchDouble2DParam(kParamConvergePoint);
-            assert(_convergepoint);
-        }
-        _offset = fetchIntParam(kParamOffset);
-        _convergemode = fetchChoiceParam(kParamConvergeMode);
-        assert(_offset && _convergemode);
+        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert(_srcClip);
+        // the Disparity clip only exists in the general context
+        _dispClip = (getContext() == eContextGeneral) ? fetchClip(kClipDisparity) : nullptr;
+        _convergePoint = fetchDouble2DParam(kParamConvergePoint);
+        _interactive = fetchBooleanParam(kParamInteractive);
+        _offset = fetchDoubleParam(kParamOffset);
+        _convergeMode = fetchChoiceParam(kParamConvergeMode);
+        assert(_convergePoint && _interactive && _offset && _convergeMode);
+        updateConvergePointEnabled();
     }
 
 private:
-    /* Override the render */
-    virtual void render(const RenderArguments &args) OVERRIDE FINAL;
+    void render(const RenderArguments &args) OVERRIDE FINAL;
+
+    bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime
+#ifdef OFX_EXTENSIONS_NUKE
+                    , int& view, std::string& plane
+#endif
+                    ) OVERRIDE FINAL;
+
+    void getRegionsOfInterest(const RegionsOfInterestArguments &args, RegionOfInterestSetter &rois) OVERRIDE FINAL;
+
+#ifdef OFX_EXTENSIONS_NUKE
+    void getFrameViewsNeeded(const FrameViewsNeededArguments& args, FrameViewsNeededSetter& frameViews) OVERRIDE FINAL;
+#endif
+
+    void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
 
     template <int nComponents>
     void renderInternal(const RenderArguments &args, BitDepthEnum dstBitDepth);
 
-    // override the roi call
-    virtual void getRegionsOfInterest(const RegionsOfInterestArguments &args, RegionOfInterestSetter &rois) OVERRIDE FINAL;
+    void setupAndProcess(ShiftBase &, const RenderArguments &args);
 
-    /* set up and run a processor */
-    void setupAndProcess(TranslateBase &, const RenderArguments &args);
+    bool hasDisparity() const { return _dispClip && _dispClip->isConnected(); }
+
+    // Converge Upon (and its overlay) is only used with a Disparity input. In the filter context,
+    // which has none, it is also hidden (describeInContext).
+    void updateConvergePointEnabled()
+    {
+        _convergePoint->setEnabled( hasDisparity() );
+        _interactive->setEnabled( hasDisparity() );
+    }
+
+    ConvergeModeEnum getConvergeMode(double time) const
+    {
+        return static_cast<ConvergeModeEnum>( _convergeMode->getValueAtTime(time) );
+    }
+
+    // the disparity RoD in the left view, in pixels at the render scale
+    OfxRectI getDisparityBounds(double time, const OfxPointD& renderScale) const;
+
+    // the horizontal disparity at the converge point, in the left view (0 without a disparity)
+    double fetchDisparity(const RenderArguments &args);
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    Clip *_dstClip;
-    Clip *_srcClip;
-    Clip *_dispClip;
-    Double2DParam *_convergepoint;
-    IntParam     *_offset;
-    ChoiceParam  *_convergemode;
+    Clip *_dstClip = nullptr;
+    Clip *_srcClip = nullptr;
+    Clip *_dispClip = nullptr;
+    Double2DParam *_convergePoint = nullptr;
+    BooleanParam *_interactive = nullptr;
+    DoubleParam *_offset = nullptr;
+    ChoiceParam *_convergeMode = nullptr;
+    // the 8- or 16-bit disparity warning is shown (renders may run concurrently)
+    std::atomic<bool> _disparityWarned{false};
 };
 
+// a shift in pixels at full resolution, at the render scale: rounded half away from zero, so that
+// both views of "Shift Both" stay symmetric. The pixel aspect ratio does not matter, since the
+// disparity and the offset are in pixels too.
+int
+scaledShift(int shift,
+            const OfxPointD& renderScale)
+{
+    return static_cast<int>( std::lround(shift * renderScale.x) );
+}
 
-////////////////////////////////////////////////////////////////////////////////
-/** @brief render for the filter */
+OfxRectI
+ReConvergePlugin::getDisparityBounds(double time,
+                                     const OfxPointD& renderScale) const
+{
+    assert(_dispClip);
+#ifdef OFX_EXTENSIONS_NUKE
+    const OfxRectD dispRoD = _dispClip->getRegionOfDefinition(time, kLeftView);
+#else
+    const OfxRectD dispRoD = _dispClip->getRegionOfDefinition(time);
+#endif
+    OfxRectI bounds;
+    Coords::toPixelEnclosing(dispRoD, renderScale, _dispClip->getPixelAspectRatio(), &bounds);
 
-////////////////////////////////////////////////////////////////////////////////
-// basic plugin render function, just a skelington to instantiate templates from
+    return bounds;
+}
 
+double
+ReConvergePlugin::fetchDisparity(const RenderArguments &args)
+{
+    if ( !hasDisparity() ) {
+        return 0.;
+    }
+    // The clip depth is known before fetching (it is the one of the clip preferences). With
+    // kSupportsMultipleClipDepths false, the host maps every clip to the deepest depth of the
+    // input clips (ofxClipPreferences.rst), so a float disparity makes all the clips float. The
+    // disparity is only 8- or 16-bit if it is itself 8- or 16-bit (or on a host that does not
+    // follow that rule): that can't hold a disparity in pixels (negative, or above 1), so ignore
+    // it, and say so (once: renders may run concurrently).
+    if ( _dispClip->getPixelDepth() != eBitDepthFloat ) {
+        if ( !_disparityWarned.exchange(true) ) {
+            setPersistentMessage(Message::eMessageWarning, "",
+                                 "The disparity is ignored: it is only read from float images, and the images are 8- or 16-bit.");
+        }
+
+        return 0.;
+    }
+    if ( _disparityWarned.exchange(false) ) {
+        clearPersistentMessage(); // only our 8- or 16-bit warning was shown
+    }
+    // the left view, whatever the rendered view (on a host without views, fetchStereoscopicImage
+    // fetches the only view)
+    std::unique_ptr<const Image> disp( _dispClip->fetchStereoscopicImage(args.time, kLeftView) );
+    if ( !disp.get() ) {
+        return 0.;
+    }
+    checkBadRenderScaleOrField(disp, args);
+    if ( disp->getPixelDepth() != eBitDepthFloat ) {
+        throwSuiteStatusException(kOfxStatErrImageFormat);
+    }
+    const std::optional<OfxPointI> p = convergePixel(_convergePoint->getValueAtTime(args.time),
+                                                     getDisparityBounds(args.time, args.renderScale),
+                                                     args.renderScale, _dispClip->getPixelAspectRatio());
+
+    return p ? disparityAt(*disp, *p) : 0.;
+}
 
 /* set up and run a processor */
 void
-ReConvergePlugin::setupAndProcess(TranslateBase &processor,
+ReConvergePlugin::setupAndProcess(ShiftBase &processor,
                                   const RenderArguments &args)
 {
-    // get a dst image
-    auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
+    std::unique_ptr<Image> dst( _dstClip->fetchImage(args.time) );
 
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
-# ifndef NDEBUG
-    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    const BitDepthEnum dstBitDepth = dst->getPixelDepth();
+    const PixelComponentEnum dstComponents = dst->getPixelComponents();
     if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
          ( dstComponents != _dstClip->getPixelComponents() ) ) {
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
     checkBadRenderScaleOrField(dst, args);
-# endif
 
-    // fetch main input image
-    auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() ) ?
-                                    _srcClip->fetchImage(args.time) : 0 );
-
-# ifndef NDEBUG
-    // make sure bit depths are sane
+    // the source image, in the rendered view
+    std::unique_ptr<const Image> src( _srcClip->isConnected() ? _srcClip->fetchImage(args.time) : nullptr );
     if ( src.get() ) {
         checkBadRenderScaleOrField(src, args);
-        BitDepthEnum srcBitDepth      = src->getPixelDepth();
-        PixelComponentEnum srcComponents = src->getPixelComponents();
-
-        // see if they have the same depths and bytes and all
-        if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
+        if ( (src->getPixelDepth() != dstBitDepth) || (src->getPixelComponents() != dstComponents) ) {
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-# endif
 
-    int offset = _offset->getValueAtTime(args.time);
-    int convergemode;
-    _convergemode->getValueAtTime(args.time, convergemode);
+#if defined(OFX_EXTENSIONS_VEGAS) || defined(OFX_EXTENSIONS_NUKE)
+    const int view = args.renderView;
+#else
+    const int view = kLeftView;
+#endif
+    const int shift = viewShift( getConvergeMode(args.time), viewRole(view), fetchDisparity(args),
+                                 _offset->getValueAtTime(args.time) );
 
-    // set the images
     processor.setDstImg( dst.get() );
     processor.setSrcImg( src.get() );
-
-    // set the render window
     processor.setRenderWindow(args.renderWindow, args.renderScale);
-
-#pragma message WARN("TODO")
-    (void)offset;
-    // set the parameters
-    if ( (getContext() == eContextGeneral) && _convergepoint && _dispClip ) {
-        // fetch the disparity of the tracked point
-    }
-    //
-    switch (convergemode) {
-    case 0:     // shift left
-        break;
-    case 1:     // shift right
-        break;
-    case 2:     // shift both
-        break;
-    }
-
-    // Call the base class process member, this will call the derived templated process code
+    processor.setShift( scaledShift(shift, args.renderScale) );
     processor.process();
 } // ReConvergePlugin::setupAndProcess
 
-// override the roi call
+bool
+ReConvergePlugin::isIdentity(const IsIdentityArguments &args,
+                             Clip * &identityClip,
+                             double & /*identityTime*/
+#ifdef OFX_EXTENSIONS_NUKE
+                             , int& /*view*/
+                             , std::string& /*plane*/
+#endif
+                             )
+{
+    // Images can only be fetched in render, not here: only the views that are not shifted
+    // whatever the disparity, and the shifts that are zero without a disparity, are identities.
+    const ConvergeModeEnum mode = getConvergeMode(args.time);
+    const double offset = _offset->getValueAtTime(args.time);
+    bool identity = !hasDisparity() &&
+                    viewShift(mode, ViewRole::left, 0., offset) == 0 &&
+                    viewShift(mode, ViewRole::right, 0., offset) == 0 &&
+                    viewShift(mode, ViewRole::other, 0., offset) == 0;
+#ifdef OFX_EXTENSIONS_NUKE
+    if ( !identity && hostPassesViewToActions() ) {
+        const ViewRole role = viewRole(args.view);
+        identity = (mode == eConvergeModeShiftRight && role != ViewRole::right) ||
+                   (mode == eConvergeModeShiftLeft && role != ViewRole::left);
+    }
+#endif
+    if (identity) {
+        identityClip = _srcClip;
+    }
+
+    return identity;
+}
+
 void
 ReConvergePlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
                                        RegionOfInterestSetter &rois)
 {
-    // set the ROI of the disp clip to the tracked point position (rounded to the nearest pixel)
-    if ( (getContext() == eContextGeneral) && _convergepoint && _srcClip && _dispClip ) {
-        OfxRectD roi;
-        // since getRegionsOfInterest is not view-specific, return a full horizontal band
-        roi = _srcClip->getRegionOfDefinition(args.time);
-        if ( Coords::rectIsEmpty(roi) ) {
-            return;
-        }
-        roi.y1 = args.regionOfInterest.y1;
-        roi.y2 = args.regionOfInterest.y2;
+#ifdef OFX_EXTENSIONS_NUKE
+    if ( !hasDisparity() && hostPassesViewToActions() ) {
+        // the shift is known: the render window, shifted
+        const int shift = viewShift( getConvergeMode(args.time), viewRole(args.view), 0., _offset->getValueAtTime(args.time) );
+        const double dx = scaledShift(shift, args.renderScale) * _srcClip->getPixelAspectRatio() / args.renderScale.x;
+        OfxRectD srcRoI = args.regionOfInterest;
+        srcRoI.x1 += dx;
+        srcRoI.x2 += dx;
+        rois.setRegionOfInterest(*_srcClip, srcRoI);
 
-        // TODO: we could compute a smaller area, depending on the convergence
-        rois.setRegionOfInterest(*_dispClip, roi);
+        return;
+    }
+#endif
+    // The shift depends on the disparity, which can only be read in render: the source RoI is the
+    // whole horizontal band of the source RoD. (getRegionsOfInterest is not view-specific on every
+    // host either: this band is right for every view.)
+#ifdef OFX_EXTENSIONS_NUKE
+    const OfxRectD srcRoD = _srcClip->getRegionOfDefinition(args.time, args.view);
+#else
+    const OfxRectD srcRoD = _srcClip->getRegionOfDefinition(args.time);
+#endif
+    if ( !Coords::rectIsEmpty(srcRoD) ) {
+        OfxRectD srcRoI = args.regionOfInterest;
+        srcRoI.x1 = srcRoD.x1;
+        srcRoI.x2 = srcRoD.x2;
+        rois.setRegionOfInterest(*_srcClip, srcRoI);
+    }
+
+    if ( !hasDisparity() ) {
+        return;
+    }
+    // the disparity: the pixel of the left view at the converge point (see fetchDisparity())
+    const double par = _dispClip->getPixelAspectRatio();
+    OfxRectD dispRoI = {0., 0., 0., 0.};
+    if ( const std::optional<OfxPointI> p = convergePixel(_convergePoint->getValueAtTime(args.time),
+                                                          getDisparityBounds(args.time, args.renderScale),
+                                                          args.renderScale, par) ) {
+        const OfxRectI pixel = {p->x, p->y, p->x + 1, p->y + 1};
+        Coords::toCanonical(pixel, args.renderScale, par, &dispRoI);
+    }
+    rois.setRegionOfInterest(*_dispClip, dispRoI);
+}
+
+void
+ReConvergePlugin::changedClip(const InstanceChangedArgs & /*args*/,
+                              const std::string &clipName)
+{
+    if (clipName == kClipDisparity || clipName == kOfxImageEffectSimpleSourceClipName) {
+        updateConvergePointEnabled();
+        if ( _disparityWarned.exchange(false) ) {
+            clearPersistentMessage(); // only our 8- or 16-bit warning, not another message
+        }
     }
 }
+
+#ifdef OFX_EXTENSIONS_NUKE
+void
+ReConvergePlugin::getFrameViewsNeeded(const FrameViewsNeededArguments& args,
+                                      FrameViewsNeededSetter& frameViews)
+{
+    OfxRangeD range;
+
+    range.min = range.max = args.time;
+    // the source in the rendered view, the disparity in the left view
+    frameViews.addFrameViewsNeeded(*_srcClip, range, args.view);
+    if (_dispClip) {
+        frameViews.addFrameViewsNeeded(*_dispClip, range, kLeftView);
+    }
+}
+#endif
 
 // the internal render function
 template <int nComponents>
@@ -326,18 +594,18 @@ ReConvergePlugin::renderInternal(const RenderArguments &args,
 {
     switch (dstBitDepth) {
     case eBitDepthUByte: {
-        ImageTranslator<unsigned char, nComponents, 255> fred(*this);
-        setupAndProcess(fred, args);
+        ImageShifter<unsigned char, nComponents> processor(*this);
+        setupAndProcess(processor, args);
         break;
     }
     case eBitDepthUShort: {
-        ImageTranslator<unsigned short, nComponents, 65535> fred(*this);
-        setupAndProcess(fred, args);
+        ImageShifter<unsigned short, nComponents> processor(*this);
+        setupAndProcess(processor, args);
         break;
     }
     case eBitDepthFloat: {
-        ImageTranslator<float, nComponents, 1> fred(*this);
-        setupAndProcess(fred, args);
+        ImageShifter<float, nComponents> processor(*this);
+        setupAndProcess(processor, args);
         break;
     }
     default:
@@ -350,12 +618,11 @@ void
 ReConvergePlugin::render(const RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
-    BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
-    PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    const BitDepthEnum dstBitDepth = _dstClip->getPixelDepth();
+    const PixelComponentEnum dstComponents = _dstClip->getPixelComponents();
 
-    assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
-    assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
-    // do the rendering
+    assert( kSupportsMultipleClipPARs   || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     if (dstComponents == ePixelComponentRGBA) {
         renderInternal<4>(args, dstBitDepth);
     } else if (dstComponents == ePixelComponentRGB) {
@@ -386,9 +653,10 @@ ReConvergePluginFactory::describe(ImageEffectDescriptor &desc)
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
-    // add the supported contexts
-    desc.addSupportedContext(eContextFilter); // parameters are offset and convergemode
-    desc.addSupportedContext(eContextGeneral); // adds second input for disparity (in the red channel), and convergepoint (with interact)
+    // The filter context has no Disparity input (only the offset is applied); the general context
+    // adds the optional Disparity input, as the OFX spec suggests for optional inputs.
+    desc.addSupportedContext(eContextFilter);
+    desc.addSupportedContext(eContextGeneral);
 
     // add supported pixel depths
     desc.addSupportedBitDepth(eBitDepthUByte);
@@ -404,19 +672,27 @@ ReConvergePluginFactory::describe(ImageEffectDescriptor &desc)
     desc.setRenderTwiceAlways(false);
     desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
+    desc.setRenderThreadSafety(kRenderThreadSafety);
+
+#ifdef OFX_EXTENSIONS_NUKE
+    // We only render the colour plane
+    desc.setIsMultiPlanar(false);
+#endif
+
+    // We use the view calls (getFrameViewsNeeded), and the views are shifted differently
+    desc.setIsViewAware(true);
+    desc.setIsViewInvariant(eViewInvarianceAllViewsVariant);
 
     ofxsSetOverlayInteractDescriptorV2(desc, new PositionOverlayDescriptorV2<ConvergePointParam>);
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(ePixelComponentNone);
 #endif
-    desc.setRenderThreadSafety(kRenderThreadSafety);
 }
 
 void
 ReConvergePluginFactory::describeInContext(ImageEffectDescriptor &desc,
-                                           ContextEnum /*context*/)
+                                           ContextEnum context)
 {
-    // Source clip only in the filter context
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
 
@@ -430,17 +706,20 @@ ReConvergePluginFactory::describeInContext(ImageEffectDescriptor &desc,
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
 
-    // Optional disparity clip
-    ClipDescriptor *dispClip = desc.defineClip(kClipDisparity);
-    dispClip->addSupportedComponent(ePixelComponentRGBA);
-    dispClip->addSupportedComponent(ePixelComponentRGB);
+    if (context == eContextGeneral) {
+        // the optional disparity: the horizontal disparity is its first channel
+        ClipDescriptor *dispClip = desc.defineClip(kClipDisparity);
+        dispClip->addSupportedComponent(ePixelComponentRGBA);
+        dispClip->addSupportedComponent(ePixelComponentRGB);
 #ifdef OFX_EXTENSIONS_NATRON
-    dispClip->addSupportedComponent(ePixelComponentXY);
+        dispClip->addSupportedComponent(ePixelComponentXY);
 #endif
-    dispClip->addSupportedComponent(ePixelComponentAlpha);
-    dispClip->setTemporalClipAccess(false);
-    dispClip->setOptional(true);
-    dispClip->setSupportsTiles(kSupportsTiles);
+        dispClip->addSupportedComponent(ePixelComponentAlpha);
+        dispClip->setTemporalClipAccess(false);
+        dispClip->setOptional(true);
+        dispClip->setSupportsTiles(kSupportsTiles);
+        dispClip->setIsMask(false);
+    }
 
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
@@ -455,18 +734,20 @@ ReConvergePluginFactory::describeInContext(ImageEffectDescriptor &desc,
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
-    // convergepoint
+    // convergePoint: (0,0) by default (canonical, so not a normalised default)
     {
         Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamConvergePoint);
         param->setLabel(kParamConvergePointLabel);
         param->setHint(kParamConvergePointHint);
         param->setDoubleType(eDoubleTypeXYAbsolute);
-        param->setDefaultCoordinateSystem(eCoordinatesNormalised);
-        param->setDefault(0.5, 0.5);
+        param->setDefault(0., 0.);
         param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
         param->setIncrement(1.);
         param->setAnimates(true);
+        if (context != eContextGeneral) {
+            param->setIsSecretAndDisabled(true); // no Disparity input
+        }
         if (page) {
             page->addChild(*param);
         }
@@ -476,33 +757,41 @@ ReConvergePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamInteractiveLabel);
         param->setHint(kParamInteractiveHint);
         param->setAnimates(false);
+        if (context != eContextGeneral) {
+            param->setIsSecretAndDisabled(true); // no Disparity input
+        }
         if (page) {
             page->addChild(*param);
         }
     }
 
-    // offset
+    // offset: a double, truncated in render
     {
-        IntParamDescriptor *param = desc.defineIntParam(kParamOffset);
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOffset);
         param->setLabel(kParamOffsetLabel);
         param->setHint(kParamOffsetHint);
-        param->setDefault(0);
-        param->setRange(-1000, 1000);
+        param->setDefault(0.);
+        param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(-100, 100);
+        param->setIncrement(1.);
         param->setAnimates(true);
         if (page) {
             page->addChild(*param);
         }
     }
 
-    // convergemode
+    // convergeMode
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamConvergeMode);
         param->setLabel(kParamConvergeModeLabel);
         param->setHint(kParamConvergeModeHint);
+        assert(param->getNOptions() == eConvergeModeShiftRight);
         param->appendOption(kParamConvergeModeOptionShiftRight);
+        assert(param->getNOptions() == eConvergeModeShiftLeft);
         param->appendOption(kParamConvergeModeOptionShiftLeft);
+        assert(param->getNOptions() == eConvergeModeShiftBoth);
         param->appendOption(kParamConvergeModeOptionShiftBoth);
+        param->setDefault(eConvergeModeShiftRight);
         param->setAnimates(true);
         if (page) {
             page->addChild(*param);
@@ -517,9 +806,7 @@ ReConvergePluginFactory::createInstance(OfxImageEffectHandle handle,
     return new ReConvergePlugin(handle);
 }
 
-static ReConvergePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+ReConvergePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
-
-#endif // ifdef DEBUG
