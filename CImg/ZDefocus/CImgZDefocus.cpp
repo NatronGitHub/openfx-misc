@@ -24,6 +24,7 @@
  * to a depth (or disparity) map, each slice is blurred with its own blur size,
  * and the blurred slices are merged "over" each other from far to near so that
  * occlusions are handled correctly.
+ * The model, the algorithm and its limitations are described in ZDefocus.md.
  */
 
 #include <cmath>
@@ -51,27 +52,26 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
 "Depth-dependent defocus (depth of field) effect.\n" \
-"Note: draft renders and renders at a reduced scale (proxy) always use the fast Gaussian aperture, whatever the 'Aperture' parameter.\n" \
-"The Source image is split into focus slices according to the Depth input (which may contain either a depth map or a disparity map). " \
-"Each slice is blurred with a blur size that depends on its distance to the focal plane, and the blurred slices are merged " \
-"(using the 'over' operator) from the farthest to the nearest slice, so that blurred foreground objects correctly occlude the background. " \
-"The result is normalized by the merged slice coverage, so that the parts of the background hidden by in-focus foreground objects do not produce dark halos.\n" \
-"The blur size of a pixel is 'Size' times its normalized defocus, where the normalized defocus is |focus/depth - 1| " \
-"for a depth map (or |disparity/focus - 1| for a disparity map), so that 'Size' is the blur size of objects at infinity. " \
-"It is then clamped to 'Maximum Size'. Pixels within the depth of focus are not blurred.\n" \
-"The Source image is processed as premultiplied.\n" \
-"The aperture (the blur kernel, which gives the shape of the bokeh) may be a Gaussian, an antialiased disc, or a custom kernel given by the Filter input " \
-"(for example made with the DiscBlades generator), which is scaled so that its larger dimension is the blur size. " \
-"Large custom kernels are applied using the Fast Fourier Transform (FFT), which is slow for small images but much faster than a direct convolution for large blur sizes.\n" \
-"Pixels outside of the Source image are ignored by all apertures (normalized convolution), so that the image edges are not darkened.\n" \
-"Uses the 'vanvliet' and 'FFT' functions from the CImg library.\n" \
+"The Source image is split into focus slices according to the Depth input (a depth map, a disparity map or a blur size map, see 'Depth Type'). " \
+"Each slice is blurred with its own blur size and merged over the farther ones, so that blurred foreground objects occlude the background. " \
+"A pixel between two slices is shared by both, so that its blur changes continuously with depth, and the background hidden by a blurred foreground is filled from the pixels around it ('Fill Background').\n" \
+"As for a thin lens, the blur size is proportional to the difference of inverse depth (or disparity) between a pixel and the depth of focus. " \
+"'Size' is the blur radius at infinity (with no Depth of Focus), and 'Maximum Size' the largest blur radius. " \
+"The parameters follow the definitions of Foundry's ZDefocus documentation (https://learn.foundry.com/nuke/content/reference_guide/filter_nodes/zdefocus.html).\n" \
+"The aperture (the bokeh shape) may be a Gaussian, an antialiased disc, or a custom kernel given by the Filter input (for example made with the DiscBlades generator). " \
+"Draft renders and renders at a reduced scale (proxy) always use the Gaussian aperture.\n" \
+"The Source image is processed as premultiplied, and pixels outside of it are ignored, so that the image edges are not darkened.\n" \
+"Uses the 'convolve' and 'FFT' functions from the CImg library.\n" \
 "CImg is a free, open-source library distributed under the CeCILL-C " \
 "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
 "It can be used in commercial applications (see http://cimg.eu)."
 
 #define kPluginIdentifier    "net.sf.cimg.CImgZDefocus"
 // History:
-// version 1.0: initial version
+// version 1.0: initial version. Before its first release (#266): the documented blur formula,
+//              Disparity with Offset, Direct and negated depth types, Size and Maximum Size as
+//              radii, the documented Depth of Focus, a truncated Gaussian, a tighter disc edge,
+//              soft slices, Fill Background, Blur Inside, and the documented defaults.
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -1348,7 +1348,7 @@ ZDefocusPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamUseFocusPoint);
         param->setLabel(kParamUseFocusPointLabel);
         param->setHint(kParamUseFocusPointHint);
-        param->setDefault(true);
+        param->setDefault(false);
         param->setAnimates(false);
         if (page) {
             page->addChild(*param);
@@ -1376,7 +1376,7 @@ ZDefocusPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setHint(kParamFocusHint);
         param->setRange(-DBL_MAX, DBL_MAX);
         param->setDisplayRange(0., 100.);
-        param->setDefault(1.);
+        param->setDefault(0.);
         if (page) {
             page->addChild(*param);
         }
@@ -1398,7 +1398,7 @@ ZDefocusPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setHint(kParamSizeHint);
         param->setRange(0., DBL_MAX);
         param->setDisplayRange(0., 100.);
-        param->setDefault(10.);
+        param->setDefault(25.);
         if (page) {
             page->addChild(*param);
         }
@@ -1409,7 +1409,7 @@ ZDefocusPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setHint(kParamMaxSizeHint);
         param->setRange(0., 1000.);
         param->setDisplayRange(0., 100.);
-        param->setDefault(20.);
+        param->setDefault(50.);
         if (page) {
             page->addChild(*param);
         }
@@ -1420,7 +1420,7 @@ ZDefocusPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setHint(kParamSlicesHint);
         param->setRange(1, 100);
         param->setDisplayRange(1, 30);
-        param->setDefault(10);
+        param->setDefault(20);
         if (page) {
             page->addChild(*param);
         }
