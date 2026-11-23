@@ -672,6 +672,17 @@ tests=(
     "LensDistortion PFBarrel squeeze 0|net.sf.openfx.LensDistortion|general|float|mean=0.5,0.5,1,1||-i Source=checker:16 model=1 pfSqueeze=0 outputMode=STMap"
     "LensDistortion 3DE filmback 0|net.sf.openfx.LensDistortion|general|float|mean=0.5,0.5,1,1||-i Source=checker:16 model=2 tde4_filmback_width_cm=0 outputMode=STMap"
     "LensDistortion 3DE b=-2|net.sf.openfx.LensDistortion|general|float|mean=0.5,0.5,1,1||-i Source=checker:16 model=5 tde4_B_Cylindric_Bending=-2 outputMode=STMap"
+    # IDistort and STMap (#303), float (the UV input has the output depth, and only float UV values
+    # are supported): the output is multiplied by the UV alpha (Multiply by UV Alpha, the default), or not.
+    "IDistort UV alpha|net.sf.openfx.IDistort|general|float|mean=0.25,0.25,0.25,0.5||-i Source=solid:0.5,0.5,0.5,1 -i UV=solid:0,0,0,0.5 -i Mask=none"
+    "IDistort no UV alpha|net.sf.openfx.IDistort|general|float|mean=0.5,0.5,0.5,1||-i Source=solid:0.5,0.5,0.5,1 -i UV=solid:0,0,0,0.5 -i Mask=none multiplyByUVAlpha=0"
+    "STMap UV alpha|net.sf.openfx.STMap|general|float|mean=0.25,0.25,0.25,0.5||-i Source=solid:0.5,0.5,0.5,1 -i UV=solid:0.5,0.5,0,0.5 -i Mask=none"
+    "STMap no UV alpha|net.sf.openfx.STMap|general|float|mean=0.5,0.5,0.5,1||-i Source=solid:0.5,0.5,0.5,1 -i UV=solid:0.5,0.5,0,0.5 -i Mask=none multiplyByUVAlpha=0"
+    # Blur Channel B = 4 pixels, Box filter (filter=1): the sampled area is 5 pixels wide. The pixels
+    # x=64 and 65 are white (the edge of a 64-pixel checker is at x=64), and their 5-pixel areas are
+    # 3/5 and 4/5 white (mean 0.7); without blur (Blur Scale 0), they are white.
+    "IDistort blur|net.sf.openfx.IDistort|general|float|mean=0.7,0.7,0.7,0.7||-i Source=checker:64 -i UV=solid:0,0,4,1 -i Mask=none channelBlur=2 filter=1 --frames 0 --window 64,10,66,20"
+    "IDistort blur scale 0|net.sf.openfx.IDistort|general|float|mean=1,1,1,1||-i Source=checker:64 -i UV=solid:0,0,4,1 -i Mask=none channelBlur=2 blurScale=0 filter=1 --frames 0 --window 64,10,66,20"
     # FrameBlend Min/Max where no frame is used (FgM > 0 everywhere): 0 (it was +-infinity)
     "FrameBlend Min no frame|net.sf.openfx.FrameBlend|filter|*|mean=0,0,0,0||-i Source=solid:0.5,0.5,0.5,1 -i FgM=solid:1,1,1,1 -i Mask=none operation=Min"
     "FrameBlend Max no frame|net.sf.openfx.FrameBlend|filter|*|mean=0,0,0,0||-i Source=solid:0.5,0.5,0.5,1 -i FgM=solid:1,1,1,1 -i Mask=none operation=Max"
