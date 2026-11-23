@@ -79,8 +79,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //     clamped to it. The output is unchanged for the key colours whose float squared norm is finite.
 //     New "Invert" parameter (issue #280), off by default: it inverts the key computed from the
 //     foreground key, before the inside and outside masks are applied, so that the pixels whose
-//     foreground key is between B and C become opaque, as with Foundry's Keyer node. Existing
-//     projects render the same.
+//     foreground key is between B and C become opaque, as with Foundry's Keyer node. The despill
+//     amount uses the key without Invert. Existing projects render the same.
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -171,8 +171,8 @@ enum KeyerModeEnum
 #define kParamInvert "invert"
 #define kParamInvertLabel "Invert"
 #define kParamInvertHint \
-    "Invert the matte computed from the foreground key: the output alpha is 1 (opaque) between B and C and 0 (transparent) below A and above D, " \
-    "as with Foundry's Keyer node. The Inside Mask and Outside Mask are applied after the inversion, and keep their meaning. Ignored in None keyer mode."
+    "Invert the matte computed by the keyer (alpha becomes 1 - alpha), e.g. to get the polarity of Foundry's Keyer node in Luminance and Color modes. " \
+    "The Inside Mask and Outside Mask are applied after the inversion, and keep their meaning. The despill amount is that of the matte without Invert. Ignored in None keyer mode."
 
 #define kClipSourceHint "The foreground image to key."
 #define kClipBg "Bg"
@@ -265,8 +265,7 @@ public:
                    double despill,
                    double despillAngle,
                    OutputModeEnum outputMode,
-                   SourceAlphaEnum sourceAlpha,
-                   bool invert)
+                   SourceAlphaEnum sourceAlpha)
     {
         _keyColor = keyColor;
         _keyerMode = keyerMode;
@@ -287,8 +286,10 @@ public:
         }
         _outputMode = outputMode;
         _sourceAlpha = sourceAlpha;
-        _invert = invert;
     }
+
+    // invert the key computed from the foreground key (not the masks, nor the despill amount)
+    void setInvert(bool invert) { _invert = invert; }
 
     double key_bg(double Kfg)
     {
@@ -310,6 +311,22 @@ public:
     }
 
 protected:
+    // nonadditive mix of a background key with the inside and outside masks (in [0,1]):
+    // the inside mask caps it at 1 - inMask, then the outside mask raises it to outMask
+    static double applyMasks(double Kbg,
+                             double inMask,
+                             double outMask)
+    {
+        if ( (inMask > 0.) && (Kbg > 1. - inMask) ) {
+            Kbg = 1. - inMask;
+        }
+        if ( (outMask > 0.) && (Kbg < outMask) ) {
+            Kbg = outMask;
+        }
+
+        return Kbg;
+    }
+
     double rgb2luminance(double r,
                          double g,
                          double b)
@@ -479,19 +496,18 @@ private:
                     } else {
                         // in [0,1] (NaN would give 0, but Kfg is finite: the samples are)
                         Kbg = clampToUnit( key_bg(Kfg) );
-                        if (_invert) {
-                            // invert the key, not the masks, which are applied below
-                            Kbg = 1. - Kbg;
-                        }
+                    }
+                    // The despill amount uses the key without Invert: the spill comes from the key
+                    // color, whatever the polarity of the output matte.
+                    double KbgDespill = Kbg;
+                    if (_invert && (_keyerMode != eKeyerModeNone) ) {
+                        // invert the key, not the masks, which are applied below
+                        Kbg = 1. - Kbg;
                     }
                     // nonadditive mix between the key generator and the garbage matte (outMask)
                     // note that in Chromakeyer this is done before on Kfg instead of Kbg.
-                    if ( (inMask > 0.) && (Kbg > 1. - inMask) ) {
-                        Kbg = 1. - inMask;
-                    }
-                    if ( (outMask > 0.) && (Kbg < outMask) ) {
-                        Kbg = outMask;
-                    }
+                    Kbg = applyMasks(Kbg, inMask, outMask);
+                    KbgDespill = applyMasks(KbgDespill, inMask, outMask);
 
 
                     // despill fgr, fgg, fgb
@@ -501,9 +517,9 @@ private:
                             // maxdespill is between 0 and 1:
                             // if despill in [0,1]: only outside regions are despilled
                             // if despill in [1,2]: inside regions are despilled too
-                            assert(0 <= Kbg && Kbg <= 1);
+                            assert(0 <= KbgDespill && KbgDespill <= 1);
                             assert(0 <= _despill && _despill <= 2);
-                            double maxdespill = Kbg * (std::min)(_despill, 1.) + (1 - Kbg) * (std::max)(0., _despill - 1);
+                            double maxdespill = KbgDespill * (std::min)(_despill, 1.) + (1 - KbgDespill) * (std::max)(0., _despill - 1);
                             assert(0 <= maxdespill && maxdespill <= 1);
 
                             //// first solution: despill proportionally to the distance to the the despill cone
@@ -782,8 +798,8 @@ KeyerPlugin::setupAndProcess(KeyerProcessorBase &processor,
     double despillAngle = _despillAngle->getValueAtTime(time);
     OutputModeEnum outputMode = (OutputModeEnum)_outputMode->getValueAtTime(time);
     SourceAlphaEnum sourceAlpha = (SourceAlphaEnum)_sourceAlpha->getValueAtTime(time);
-    const bool invert = _invert->getValueAtTime(time);
-    processor.setValues(keyColorF, keyerMode, luminanceMath, softnessLower, toleranceLower, center, toleranceUpper, softnessUpper, despill, despillAngle, outputMode, sourceAlpha, invert);
+    processor.setValues(keyColorF, keyerMode, luminanceMath, softnessLower, toleranceLower, center, toleranceUpper, softnessUpper, despill, despillAngle, outputMode, sourceAlpha);
+    processor.setInvert( _invert->getValueAtTime(time) );
     processor.setDstImg( dst.get() );
     processor.setSrcImgs( src.get(), bg.get(), inMask.get(), outMask.get() );
     processor.setRenderWindow(args.renderWindow, args.renderScale);
