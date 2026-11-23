@@ -490,6 +490,12 @@ tests=(
     "Grade gamma 0 alpha 0|net.sf.openfx.GradePlugin|filter|*|mean=0,0,0,0||-i Source=solid:2,0.5,1,0 -i Mask=none gamma=0,0,0,0 premult=1"
     # Grade: a small gamma (10^100 overflows the float range) is capped to FLT_MAX, as gamma 0
     "Grade gamma 0.01 alpha 0|net.sf.openfx.GradePlugin|filter|*|mean=0,0,0,0||-i Source=solid:10,10,10,0 -i Mask=none gamma=0.01,0.01,0.01,0.01 premult=1"
+    # Grade (version 3 unless -m): above 1 the gamma curve is continued by its tangent at 1, as in Nuke
+    # (1 + (x - 1) / gamma: 2 -> 1.5, 4 -> 2.5 with gamma 2), and Reverse is the inverse of that line.
+    # Version 2 keeps the power curve above 1 (sqrt(2), sqrt(4)), so that old projects render the same.
+    "Grade gamma above 1|net.sf.openfx.GradePlugin|filter|float|mean=1.5,0.5,2.5,1||-i Source=solid:2,0.25,4,1 -i Mask=none gamma=2,2,2,2"
+    "Grade gamma above 1 reverse|net.sf.openfx.GradePlugin|filter|float|mean=2,0.25,4,1||-i Source=solid:1.5,0.5,2.5,1 -i Mask=none gamma=2,2,2,2 reverse=1"
+    "Grade 2 gamma above 1|net.sf.openfx.GradePlugin|filter|float|mean=1.4142,0.5,2,1||-m 2 -i Source=solid:2,0.25,4,1 -i Mask=none gamma=2,2,2,2"
     # ColorCorrect: gamma 0 in the shadows (was pow(2, 1/0) = inf), whose weight is 0 at luminance 2 (was 0 * inf = NaN)
     "ColorCorrect gamma 0|net.sf.openfx.ColorCorrectPlugin|filter|float|mean=2,2,2,1||-i Source=solid:2,2,2,1 -i Mask=none ShadowsGamma=0,0,0,0"
     "ColorCorrect gamma 0.001|net.sf.openfx.ColorCorrectPlugin|filter|float|mean=10,10,10,1||-i Source=solid:10,10,10,1 -i Mask=none ShadowsGamma=0.001,0.001,0.001,0.001"

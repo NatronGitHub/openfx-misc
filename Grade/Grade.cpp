@@ -54,7 +54,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginName "GradeOFX"
 #define kPluginGrouping "Color"
-#define kPluginDescription "Modify the tonal spread of an image from the white and black points.\n" \
+#define kPluginDescriptionStart "Modify the tonal spread of an image from the white and black points.\n" \
     "It can also match the colors of two images: set Black Point and White Point to the darkest and " \
     "lightest colors of the image to correct, which maps them to 0 and 1, then set Lift (black) and " \
     "Gain (white) to the darkest and lightest colors of the reference image. " \
@@ -62,7 +62,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "Here is the formula used:\n" \
     "A = multiply * (white - black) / (whitepoint - blackpoint)\n" \
     "B = offset + black - A * blackpoint\n" \
-    "output = pow(A * input + B, 1 / gamma).\n" \
+    "output = pow(A * input + B, 1 / gamma)"
+#define kPluginDescriptionGamma2 ".\n"
+#define kPluginDescriptionGamma3 " if A * input + B is below 1,\n" \
+    "output = 1 + (A * input + B - 1) / gamma above 1: the curve is continued by its tangent at 1, as in Nuke's Grade " \
+    "(the Gamma plugin uses the power curve everywhere).\n"
+#define kPluginDescriptionEnd \
     "\n" \
     "A special use for Grade is to generate a mask image with soft edges by thresholding an input image. " \
     "Set the \"Black Point\" and \"White Point\" " \
@@ -79,8 +84,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              and the results of a small gamma are capped to FLT_MAX;
 //              Normalize with no analyzed pixel leaves the black and white points unchanged;
 //              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79)
-#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+// version 3.0: above 1, the gamma curve is continued by its tangent at 1 (output = 1 + (x - 1) / gamma), as in Nuke's Grade.
+//              Version 2 (obsolete, same code) keeps the power curve above 1, so that existing projects render the same.
+#define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -365,6 +372,7 @@ public:
         , _processG(false)
         , _processB(false)
         , _processA(false)
+        , _gammaLinearAbove1(true)
         , _reverse(false)
         , _clampBlack(true)
         , _clampWhite(false)
@@ -385,6 +393,7 @@ public:
                    const RGBAValues& multiply,
                    const RGBAValues& offset,
                    const RGBAValues& gamma,
+                   bool gammaLinearAbove1,
                    bool reverse,
                    bool clampBlack,
                    bool clampWhite,
@@ -403,6 +412,7 @@ public:
         _multiply = multiply;
         _offset = offset;
         _gamma = gamma;
+        _gammaLinearAbove1 = gammaLinearAbove1;
         _reverse = reverse;
         _clampBlack = clampBlack;
         _clampWhite = clampWhite;
@@ -422,7 +432,8 @@ public:
                double black,
                double mutiply,
                double offset,
-               double gamma)
+               double gamma,
+               bool gammaLinearAbove1)
     {
         double d = wp - bp;
         double A = d != 0 ? mutiply * (white - black) / d : 0;
@@ -453,7 +464,12 @@ public:
             // which is +inf as a float): cap it to FLT_MAX, the value of the gamma <= 0 branch
             // above. pow of a positive value is never NaN, and the result is unchanged whenever
             // it fits in a float.
-            *v = (std::min)( std::pow(A, invgamma), (double)FLT_MAX );
+            if (gammaLinearAbove1 && A > 1.) {
+                // version 3: the tangent of the power curve at 1, as in Nuke's Grade
+                *v = (std::min)( 1. + (A - 1.) * invgamma, (double)FLT_MAX );
+            } else {
+                *v = (std::min)( std::pow(A, invgamma), (double)FLT_MAX );
+            }
         }
     }
 
@@ -464,10 +480,16 @@ public:
                   double black,
                   double mutiply,
                   double offset,
-                  double gamma)
+                  double gamma,
+                  bool gammaLinearAbove1)
     {
         if (gamma != 1. && *v > 0) {
-            *v = std::pow(*v, gamma);
+            if (gammaLinearAbove1 && gamma > 0 && *v > 1.) {
+                // version 3: the inverse of the straight line that grade() uses above 1
+                *v = 1. + (*v - 1.) * gamma;
+            } else {
+                *v = std::pow(*v, gamma);
+            }
         }
 
         double d = wp - bp;
@@ -491,16 +513,16 @@ public:
                double *a)
     {
         if (processR) {
-            grade(r, _whitePoint.r, _blackPoint.r, _white.r, _black.r, _multiply.r, _offset.r, _gamma.r);
+            grade(r, _whitePoint.r, _blackPoint.r, _white.r, _black.r, _multiply.r, _offset.r, _gamma.r, _gammaLinearAbove1);
         }
         if (processG) {
-            grade(g, _whitePoint.g, _blackPoint.g, _white.g, _black.g, _multiply.g, _offset.g, _gamma.g);
+            grade(g, _whitePoint.g, _blackPoint.g, _white.g, _black.g, _multiply.g, _offset.g, _gamma.g, _gammaLinearAbove1);
         }
         if (processB) {
-            grade(b, _whitePoint.b, _blackPoint.b, _white.b, _black.b, _multiply.b, _offset.b, _gamma.b);
+            grade(b, _whitePoint.b, _blackPoint.b, _white.b, _black.b, _multiply.b, _offset.b, _gamma.b, _gammaLinearAbove1);
         }
         if (processA) {
-            grade(a, _whitePoint.a, _blackPoint.a, _white.a, _black.a, _multiply.a, _offset.a, _gamma.a);
+            grade(a, _whitePoint.a, _blackPoint.a, _white.a, _black.a, _multiply.a, _offset.a, _gamma.a, _gammaLinearAbove1);
         }
     }
 
@@ -511,16 +533,16 @@ public:
                   double *a)
     {
         if (processR) {
-            invgrade(r, _whitePoint.r, _blackPoint.r, _white.r, _black.r, _multiply.r, _offset.r, _gamma.r);
+            invgrade(r, _whitePoint.r, _blackPoint.r, _white.r, _black.r, _multiply.r, _offset.r, _gamma.r, _gammaLinearAbove1);
         }
         if (processG) {
-            invgrade(g, _whitePoint.g, _blackPoint.g, _white.g, _black.g, _multiply.g, _offset.g, _gamma.g);
+            invgrade(g, _whitePoint.g, _blackPoint.g, _white.g, _black.g, _multiply.g, _offset.g, _gamma.g, _gammaLinearAbove1);
         }
         if (processB) {
-            invgrade(b, _whitePoint.b, _blackPoint.b, _white.b, _black.b, _multiply.b, _offset.b, _gamma.b);
+            invgrade(b, _whitePoint.b, _blackPoint.b, _white.b, _black.b, _multiply.b, _offset.b, _gamma.b, _gammaLinearAbove1);
         }
         if (processA) {
-            invgrade(a, _whitePoint.a, _blackPoint.a, _white.a, _black.a, _multiply.a, _offset.a, _gamma.a);
+            invgrade(a, _whitePoint.a, _blackPoint.a, _white.a, _black.a, _multiply.a, _offset.a, _gamma.a, _gammaLinearAbove1);
         }
     }
 
@@ -570,6 +592,7 @@ private:
     RGBAValues _multiply;
     RGBAValues _offset;
     RGBAValues _gamma;
+    bool _gammaLinearAbove1; // true from version 3
     bool _reverse;
     bool _clampBlack;
     bool _clampWhite;
@@ -668,8 +691,10 @@ class GradePlugin
 {
 public:
     /** @brief ctor */
-    GradePlugin(OfxImageEffectHandle handle)
+    GradePlugin(OfxImageEffectHandle handle,
+                unsigned int majorVersion)
         : ImageEffect(handle)
+        , _gammaLinearAbove1(majorVersion >= 3)
         , _dstClip(NULL)
         , _srcClip(NULL)
         , _maskClip(NULL)
@@ -851,6 +876,8 @@ private:
     }
 private:
     // do not need to delete these, the ImageEffect is managing them for us
+    // version 3: above 1, the gamma curve is continued by its tangent at 1. Version 2: the power curve everywhere.
+    const bool _gammaLinearAbove1;
     Clip *_dstClip;
     Clip *_srcClip;
     Clip *_maskClip;
@@ -957,7 +984,7 @@ GradePlugin::setupAndProcess(GradeProcessorBase &processor,
     _processB->getValueAtTime(time, processB);
     _processA->getValueAtTime(time, processA);
 
-    processor.setValues(blackPoint, whitePoint, black, white, multiply, offset, gamma,
+    processor.setValues(blackPoint, whitePoint, black, white, multiply, offset, gamma, _gammaLinearAbove1,
                         reverse, clampBlack, clampWhite, premult, premultChannel, mix,
                         processR, processG, processB, processA);
     processor.process();
@@ -1106,14 +1133,21 @@ GradePlugin::changedParam(const InstanceChangedArgs &args,
     }
 }
 
-mDeclarePluginFactory(GradePluginFactory, {ofxsThreadSuiteCheck();}, {});
+mDeclarePluginFactoryVersioned(GradePluginFactory, {ofxsThreadSuiteCheck();}, {});
+template<unsigned int majorVersion>
 void
-GradePluginFactory::describe(ImageEffectDescriptor &desc)
+GradePluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
-    desc.setPluginDescription(kPluginDescription);
+    if (majorVersion < kPluginVersionMajor) {
+        // version 2: the power curve above 1 too
+        desc.setPluginDescription(kPluginDescriptionStart kPluginDescriptionGamma2 kPluginDescriptionEnd);
+        desc.setIsObsolete(true);
+    } else {
+        desc.setPluginDescription(kPluginDescriptionStart kPluginDescriptionGamma3 kPluginDescriptionEnd);
+    }
 
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
@@ -1161,8 +1195,9 @@ defineRGBAScaleParam(ImageEffectDescriptor &desc,
     }
 }
 
+template<unsigned int majorVersion>
 void
-GradePluginFactory::describeInContext(ImageEffectDescriptor &desc,
+GradePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
                                       ContextEnum context)
 {
     // Source clip only in the filter context
@@ -1299,14 +1334,18 @@ GradePluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
 } // GradePluginFactory::describeInContext
 
+template<unsigned int majorVersion>
 ImageEffect*
-GradePluginFactory::createInstance(OfxImageEffectHandle handle,
-                                   ContextEnum /*context*/)
+GradePluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
+                                                 ContextEnum /*context*/)
 {
-    return new GradePlugin(handle);
+    return new GradePlugin(handle, majorVersion);
 }
 
-static GradePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static GradePluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
+// version 2: the gamma is a power curve above 1 too
+static GradePluginFactory<2> p2(kPluginIdentifier, 1);
 mRegisterPluginFactoryInstance(p)
+mRegisterPluginFactoryInstance(p2)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
