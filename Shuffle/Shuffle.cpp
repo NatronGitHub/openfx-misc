@@ -56,8 +56,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 3.1: fix crashes and failed renders in the filter context, and when the default input (B) is disconnected
 // version 4.0: on hosts without the multiplane suites, the A channels read the A input and the B channels the B input
 //              (version 3 swapped them, which is kept so that version 3 projects render the same)
+// version 4.1: R, G, B from the color plane of an input and A from another plane was taken for an identity:
+//              the alpha was not written
 #define kPluginVersionMajor 4 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1// Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -827,11 +829,13 @@ ShufflePlugin::isIdentityInternal(double time,
                     return false;
                 } else {
 
-                    //In this case if the A choice is visible, the user either checked "Create alpha" or he/she set it explicitly to 0 or 1
-                    if (data[i].index == 3 && !_channelParam[3]->getIsSecret()) {
+                    // The A choice reads a channel of another plane. If the choice is visible, that channel
+                    // is written to the output: this is not an identity, whatever its index in its plane
+                    // (the only channel of a one-channel plane has index 0).
+                    if ( !_channelParam[3]->getIsSecret() ) {
                         return false;
                     } else {
-                        ///Do not do the checks below
+                        ///The A choice is not used: do not do the checks below
                         continue;
                     }
                 }
