@@ -170,7 +170,7 @@ unnegatedDepthType(DepthTypeEnum depthType)
 
 #define kParamSlices "slices"
 #define kParamSlicesLabel "Focus Slices"
-#define kParamSlicesHint "Number of focus slices on each side of the focal plane. The blur size is quantized in steps of 'Maximum Size'/'Focus Slices'. More slices give a smoother result but are slower to render."
+#define kParamSlicesHint "Number of focus slices on each side of the focal plane, evenly spaced in blur size between 0 and 'Maximum Size'. A pixel between two slices is shared by both, so that its blur changes continuously with depth. More slices are more accurate but slower to render."
 
 #define kParamAperture "aperture"
 #define kParamApertureLabel "Aperture"
@@ -241,8 +241,8 @@ clipPAR(const Clip* clip)
 }
 
 // The slice coordinate of a pixel (see sliceWeight()), as a function of its Depth value v: its
-// signed blur radius times slices/maxSize (slice k has a radius of |k|*maxSize/slices), rounded,
-// clamped to [-slices, slices]. The blur is negative behind the focus, positive in front of it.
+// signed blur radius times slices/maxSize (slice k has a radius of |k|*maxSize/slices), clamped
+// to [-slices, slices]. The blur is negative behind the focus, positive in front of it.
 // For depth and disparity maps, the blur radius is Size*max(0, |s| - dof/2), with the signed
 // normalized defocus s = focus/depth - 1 (depth) or disparity/focus - 1 (disparity): the depth
 // of focus is a dead zone, which never adds blur, and Size is the blur at infinity with no depth
@@ -280,8 +280,7 @@ public:
         if ( std::isnan(blur) ) {
             return 0.f;
         }
-        // the blur radius is quantized in steps of maxSize/slices
-        const double q = std::floor(blur * _slices / _maxSize + 0.5);
+        const double q = blur * _slices / _maxSize;
 
         return static_cast<float>( (std::max)( static_cast<double>(-_slices), (std::min)(static_cast<double>(_slices), q) ) );
     }
@@ -322,12 +321,15 @@ private:
     int _slices;
 };
 
-// The weight in slice k of a pixel with the (integer) slice coordinate q: 1 in its slice.
+// The weight in slice k of a pixel with the slice coordinate q, which is shared by its two
+// neighbouring slices k0 = floor(q) and k0 + 1: it is fully in slice k0, the farther one, and
+// partly (q - k0) in slice k0 + 1. Since slice k0 + 1 is merged over slice k0, the pixel is a
+// linear blend of the two blur sizes, which changes continuously with q (no banding).
 float
 sliceWeight(float q,
             int k)
 {
-    return (q == k) ? 1.f : 0.f;
+    return (q >= k + 1) ? 0.f : (std::max)( 0.f, (std::min)(1.f, q - k + 1) );
 }
 
 // Set the channels [first, first + nComps] of layer (which covers crop) to the premultiplied
