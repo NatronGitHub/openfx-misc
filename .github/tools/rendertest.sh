@@ -653,6 +653,18 @@ tests=(
     # not padded to 1024x1024) by a 7x5 kernel: the exact linear convolution, without a CImg
     # "non 2^N dimension" error, whatever the FFT library (CImgFFTConvolve.h)
     "CImgConvolve 720x576|net.sf.cimg.CImgConvolve|filter|float|conv=convsrc.pfm,convk.pfm||--frames 0 -i Source=file:convsrc.pfm -i Filter=file:convk.pfm -i Mask=none filterCenter=2"
+    # TimeDissolve, In 1 and Out 10 (the defaults): the In and Out frames are part of the dissolve
+    # (issue #320). The curve abscissa is 0 at the frame before In and 1 at the frame after Out:
+    # frame 0 is A, frame 11 is B, and with the smoothstep curve (hostDemo has no parametric
+    # parameters) frame 1 has 3x^2-2x^3 = 0.0233 of B (x = 1/11), frame 10 has 0.9767 of B (byte
+    # images truncate: tolerance 0.005).
+    "TimeDissolve before In|net.sf.openfx.TimeDissolvePlugin|filter|*|identity+mean=0,0,0,1||-i A=solid:0,0,0,1 -i Source=solid:1,1,1,1 --frames 0"
+    "TimeDissolve at In|net.sf.openfx.TimeDissolvePlugin|filter|*|mean=0.0233,0.0233,0.0233,1+tol=0.005||-i A=solid:0,0,0,1 -i Source=solid:1,1,1,1 --frames 1"
+    "TimeDissolve at Out|net.sf.openfx.TimeDissolvePlugin|filter|*|mean=0.9767,0.9767,0.9767,1+tol=0.005||-i A=solid:0,0,0,1 -i Source=solid:1,1,1,1 --frames 10"
+    "TimeDissolve after Out|net.sf.openfx.TimeDissolvePlugin|filter|*|identity+mean=1,1,1,1||-i A=solid:0,0,0,1 -i Source=solid:1,1,1,1 --frames 11"
+    # the A input at the same time (hostDemo's default pattern: red = t at t > 1, except the text),
+    # at frame 5 weighted by 1 - 0.432 (x = 5/11)
+    "TimeDissolve default input|net.sf.openfx.TimeDissolvePlugin|filter|float|mean=2.834,0,0,1+framesdiffer||-i A=default -i Source=solid:0,0,0,1 --frames 5,1,10"
 )
 
 n=0 failed=() xfailed=()
