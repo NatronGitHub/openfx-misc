@@ -109,8 +109,9 @@ enum TrackerScoreEnum
 
 class TrackerPMProcessorBase;
 ////////////////////////////////////////////////////////////////////////////////
-/** @brief The plugin that does our work */
-class TrackerPMPlugin
+/** @brief The plugin that does our work. FINAL: the constructor converts the normalised defaults last
+ *  (ofxsDenormaliseUntouchedDefault()), which a derived class's constructor would follow. */
+class TrackerPMPlugin FINAL
     : public GenericTrackerPlugin
 {
 public:
