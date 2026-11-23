@@ -47,7 +47,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "- it is linear between C = (center+toleranceUpper) and D = (center+toleranceUpper+softnessUpper)\n" \
     "- it is 0 above D = (center+toleranceUpper+softnessUpper)\n" \
     "The output alpha is 1 minus the background key: it is 0 (transparent) between B and C, and 1 (opaque) below A and above D.\n" \
-    "Two special cases: if B <= 0, the background key is 1 (alpha is 0) for every foreground key <= 0, even below A; if C >= 1, it is 1 for every foreground key >= 1, even above D.\n" \
+    "Two special cases: if B <= 0, the background key is 1 (alpha is 0) for every foreground key <= 0, even below A; if C >= 1, it is 1 for every foreground key above C, even above D.\n" \
     "\n" \
     "Keyer can pull mattes that correspond to the RGB channels, the luminance and the red, green and blue colors. " \
     "One very useful application for a luminance mask is to mask out a sky (almost always it is the brightest thing in a landscape).\n" \
