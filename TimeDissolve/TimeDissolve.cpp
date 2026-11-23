@@ -66,11 +66,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamIn "dissolveIn"
 #define kParamInLabel "In"
-#define kParamInHint "First frame of the dissolve: the frame before it shows only A, and this frame already shows some of B."
+#define kParamInHint "First frame of the dissolve: the frame before it shows only A, and with the default curve this frame already shows some of B."
 
 #define kParamOut "dissolveOut"
 #define kParamOutLabel "Out"
-#define kParamOutHint "Last frame of the dissolve: this frame still shows some of A, and the frame after it shows only B."
+#define kParamOutHint "Last frame of the dissolve: with the default curve this frame still shows some of A, and the frame after it shows only B."
 
 #define kParamCurve "dissolveCurve"
 #define kParamCurveLabel "Curve"
@@ -189,7 +189,8 @@ TimeDissolvePlugin::getTransition(double time)
 
     // The In and Out frames are part of the dissolve: the curve abscissa is 0 at the frame
     // before In and 1 at the frame after Out (kParamCurveHint, kParamInHint, kParamOutHint),
-    // so that the In frame already shows some of B, and the Out frame still shows some of A.
+    // so that, with the default curve, the In frame already shows some of B, and the Out frame
+    // still shows some of A.
     _dissolveIn->getValueAtTime(time, dissolveIn);
     --dissolveIn;
     _dissolveOut->getValueAtTime(time, dissolveOut);

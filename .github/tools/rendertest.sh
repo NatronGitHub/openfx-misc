@@ -656,11 +656,13 @@ tests=(
     # TimeDissolve, In 1 and Out 10 (the defaults): the In and Out frames are part of the dissolve
     # (issue #320). The curve abscissa is 0 at the frame before In and 1 at the frame after Out:
     # frame 0 is A, frame 11 is B, and with the smoothstep curve (hostDemo has no parametric
-    # parameters) frame 1 has 3x^2-2x^3 = 0.0233 of B (x = 1/11), frame 10 has 0.9767 of B (byte
-    # images truncate: tolerance 0.005).
+    # parameters) frame 1 has 3x^2-2x^3 = 0.0233 of B (x = 1/11), frame 10 has 0.9767 of B. Byte
+    # images truncate (0.0233 gives 5/255): tolerance 0.005 in byte, 0.0005 in short and float.
     "TimeDissolve before In|net.sf.openfx.TimeDissolvePlugin|filter|*|identity+mean=0,0,0,1||-i A=solid:0,0,0,1 -i Source=solid:1,1,1,1 --frames 0"
-    "TimeDissolve at In|net.sf.openfx.TimeDissolvePlugin|filter|*|mean=0.0233,0.0233,0.0233,1+tol=0.005||-i A=solid:0,0,0,1 -i Source=solid:1,1,1,1 --frames 1"
-    "TimeDissolve at Out|net.sf.openfx.TimeDissolvePlugin|filter|*|mean=0.9767,0.9767,0.9767,1+tol=0.005||-i A=solid:0,0,0,1 -i Source=solid:1,1,1,1 --frames 10"
+    "TimeDissolve at In|net.sf.openfx.TimeDissolvePlugin|filter|byte|mean=0.0233,0.0233,0.0233,1+tol=0.005||-i A=solid:0,0,0,1 -i Source=solid:1,1,1,1 --frames 1"
+    "TimeDissolve at In|net.sf.openfx.TimeDissolvePlugin|filter|short float|mean=0.02329,0.02329,0.02329,1+tol=0.0005||-i A=solid:0,0,0,1 -i Source=solid:1,1,1,1 --frames 1"
+    "TimeDissolve at Out|net.sf.openfx.TimeDissolvePlugin|filter|byte|mean=0.9767,0.9767,0.9767,1+tol=0.005||-i A=solid:0,0,0,1 -i Source=solid:1,1,1,1 --frames 10"
+    "TimeDissolve at Out|net.sf.openfx.TimeDissolvePlugin|filter|short float|mean=0.97671,0.97671,0.97671,1+tol=0.0005||-i A=solid:0,0,0,1 -i Source=solid:1,1,1,1 --frames 10"
     "TimeDissolve after Out|net.sf.openfx.TimeDissolvePlugin|filter|*|identity+mean=1,1,1,1||-i A=solid:0,0,0,1 -i Source=solid:1,1,1,1 --frames 11"
     # the A input at the same time (hostDemo's default pattern: red = t at t > 1, except the text),
     # at frame 5 weighted by 1 - 0.432 (x = 5/11)
