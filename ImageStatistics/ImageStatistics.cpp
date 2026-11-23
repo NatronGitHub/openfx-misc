@@ -32,6 +32,7 @@
 #include "ofxsMacros.h"
 #include "ofxsCopier.h"
 #include "ofxsCoords.h"
+#include "ofxsNormalisedDefaults.h"
 #include "ofxsLut.h"
 #include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
@@ -90,6 +91,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "The Analyze Sequence buttons analyze the frames given by Sequence Range: the frame range of the input " \
     "(the default), the timeline (project) frame range, or a custom range, within the frame range of the input."
 #define kPluginIdentifier "net.sf.openfx.ImageStatistics"
+// (#236, in the current minor version, not released yet) on hosts that ignore normalised defaults
+//              (e.g. DaVinci Resolve), the default rectangle is the project's, not (1,1) pixels
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 2 // Increment this when you have fixed a bug or made it faster.
 // 1.2: the S.Dev. of fewer than 2 pixels, and the skewness and kurtosis of fewer than 3 and 4 pixels,
@@ -282,11 +285,6 @@ enum SequenceRangeEnum
 #define kParamMinLumaPixVal "minLumaPixVal"
 #define kParamMinLumaPixValLabel "Min Luma Pixel Value"
 #define kParamMinLumaPixValHint "RGB value for the pixel with the minimum luma value."
-
-// Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
-#define kParamDefaultsNormalised "defaultsNormalised"
-
-static bool gHostSupportsDefaultCoordinateSystem = true; // for kParamDefaultsNormalised
 
 #define kParamGroupAutoCrop "Auto Crop"
 
@@ -1193,29 +1191,16 @@ public:
         _autoCropSize = fetchDouble2DParam(kParamAutoCropSize);
         assert(_autoCropBtmLeft && _autoCropSize);
 
-        // honor kParamDefaultsNormalised
-        if ( paramExists(kParamDefaultsNormalised) ) {
-            // Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
-            // handle these ourselves!
-            BooleanParam* param = fetchBooleanParam(kParamDefaultsNormalised);
-            assert(param);
-            bool normalised = param->getValue();
-            if (normalised) {
-                OfxPointD size = getProjectExtent();
-                OfxPointD origin = getProjectOffset();
-                OfxPointD p;
-                // we must denormalise all parameters for which setDefaultCoordinateSystem(eCoordinatesNormalised) couldn't be done
-                //EditBlock eb(*this, kParamDefaultsNormalised);
-                p = _btmLeft->getValue();
-                _btmLeft->setValue(p.x * size.x + origin.x, p.y * size.y + origin.y);
-                p = _size->getValue();
-                _size->setValue(p.x * size.x, p.y * size.y);
-                param->setValue(false);
-            }
-        }
 
         // finally
         syncPrivateData();
+        // Hosts that ignore normalised defaults (e.g. Resolve) give the normalised values as is: convert
+        // the ones that still equal their default (#236, see ofxsNormalisedDefaults.h). Last, since
+        // setValue() may call changedParam().
+        // the size only if the position is untouched too: (1,1) may be a deliberate one-pixel rectangle
+        if ( ofxsDenormaliseUntouchedDefault(*this, *_btmLeft, /*isPosition=*/true) ) {
+            ofxsDenormaliseUntouchedDefault(*this, *_size, /*isPosition=*/false);
+        }
     }
 
 private:
@@ -2159,11 +2144,7 @@ ImageStatisticsPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractBtmLeft);
         param->setLabel(kParamRectangleInteractBtmLeftLabel);
         param->setDoubleType(eDoubleTypeXYAbsolute);
-        if ( param->supportsDefaultCoordinateSystem() ) {
-            param->setDefaultCoordinateSystem(eCoordinatesNormalised); // no need of kParamDefaultsNormalised
-        } else {
-            gHostSupportsDefaultCoordinateSystem = false; // no multithread here, see kParamDefaultsNormalised
-        }
+        ofxsSetDefaultCoordinateSystemNormalised(*param); // see ofxsNormalisedDefaults.h (#236)
         param->setDefault(0., 0.);
         param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
@@ -2182,11 +2163,7 @@ ImageStatisticsPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractSize);
         param->setLabel(kParamRectangleInteractSizeLabel);
         param->setDoubleType(eDoubleTypeXY);
-        if ( param->supportsDefaultCoordinateSystem() ) {
-            param->setDefaultCoordinateSystem(eCoordinatesNormalised); // no need of kParamDefaultsNormalised
-        } else {
-            gHostSupportsDefaultCoordinateSystem = false; // no multithread here, see kParamDefaultsNormalised
-        }
+        ofxsSetDefaultCoordinateSystemNormalised(*param); // see ofxsNormalisedDefaults.h (#236)
         param->setDefault(1., 1.);
         param->setRange(0., 0., DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(0, 0, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)

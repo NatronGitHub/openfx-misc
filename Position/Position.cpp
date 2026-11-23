@@ -27,6 +27,7 @@
 #include <iostream>
 
 #include "ofxsCoords.h"
+#include "ofxsNormalisedDefaults.h"
 #include "ofxsMacros.h"
 #include "ofxsCopier.h"
 #include "ofxsPositionInteract.h"
@@ -40,8 +41,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDescription "Translate an image by an integer number of pixels.\n" \
     "This plugin does not concatenate transforms."
 #define kPluginIdentifier "net.sf.openfx.Position"
+// version 1.1: on hosts that ignore normalised defaults (e.g. DaVinci Resolve), the default translation
+//              (0,0) is the project offset; this only changes anything if that offset is not zero (#236)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -58,11 +61,6 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamInteractiveLabel "Interactive"
 #define kParamInteractiveHint \
     "When checked the image will be rendered whenever moving the overlay interact instead of when releasing the mouse button."
-
-// Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
-#define kParamDefaultsNormalised "defaultsNormalised"
-
-static bool gHostSupportsDefaultCoordinateSystem = true; // for kParamDefaultsNormalised
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -83,24 +81,10 @@ public:
         _translate = fetchDouble2DParam(kParamTranslate);
         assert(_translate);
 
-        // honor kParamDefaultsNormalised
-        if ( paramExists(kParamDefaultsNormalised) ) {
-            // Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
-            // handle these ourselves!
-            BooleanParam* param = fetchBooleanParam(kParamDefaultsNormalised);
-            assert(param);
-            bool normalised = param->getValue();
-            if (normalised) {
-                OfxPointD size = getProjectExtent();
-                OfxPointD origin = getProjectOffset();
-                OfxPointD p;
-                // we must denormalise all parameters for which setDefaultCoordinateSystem(eCoordinatesNormalised) couldn't be done
-                //EditBlock eb(*this, kParamDefaultsNormalised);
-                p = _translate->getValue();
-                _translate->setValue(p.x * size.x + origin.x, p.y * size.y + origin.y);
-                param->setValue(false);
-            }
-        }
+        // Hosts that ignore normalised defaults (e.g. Resolve) give the normalised values as is: convert
+        // the ones that still equal their default (#236, see ofxsNormalisedDefaults.h). Last, since
+        // setValue() may call changedParam().
+        ofxsDenormaliseUntouchedDefault(*this, *_translate, /*isPosition=*/true);
     }
 
 private:
@@ -384,11 +368,7 @@ PositionPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamTranslateLabel);
         param->setHint(kParamTranslateHint);
         param->setDoubleType(eDoubleTypeXYAbsolute);
-        if ( param->supportsDefaultCoordinateSystem() ) {
-            param->setDefaultCoordinateSystem(eCoordinatesNormalised); // no need of kParamDefaultsNormalised
-        } else {
-            gHostSupportsDefaultCoordinateSystem = false; // no multithread here, see kParamDefaultsNormalised
-        }
+        ofxsSetDefaultCoordinateSystemNormalised(*param); // see ofxsNormalisedDefaults.h (#236)
         param->setDefault(0., 0.);
         param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)

@@ -27,6 +27,7 @@
 
 #include "ofxsProcessing.H"
 #include "ofxsCoords.h"
+#include "ofxsNormalisedDefaults.h"
 #include "ofxsRectangleInteract.h"
 #include "ofxsMaskMix.h"
 #include "ofxsMacros.h"
@@ -46,8 +47,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
+// version 2.1: on hosts that ignore normalised defaults (e.g. DaVinci Resolve), the default rectangle
+//              is the project's, not (1,1) pixels (#236)
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -93,10 +96,6 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamSoftnessLabel "Softness"
 #define kParamSoftnessHint "Size of the fade around edges of the rectangle to apply"
 
-// Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
-#define kParamDefaultsNormalised "defaultsNormalised"
-
-static bool gHostSupportsDefaultCoordinateSystem = true; // for kParamDefaultsNormalised
 class CopyRectangleProcessorBase
     : public ImageProcessor
 {
@@ -282,25 +281,12 @@ public:
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
 
-        // honor kParamDefaultsNormalised
-        if ( paramExists(kParamDefaultsNormalised) ) {
-            // Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
-            // handle these ourselves!
-            BooleanParam* param = fetchBooleanParam(kParamDefaultsNormalised);
-            assert(param);
-            bool normalised = param->getValue();
-            if (normalised) {
-                OfxPointD size = getProjectExtent();
-                OfxPointD origin = getProjectOffset();
-                OfxPointD p;
-                // we must denormalise all parameters for which setDefaultCoordinateSystem(eCoordinatesNormalised) couldn't be done
-                //EditBlock eb(*this, kParamDefaultsNormalised);
-                p = _btmLeft->getValue();
-                _btmLeft->setValue(p.x * size.x + origin.x, p.y * size.y + origin.y);
-                p = _size->getValue();
-                _size->setValue(p.x * size.x, p.y * size.y);
-                param->setValue(false);
-            }
+        // Hosts that ignore normalised defaults (e.g. Resolve) give the normalised values as is: convert
+        // the ones that still equal their default (#236, see ofxsNormalisedDefaults.h). Last, since
+        // setValue() may call changedParam().
+        // the size only if the position is untouched too: (1,1) may be a deliberate one-pixel rectangle
+        if ( ofxsDenormaliseUntouchedDefault(*this, *_btmLeft, /*isPosition=*/true) ) {
+            ofxsDenormaliseUntouchedDefault(*this, *_size, /*isPosition=*/false);
         }
     }
 
@@ -708,11 +694,7 @@ CopyRectanglePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractBtmLeft);
         param->setLabel(kParamRectangleInteractBtmLeftLabel);
         param->setDoubleType(eDoubleTypeXYAbsolute);
-        if ( param->supportsDefaultCoordinateSystem() ) {
-            param->setDefaultCoordinateSystem(eCoordinatesNormalised); // no need of kParamDefaultsNormalised
-        } else {
-            gHostSupportsDefaultCoordinateSystem = false; // no multithread here, see kParamDefaultsNormalised
-        }
+        ofxsSetDefaultCoordinateSystemNormalised(*param); // see ofxsNormalisedDefaults.h (#236)
         param->setDefault(0., 0.);
         param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(-10000., -10000., 10000., 10000.); // Resolve requires display range or values are clamped to (-1,1)
@@ -729,11 +711,7 @@ CopyRectanglePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractSize);
         param->setLabel(kParamRectangleInteractSizeLabel);
         param->setDoubleType(eDoubleTypeXY);
-        if ( param->supportsDefaultCoordinateSystem() ) {
-            param->setDefaultCoordinateSystem(eCoordinatesNormalised); // no need of kParamDefaultsNormalised
-        } else {
-            gHostSupportsDefaultCoordinateSystem = false; // no multithread here, see kParamDefaultsNormalised
-        }
+        ofxsSetDefaultCoordinateSystemNormalised(*param); // see ofxsNormalisedDefaults.h (#236)
         param->setDefault(1., 1.);
         param->setRange(0., 0., DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(0., 0., 10000., 10000.); // Resolve requires display range or values are clamped to (-1,1)
