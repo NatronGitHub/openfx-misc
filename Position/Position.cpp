@@ -42,7 +42,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "This plugin does not concatenate transforms."
 #define kPluginIdentifier "net.sf.openfx.Position"
 // version 1.1: on hosts that ignore normalised defaults (e.g. DaVinci Resolve), the default translation
-//              is in project coordinates, not the normalised value taken as pixels (#236)
+//              (0,0) is the project offset; this only changes anything if that offset is not zero (#236)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
