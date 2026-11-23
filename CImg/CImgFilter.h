@@ -181,6 +181,9 @@ public:
 
     virtual void changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName) OVERRIDE;
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE;
+    // In the general context, map Source and Output to the same components (render() needs them to
+    // be the same). Plug-ins that override getClipPreferences() must call this one first.
+    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE;
     static OFX::PageParamDescriptor* describeInContextBegin(bool sourceIsOptional,
                                                             OFX::ImageEffectDescriptor &desc,
                                                             OFX::ContextEnum context,

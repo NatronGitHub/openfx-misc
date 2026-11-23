@@ -113,6 +113,29 @@ CImgFilterPluginHelperBase::CImgFilterPluginHelperBase(OfxImageEffectHandle hand
     }
 }
 
+// render() copies Source with the output's components, so they must be the same (it refuses
+// others). In the other contexts the host makes them the same: "a plugin cannot change the
+// component type of the Output clip, it will always be the same as the Source clip" (filter
+// context), "the component type of Source and Output will always be the same" (paint context,
+// ofxImageEffectContexts.rst). In the general context, "all input clips may be remapped, as can
+// the output clip. The output clip has its default components set to be: RGBA if any of the
+// inputs is RGBA; otherwise A if the effect has any inputs" (ofxClipPreferences.rst): with an
+// RGB Source and the Alpha Mask, the default output is A. The output follows Source, as with a
+// filter: give both the components that the host mapped Source to (one that the plug-in supports
+// on Source, and so on the output, which supports the same ones) (issue #251).
+void
+CImgFilterPluginHelperBase::getClipPreferences(ClipPreferencesSetter &clipPreferences)
+{
+    if ( (getContext() != eContextGeneral) || !_srcClip || !_srcClip->isConnected() ) {
+        return;
+    }
+    const PixelComponentEnum srcComponents = _srcClip->getPixelComponents();
+    if ( isSupportedComponents(srcComponents) ) {
+        clipPreferences.setClipComponents(*_srcClip, srcComponents);
+        clipPreferences.setClipComponents(*_dstClip, srcComponents);
+    }
+}
+
 void
 CImgFilterPluginHelperBase::changedClip(const InstanceChangedArgs &args,
                                         const std::string &clipName)
