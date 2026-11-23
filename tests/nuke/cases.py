@@ -1,4 +1,4 @@
-"""The cases and input images of nukecompare.py.
+"""The cases and input images of the compatibility tests (harness.py).
 
 Images: IMAGES maps a name to a dict with
 - "nuke": the four expressions (r, g, b, a) of a Nuke Expression node, in
@@ -39,8 +39,9 @@ Cases: CASES is a list of dicts with
   project format in Nuke, the others WIDTH x HEIGHT;
 - "channels": the compared channels, e.g. "rgb" or "rgba";
 - "tolerance": the largest accepted absolute difference;
-- "known": the GitHub issue of a known difference that the case confirms;
-  None means the outputs must match.
+- "known": the GitHub issue of a known difference that the case confirms
+  (the test is an expected failure, see ISSUES); None means the outputs
+  must match.
 """
 
 WIDTH = 32
@@ -1382,6 +1383,34 @@ for _name, _x, _y, _knobs, _params, _disparity in _RECONVERGE:
                              dict(_ofx_point, **_params), _disparity))
 
 
+# ---------------------------------------------- More common-use cases
+CASES += [
+    case("FilterErode size 0 (ErodeSmoothCImg size 0)",
+         ("FilterErode", {"size": 0}),
+         (CIMG + "CImgErodeSmooth", {}), input="mask", channels="rgba"),
+    case("Radial softness 0",
+         ("Radial", {"area": [100, 100, 600, 476], "softness": 0}),
+         (ofx_id("Radial"), {"bottomLeft": [cx(100), 100],
+                             "size": [cx(500), 376], "softness": 0}),
+         **dict(GEN, tolerance=1e-4)),
+    case("Retime speed 0.5, filter none, whole source frames",
+         ("Retime", {"input.first": 0, "input.last": 25, "output.first": 0,
+                     "speed": .5, "filter": "none"}),
+         (ofx_id("Retime"), {"speed": .5, "filter": "None"}),
+         frames=[0, 2, 4, 10], **TIME),
+    case("TimeDissolve in 1, out 10, after the In frame",
+         ("TimeDissolve", {"in": 1, "out": 10}),
+         (ofx_id("TimeDissolvePlugin"), {}),
+         nuke_inputs=["black", "white"],
+         clips={"Source": "black", "A": "white"},
+         frames=[0, 2, 5, 9, 10, 11], channels="rgba", tolerance=1e-4),
+    case("AppendClip defaults, after the first frames",
+         ("AppendClip", {}), (ofx_id("AppendClip"), {}),
+         nuke_inputs=["frame", "white"], clips={"1": "frame", "2": "white"},
+         frames=[2, 25, 26, 27, 40], channels="rgba", tolerance=1e-4),
+]
+
+
 # ----------------------------------------------- Known divergences, by case
 # The differences the runs found, with the issue that records each one
 # (DOCUMENTED: differences that are intentional or come from OFX, e.g.
@@ -1449,7 +1478,8 @@ KNOWN = {
         "Ramp defaults", "Transform translate 0.5,0.25 cubic, edges",
         "Reformat to box 20x12 fit, box PAR = PAR",
         "Reformat to box 20x12 fit, reference black outside",
-        "Blur size 4 on the ramp (edges)", "Convolve2 3x3 kernel, edges"] + [
+        "Blur size 4 on the ramp (edges)", "Convolve2 3x3 kernel, edges",
+        "Radial softness 0"] + [
             "Ramp %s, horizontal" % _t
             for _t in ("linear", "plinear", "smooth0", "smooth1", "smooth")],
 }
@@ -1458,3 +1488,62 @@ for _known, _names in KNOWN.items():
     for _name in _names:
         assert _BY_NAME[_name]["known"] is None, _name
         _BY_NAME[_name]["known"] = _known
+
+
+# The short titles of the issues of known differences (xfail reasons).
+ISSUES = {
+    261: 'Grade: the gamma curve above 1',
+    266: 'ZDefocus semantics',
+    267: 'ReConverge: implement the convergence shift',
+    270: 'Transform family: missing sharpening filters, no prefilte...',
+    271: 'Color and mask nodes: no fringe, no (un)premult invert, n...',
+    272: 'ColorCorrect, ColorMatrix, Saturation, HSVTool: Clamp Bla...',
+    273: 'TimeBlur and motion blur: shutter limited to 0-2 frames;...',
+    274: 'DirBlur, EdgeExtend, ChromaKeyer, SmoothPatchBased: say w...',
+    275: 'Difference: with RGB input the matte overwrites blue',
+    276: 'Wrong or misleading hints, descriptions and comments',
+    277: 'Merge: alpha masking changes RGB, alpha outside [0, 1] is...',
+    278: 'KeyMix: no bounding box choice',
+    279: 'Shuffle: one output layer; the ShuffleCopy-style default...',
+    280: 'Keyer: the matte is inverted with respect to its A, B, C,...',
+    281: 'PIK: luminance match and autolevels are not implemented;...',
+    282: 'CopyRectangle: softness ramp shape; whole-image default area',
+    283: 'Roto: nothing is drawn by default (Process A off); no pre...',
+    284: 'Constant: finite region of definition',
+    285: 'CheckerBoard: centerline width default 1, and the four-co...',
+    286: 'ColorBars: SMPTE HD bars with an IRE intensity; no PAL op...',
+    287: 'ColorWheel: gamma default 0.45; no area control',
+    288: 'Radial and Rectangle: softness falloff curve; missing Dra...',
+    289: 'ColorCorrect: tonal range weighting, negative values unde...',
+    290: 'ColorLookup: master curve combination, and the master cur...',
+    291: 'ColorMatrix: no invert option',
+    292: 'Saturation: negative saturation cannot be entered',
+    293: 'HSVTool: no Set Saturation / Set Brightness, no per-compo...',
+    294: 'Invert: no clamp option',
+    295: 'Premult and Unpremult: no invert option; Premult does not...',
+    296: 'ColorTransform nodes: say that HSV/HSL work on the values...',
+    297: 'CImgExpression: x and y are buffer indices at render scale',
+    298: 'Crop: softness falloff curve',
+    299: 'AdjustRoD: cannot shrink the RoD; default amount 0',
+    300: 'Position: no edge-pixel fill',
+    301: 'Mirror: flips around the input RoD instead of the format',
+    302: 'LensDistortion: the model does not follow its documented...',
+    303: 'IDistort: the output is multiplied by the UV alpha; no bl...',
+    304: 'GodRays: translate and skew combine with the other controls',
+    305: 'ContactSheet: placement in partially filled sheets; no Sn...',
+    306: 'TimeOffset: no rounding mode',
+    307: 'FrameHold: First Frame defaults to 0; no Set to Current F...',
+    308: 'FrameRange: frames outside the range are black by default',
+    309: 'Retime: output range ignores the speed; no Box filter; No...',
+    310: 'FrameBlend: blends 6 frames by default',
+    311: 'Anaglyph, MixViews, SideBySide, JoinViews: limited to the...',
+    312: "BlurCImg family: the IIR Gaussian's shape (peak and tail)",
+    313: 'SharpenCImg, SoftenCImg: no minimum/maximum controls',
+    314: 'EdgeDetectCImg: no Prewitt, no threshold, no single alpha...',
+    315: 'ErodeCImg/DilateCImg, ErodeBlurCImg, ErodeSmoothCImg, Med...',
+    316: 'ConvolveCImg: per-channel kernels by default',
+    317: 'Compatibility tests that cannot be automated yet',
+    318: 'Document the behaviours that come from OFX: black outside...',
+    319: 'AppendClip: first output frame, fade curve, cross-dissolve',
+    320: 'TimeDissolve: the dissolve starts before the In frame',
+}

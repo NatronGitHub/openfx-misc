@@ -1,53 +1,29 @@
-#!/usr/bin/env python3
-"""Compare openfx-misc plug-ins with the Nuke nodes they clone.
+"""Renders compatibility test cases with Nuke and hostDemo, and compares.
 
-A local tool, not run in CI. Each case renders the same small synthetic
-images through a Nuke node (in Nuke's terminal mode, `nuke --nc -t`, one
-process per case, which works with a Nuke Non-Commercial licence once you
-are signed in; --nc is always passed) and through the matching openfx-misc
-plug-in (with openfx's hostDemo), and compares the pixel values. The inputs
-go well outside [0, 1], so that differences in how a node treats negative
-values or values above 1 show up (e.g. Grade's gamma above 1, issue #261).
-The cases and the input images are in nukecompare_cases.py, next to this
-file.
+Each case renders the same small synthetic images through a Nuke node (in
+Nuke's terminal mode, `nuke --nc -t`, one process per case: a Nuke
+Non-Commercial session allows only 10 node objects) and through the
+matching openfx-misc plug-in (with openfx's hostDemo), and compares the
+pixel values. The cases and the input images are in cases.py.
 
 hostDemo's project is PAL SD (768x576 canonical, 720x576 pixels, pixel
 aspect ratio 768/720), so the Nuke formats get the same pixel aspect ratio:
 OFX positions are canonical (x in pixels times the PAR), Nuke's in pixels.
 
-Usage:
-    .github/tools/nukecompare.py [--nuke NUKE] [--only REGEX] [--keep DIR]
-                                 [--list] PREFIX
-
-PREFIX is a CMake install prefix of openfx-misc configured with
--DOFX_BUILD_HOSTDEMO=ON (bundles in PREFIX/OFX/Plugins, hostDemo in
-PREFIX/bin). NUKE is the Nuke executable (default: $NUKE, or the newest
-/Applications/Nuke*/Nuke*.app/Contents/MacOS/Nuke<version>). $HOSTDEMO, if
-set, is used to run hostDemo (e.g. a wrapper), with $HOSTDEMO_REAL as the
-real binary.
-
-Exit status: 0 if every case matches within its tolerance, is a known
-divergence that still diverges, or is skipped because its plug-in is not
-installed (SKIP); 1 otherwise (a new divergence, an error, or a known
-divergence that now matches: update the case).
+$HOSTDEMO, if set, is used to run hostDemo (e.g. a wrapper), with
+$HOSTDEMO_REAL as the real binary.
 """
 
-import argparse
 import glob
 import json
 import math
 import os
 import re
-import shutil
 import struct
 import subprocess
-import sys
-import tempfile
 
-sys.dont_write_bytecode = True  # no __pycache__ next to the cases
-import nukecompare_cases as cases_module  # noqa: E402 (after the line above)
-from nukecompare_cases import (  # noqa: E402
-    CASES, HEIGHT, IMAGES, PAR, PROJECT, WIDTH)
+import cases as cases_module
+from cases import HEIGHT, IMAGES, PAR, PROJECT, WIDTH
 
 CHANNEL_INDEX = {"r": 0, "g": 1, "b": 2, "a": 3}
 NUKE_TIMEOUT = 300  # seconds, per case
@@ -58,6 +34,10 @@ PROJECT_STEP = 8  # compare one pixel in 8x8 over the project area
 
 class CaseError(Exception):
     """A case could not be run (Nuke or hostDemo failed)."""
+
+
+class NukeUnavailable(CaseError):
+    """Nuke cannot run (not installed, or not signed in)."""
 
 
 class PluginMissing(CaseError):
@@ -357,7 +337,9 @@ def describe(prefix, plugin, work):
             raise _DESCRIPTIONS[plugin]
         return _DESCRIPTIONS[plugin]
     command, env = hostdemo_command(prefix)
-    path = os.path.join(work, plugin + ".describe.json")
+    describe_dir = os.path.join(work, "describe")
+    os.makedirs(describe_dir, exist_ok=True)
+    path = os.path.join(describe_dir, "%s.%d.json" % (plugin, os.getpid()))
     status = run_command(command + ["-p", plugin, "--describe", path],
                          path + ".log", HOSTDEMO_TIMEOUT, cwd=work, env=env)
     if status != 0 or not os.path.exists(path):
@@ -545,81 +527,59 @@ def compare(case, nuke_results, ofx_results):
     return worst, where
 
 
-def known_label(known):
-    """How a known divergence is printed: #N, or the draft issue file."""
-    return ("#%d" % known) if isinstance(known, int) else str(known)
+def case_id(case):
+    """The test id of a case: "<plug-in>/<case name>".
+
+    The plug-in is the last part of the OFX identifier, without "Plugin"
+    and with "CImg" at the end (e.g. Merge, BlurCImg).
+    """
+    plugin = case["ofx"][0].split(".")[-1]
+    plugin = re.sub(r"Plugin$", "", plugin)
+    if plugin.startswith("CImg"):
+        plugin = plugin[len("CImg"):] + "CImg"
+    plugin = plugin[0].upper() + plugin[1:]
+    name = case["name"].replace("[0, 1]", "0-1")
+    first, _, rest = name.partition(" ")
+    nuke_class = re.sub(r"\d+$", "", case["nuke"][0]).lower()
+    if rest and first.lower() in (nuke_class, plugin.lower(),
+                                  plugin.lower().replace("cimg", "")):
+        name = rest
+    name = re.sub(r"[,\[\]]", "", name)
+    return "%s/%s" % (plugin, name)
+
+
+def check_nuke(nuke, work):
+    """Raises NukeUnavailable unless Nuke renders a one-node script."""
+    if not nuke or not os.access(nuke, os.X_OK):
+        raise NukeUnavailable("no Nuke executable: use --nuke or $NUKE")
+    script = os.path.join(work, "check_nuke.py")
+    result = os.path.join(work, "check_nuke.json")
+    with open(script, "w") as f:
+        f.write("import json\nimport nuke\n"
+                "c = nuke.nodes.Constant(color=0.5)\n"
+                "with open(%r, 'w') as f:\n"
+                "    json.dump(c.sample('rgba.red', 0.5, 0.5), f)\n" % result)
+    if os.path.exists(result):
+        os.remove(result)
+    status = run_command([nuke, "--nc", "-t", script],
+                         os.path.join(work, "check_nuke.log"), 120,
+                         cwd=work)
+    if status != 0 or not os.path.exists(result):
+        raise NukeUnavailable(
+            "%s --nc -t failed (exit status %d, see %s): sign in to Nuke "
+            "Non-Commercial (or use a licensed Nuke)"
+            % (nuke, status, os.path.join(work, "check_nuke.log")))
 
 
 def run_case(nuke, prefix, case, work):
-    """Runs a case.
+    """Renders a case on both sides and compares them.
+
+    hostDemo runs first, so that a case whose plug-in is not installed
+    raises PluginMissing without starting Nuke.
 
     Returns:
-        (line, unexpected): the result line, and whether the result is
-        unexpected (an error, a new divergence, or a known one that now
-        matches). A case whose plug-in is not installed is skipped.
+        (max abs difference, where), as compare().
     """
-    try:
-        ofx_results = run_ofx(prefix, case, work)  # first: may skip
-        nuke_results = run_nuke(nuke, case, work)
-        worst, where = compare(case, nuke_results, ofx_results)
-    except PluginMissing as ex:
-        return "SKIP   %s: %s" % (case["name"], ex), False
-    except CaseError as ex:
-        return "ERROR  %s: %s" % (case["name"], ex), True
-    known = case.get("known")
-    same = worst <= case["tolerance"]
-    if same and not known:
-        return "ok     %s (max diff %.3g)" % (case["name"], worst), False
-    if not same and known:
-        return ("XFAIL  %s (known divergence %s; max diff %.3g at %s)"
-                % (case["name"], known_label(known), worst, where)), False
-    if same:
-        return ("XPASS  %s (known divergence %s, but now matches: update "
-                "the case)" % (case["name"], known_label(known))), True
-    return ("DIFF   %s (max diff %.3g at %s)"
-            % (case["name"], worst, where)), True
-
-
-def main():
-    """Runs the cases; returns the exit status."""
-    parser = argparse.ArgumentParser(
-        description=(__doc__ or "").split("\n", maxsplit=1)[0])
-    parser.add_argument("prefix", nargs="?",
-                        help="openfx-misc install prefix")
-    parser.add_argument("--nuke", help="the Nuke executable")
-    parser.add_argument("--only", help="only the cases whose name matches "
-                        "this regular expression")
-    parser.add_argument("--keep", help="keep the work files in this "
-                        "directory")
-    parser.add_argument("--list", action="store_true",
-                        help="list the cases and exit")
-    args = parser.parse_args()
-    cases = [c for c in CASES
-             if not args.only or re.search(args.only, c["name"])]
-    if args.list:
-        for case in cases:
-            print("%s: Nuke %s vs %s" % (case["name"], case["nuke"][0],
-                                         case["ofx"][0]))
-        return 0
-    if not args.prefix:
-        parser.error("PREFIX is required")
-    nuke = args.nuke or find_nuke()
-    if not nuke:
-        sys.exit("nukecompare: no Nuke found: use --nuke or $NUKE")
-    work = args.keep or tempfile.mkdtemp(prefix="nukecompare.")
-    os.makedirs(work, exist_ok=True)
-    failures = 0
-    try:
-        for case in cases:
-            line, unexpected = run_case(nuke, args.prefix, case, work)
-            print(line, flush=True)
-            failures += unexpected
-    finally:
-        if not args.keep:
-            shutil.rmtree(work, ignore_errors=True)
-    print("nukecompare: %d cases, %d unexpected" % (len(cases), failures))
-    return 1 if failures else 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+    ofx_results = run_ofx(prefix, case, work)
+    nuke_results = run_nuke(nuke, case, work)
+    return compare(case, nuke_results, ofx_results)
