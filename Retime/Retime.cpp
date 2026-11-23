@@ -36,6 +36,7 @@
 #include <cassert>
 #include <climits> // INT_MAX
 #include <algorithm> // std::sort
+#include <optional>
 #include <vector>
 
 #include "ofxsImageEffect.h"
@@ -57,7 +58,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "RetimeOFX"
 #define kPluginGrouping "Time"
 #define kPluginDescription "Change the timing of the input clip.\n" \
-    "In the general context (e.g. in Natron), the output frame range starts with the input frame range, and lasts as long as it takes to play the input frame range at the given Speed (e.g. twice as long at speed 0.5), forwards or backwards. If the speed is 0, it is the input frame range. On hosts without parametric parameters, the Duration parameter sets it instead.\n" \
+    "In the general context (e.g. in Natron), the output frame range starts with the input frame range, and lasts as long as it takes to play the input frame range at the given Speed (e.g. twice as long at speed 0.5), forwards, or backwards with Reverse input. It is the input frame range if the speed is 0 or negative, or so small that the output would last more than 1000 times the input or 100000 frames. A speed without keys (e.g. an expression) is taken as constant, with its value at the first input frame. On hosts without parametric parameters, the Duration parameter sets it instead.\n" \
     "The Before and After parameters set what is read when the source frame falls outside the frame range of the input clip: the input frame itself (Original), the first or last frame (Hold), transparent black (Black), or frames repeated from the input range (Loop, Bounce).\n" \
     "Before and After refer to the source frame range, not to the output: when the input is played backwards (Reverse input, or a negative speed or warp slope), Before sets what is shown at the end of the output.\n" \
     "See also: https://web.archive.org/web/20220627032808/http://www.opticalenquiry.com/nuke/index.php?title=Retime"
@@ -70,7 +71,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              (#309, in the current minor version, not released yet) in the general context, the time
 //              domain (output frame range) follows the speed: it ends where the integrated speed covers the
 //              input frame range (it was the input frame range at any speed), except with the Duration
-//              parameter (hosts without parametric parameters), which still sets it; the Box filter
+//              parameter (hosts without parametric parameters), which still sets it. In old projects, this
+//              also changes what the nodes downstream see as their input frame range (e.g. Write,
+//              FrameRange, FrameHold, the Before/After of another Retime). The Box filter
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -91,16 +94,16 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamDuration "duration"
 #define kParamDurationLabel "Duration"
-#define kParamDurationHint "How long the output clip should be, as a proportion of the input clip's length."
+#define kParamDurationHint "How long the output clip should be, as a proportion of the input clip's length. Only on hosts without parametric parameters (no Warp curve), where it sets the output frame range: the speed is not used for it."
 
 #define kParamFilter "filter"
 #define kParamFilterLabel "Filter"
 #define kParamFilterHint "How input images are combined to compute the output image."
 
 #define kParamFilterOptionNone "None", "Do not interpolate, ask for images with fractional time to the input effect. Useful if the input effect can interpolate itself.", "none"
-#define kParamFilterOptionNearest "Nearest", "Pick input image with nearest integer time.", "nearest"
+#define kParamFilterOptionNearest "Nearest", "Pick input image with nearest integer time. Half frames are rounded up (e.g. 1.5 gives frame 2).", "nearest"
 #define kParamFilterOptionLinear "Linear", "Blend the two nearest images with linear interpolation.", "linear"
-#define kParamFilterOptionBox "Box", "Average the input frames covered by the output frame (from half a frame before it to half a frame after it, mapped to the input time), each weighted by the part of it that is covered (input frame n covers the times from n-0.5 to n+0.5). At speed 1, this is the input frame; faster speeds blend several frames (motion blur), at most " STRINGISE(kBoxMaxFrames) " frames.", "box"
+#define kParamFilterOptionBox "Box", "Average the input frames covered by the output frame (from half a frame before it to half a frame after it, mapped to the input time), each weighted by the part of it that is covered (input frame n covers the times from n-0.5 to n+0.5). At speed 1, this is the input frame; faster speeds blend several frames (motion blur), at most " STRINGISE(kBoxMaxFrames) " frames plus a partial frame at each end. At the ends of the input frame range, the frames outside it are read according to Before/After, so the first and last frames fade (to black, or to what the input gives there) unless Before/After is Hold. In the Retimer context, where the host only gives the source time of the current frame, Box reads the nearest frame.", "box"
 
 enum FilterEnum
 {
@@ -110,8 +113,9 @@ enum FilterEnum
     eFilterBox,
 };
 
-// the maximum number of frames (or fields) blended by the Box filter: beyond that, the frames
-// around the middle of the output frame are used
+// the maximum length, in frames (or fields), of the source interval averaged by the Box filter: beyond
+// that, the part around its middle is used. It covers up to kBoxMaxFrames + 1 samples, the first and last
+// ones partially.
 #define kBoxMaxFrames 64
 
 #define kParamFilterDefault eFilterLinear
@@ -132,7 +136,9 @@ struct BoxSample
 {
     double time; // source time
     double weight;
-    bool black; // transparent black (Before/After = Black)
+    BeforeAfterEnum mode; // the Before/After behaviour that applies (Black: transparent black)
+
+    bool black() const { return mode == eBeforeAfterBlack; }
 };
 
 // The source frames used at a given output time, after applying Before/After.
@@ -273,9 +279,9 @@ public:
 private:
     auto_ptr<Image> fetchDstImage(const RenderArguments &args);
     void getSourceFrames(double time, FieldEnum fieldToRender, SourceFrames *frames);
-    void getBoxSamples(double time, double sourceTime, FieldEnum fieldToRender, std::vector<BoxSample> *samples);
+    std::vector<BoxSample> getBoxSamples(double time, double sourceTime, FieldEnum fieldToRender);
     double getSourceTime(double time);
-    bool getSpeedDuration(const OfxRangeD &srcRange, double *duration);
+    std::optional<double> getSpeedDuration(const OfxRangeD &srcRange);
 };
 
 // Box filter: accumulate weight * src into a float buffer that covers the render window.
@@ -537,7 +543,7 @@ RetimePlugin::renderBox(const RenderArguments &args,
         if ( abort() ) {
             return;
         }
-        if ( it->black || !srcConnected ) {
+        if ( it->black() || !srcConnected ) {
             continue;
         }
         auto_ptr<const Image> src( _srcClip->fetchImage(it->time) );
@@ -604,7 +610,7 @@ RetimePlugin::getSourceFrames(double time,
     frames->boxed = false;
     frames->box.clear();
     if (filter == eFilterBox) {
-        getBoxSamples(time, sourceTime, fieldToRender, &frames->box);
+        frames->box = getBoxSamples(time, sourceTime, fieldToRender);
         assert( !frames->box.empty() );
         frames->from = frames->box[0].time;
         frames->boxed = frames->box.size() > 1;
@@ -637,21 +643,25 @@ RetimePlugin::getSourceFrames(double time,
         fromMode = mapSourceTime(first, last, before, after, &frames->from);
         toMode = mapSourceTime(first, last, before, after, &frames->to);
         for (std::vector<BoxSample>::iterator it = frames->box.begin(); it != frames->box.end(); ++it) {
-            it->black = (mapSourceTime(first, last, before, after, &it->time) == eBeforeAfterBlack);
+            it->mode = mapSourceTime(first, last, before, after, &it->time);
         }
     }
     if (frames->boxed) {
         // merge the samples that read the same frame (e.g. Hold), and the black ones
         std::vector<BoxSample> merged;
         for (std::vector<BoxSample>::const_iterator it = frames->box.begin(); it != frames->box.end(); ++it) {
-            std::vector<BoxSample>::iterator m = merged.begin();
-            while ( (m != merged.end()) && !( (m->black && it->black) || (!m->black && !it->black && (m->time == it->time)) ) ) {
-                ++m;
-            }
+            const BoxSample &sample = *it;
+            std::vector<BoxSample>::iterator m =
+                std::find_if( merged.begin(), merged.end(), [&sample](const BoxSample &other) {
+                    return sample.black() ? other.black() : ( !other.black() && (other.time == sample.time) );
+                } );
             if ( m == merged.end() ) {
-                merged.push_back(*it);
+                merged.push_back(sample);
             } else {
-                m->weight += it->weight;
+                m->weight += sample.weight;
+                if (m->mode == eBeforeAfterOriginal) {
+                    m->mode = sample.mode; // e.g. Hold: the merged frame is held
+                }
             }
         }
         frames->box.swap(merged);
@@ -659,7 +669,7 @@ RetimePlugin::getSourceFrames(double time,
             // a single frame: a copy (or black)
             frames->boxed = false;
             frames->from = frames->to = frames->box[0].time;
-            fromMode = frames->box[0].black ? eBeforeAfterBlack : eBeforeAfterOriginal;
+            fromMode = frames->box[0].mode;
             frames->box.clear();
         } else {
             frames->from = frames->to = frames->box[0].time;
@@ -682,20 +692,24 @@ RetimePlugin::getSourceFrames(double time,
 // field), from half a frame (or field) before the output time to half a frame (or field) after it,
 // mapped to the source time. Source frame (or field) n covers the times n-1/2 to n+1/2 (in frames, or
 // fields), and its weight is the part of the mapped interval that it covers. Before/After is not applied
-// here. At least one sample, the one at sourceTime if the mapped interval is empty.
-void
+// here. At least one sample, the one at sourceTime if the mapped interval is empty. In the Retimer
+// context, the host gives the source time of the current time only: one sample, at sourceTime.
+std::vector<BoxSample>
 RetimePlugin::getBoxSamples(double time,
                             double sourceTime,
-                            FieldEnum fieldToRender,
-                            std::vector<BoxSample> *samples)
+                            FieldEnum fieldToRender)
 {
     const double step = (fieldToRender == eFieldNone) ? 1. : 0.5;
-    double a = getSourceTime(time - step / 2);
-    double b = getSourceTime(time + step / 2);
-    if (b < a) {
-        std::swap(a, b);
+    std::vector<BoxSample> samples;
+    double a = sourceTime;
+    double b = sourceTime;
+    if (getContext() != eContextRetimer) {
+        a = getSourceTime(time - step / 2);
+        b = getSourceTime(time + step / 2);
+        if (b < a) {
+            std::swap(a, b);
+        }
     }
-    samples->clear();
     // a finite, reasonable interval (also false for NaN)
     if ( (std::fabs(a) < kMaxBeforeAfterFrame) && (std::fabs(b) < kMaxBeforeAfterFrame) && (b > a) ) {
         if (b - a > kBoxMaxFrames * step) {
@@ -708,17 +722,19 @@ RetimePlugin::getBoxSamples(double time,
         for (double n = first; n <= last; ++n) {
             const double overlap = (std::min)(b, (n + 0.5) * step) - (std::max)(a, (n - 0.5) * step);
             if (overlap > 0.) {
-                BoxSample sample = { n * step, overlap / (b - a), false };
-                samples->push_back(sample);
+                const BoxSample sample = { n * step, overlap / (b - a), eBeforeAfterOriginal };
+                samples.push_back(sample);
             }
         }
     }
-    if ( samples->empty() ) {
-        // speed 0, or no reasonable interval: the frame (or field) at the source time
+    if ( samples.empty() ) {
+        // speed 0, the Retimer context, or no reasonable interval: the frame (or field) at the source time
         const double n = (std::fabs(sourceTime) < kMaxBeforeAfterFrame) ? std::floor(sourceTime / step + 0.5) * step : sourceTime;
-        BoxSample sample = { n, 1., false };
-        samples->push_back(sample);
+        const BoxSample sample = { n, 1., eBeforeAfterOriginal };
+        samples.push_back(sample);
     }
+
+    return samples;
 }
 
 void
@@ -736,7 +752,7 @@ RetimePlugin::getFramesNeeded(const FramesNeededArguments &args,
         getSourceFrames(args.time, fields[i], &src);
         if (src.boxed) {
             for (std::vector<BoxSample>::const_iterator it = src.box.begin(); it != src.box.end(); ++it) {
-                if (!it->black) {
+                if ( !it->black() ) {
                     times.push_back(it->time);
                 }
             }
@@ -773,21 +789,22 @@ RetimePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
     SourceFrames src;
     getSourceFrames(args.time, eFieldNone, &src);
     if (src.boxed) {
-        // union of the RoDs of the frames read, empty if they are all black
-        bool empty = true;
-        rod.x1 = rod.y1 = rod.x2 = rod.y2 = 0.;
+        // the union of the RoDs of the frames read. The black samples are merged into one, so at
+        // least one of the (two or more) samples is not black.
+        bool first = true;
         for (std::vector<BoxSample>::const_iterator it = src.box.begin(); it != src.box.end(); ++it) {
-            if (it->black) {
+            if ( it->black() ) {
                 continue;
             }
             const OfxRectD frameRoD = _srcClip->getRegionOfDefinition(it->time, args.view);
-            if (empty) {
+            if (first) {
                 rod = frameRoD;
-                empty = false;
+                first = false;
             } else {
                 Coords::rectBoundingBox(rod, frameRoD, &rod);
             }
         }
+        assert(!first);
 
         return true;
     }
@@ -842,57 +859,77 @@ RetimePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     }
 }
 
-// the input length covered after d output frames from start: the absolute value of the integrated speed
+// the furthest output duration that getSpeedDuration() considers, for an input frame range of the given
+// length: a slower speed gives the host default. Hosts may evaluate an integral slowly (e.g. Natron
+// integrates an expression numerically, frame by frame), and this is called from the host's frame range
+// queries, so the search must stay short.
 static double
-speedCovered(DoubleParam &speed,
-             double start,
-             double d)
+maxSpeedDuration(double length)
 {
-    return std::fabs( speed.integrate(start, start + d) );
+    return (std::min)(length * 1000., 1e5);
 }
 
-// The output duration at the current speed: the smallest d >= 0 (to within one frame, rounded down)
-// such that the speed integrated from the start of the input frame range to that start plus d covers
-// the length of the input frame range, i.e. the time at which the last input frame is reached (or the
-// first one, backwards). The speed may be animated: d is searched by doubling, then by bisection on whole
-// frames, which is exact when the speed does not change sign. False if the input range is empty, or the
-// speed is too small or not finite: the input range is not reached within kMaxBeforeAfterFrame frames.
-bool
-RetimePlugin::getSpeedDuration(const OfxRangeD &srcRange,
-                               double *duration)
+// The output duration at the current speed: the largest whole number of frames d such that the
+// signed integral I(d) of the speed, from the start of the input frame range to that start plus d,
+// stays within the length of the input frame range, i.e. the time at which the last input frame is
+// reached (forwards, from the first input frame; with Reverse input, backwards from the last one: the
+// source time is first + I or last - I, in the input range for 0 <= I <= length). None (the host
+// default) if the input range is empty, if the integral is negative (the speed plays the frames before
+// the input, or after it with Reverse input), or if the input length is not reached within
+// maxSpeedDuration() frames (a speed that is 0, too small or not finite).
+// - A speed without keys (a constant, or an expression) is taken as constant, with its value at the
+//   first input frame: d = length / speed.
+// - An animated speed: d is searched by doubling, then by bisection on whole frames. This is exact
+//   if the integral is monotonic (the speed does not change sign). If the speed changes sign, d is the
+//   first probed duration where the integral reaches the length: frames where the integral is negative
+//   or goes back may be included.
+std::optional<double>
+RetimePlugin::getSpeedDuration(const OfxRangeD &srcRange)
 {
     const double length = srcRange.max - srcRange.min;
     if ( !(length > 0.) || !(length < kMaxBeforeAfterFrame) ) {
-        return false;
+        return std::nullopt;
     }
-    // a small tolerance, so that rounding errors in the integral do not drop the last frame
+    const double maxDuration = maxSpeedDuration(length);
+    // a small tolerance, so that rounding errors do not drop the last frame
     const double target = length * (1. - 1e-9);
-    double lo = 0.; // not covered after lo frames
+    const double limit = length * (1. + 1e-9);
+    if (_speed->getNumKeys() == 0) {
+        const double speed = _speed->getValueAtTime(srcRange.min);
+        if ( !(speed > 0.) ) { // also NaN
+            return std::nullopt;
+        }
+        const double d = length / speed;
+        if ( !(d <= maxDuration) ) {
+            return std::nullopt;
+        }
+
+        return std::floor(d * (1. + 1e-9));
+    }
+    double lo = 0.; // the integral is below the length after lo frames
     double hi = 1.;
     for (;;) {
-        const double c = speedCovered(*_speed, srcRange.min, hi);
+        const double c = _speed->integrate(srcRange.min, srcRange.min + hi);
         if (c >= target) {
             break;
         }
-        if ( !(c == c) || (hi >= kMaxBeforeAfterFrame) ) { // NaN, or too slow
-            return false;
+        if ( !(c == c) || (hi >= maxDuration) ) { // NaN, or too slow (or negative)
+            return std::nullopt;
         }
         lo = hi;
-        hi *= 2;
+        hi = (std::min)(hi * 2, maxDuration);
     }
-    // covered after hi frames, not after lo frames: the last whole frame not past the end
+    // the integral reaches the length after hi frames, not after lo frames: the last whole frame not past it
     while (hi - lo > 1.) {
         const double mid = std::floor( (lo + hi) / 2 );
-        if (speedCovered(*_speed, srcRange.min, mid) >= target) {
+        if (_speed->integrate(srcRange.min, srcRange.min + mid) >= target) {
             hi = mid;
         } else {
             lo = mid;
         }
     }
-    // hi frames reach the end: if they do not go past it, hi is the duration, else lo
-    *duration = (speedCovered(*_speed, srcRange.min, hi) <= length * (1. + 1e-9)) ? hi : lo;
 
-    return true;
+    return (_speed->integrate(srcRange.min, srcRange.min + hi) <= limit) ? hi : lo;
 }
 
 /* override the time domain action, only for the general context */
@@ -921,15 +958,16 @@ RetimePlugin::getTimeDomain(OfxRangeD &range)
     // From the speed: the output starts with the input (the speed is integrated from there) and ends
     // when the input frame range has been played (forwards, or backwards). The warp curve maps that
     // part of the output, from 0 to 1 on its X axis, so it does not change the range.
-    double duration;
-    if ( _speed && getSpeedDuration(srcRange, &duration) ) {
-        range.min = srcRange.min;
-        range.max = srcRange.min + duration;
+    if (_speed) {
+        if ( const std::optional<double> duration = getSpeedDuration(srcRange) ) {
+            range.min = srcRange.min;
+            range.max = srcRange.min + *duration;
 
-        return true;
+            return true;
+        }
     }
 
-    // the input range is empty, or the speed is 0: the default, i.e. the input time domain
+    // the input range is empty, or the speed is 0, negative or too small: the default, i.e. the input time domain
     return false;
 }
 
