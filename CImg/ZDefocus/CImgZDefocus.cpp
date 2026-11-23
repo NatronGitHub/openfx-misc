@@ -95,19 +95,20 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamDepthChannel "depthChannel"
 #define kParamDepthChannelLabel "Depth Channel"
-#define kParamDepthChannelHint "Channel of the Depth input that contains the depth or disparity. If the Depth input has a single channel, it is always used. If it has two channels, only R and G can be used."
+#define kParamDepthChannelHint "Channel of the Depth input that contains the depth or disparity. If the Depth input has a single channel, it is always used. Channels that it does not have read as 0, and the luminance of a two-channel input is its first channel."
 #define kParamDepthChannelOptionR "R", "Red channel.", "r"
 #define kParamDepthChannelOptionG "G", "Green channel.", "g"
 #define kParamDepthChannelOptionB "B", "Blue channel.", "b"
 #define kParamDepthChannelOptionA "A", "Alpha channel.", "a"
 #define kParamDepthChannelOptionLuminance "Luminance", "Rec.709 luminance of the RGB channels.", "luminance"
+// the same channels as CImgKernelChannelEnum (the Depth pixels are read by cimgKernelValue())
 enum DepthChannelEnum
 {
-    eDepthChannelR = 0,
-    eDepthChannelG,
-    eDepthChannelB,
-    eDepthChannelA,
-    eDepthChannelLuminance,
+    eDepthChannelR = eCImgKernelR,
+    eDepthChannelG = eCImgKernelG,
+    eDepthChannelB = eCImgKernelB,
+    eDepthChannelA = eCImgKernelA,
+    eDepthChannelLuminance = eCImgKernelLuminance,
 };
 
 #define kParamDepthType "depthType"
@@ -164,11 +165,6 @@ enum ApertureEnum
 
 // custom kernel pixels below this fraction of the kernel maximum are outside of the bokeh
 constexpr double kKernelThreshold = 1e-3;
-
-// Rec.709 luminance coefficients
-constexpr float kLumR = 0.2126f;
-constexpr float kLumG = 0.7152f;
-constexpr float kLumB = 0.0722f;
 
 // ratio between the size and the Gaussian standard deviation (same as CImgBlur)
 constexpr double kSizeToSigma = 1. / 2.4;
@@ -228,38 +224,6 @@ clipPAR(const Clip* clip)
     const double par = clip ? clip->getPixelAspectRatio() : 1.;
 
     return (par > 0.) ? par : 1.;
-}
-
-// Read the depth value from a (non-null) pixel with nComps components.
-// Channels that the pixel does not have read as 0 (or 1 for a missing alpha).
-float
-getDepthValue(const float* p,
-              int nComps,
-              DepthChannelEnum channel)
-{
-    if (nComps == 1) {
-        return p[0];
-    }
-    if (nComps == 2) {
-        return (channel == eDepthChannelR) ? p[0] : ( (channel == eDepthChannelG) ? p[1] : 0.f );
-    }
-    if ( (nComps != 3) && (nComps != 4) ) {
-        return 0.f;
-    }
-    switch (channel) {
-    case eDepthChannelR:
-        return p[0];
-    case eDepthChannelG:
-        return p[1];
-    case eDepthChannelB:
-        return p[2];
-    case eDepthChannelA:
-        return (nComps == 4) ? p[3] : 1.f;
-    case eDepthChannelLuminance:
-        return kLumR * p[0] + kLumG * p[1] + kLumB * p[2];
-    }
-
-    return 0.f;
 }
 
 // Convert a depth or disparity value to a signed "normalized defocus":
@@ -647,7 +611,7 @@ ZDefocusPlugin::getFocusValue(double time,
     const float* pixel = static_cast<const float*>( depth->getPixelAddress(pix.x, pix.y) );
 
     // depth not available at the focus point (e.g. outside of the Depth RoD): use the focus value
-    return pixel ? getDepthValue(pixel, depth->getPixelComponentCount(), depthChannel) : focus;
+    return pixel ? cimgKernelValue(pixel, depth->getPixelComponentCount(), depthChannel) : focus;
 }
 
 CImg<cimgpix_t>
@@ -785,7 +749,7 @@ ZDefocusPlugin::render(const RenderArguments &args)
         }
         const float* dp = depth.get() ? static_cast<const float*>( depth->getPixelAddress(procRect.x1 + x, procRect.y1 + y) ) : nullptr;
         // no depth: consider that the pixel is at infinity (zero depth or disparity)
-        const int k = sliceIndexOf(blurModel.blurSize( dp ? getDepthValue(dp, depthComps, depthChannel) : 0. ), maxSize, slices);
+        const int k = sliceIndexOf(blurModel.blurSize( dp ? cimgKernelValue(dp, depthComps, depthChannel) : 0. ), maxSize, slices);
         sliceIndex(x, y) = k;
         addPixel(sliceBox[k + slices], x, y);
     }
