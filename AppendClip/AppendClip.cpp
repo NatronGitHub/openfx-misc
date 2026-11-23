@@ -47,6 +47,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Time"
 #define kPluginDescription \
     "Append one clip to another.\n" \
+    "The first frame of the first clip is shown at First Frame, and each clip starts right after the previous one, " \
+    "or Cross Dissolve frames before its end. " \
+    "The fades and the cross-dissolve are linear: with N frames, they weight the faded clip by 1/(N+1), 2/(N+1)... N/(N+1), " \
+    "so that no faded frame is entirely black, and every frame of a cross-dissolve shows both clips.\n" \
     "See also: https://web.archive.org/web/20220627030729/http://www.opticalenquiry.com/nuke/index.php?title=AppendClip"
 
 #define kPluginIdentifier "net.sf.openfx.AppendClip"
@@ -68,23 +72,20 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamFadeIn "fadeIn"
 #define kParamFadeInLabel "Fade In"
-#define kParamFadeInHint "Number of frames to fade in from black at the beginning of the first clip."
+#define kParamFadeInHint "Number of frames to fade in from black at the beginning of the first clip. With N frames, the first N frames are weighted by 1/(N+1), 2/(N+1)... N/(N+1), and the next one is not faded."
 
 #define kParamFadeOut "fadeOut"
 #define kParamFadeOutLabel "Fade Out"
-#define kParamFadeOutHint "Number of frames to fade out to black at the end of the last clip."
+#define kParamFadeOutHint "Number of frames to fade out to black at the end of the last clip. With N frames, the last N frames are weighted by N/(N+1)... 2/(N+1), 1/(N+1)."
 
 #define kParamCrossDissolve "crossDissolve"
 #define kParamCrossDissolveLabel "Cross Dissolve"
-#define kParamCrossDissolveHint "Number of frames to cross-dissolve between clips."
-
-#define kParamCrossDissolve "crossDissolve"
-#define kParamCrossDissolveLabel "Cross Dissolve"
-#define kParamCrossDissolveHint "Number of frames to cross-dissolve between clips."
+#define kParamCrossDissolveHint "Number of frames to cross-dissolve between clips: each clip starts N frames before the end of the previous one. " \
+    "Over these N frames, the previous clip is weighted by N/(N+1)... 1/(N+1), and the next one by 1/(N+1)... N/(N+1)."
 
 #define kParamFirstFrame "firstFrame"
 #define kParamFirstFrameLabel "First Frame"
-#define kParamFirstFrameHint "Frame to start the first clip at."
+#define kParamFirstFrameHint "Output frame at which the first clip starts playing: its first frame is shown at this frame, whatever its own frame range. For example, with First Frame 5 and a first clip from frame 0 to 25, frame 5 shows its frame 0."
 
 #define kParamLastFrame "lastFrame"
 #define kParamLastFrameLabel "Last Frame"
@@ -367,7 +368,10 @@ AppendClipPlugin::getSources(int firstFrame,
     if (lastFrame) {
         assert(!clip0_p && !t0_p && !alpha0_p && !clip1_p && !t1_p && !alpha1_p);
     }
-    // if fadeIn = 0 return first frame of first connected clip if time <= firstFrame, else return back
+    // the first frame of the first connected clip is at firstFrame. Before firstFrame (out of the
+    // time domain), the output is black if fadeIn != 0, else the first clip at the same offset
+    // (time - firstFrame) from its first frame (also out of its frame range); likewise after the
+    // last frame with fadeOut.
     int clip0 = -1;
     double t0 = -1;
     double alpha0 = 0;
