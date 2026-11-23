@@ -172,6 +172,10 @@ unnegatedDepthType(DepthTypeEnum depthType)
 #define kParamSlicesLabel "Focus Slices"
 #define kParamSlicesHint "Number of focus slices on each side of the focal plane, evenly spaced in blur size between 0 and 'Maximum Size'. A pixel between two slices is shared by both, so that its blur changes continuously with depth. More slices are more accurate but slower to render."
 
+#define kParamFillBackground "fillBackground"
+#define kParamFillBackgroundLabel "Fill Background"
+#define kParamFillBackgroundHint "Fill the background hidden by each slice in front of the focal plane with the farther pixels around it, so that a blurred foreground object becomes transparent near its edges and shows the background behind it, instead of having a hard inner edge. The filled background may show smeared detail. Slower."
+
 #define kParamAperture "aperture"
 #define kParamApertureLabel "Aperture"
 #define kParamApertureHint "Shape of the aperture (the blur kernel). Draft renders and renders at a reduced scale (proxy) always use the Gaussian."
@@ -194,6 +198,10 @@ constexpr double kKernelThreshold = 1e-3;
 
 // Below this, a blurred weight (the blurred all-ones image, the coverage, 1 - a slice mask) is 0.
 constexpr float kMinWeight = 1e-6f;
+
+// The background hidden by a slice is filled where its blurred mask is above this fraction of
+// the mask of a single pixel, 1/(kernel area) (see fillHiddenBackground())
+constexpr double kFillMinPixelMask = 0.1;
 
 // The cost of the FFT of the Gaussian aperture, in direct convolution taps per pixel of the padded
 // FFT image (see truncatedGaussianBlur())
@@ -330,6 +338,22 @@ sliceWeight(float q,
             int k)
 {
     return (q >= k + 1) ? 0.f : (std::max)( 0.f, (std::min)(1.f, q - k + 1) );
+}
+
+// The weight of a pixel with the slice coordinate q in the estimate of the background hidden by
+// slice k (k > 0): the part of the pixel that is not in slice k or in a nearer slice (1 - the sum
+// of its weights in them), times 1 if the pixel is not blurrier than slice k (|q| <= k), fading
+// to 0 at |q| = k + 1. The blurrier pixels are left out, since the estimate is blurred with the
+// kernel of slice k: they would show as sharp texture around a blurred foreground. Their part of
+// the hidden background is left to the final normalization by the coverage, as without the fill.
+float
+behindWeight(float q,
+             int k)
+{
+    const float notInSlice = (std::max)( 0.f, (std::min)(1.f, k - q) );
+    const float notBlurrier = (std::max)( 0.f, (std::min)(1.f, k + 1 - std::abs(q)) );
+
+    return notInSlice * notBlurrier;
 }
 
 // Set the channels [first, first + nComps] of layer (which covers crop) to the premultiplied
@@ -601,15 +625,59 @@ addPixel(OfxRectI& b,
 }
 
 // The channels of a slice layer (see render()): the premultiplied slice image [0, nComps), the
-// slice mask and the all-ones image.
+// slice mask, the all-ones image, and, with the background fill, the premultiplied background
+// behind the slice [behind(), behind() + nComps) and its mask.
 struct LayerChannels
 {
     int nComps;
 
     int mask() const { return nComps; }
     int ones() const { return nComps + 1; }
-    int sliceCount() const { return ones() + 1; }
+    int behind() const { return nComps + 2; }
+    int behindMask() const { return behind() + nComps; }
+    int sliceCount() const { return ones() + 1; } // without the background fill
+    int fillCount() const { return behindMask() + 1; } // with the background fill
 };
+
+// Before merging the blurred slice layer over result (see mergeOver()), fill the background that
+// the slice hides: where the slice covers result (its normalized blurred mask a is above minMask),
+// the part of result that is not covered yet (1 - coverage: the holes of the farther slices,
+// behind the slice and the nearer ones) gets the blurred background behind the slice, normalized
+// by its blurred weight (the layer channels after the all-ones image, see render()). The fill is
+// partial where the background around is only partly known: its fraction is the normalized
+// blurred background weight over 1 - a, the part of the kernel that is not the slice. This
+// fraction also keeps the estimate bounded where its weight is small (e.g. FFT rounding).
+// Without the fill, the final division by the coverage would show the slice color alone where its
+// blurred mask is partial: a hard inner edge on a blurred foreground over a sharp background
+// (ZDefocus.md, "Partial occlusion").
+void
+fillHiddenBackground(CImg<cimgpix_t>& result,
+                     const CImg<cimgpix_t>& layer,
+                     const OfxRectI& crop,
+                     const LayerChannels& ch,
+                     float minMask)
+{
+    cimg_forXY(layer, x, y) {
+        const float ones = layer(x, y, 0, ch.ones());
+        float& coverage = result(crop.x1 + x, crop.y1 + y, 0, ch.nComps);
+        if ( !(ones > kMinWeight) || !(coverage < 1.f) ) {
+            continue;
+        }
+        const float a = layer(x, y, 0, ch.mask()) / ones;
+        const float open = 1.f - a; // the part of the kernel that is not the slice
+        const float known = layer(x, y, 0, ch.behindMask()) / ones; // the part that is background
+        if ( !(a > minMask) || !(open > kMinWeight) || !(known > 0.f) ) {
+            continue;
+        }
+        const float hidden = 1.f - coverage;
+        // fraction filled: min(1, known/open); the estimate: background color / known
+        const float scale = hidden / ( ones * (std::max)(known, open) );
+        for (int c = 0; c < ch.nComps; ++c) {
+            result(crop.x1 + x, crop.y1 + y, 0, c) += scale * layer(x, y, 0, ch.behind() + c);
+        }
+        coverage += hidden * (std::min)(1.f, known / open);
+    }
+}
 
 // Merge the blurred slice layer (the slice color, the slice mask and the blurred all-ones image,
 // see render()) over result, at the offset (crop.x1, crop.y1). The slice is first normalized by
@@ -763,6 +831,7 @@ public:
         , _maxSize( fetchDoubleParam(kParamMaxSize) )
         , _slices( fetchIntParam(kParamSlices) )
         , _aperture( fetchChoiceParam(kParamAperture) )
+        , _fillBackground( fetchBooleanParam(kParamFillBackground) )
     {
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGBA ||
                              _dstClip->getPixelComponents() == ePixelComponentRGB ||
@@ -772,7 +841,7 @@ public:
                              _srcClip->getPixelComponents() == ePixelComponentAlpha) );
         assert(_depthClip && _filterClip);
         assert(_depthChannel && _depthType && _useFocusPoint && _focusPoint && _focus && _depthOfFocus &&
-               _size && _maxSize && _slices && _aperture);
+               _size && _maxSize && _slices && _aperture && _fillBackground);
 
         updateGUI();
     }
@@ -807,6 +876,7 @@ private:
     DoubleParam* _maxSize;
     IntParam* _slices;
     ChoiceParam* _aperture;
+    BooleanParam* _fillBackground;
 };
 
 
@@ -926,6 +996,7 @@ ZDefocusPlugin::render(const RenderArguments &args)
     const DepthTypeEnum depthType = static_cast<DepthTypeEnum>( _depthType->getValueAtTime(time) );
     const double maxSize = kRadiusToDiameter * _maxSize->getValueAtTime(time); // the largest kernel diameter
     const int slices = (std::max)( 1, _slices->getValueAtTime(time) );
+    const bool fillBackground = _fillBackground->getValueAtTime(time);
     const ApertureEnum paramAperture = static_cast<ApertureEnum>( _aperture->getValueAtTime(time) );
     // in draft mode or proxy mode, always use the Gaussian aperture
     ApertureEnum aperture = ( args.renderQualityDraft || isProxyScale(args.renderScale) ) ? eApertureGaussian : paramAperture;
@@ -993,12 +1064,23 @@ ZDefocusPlugin::render(const RenderArguments &args)
             const int hy = blurPadding(sy);
             OfxRectI crop = {box.x1 - 2 * hx, box.y1 - 2 * hy, box.x2 + 2 * hx, box.y2 + 2 * hy};
             Coords::rectIntersection(crop, procBox, &crop);
-            // the layer channels: the premultiplied slice image, the slice mask and the all-ones image
-            layer.assign(crop.x2 - crop.x1, crop.y2 - crop.y1, 1, channels.sliceCount(), 0.f);
+            // The layer channels: the premultiplied slice image, the slice mask, the all-ones image,
+            // and, to fill the background hidden by the slices in front of the focal plane, the
+            // premultiplied background behind the slice and its mask. They are blurred together.
+            const bool fill = fillBackground && (k > 0);
+            layer.assign(crop.x2 - crop.x1, crop.y2 - crop.y1, 1, fill ? channels.fillCount() : channels.sliceCount(), 0.f);
             setWeightedImage(layer, 0, img, sliceCoord, crop, [k](float q) { return sliceWeight(q, k); });
             layer.get_shared_channel( channels.ones() ).fill(1.f);
+            if (fill) {
+                setWeightedImage(layer, channels.behind(), img, sliceCoord, crop, [k](float q) { return behindWeight(q, k); });
+            }
             if ( !apertureBlur(layer, aperture, kernel, sx, sy, *this) ) {
                 return;
+            }
+            if (fill) {
+                // a fraction of the mask of a single pixel, whose blurred mask is 1/(kernel area)
+                const double kernelArea = (std::max)(1., OFXS_PI / 4 * sx * sy);
+                fillHiddenBackground( result, layer, crop, channels, static_cast<float>(kFillMinPixelMask / kernelArea) );
             }
             mergeOver(result, layer, crop, channels);
         }
@@ -1314,6 +1396,15 @@ ZDefocusPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         assert(param->getNOptions() == eApertureCustom);
         param->appendOption(kParamApertureOptionCustom);
         param->setDefault( static_cast<int>(eApertureGaussian) );
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamFillBackground);
+        param->setLabel(kParamFillBackgroundLabel);
+        param->setHint(kParamFillBackgroundHint);
+        param->setDefault(true);
         if (page) {
             page->addChild(*param);
         }
