@@ -568,14 +568,6 @@ private:
     // the custom aperture kernel from the Filter input; empty if it is not available
     CImg<cimgpix_t> getCustomKernel(const RenderArguments &args);
 
-    // only float images are supported: post an error message and throw kOfxStatFailed
-    // (see CImgFilterPluginHelperBase::throwBitDepthUnsupported())
-    void throwBitDepthUnsupported()
-    {
-        setPersistentMessage(Message::eMessageError, "", kCImgFilterBitDepthUnsupportedMessage);
-        throwSuiteStatusException(kOfxStatFailed);
-    }
-
     // the ImageEffect owns these
     Clip* const _dstClip;
     Clip* const _srcClip;
@@ -628,7 +620,7 @@ ZDefocusPlugin::getCustomKernel(const RenderArguments &args)
     }
     checkBadRenderScaleOrField(filter, args);
     if (filter->getPixelDepth() != eBitDepthFloat) {
-        throwBitDepthUnsupported();
+        cimgThrowBitDepthUnsupported(*this);
     }
     // the kernel is the Filter image within its (finite) RoD
     OfxRectD rod;
@@ -672,14 +664,14 @@ ZDefocusPlugin::render(const RenderArguments &args)
     checkBadRenderScaleOrField(dst, args);
     const int nComps = dst->getPixelComponentCount();
     if (dst->getPixelDepth() != eBitDepthFloat) {
-        throwBitDepthUnsupported();
+        cimgThrowBitDepthUnsupported(*this);
     }
 
     auto_ptr<const Image> src( _srcClip->isConnected() ?
                                _srcClip->fetchImage(time) : nullptr );
     if ( src.get() ) {
         if (src->getPixelDepth() != eBitDepthFloat) {
-            throwBitDepthUnsupported();
+            cimgThrowBitDepthUnsupported(*this);
         }
         if (src->getPixelComponentCount() != nComps) {
             throwSuiteStatusException(kOfxStatErrImageFormat);
@@ -689,9 +681,9 @@ ZDefocusPlugin::render(const RenderArguments &args)
     auto_ptr<const Image> depth( _depthClip->isConnected() ?
                                  _depthClip->fetchImage(time) : nullptr );
     if ( depth.get() && (depth->getPixelDepth() != eBitDepthFloat) ) {
-        throwBitDepthUnsupported();
+        cimgThrowBitDepthUnsupported(*this);
     }
-    // all the images are float: clear the message of throwBitDepthUnsupported() if a previous
+    // all the images are float: clear the message of cimgThrowBitDepthUnsupported() if a previous
     // render posted it (the Filter image is checked below, in getCustomKernel())
     clearPersistentMessage();
 
