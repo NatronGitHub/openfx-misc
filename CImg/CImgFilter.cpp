@@ -118,18 +118,22 @@ CImgFilterPluginHelperBase::CImgFilterPluginHelperBase(OfxImageEffectHandle hand
 // component type of the Output clip, it will always be the same as the Source clip" (filter
 // context), "the component type of Source and Output will always be the same" (paint context,
 // ofxImageEffectContexts.rst). In the general context, "all input clips may be remapped, as can
-// the output clip. The output clip has its default components set to be: RGBA if any of the
-// inputs is RGBA; otherwise A if the effect has any inputs" (ofxClipPreferences.rst): with an
-// RGB Source and the Alpha Mask, the default output is A. The output follows Source, as with a
-// filter: give both the components that the host mapped Source to (one that the plug-in supports
-// on Source, and so on the output, which supports the same ones) (issue #251).
+// the output clip" (ofxClipPreferences.rst), and the host's default output components may differ
+// from Source's: the spec's default is "RGBA if any of the inputs is RGBA; otherwise A if the
+// effect has any inputs" (A for an RGB Source with the Alpha Mask); HostSupport-based hosts give
+// RGBA when an Alpha and a non-Alpha input are connected (an RGB Source with the Mask); Natron
+// gives the most components of all the inputs (RGBA for CImgConvolve with an RGB Source and an
+// RGBA Filter). The output follows Source, as with a filter: give both the unmapped components of
+// Source (read the unmapped ones: the mapped ones may still be those of the previous clip
+// preferences). Every CImgFilterPluginHelper plug-in supports all the components that
+// isSupportedComponents() accepts, on Source and Output (issue #251).
 void
 CImgFilterPluginHelperBase::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     if ( (getContext() != eContextGeneral) || !_srcClip || !_srcClip->isConnected() ) {
         return;
     }
-    const PixelComponentEnum srcComponents = _srcClip->getPixelComponents();
+    const PixelComponentEnum srcComponents = _srcClip->getUnmappedPixelComponents();
     if ( isSupportedComponents(srcComponents) ) {
         clipPreferences.setClipComponents(*_srcClip, srcComponents);
         clipPreferences.setClipComponents(*_dstClip, srcComponents);
