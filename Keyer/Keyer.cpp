@@ -39,13 +39,14 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Keyer"
 #define kPluginDescription \
     "A collection of simple keyers. These work by computing a foreground key from the RGB values of the input image (see the keyerMode parameter).\n" \
-    "This foreground key is is a scalar from 0 to 1. From the foreground key, a background key (or transparency) is computed.\n" \
+    "This foreground key is a scalar from 0 to 1. From the foreground key, a background key (or transparency) is computed.\n" \
     "The function that maps the foreground key to the background key is piecewise linear:\n" \
     "- it is 0 below A = (center+toleranceLower+softnessLower)\n" \
     "- it is linear between A = (center+toleranceLower+softnessLower) and B = (center+toleranceLower)\n" \
-    " -it is 1 between B = (center+toleranceLower) and C = (center+toleranceUpper)\n" \
+    "- it is 1 between B = (center+toleranceLower) and C = (center+toleranceUpper)\n" \
     "- it is linear between C = (center+toleranceUpper) and D = (center+toleranceUpper+softnessUpper)\n" \
     "- it is 0 above D = (center+toleranceUpper+softnessUpper)\n" \
+    "The output alpha is 1 minus the background key: it is 0 (transparent) between B and C, and 1 (opaque) below A and above D.\n" \
     "\n" \
     "Keyer can pull mattes that correspond to the RGB channels, the luminance and the red, green and blue colors. " \
     "One very useful application for a luminance mask is to mask out a sky (almost always it is the brightest thing in a landscape).\n" \
@@ -55,6 +56,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "center = (B+C)/2\n" \
     "toleranceUpper = (C-B)/2\n" \
     "softnessUpper = (D-C)\n" \
+    "Note that the matte is inverted with respect to the A, B, C, D of Foundry's documentation of the Keyer node, where \"any pixel with a luminance value between B and C becomes opaque\".\n" \
     "\n" \
     "See also:\n" \
     "- https://web.archive.org/web/20220524000628/http://www.opticalenquiry.com/nuke/index.php?title=The_Keyer_Nodes#Keyer" \

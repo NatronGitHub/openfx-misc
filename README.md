@@ -284,7 +284,7 @@ grouping).
 
 ### Transform
 
-* AdjustRoD: Enlarges the input image by a given amount of black and transparent pixels.
+* AdjustRoD: Enlarges the input image by a given amount, with copies of the closest edge pixel (default) or black and transparent pixels.
 * Card3DOFX: Transform and image as if it were projected on a 3D card.
 * CornerPinOFX and CornerPinMaskedOFX: Fit an image to another in translation, rotation, scale, and shear
 * CropOFX: Remove everything outside from the image of a rectangle.

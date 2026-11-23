@@ -84,7 +84,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamThreshold "threshold"
 #define kParamThresholdLabel "Threshold"
 #define kParamThresholdHint "Threshold used to discard pixels too far from the current pixel value in the median computation. A threshold value of zero disables the threshold."
-#define kParamThresholdDefault 1
+#define kParamThresholdDefault 0.
 
 
 /// Median plugin
@@ -217,7 +217,7 @@ CImgMedianPluginFactory::describeInContext(ImageEffectDescriptor& desc,
         param->setHint(kParamThresholdHint);
         param->setRange(0, DBL_MAX);
         param->setDisplayRange(0, 1);
-        param->setDefault(0.);
+        param->setDefault(kParamThresholdDefault);
         if (page) {
             page->addChild(*param);
         }

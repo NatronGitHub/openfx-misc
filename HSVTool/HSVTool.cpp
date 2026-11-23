@@ -138,7 +138,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamSaturationAdjustmentGainHint "Factor to be applied to the saturation adjustment within the range. A value of 0 will set all values within range to a constant (computed at the center of the range), and a value of 1 will add saturationAdjustment to all values within range."
 #define kParamSaturationRangeRolloff "saturationRangeRolloff"
 #define kParamSaturationRangeRolloffLabel "Saturation Range Rolloff"
-#define kParamSaturationRangeRolloffHint "Interval (in degrees) around Saturation Range, where saturation rotation decreases progressively to zero."
+#define kParamSaturationRangeRolloffHint "Interval around Saturation Range, in the same units as saturation, where the modifications decrease progressively to zero."
 
 #define kGroupBrightness "brightness"
 #define kGroupBrightnessLabel "Brightness"
@@ -154,7 +154,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamBrightnessAdjustmentGainHint "Factor to be applied to the brightness adjustment within the range. A value of 0 will set all values within range to a constant (computed at the center of the range), and a value of 1 will add brightnessAdjustment to all values within range."
 #define kParamBrightnessRangeRolloff "brightnessRangeRolloff"
 #define kParamBrightnessRangeRolloffLabel "Brightness Range Rolloff"
-#define kParamBrightnessRangeRolloffHint "Interval (in degrees) around Brightness Range, where brightness rotation decreases progressively to zero."
+#define kParamBrightnessRangeRolloffHint "Interval around Brightness Range, in the same units as brightness, where the modifications decrease progressively to zero."
 
 #define kParamClampBlack "clampBlack"
 #define kParamClampBlackLabel "Clamp Black"

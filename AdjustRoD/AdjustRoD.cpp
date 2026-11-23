@@ -37,7 +37,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginName "AdjustRoD"
 #define kPluginGrouping "Transform"
-#define kPluginDescription "Enlarges the input image by a given amount of black and transparent pixels."
+#define kPluginDescription "Enlarges the input image by a given amount. The added pixels are copies of the closest edge pixel (Border Conditions: Nearest, the default), or black and transparent (Border Conditions: Black)."
 #define kPluginIdentifier "net.sf.openfx.AdjustRoDPlugin"
 // History:
 // 1.0 initial version
@@ -463,7 +463,7 @@ AdjustRoDPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->appendOption(kParamBoundaryOptionNeumann);
         //assert(param->getNOptions() == eBoundaryPeriodic && param->getNOptions() == 2);
         //param->appendOption(kParamBoundaryOptionPeriodic);
-        param->setDefault( (int)eBoundaryNeumann ); // aka zero
+        param->setDefault( (int)eBoundaryNeumann ); // Nearest: edge replication
         if (page) {
             page->addChild(*param);
         }
