@@ -22,8 +22,7 @@ import re
 import struct
 import subprocess
 
-import cases as cases_module
-from cases import HEIGHT, IMAGES, PAR, PROJECT, WIDTH
+import cases
 
 CHANNEL_INDEX = {"r": 0, "g": 1, "b": 2, "a": 3}
 NUKE_TIMEOUT = 300  # seconds, per case
@@ -66,10 +65,10 @@ def case_region(case):
     """The compared pixels: (x1, y1, x2, y2, step)."""
     region = case.get("region")
     if region == "project":
-        return (0, 0, PROJECT[0], PROJECT[1], PROJECT_STEP)
+        return (0, 0, cases.PROJECT[0], cases.PROJECT[1], PROJECT_STEP)
     if region:
         return tuple(region) + ((1,) if len(region) == 4 else ())
-    return (0, 0, WIDTH, HEIGHT, 1)
+    return (0, 0, cases.WIDTH, cases.HEIGHT, 1)
 
 
 def case_points(case):
@@ -100,7 +99,7 @@ def case_multiview(case):
     """Whether the Nuke script needs left and right views."""
     nuke_inputs, _ = case_images(case)
     return (case_views(case) != ["left"]
-            or any(IMAGES[i].get("views") for i in nuke_inputs if i))
+            or any(cases.IMAGES[i].get("views") for i in nuke_inputs if i))
 
 
 def write_pfm(path, pixels, components):
@@ -162,9 +161,10 @@ def nuke_script(case, result_path):
     lines = [
         "import json",
         "import nuke",
-        "nuke.addFormat('%d %d %r nukecompare')" % (WIDTH, HEIGHT, PAR),
+        "nuke.addFormat('%d %d %r nukecompare')"
+        % (cases.WIDTH, cases.HEIGHT, cases.PAR),
         "nuke.addFormat('%d %d %r nukecompare_project')"
-        % (PROJECT[0], PROJECT[1], PAR),
+        % (cases.PROJECT[0], cases.PROJECT[1], cases.PAR),
         "fmt = %r" % ("nukecompare_project" if project else "nukecompare"),
         "root = nuke.root()",
         "root['format'].setValue(fmt)",
@@ -182,7 +182,7 @@ def nuke_script(case, result_path):
     constant = ("nuke.nodes.Constant(format=fmt, first=%d, last=%d)"
                 % (FIRST_FRAME, LAST_FRAME))
     for name in sorted(set(i for i in nuke_inputs if i)):
-        image = IMAGES[name]
+        image = cases.IMAGES[name]
         if image.get("views"):
             left, right = image["views"]
             lines += [
@@ -215,7 +215,7 @@ def nuke_script(case, result_path):
         if name:
             lines.append("n.setInput(%d, images[%r])" % (i, name))
     for knob, value in knobs.items():
-        if isinstance(value, cases_module.Script):
+        if isinstance(value, cases.Script):
             lines.append("n[%r].fromScript(%r)" % (knob, str(value)))
         else:
             lines.append("n[%r].setValue(%r)" % (knob, value))
@@ -322,6 +322,9 @@ def hostdemo_command(prefix):
     return [hostdemo, "--no-std-paths", "--no-cache", "--quiet"], env
 
 
+# hostDemo --describe results by plug-in identifier, for the process (one
+# pytest session or xdist worker): the clips of each context, or the
+# PluginMissing error of a plug-in that is not installed.
 _DESCRIPTIONS = {}
 
 
@@ -369,11 +372,11 @@ def describe(prefix, plugin, work):
 
 def ofx_input_spec(name, case_dir):
     """The hostDemo -i spec of an image, writing its PFM files."""
-    image = IMAGES[name]
+    image = cases.IMAGES[name]
     if "ofx" in image:
         return image["ofx"]
     function = image["py"]
-    x1, y1, x2, y2 = image.get("box", (0, 0, WIDTH, HEIGHT))
+    x1, y1, x2, y2 = image.get("box", (0, 0, cases.WIDTH, cases.HEIGHT))
     pixels = [[function(x, y) for x in range(x1, x2)] for y in range(y1, y2)]
     rgb = name + ".pfm"
     write_pfm(os.path.join(case_dir, rgb), pixels, 3)
@@ -501,8 +504,12 @@ def compare(case, nuke_results, ofx_results):
 
     Returns:
         (max abs difference, where): `where` describes the worst pixel.
+
+    Raises:
+        CaseError: a render is missing, or nothing was compared.
     """
     worst, where = 0., None
+    compared = 0
     points = case_points(case)
     several = len(nuke_results) > 1
     for key in sorted(nuke_results):
@@ -513,6 +520,7 @@ def compare(case, nuke_results, ofx_results):
         nuke_values, ofx_values = nuke_results[key], ofx_results[key]
         for i, (x, y) in enumerate(points):
             for c in case["channels"]:
+                compared += 1
                 n = nuke_values[i][CHANNEL_INDEX[c]]
                 o = ofx_values[i][CHANNEL_INDEX[c]]
                 if math.isnan(n) and math.isnan(o):
@@ -524,6 +532,9 @@ def compare(case, nuke_results, ofx_results):
                     where = "%sx=%d y=%d %s: Nuke %.6g, openfx-misc %.6g" % (
                         ("t=%g %s " % (frame, view)) if several else "",
                         x, y, c, n, o)
+    if not compared:
+        raise CaseError("nothing was compared (no frame, view, pixel or "
+                        "channel)")
     return worst, where
 
 
@@ -544,7 +555,8 @@ def case_id(case):
     if rest and first.lower() in (nuke_class, plugin.lower(),
                                   plugin.lower().replace("cimg", "")):
         name = rest
-    name = re.sub(r"[,\[\]]", "", name)
+    name = re.sub(r"[\[\]]", "", name)
+    name = re.sub(r" +", " ", name.replace(",", " "))
     return "%s/%s" % (plugin, name)
 
 

@@ -1,13 +1,10 @@
 """pytest configuration of the compatibility tests (see README.md)."""
 
 import os
-import sys
 
 import pytest
 
-sys.dont_write_bytecode = True  # no __pycache__ in the source tree
-
-import harness  # noqa: E402 (after the line above)
+import harness
 
 
 def pytest_addoption(parser):

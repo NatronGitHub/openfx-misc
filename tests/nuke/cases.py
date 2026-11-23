@@ -83,8 +83,106 @@ CHECKER = "fmod(floor(x / 4) + floor(y / 4), 2)"
 
 
 def _const(r, g, b, a):
-    return {"nuke": tuple(repr(float(c)) for c in (r, g, b, a)),
-            "py": lambda x, y: (r, g, b, a)}
+    def pixel(x, y):
+        del x, y  # uniform
+        return r, g, b, a
+    return {"nuke": tuple(repr(float(c)) for c in (r, g, b, a)), "py": pixel}
+
+
+# The pixel functions of the images (x, y: pixel indices from the bottom
+# left); each one gives the same values as the image's Nuke expressions.
+def _ramp(x, y):
+    return -1. + 4. * _u(x), -.5 + 2.5 * _v(y), 1.5 - 2. * _u(x), 1.
+
+
+def _premult(x, y):
+    a = y / (HEIGHT - 1.)
+    r, g, b, _ = _ramp(x, y)
+    return r * a, g * a, b * a, a
+
+
+def _impulse(x, y):
+    if (x, y) == (WIDTH // 2, HEIGHT // 2):
+        return 1., 1., 1., 1.
+    return 0., 0., 0., 1.
+
+
+def _hue_wheel(x, y, radius):
+    dx, dy = x - 15.5, y - 15.5
+    return (.5 + dx / radius,
+            .5 + (-.5 * dx + .8660254 * dy) / radius,
+            .5 + (-.5 * dx - .8660254 * dy) / radius, 1.)
+
+
+def _hues(x, y):
+    return _hue_wheel(x, y, 16.)
+
+
+def _hues01(x, y):
+    return _hue_wheel(x, y, 48.)
+
+
+def _checker_image(x, y):
+    c = _checker(x, y)
+    return -.25 + 1.75 * c, 1. - 1.25 * c, .5 * c, 1.
+
+
+def _merge_a(x, y, alpha=1.):
+    del y  # A varies along x
+    return -1. + 4. * _u(x), 2. - 3. * _u(x), .5, alpha
+
+
+def _merge_b(x, y, alpha=1.):
+    del x  # B varies along y
+    return -1. + 4. * _v(y), 2. - 3. * _v(y), .25, alpha
+
+
+def _merge_aa(x, y):
+    return _merge_a(x, y, (y - 8.) / 16.)
+
+
+def _merge_ba(x, y):
+    return _merge_b(x, y, (x - 8.) / 16.)
+
+
+def _merge_aa01(x, y):
+    return _merge_a(x, y, _clamp01((y - 8.) / 16.))
+
+
+def _merge_ba01(x, y):
+    return _merge_b(x, y, _clamp01((x - 8.) / 16.))
+
+
+def _mask(x, y):
+    del y  # along x
+    return (_clamp01((x - 8.) / 16.),) * 4
+
+
+def _grey3(x, y):
+    del y  # along x
+    v = .1 if x < 11 else .5 if x < 22 else .9
+    return v, v, v, 1.
+
+
+def _uvwarp(x, y, alpha=1.):
+    return (y - 16.) / 8., (x - 16.) / 16., 1.5 - 2. * _u(x), alpha
+
+
+def _uvwarp_a(x, y):
+    return _uvwarp(x, y, .5)
+
+
+def _stmap(x, y):
+    return .25 + .5 * _u(x) + .1 * _v(y), .2 + .6 * _v(y), 1., 1.
+
+
+def _kernel(x, y):
+    return (float((x - 14) + 3 * (y - 14) + 1),) * 4
+
+
+def _kernel_rgb(x, y):
+    return (float((x, y) == (15, 15)), float((x, y) == (14, 15)),
+            float((x, y) == (15, 16)), float((x, y) == (15, 15)))
 
 
 IMAGES = {
@@ -92,8 +190,7 @@ IMAGES = {
     # G from -0.5 to 2 (bottom to top), B from 1.5 down to -0.5; opaque.
     "ramp": {
         "nuke": ("-1 + 4 * " + U, "-0.5 + 2.5 * " + V, "1.5 - 2 * " + U, "1"),
-        "py": lambda x, y: (-1. + 4. * _u(x), -.5 + 2.5 * _v(y),
-                            1.5 - 2. * _u(x), 1.),
+        "py": _ramp,
     },
     # The ramp's colours premultiplied by an alpha from 0 (bottom row) to 1
     # (top row); flagged premultiplied in OFX.
@@ -102,19 +199,14 @@ IMAGES = {
                  "(-0.5 + 2.5 * %s) * y / %d" % (V, HEIGHT - 1),
                  "(1.5 - 2 * %s) * y / %d" % (U, HEIGHT - 1),
                  "y / %d" % (HEIGHT - 1)),
-        "py": lambda x, y: ((-1. + 4. * _u(x)) * y / (HEIGHT - 1.),
-                            (-.5 + 2.5 * _v(y)) * y / (HEIGHT - 1.),
-                            (1.5 - 2. * _u(x)) * y / (HEIGHT - 1.),
-                            y / (HEIGHT - 1.)),
+        "py": _premult,
         "premult": True,
     },
     # One white pixel at the centre, on black; opaque.
     "impulse": {
         "nuke": ("(x == %d && y == %d) ? 1 : 0" % (WIDTH // 2, HEIGHT // 2),)
         * 3 + ("1",),
-        "py": lambda x, y: ((1., 1., 1., 1.)
-                            if (x, y) == (WIDTH // 2, HEIGHT // 2)
-                            else (0., 0., 0., 1.)),
+        "py": _impulse,
     },
     # All hues around the centre, the saturation growing with the radius,
     # going outside [0, 1] in the corners; r + g + b = 1.5; opaque.
@@ -123,50 +215,53 @@ IMAGES = {
                  "0.5 + (-0.5 * (x - 15.5) + 0.8660254 * (y - 15.5)) / 16",
                  "0.5 + (-0.5 * (x - 15.5) - 0.8660254 * (y - 15.5)) / 16",
                  "1"),
-        "py": lambda x, y: (
-            .5 + (x - 15.5) / 16.,
-            .5 + (-.5 * (x - 15.5) + .8660254 * (y - 15.5)) / 16.,
-            .5 + (-.5 * (x - 15.5) - .8660254 * (y - 15.5)) / 16., 1.),
+        "py": _hues,
     },
     # 4x4 checks of (-0.25, 1, 0) and (1.5, -0.25, 0.5); opaque.
     "checker": {
         "nuke": ("-0.25 + 1.75 * " + CHECKER, "1 - 1.25 * " + CHECKER,
                  "0.5 * " + CHECKER, "1"),
-        "py": lambda x, y: (-.25 + 1.75 * _checker(x, y),
-                            1. - 1.25 * _checker(x, y),
-                            .5 * _checker(x, y), 1.),
+        "py": _checker_image,
     },
     # Merge inputs: A varies along x, B along y, so that each pixel is
     # another (A, B) pair, from -1 to 3. The "a" versions have an alpha
-    # from -0.5 to 1.44 (A along y, B along x), 0 at y = 8 (A) or x = 8 (B).
+    # from -0.5 to 1.44 (A along y, B along x), 0 at y = 8 (A) or x = 8 (B);
+    # the "a01" versions the same alpha clamped to [0, 1].
     "A": {
         "nuke": ("-1 + 4 * " + U, "2 - 3 * " + U, "0.5", "1"),
-        "py": lambda x, y: (-1. + 4. * _u(x), 2. - 3. * _u(x), .5, 1.),
+        "py": _merge_a,
     },
     "B": {
         "nuke": ("-1 + 4 * " + V, "2 - 3 * " + V, "0.25", "1"),
-        "py": lambda x, y: (-1. + 4. * _v(y), 2. - 3. * _v(y), .25, 1.),
+        "py": _merge_b,
     },
     "Aa": {
         "nuke": ("-1 + 4 * " + U, "2 - 3 * " + U, "0.5", "(y - 8) / 16"),
-        "py": lambda x, y: (-1. + 4. * _u(x), 2. - 3. * _u(x), .5,
-                            (y - 8.) / 16.),
+        "py": _merge_aa,
     },
     "Ba": {
         "nuke": ("-1 + 4 * " + V, "2 - 3 * " + V, "0.25", "(x - 8) / 16"),
-        "py": lambda x, y: (-1. + 4. * _v(y), 2. - 3. * _v(y), .25,
-                            (x - 8.) / 16.),
+        "py": _merge_ba,
+    },
+    "Aa01": {
+        "nuke": ("-1 + 4 * " + U, "2 - 3 * " + U, "0.5",
+                 "min(max((y - 8) / 16, 0), 1)"),
+        "py": _merge_aa01,
+    },
+    "Ba01": {
+        "nuke": ("-1 + 4 * " + V, "2 - 3 * " + V, "0.25",
+                 "min(max((x - 8) / 16, 0), 1)"),
+        "py": _merge_ba01,
     },
     # A mask: alpha from 0 (x <= 8) to 1 (x >= 24), RGB the same.
     "mask": {
         "nuke": ("min(max((x - 8) / 16, 0), 1)",) * 4,
-        "py": lambda x, y: (_clamp01((x - 8.) / 16.),) * 4,
+        "py": _mask,
     },
     # Three grey columns: 0.1, 0.5, 0.9 (keyer polarity).
     "grey3": {
         "nuke": ("x < 11 ? 0.1 : (x < 22 ? 0.5 : 0.9)",) * 3 + ("1",),
-        "py": lambda x, y: ((.1 if x < 11 else .5 if x < 22 else .9),) * 3
-        + (1.,),
+        "py": _grey3,
     },
     # A uniform image: red = the frame number (hostDemo's default input,
     # view 0), green = blue = 0, opaque.
@@ -174,11 +269,54 @@ IMAGES = {
         "color": ("frame", "0", "0", "1"),
         "ofx": "default",
     },
+    # The right view of "views", in both views (JoinViews' right input).
+    "frame_gb": {
+        "color": ("0", "frame", "frame", "1"),
+        "ofx": "default",
+    },
     # Two views: left (frame, 0, 0, 1), right (0, frame, frame, 1), as
     # hostDemo's default input.
     "views": {
         "views": (("frame", "0", "0", "1"), ("0", "frame", "frame", "1")),
         "ofx": "default",
+    },
+    # All hues, as "hues", but within [0.06, 0.94].
+    "hues01": {
+        "nuke": ("0.5 + (x - 15.5) / 48",
+                 "0.5 + (-0.5 * (x - 15.5) + 0.8660254 * (y - 15.5)) / 48",
+                 "0.5 + (-0.5 * (x - 15.5) - 0.8660254 * (y - 15.5)) / 48",
+                 "1"),
+        "py": _hues01,
+    },
+    # IDistort: R and G are offsets in pixels (as UV), B a ramp; opaque, or
+    # alpha 0.5.
+    "uvwarp": {
+        "nuke": ("(y - 16) / 8", "(x - 16) / 16", "1.5 - 2 * " + U, "1"),
+        "py": _uvwarp,
+    },
+    "uvwarp_a": {
+        "nuke": ("(y - 16) / 8", "(x - 16) / 16", "1.5 - 2 * " + U, "0.5"),
+        "py": _uvwarp_a,
+    },
+    # STMap: R and G are normalised source positions, a zoom on the centre
+    # with a twist; B and A 1.
+    "stmap": {
+        "nuke": ("0.25 + 0.5 * %s + 0.1 * %s" % (U, V), "0.2 + 0.6 * " + V,
+                 "1", "1"),
+        "py": _stmap,
+    },
+    # A 3x3 asymmetric kernel (Convolve's filter input), in a box.
+    "kernel": {
+        "nuke": ("(x - 14) + 3 * (y - 14) + 1",) * 4,
+        "py": _kernel,
+        "box": (14, 14, 17, 17),
+    },
+    # The same kernel with a different colour per channel.
+    "kernel_rgb": {
+        "nuke": ("x == 15 && y == 15 ? 1 : 0", "x == 14 && y == 15 ? 1 : 0",
+                 "x == 15 && y == 16 ? 1 : 0", "x == 15 && y == 15 ? 1 : 0"),
+        "py": _kernel_rgb,
+        "box": (14, 14, 17, 17),
     },
     # Uniform images.
     "grey05_a0": _const(.5, .5, .5, 0.),
@@ -195,62 +333,6 @@ IMAGES = {
     "black": _const(0., 0., 0., 1.),
     "depth2": _const(2., 2., 2., 1.),
     "screen": _const(.1, .2, .8, 1.),
-}
-# The same with an alpha within [0, 1]: 0 up to y = 8 (A) or x = 8 (B), 1
-# from y = 24 or x = 24.
-IMAGES["Aa01"] = dict(IMAGES["Aa"], nuke=IMAGES["Aa"]["nuke"][:3]
-                      + ("min(max((y - 8) / 16, 0), 1)",),
-                      py=lambda x, y: (-1. + 4. * _u(x), 2. - 3. * _u(x), .5,
-                                       _clamp01((y - 8.) / 16.)))
-IMAGES["Ba01"] = dict(IMAGES["Ba"], nuke=IMAGES["Ba"]["nuke"][:3]
-                      + ("min(max((x - 8) / 16, 0), 1)",),
-                      py=lambda x, y: (-1. + 4. * _v(y), 2. - 3. * _v(y), .25,
-                                       _clamp01((x - 8.) / 16.)))
-# All hues, as "hues", but within [0.06, 0.94].
-IMAGES["hues01"] = {
-    "nuke": ("0.5 + (x - 15.5) / 48",
-             "0.5 + (-0.5 * (x - 15.5) + 0.8660254 * (y - 15.5)) / 48",
-             "0.5 + (-0.5 * (x - 15.5) - 0.8660254 * (y - 15.5)) / 48",
-             "1"),
-    "py": lambda x, y: (
-        .5 + (x - 15.5) / 48.,
-        .5 + (-.5 * (x - 15.5) + .8660254 * (y - 15.5)) / 48.,
-        .5 + (-.5 * (x - 15.5) - .8660254 * (y - 15.5)) / 48., 1.),
-}
-# The right view of "views", in both views (JoinViews' right input).
-IMAGES["frame_gb"] = {"color": ("0", "frame", "frame", "1"),
-                      "ofx": "default"}
-# IDistort: R and G are offsets in pixels (as UV), B a ramp; opaque.
-IMAGES["uvwarp"] = {
-    "nuke": ("(y - 16) / 8", "(x - 16) / 16", "1.5 - 2 * " + U, "1"),
-    "py": lambda x, y: ((y - 16.) / 8., (x - 16.) / 16., 1.5 - 2. * _u(x),
-                        1.),
-}
-IMAGES["uvwarp_a"] = dict(IMAGES["uvwarp"], nuke=IMAGES["uvwarp"]["nuke"][:3]
-                          + ("0.5",),
-                          py=lambda x, y: ((y - 16.) / 8., (x - 16.) / 16.,
-                                           1.5 - 2. * _u(x), .5))
-# STMap: R and G are normalised source positions, a zoom on the centre
-# with a twist; B and A 1.
-IMAGES["stmap"] = {
-    "nuke": ("0.25 + 0.5 * %s + 0.1 * %s" % (U, V), "0.2 + 0.6 * " + V,
-             "1", "1"),
-    "py": lambda x, y: (.25 + .5 * _u(x) + .1 * _v(y), .2 + .6 * _v(y),
-                        1., 1.),
-}
-# A 3x3 asymmetric kernel (Convolve's filter input), in a box.
-IMAGES["kernel"] = {
-    "nuke": ("(x - 14) + 3 * (y - 14) + 1",) * 4,
-    "py": lambda x, y: (float((x - 14) + 3 * (y - 14) + 1),) * 4,
-    "box": (14, 14, 17, 17),
-}
-# The same kernel with a different colour per channel.
-IMAGES["kernel_rgb"] = {
-    "nuke": ("x == 15 && y == 15 ? 1 : 0", "x == 14 && y == 15 ? 1 : 0",
-             "x == 15 && y == 16 ? 1 : 0", "x == 15 && y == 15 ? 1 : 0"),
-    "py": lambda x, y: (float((x, y) == (15, 15)), float((x, y) == (14, 15)),
-                        float((x, y) == (15, 16)), float((x, y) == (15, 15))),
-    "box": (14, 14, 17, 17),
 }
 # An element on the left of the image (Mirror).
 IMAGES["element"] = dict(IMAGES["ramp"], box=(2, 4, 12, 20))
@@ -296,8 +378,7 @@ CASES += [
 ]
 
 # ---------------------------------------------------------------- Color
-# The two renders' Rec. 709 luminance weights differ by about 1e-4
-# (Saturation, rgb outside [0, 1]: up to 5e-4).
+# Saturation outputs differ by up to 5e-4 here: tolerance 1e-3.
 SATURATION_TOLERANCE = 1e-3
 CASES += [
     case("Add defaults", ("Add", {}), (ofx_id("AddPlugin"), {}),
@@ -360,7 +441,7 @@ CASES += [
          input="ramp"),
     case("Grade gamma 0.7", ("Grade", {"gamma": 0.7}),
          (ofx_id("GradePlugin"), {"gamma": rgba(.7)}), input="ramp",
-         tolerance=1e-4, known=261),
+         tolerance=1e-4),
     case("Grade gamma 2, black clamp off (negatives)",
          ("Grade", {"gamma": 2., "black_clamp": False}),
          (ofx_id("GradePlugin"), {"gamma": rgba(2.), "clampBlack": 0}),
@@ -370,7 +451,7 @@ CASES += [
          ("Grade", {"gamma": 2., "black_clamp": False, "reverse": True}),
          (ofx_id("GradePlugin"), {"gamma": rgba(2.), "clampBlack": 0,
                                   "reverse": 1}),
-         input="ramp", tolerance=1e-4, known=261),
+         input="ramp", tolerance=1e-4),
     case("Grade black/white points, lift, gain, multiply, offset",
          ("Grade", {"blackpoint": .1, "whitepoint": .9, "black": .05,
                     "white": 1.2, "multiply": 1.1, "add": -.02,
@@ -721,7 +802,8 @@ CASES += [
          ("Keyer", {"operation": "luminance key", "invert": True,
                     "range": [.2, .4, .6, .8]}),
          (ofx_id("KeyerPlugin"), dict(KEYER_ABCD, show="Unpremultiplied")),
-         input="ramp", channels="a", tolerance=5e-3),  # luminance weights
+         input="ramp", channels="a",
+         tolerance=5e-3),  # outputs differ by up to 3e-3 here
     case("PIK C-blue on IBK (IBKGizmoV3)",
          ("IBKGizmoV3", {"st": "C-blue"}),
          (ofx_id("PIK"), {"screenType": "C-Blue", "show": "Premultiplied"}),
@@ -810,6 +892,7 @@ CASES += [
          (ofx_id("Rectangle"), {"bottomLeft": [cx(100), 100],
                                 "size": [cx(500), 376]}),
          **dict(GEN, tolerance=1e-4)),
+    # Softness is canonical: 40 is 37.5 pixels in x.
     case("Rectangle softness 40",
          ("Rectangle", {"area": [100, 100, 600, 476], "softness": 40}),
          (ofx_id("Rectangle"), {"bottomLeft": [cx(100), 100],
@@ -916,6 +999,7 @@ CASES += [
          (ofx_id("CropPlugin"), {"bottomLeft": [cx(8), 8],
                                  "size": [cx(16), 12]}),
          input="ramp", channels="rgba", nuke_edges=True),
+    # Softness is canonical: 4 is 3.75 pixels in x.
     case("Crop softness 4", ("Crop", {"box": [4, 4, 28, 28], "softness": 4}),
          (ofx_id("CropPlugin"), {"bottomLeft": [cx(4), 4],
                                  "size": [cx(24), 24], "softness": 4}),
@@ -1042,6 +1126,8 @@ for _steps in (1, 2, 3, 5):
         clips={"Source": "ramp", "Mask": "white"}))
 
 # ---------------------------------------------------------------- Filter
+# Sharpen and Soften size 3, with x in pixels (the size is canonical).
+SHARPEN_SIZE = {"size": [cx(3), 3], "uniform": 0}
 CIMG = "net.sf.cimg."
 CASES += [
     case("Blur defaults (size 0)", ("Blur", {}), (CIMG + "CImgBlur", {}),
@@ -1069,23 +1155,25 @@ CASES += [
          (CIMG + "CImgLaplacian", {"size": [cx(3), 3], "uniform": 0}),
          input="impulse", tolerance=1e-3,
          known=312),
+    # Sharpen and Soften: RGB away from the edges (SharpenCImg and
+    # SoftenCImg leave alpha alone by default; the edges are #318).
     case("Sharpen defaults on the checker", ("Sharpen", {}),
-         (CIMG + "CImgSharpen", {}), input="checker", channels="rgba",
-         tolerance=2e-3, known=313),
+         (CIMG + "CImgSharpen", SHARPEN_SIZE), input="checker",
+         region=INNER, tolerance=2e-3, known=313),
     case("Sharpen defaults, values in [0, 1]", ("Sharpen", {}),
-         (CIMG + "CImgSharpen", {"size": [cx(3), 3], "uniform": 0}),
-         input="mask", channels="rgba", tolerance=2e-3),
+         (CIMG + "CImgSharpen", SHARPEN_SIZE), input="mask",
+         region=INNER, tolerance=2e-3, known=312),
     case("Sharpen minimum -10, maximum 10",
          ("Sharpen", {"minimum": -10, "maximum": 10}),
-         (CIMG + "CImgSharpen", {"size": [cx(3), 3], "uniform": 0}),
-         input="checker", channels="rgba", tolerance=2e-3),
+         (CIMG + "CImgSharpen", SHARPEN_SIZE), input="checker",
+         region=INNER, tolerance=2e-3),
     case("Soften defaults on the checker", ("Soften", {}),
-         (CIMG + "CImgSoften", {}), input="checker", channels="rgba",
-         tolerance=2e-3, known=313),
+         (CIMG + "CImgSoften", SHARPEN_SIZE), input="checker",
+         region=INNER, tolerance=2e-3, known=313),
     case("Soften minimum -10, maximum 10",
          ("Soften", {"minimum": -10, "maximum": 10}),
-         (CIMG + "CImgSoften", {"size": [cx(3), 3], "uniform": 0}),
-         input="checker", channels="rgba", tolerance=2e-3),
+         (CIMG + "CImgSoften", SHARPEN_SIZE), input="checker",
+         region=INNER, tolerance=2e-3),
     # The reference writes its edges into alpha, EdgeDetectCImg into RGB.
     case("EdgeDetect sobel", ("EdgeDetect", {}),
          ("eu.cimg.EdgeDetect", {"filter": "Sobel"}), input="checker",
@@ -1268,7 +1356,7 @@ CASES += [
 VIEWS = {"input": "views", "views": ["left", "right"], "frames": [4],
          "channels": "rgba", "tolerance": 1e-4}
 CASES += [
-    # Luminance weights differ by about 1e-4.
+    # Outputs differ by up to 4e-4 here: tolerance 1e-3.
     case("Anaglyph defaults", ("Anaglyph", {}),
          (ofx_id("anaglyphPlugin"), {}),
          **dict(VIEWS, views=["left"], tolerance=1e-3)),
@@ -1302,9 +1390,6 @@ for _center in (False, True):
         known=305 if _center else None))
 
 # ------------------------------------------------------------ ReConverge
-# These cases need #267 (ReConverge implemented and built in Release):
-# until it is merged they fail on master, hence known=267.
-#
 # The cases cover the convergence modes (shift right, left, both), the
 # offset, converge points inside and outside the image, no disparity, and
 # non-integer shifts (see #267 for the expected behaviour). Only the
@@ -1314,9 +1399,15 @@ for _center in (False, True):
 # The disparity (disparityR.x in the reference, red of the OFX Disparity
 # clip), the same in both views, non-integer: d(13, 9) = 4.75, d(20, 3) = 6.75.
 _DISP_EXPR = "(x - 8) * 0.5 + y * 0.25"
+
+
+def _disparity(x, y):
+    return (x - 8) * .5 + y * .25, 0., 0., 1.
+
+
 IMAGES["disparity"] = {
     "nuke": (_DISP_EXPR, "0", "0", "1"),  # unused: see _RECONVERGE_DISP
-    "py": lambda x, y: ((x - 8) * .5 + y * .25, 0., 0., 1.),
+    "py": _disparity,
 }
 # The reference node has one input: the disparity goes in its disparityR.x.
 _RECONVERGE_DISP = (
@@ -1335,7 +1426,7 @@ def _reconverge(name, knobs, params, disparity=True):
     return case(name, ("ReConverge", knobs),
                 (ofx_id("reConvergePlugin"), params), input="ramp",
                 context="general", views=["left", "right"], channels="rgba",
-                tolerance=1e-6, known=267, **extra)
+                tolerance=1e-6, **extra)
 
 
 def _point(x, y):
@@ -1462,7 +1553,6 @@ KNOWN = {
         "Blur size 10, impulse (BlurCImg size x times PAR)",
         "Blur size 4 on the ramp, BlurCImg boundary Nearest"],
     313: [
-        "Sharpen defaults, values in [0, 1]",
         "Sharpen minimum -10, maximum 10", "Soften minimum -10, maximum 10"],
     315: [
         "Erode (blur) defaults (ErodeBlur)",
@@ -1486,15 +1576,15 @@ KNOWN = {
 _BY_NAME = {_c["name"]: _c for _c in CASES}
 for _known, _names in KNOWN.items():
     for _name in _names:
-        assert _BY_NAME[_name]["known"] is None, _name
+        if _name not in _BY_NAME or _BY_NAME[_name]["known"] is not None:
+            raise ValueError("KNOWN: no case %r, or it already has a known "
+                             "issue" % _name)
         _BY_NAME[_name]["known"] = _known
 
 
 # The short titles of the issues of known differences (xfail reasons).
 ISSUES = {
-    261: 'Grade: the gamma curve above 1',
     266: 'ZDefocus semantics',
-    267: 'ReConverge: implement the convergence shift',
     270: 'Transform family: missing sharpening filters, no prefilte...',
     271: 'Color and mask nodes: no fringe, no (un)premult invert, n...',
     272: 'ColorCorrect, ColorMatrix, Saturation, HSVTool: Clamp Bla...',

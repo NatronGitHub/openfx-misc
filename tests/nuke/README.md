@@ -13,6 +13,8 @@ A case that matches is a plain test. A known difference is a strict
 expected failure whose reason is the GitHub issue that records it (label
 `compatibility`); a test that starts to match fails, so update the case. A
 plug-in that is not in the install (e.g. a Debug-only one) is skipped.
+A PR that fixes a known difference removes its `known=` in the same PR
+and runs `pytest tests/nuke -k <plug-in>`.
 
 ## Requirements
 
