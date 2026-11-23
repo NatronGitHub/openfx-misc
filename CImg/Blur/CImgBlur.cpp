@@ -226,6 +226,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 4.0: added cropToFormat parameter on Natron (this line said 4.1, but the minor version was not incremented)
 // versions 3.1 (kept for Blur, Laplacian, ChromaBlur, Bloom) and 4.1: premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79);
 //              EdgeExtend has no premult parameter and stays 4.0
+// versions 3.1 (Blur, Bloom) and 4.1 (Blur, Bloom, ErodeBlur): not an identity (pass-through) when the Alpha Threshold changes the alpha, or when ErodeBlur remaps or clamps the values, even with a small size (issue #324);
 // EdgeDetect version 5.0: fix the gradient direction in RMS multichannel mode (only EdgeDetect has version 5);
 //              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79)
 #define kPluginVersionMajorEdgeDetect 5
@@ -2000,7 +2001,7 @@ public:
                 *ptr = (*ptr < t0) ? 0.f : ((*ptr > t1) ? 1.f : static_cast<float>((*ptr - t0) / (t1 - t0)) );
             }
         }
-        if (params.alphaThreshold > 0. && alphaChannel != -1) {
+        if ( thresholdsAlpha(params, alphaChannel != -1) ) {
             cimg_forXY(cimg, x, y) {
                 float& alpha = cimg(x, y, 0, alphaChannel);
                 if (alpha < params.alphaThreshold) {
@@ -2013,10 +2014,38 @@ public:
         }
     } // render
 
+    // true if render() zeroes the alpha values below the Alpha Threshold
+    static bool thresholdsAlpha(const CImgBlurParams& params,
+                                bool hasAlphaChannel)
+    {
+        return params.alphaThreshold > 0. && hasAlphaChannel;
+    }
+
+    // true if the image passed to render() has an alpha channel (the alphaChannel argument of
+    // render() is not -1; see CImgFilterPluginHelper::render())
+    bool renderHasAlphaChannel(double time) const
+    {
+        if (!_supportsComponentRemapping || !_srcClip) {
+            return false;
+        }
+        const PixelComponentEnum components = _srcClip->getPixelComponents();
+        if ( (components != ePixelComponentRGBA) && (components != ePixelComponentAlpha) ) {
+            return false;
+        }
+
+        return !_processA || _processA->getValueAtTime(time);
+    }
+
     virtual bool isIdentity(const IsIdentityArguments &args,
                             const CImgBlurParams& params) OVERRIDE FINAL
     {
         if (_blurPlugin == eBlurPluginLaplacian) {
+            return false;
+        }
+        if (_blurPlugin == eBlurPluginErodeBlur) {
+            // ErodeBlur remaps the values with its two thresholds and clamps them to [0,1], even when
+            // the blur does nothing (issue #324). Even with erodeSize = 0 (thresholds 0 and 1), the
+            // clamp changes the float images (the only depth supported) that are not in [0,1].
             return false;
         }
         if ( (_blurPlugin == eBlurPluginSharpen || _blurPlugin == eBlurPluginSoften) && params.sharpenSoftenAmount == 0. ) {
@@ -2029,6 +2058,13 @@ public:
         double sx, sy;
         sx = args.renderScale.x * params.sizex;
         sy = args.renderScale.y * params.sizey;
+
+        // Blur, Bloom: the Alpha Threshold changes the alpha even when the blur does not, unless
+        // render() returns before applying it, when blur() is skipped (issue #324)
+        if ( thresholdsAlpha( params, renderHasAlphaChannel(args.time) ) &&
+             !blurIsSkipped(params.filter, sx, params.orderX, sy, params.orderY, 1.) ) {
+            return false;
+        }
 
         if (_blurPlugin == eBlurPluginBloom) {
             // size of the largest blur kernel
@@ -2063,6 +2099,24 @@ public:
     // describeInContext function for plugin factories
     static void describeInContext(ImageEffectDescriptor& desc, ContextEnum context, int majorVersion, int minorVersion, BlurPluginEnum blurPlugin = eBlurPluginBlur);
 
+    // true if blur() does not modify the image and returns false: a (quasi-)Gaussian blur with a
+    // tiny sigma, except for Bloom, EdgeExtend and Laplacian (render() then returns early, except for
+    // these). Used by blur() and isIdentity().
+    bool blurIsSkipped(FilterEnum filter,
+                       double sx, int orderX,
+                       double sy, int orderY,
+                       double scale) const
+    {
+        if ( (filter != eFilterQuasiGaussian) && (filter != eFilterGaussian) ) {
+            return false;
+        }
+        const float sigmax = (float)(sx * scale / 2.4);
+        const float sigmay = (float)(sy * scale / 2.4);
+
+        return (_blurPlugin != eBlurPluginBloom) && (_blurPlugin != eBlurPluginEdgeExtend) && (_blurPlugin != eBlurPluginLaplacian) &&
+               (sigmax < 0.1) && (sigmay < 0.1) && (orderX == 0) && (orderY == 0);
+    }
+
     // returns true if the image was actually modified
     bool blur(FilterEnum filter,
               double sx, int orderX,
@@ -2070,12 +2124,12 @@ public:
               double scale, bool boundary,
               cimg_library::CImg<cimgpix_t>& cimg_blur)
     {
+        if ( blurIsSkipped(filter, sx, orderX, sy, orderY, scale) ) {
+            return false;
+        }
         if ( (filter == eFilterQuasiGaussian) || (filter == eFilterGaussian) ) {
             float sigmax = (float)(sx * scale / 2.4);
             float sigmay = (float)(sy * scale / 2.4);
-            if ( (_blurPlugin != eBlurPluginBloom) && (_blurPlugin != eBlurPluginEdgeExtend) && (_blurPlugin != eBlurPluginLaplacian) && (sigmax < 0.1) && (sigmay < 0.1) && (orderX == 0) && (orderY == 0) ) {
-                return false;
-            }
             // VanVliet filter was inexistent before 1.53, and buggy before CImg.h from
             // 57ffb8393314e5102c00e5f9f8fa3dcace179608 Thu Dec 11 10:57:13 2014 +0100
             if (filter == eFilterGaussian) {

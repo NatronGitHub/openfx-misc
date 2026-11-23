@@ -65,6 +65,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              (NaN audit); a merge result (Product, Over...) beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #80),
 //              and infinite inputs of the merge operators are made finite (+-FLT_MAX) instead of giving NaN (SupportExt #82);
 //              a NaN Foreground Matte sample is 0, as in the mask mix (the frame was skipped, as under a matte) (issue #220)
+//              Not an identity (pass-through of the only frame blended) where Mix, the mask, unprocessed channels or
+//              the operator change it, and the unprocessed channels are the source ones with Mix 1 and no mask (they were 0) (issue #325)
 // version 2.1 (kept for backward compatibility, frames aligned on the last frame of the range): the fixes of 3.1
 //              (the NaN audit ones also applied to version 2, which was still registered as 2.0, SupportExt #80 and #82,
 //              and issue #220)
@@ -752,8 +754,10 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor,
     _processB->getValueAtTime(time, processB);
     _processA->getValueAtTime(time, processA);
 
-    // If masking or mixing, fetch the original image
-    auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() && (doMasking || mix != 1.) ) ?
+    // If masking, mixing, or copying unprocessed channels, fetch the original image
+    // (the unprocessed channels were 0 with Mix 1 and no mask, issue #325)
+    const bool processAll = processR && processG && processB && processA;
+    auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() && (doMasking || mix != 1. || !processAll) ) ?
                                     _srcClip->fetchImage(args.time) :
                                     0 );
     if ( src.get() ) {
@@ -1060,26 +1064,49 @@ FrameBlendPlugin::isIdentity(const IsIdentityArguments &args,
         return false;
     }
 
-    bool absolute;
-    _absolute->getValueAtTime(time, absolute);
-    OfxRangeD range;
-    int min, max;
-    _frameRange->getValueAtTime(time, min, max);
-    if (!absolute) {
-        min += time;
-        max += time;
-    }
-    range.min = min;
-    range.max = max;
-
-    if (range.min == range.max) {
-        identityClip = _srcClip;
-        identityTime = range.min;
-
-        return true;
-    }
-
     bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
+
+    // one frame is blended (the same frames as in render()): the render copies it only if nothing
+    // else changes it (issue #325)
+    int first, interval, n;
+    getFrames(time, &first, &interval, &n);
+    if ( (n == 1) && !doMasking && (mix == 1.) ) {
+        bool processR, processG, processB, processA;
+        _processR->getValueAtTime(time, processR);
+        _processG->getValueAtTime(time, processG);
+        _processB->getValueAtTime(time, processB);
+        _processA->getValueAtTime(time, processA);
+        // the unprocessed channels are copied from the source at the current time
+        const bool channelsFromFirst = (processR && processG && processB && processA) || (first == time);
+        bool copiesFrame;
+        switch ( (OperationEnum)_operation->getValueAtTime(time) ) {
+        case eOperationMin:
+        case eOperationMax:
+            // the first source pixel is taken as is
+            copiesFrame = true;
+            break;
+        case eOperationAverage:
+        case eOperationSum:
+        case eOperationOver:
+            // the merge operators make the infinite values of float images finite (+-FLT_MAX,
+            // SupportExt #82), otherwise they copy the pixel (0 + A, A / 1, A over 0)
+            copiesFrame = ( _srcClip->getPixelDepth() != eBitDepthFloat );
+            break;
+        case eOperationProduct:
+        default:
+            // the initial value 1 is multiplied by 1 - Decay, then by the pixel divided by maxValue
+            // (the pixel itself only on float images): not a copy
+            copiesFrame = false;
+            break;
+        }
+        if (channelsFromFirst && copiesFrame) {
+            identityClip = _srcClip;
+            identityTime = first;
+
+            return true;
+        }
+    }
+
     if (doMasking) {
         bool maskInvert;
         _maskInvert->getValueAtTime(args.time, maskInvert);

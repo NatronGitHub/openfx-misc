@@ -156,6 +156,8 @@ enum MergePluginEnum
 // 1.1, 2.1 and 3.0 (unreleased, fixed in place): in the filter context, B is the mandated Source clip
 //      (RGBA or Alpha), and Source and Output are no longer remapped there (issue #217). The general
 //      context, used by Natron, is unchanged.
+// 1.1 and 2.1 (unreleased, fixed in place): with Alpha-only images, B is not passed through when B's R checkbox,
+//      which controls the alpha in these versions, is unchecked (issue #328).
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -1340,6 +1342,11 @@ MergePlugin::isIdentity(const IsIdentityArguments &args,
     for (int c = 0; c < 4; ++c) {
         _outputChannels[c]->getValueAtTime(time, outputChannels[c]);
         _bChannels[c]->getValueAtTime(time, srcBChannels[c]);
+    }
+    if ( (getMajorVersion() < 3) && (_dstClip->getPixelComponents() == ePixelComponentAlpha) ) {
+        // versions 1 and 2, Alpha-only images: B's R checkbox controls the alpha channel (see alphaFromA
+        // in the processor) (issue #328)
+        srcBChannels[3] = srcBChannels[0];
     }
     if (!outputChannels[0] && !outputChannels[1] && !outputChannels[2] && !outputChannels[3] && plane == kFnOfxImagePlaneColour) {
         identityClip = _srcClipB;
