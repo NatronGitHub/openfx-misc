@@ -34,6 +34,7 @@
 
 #include "ofxsTransform3x3.h"
 #include "ofxsCoords.h"
+#include "ofxsNormalisedDefaults.h"
 #include "ofxsThreadSuite.h"
 #include "ofxsGenerator.h"
 #include "ofxsFormatResolution.h"
@@ -74,6 +75,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // SupportExt#179, in the current minor versions (not released yet, so no further bump): with the Box
 //              filter, the thin band just outside the source image is black (Black Outside) or the
 //              edge colour, not about 4x the edge value (garbage).
+// (#236, in the current minor version, not released yet) on hosts that ignore normalised defaults
+//              (e.g. DaVinci Resolve), the default rectangle is the project's, not (1,1) pixels
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 // 1.1: importing a chan or Boujou file no longer sets NaN or infinite rotation and focal length keys (NaN audit);
@@ -92,11 +95,6 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamOutputFormat "format"
 #define kParamOutputFormatLabel "Output Format", "Desired format for the output sequence."
-
-// Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
-#define kParamDefaultsNormalised "defaultsNormalised"
-
-static bool gHostSupportsDefaultCoordinateSystem = true; // for kParamDefaultsNormalised
 
 ////////////////////////////////////////////////////////////////////////////////
 // BEGIN CameraParm
@@ -1648,29 +1646,16 @@ public:
         _srcClipChanged = fetchBooleanParam(kParamSrcClipChanged);
         assert(_srcClipChanged);
 
-        // honor kParamDefaultsNormalised
-        if ( paramExists(kParamDefaultsNormalised) ) {
-            // Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
-            // handle these ourselves!
-            BooleanParam* param = fetchBooleanParam(kParamDefaultsNormalised);
-            assert(param);
-            bool normalised = param->getValue();
-            if (normalised) {
-                OfxPointD size = getProjectExtent();
-                OfxPointD origin = getProjectOffset();
-                OfxPointD p;
-                // we must denormalise all parameters for which setDefaultCoordinateSystem(eCoordinatesNormalised) couldn't be done
-                //EditBlock eb(*this, kParamDefaultsNormalised);
-                p = _btmLeft->getValue();
-                _btmLeft->setValue(p.x * size.x + origin.x, p.y * size.y + origin.y);
-                p = _size->getValue();
-                _size->setValue(p.x * size.x, p.y * size.y);
-                param->setValue(false);
-            }
-        }
 
         // finally...
         syncPrivateData();
+        // Hosts that ignore normalised defaults (e.g. Resolve) give the normalised values as is: convert
+        // the ones that still equal their default (#236, see ofxsNormalisedDefaults.h). Last, since
+        // setValue() may call changedParam().
+        // the size only if the position is untouched too: (1,1) may be a deliberate one-pixel rectangle
+        if ( ofxsDenormaliseUntouchedDefault(*this, *_btmLeft, /*isPosition=*/true) ) {
+            ofxsDenormaliseUntouchedDefault(*this, *_size, /*isPosition=*/false);
+        }
     }
 
     ~Card3DPlugin()
@@ -2304,11 +2289,7 @@ Card3DPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractBtmLeft);
             param->setLabel(kParamRectangleInteractBtmLeftLabel);
             param->setDoubleType(eDoubleTypeXYAbsolute);
-            if ( param->supportsDefaultCoordinateSystem() ) {
-                param->setDefaultCoordinateSystem(eCoordinatesNormalised); // no need of kParamDefaultsNormalised
-            } else {
-                gHostSupportsDefaultCoordinateSystem = false; // no multithread here, see kParamDefaultsNormalised
-            }
+            ofxsSetDefaultCoordinateSystemNormalised(*param); // see ofxsNormalisedDefaults.h (#236)
             param->setDefault(0., 0.);
             param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
@@ -2326,11 +2307,7 @@ Card3DPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractSize);
             param->setLabel(kParamRectangleInteractSizeLabel);
             param->setDoubleType(eDoubleTypeXY);
-            if ( param->supportsDefaultCoordinateSystem() ) {
-                param->setDefaultCoordinateSystem(eCoordinatesNormalised); // no need of kParamDefaultsNormalised
-            } else {
-                gHostSupportsDefaultCoordinateSystem = false; // no multithread here, see kParamDefaultsNormalised
-            }
+            ofxsSetDefaultCoordinateSystemNormalised(*param); // see ofxsNormalisedDefaults.h (#236)
             param->setDefault(1., 1.);
             param->setRange(0., 0., DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0, 0, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
