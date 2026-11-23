@@ -144,7 +144,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              (e.g. DaVinci Resolve), the default rectangle is the project's, not (1,1) pixels
 // (#303, in the current minor version, not released yet) the Multiply by UV Alpha parameter (checked
 //              by default, as before: the output is multiplied by the Alpha Channel from UV) and the Blur
-//              Channel and Blur Scale parameters (no blur by default)
+//              Channel and Blur Scale parameters (no blur by default); with a transform concatenated
+//              from upstream (e.g. Transform, CornerPin), the filter footprint is the one of the UV map
+//              composed with the inverse transform (it was the transform's alone, so the UV map's own
+//              minification was ignored)
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -229,7 +232,7 @@ enum DistortionPluginEnum
 #define kParamMultiplyByUVAlphaLabel "Multiply by UV Alpha", "Multiply the output (all the processed channels, so that a premultiplied image stays premultiplied) by the Alpha Channel from UV, e.g. the coverage of the object in a UV pass rendered by a 3D software. Uncheck to use the Alpha Channel from UV only to unpremultiply UV (see \"Unpremult UV\")."
 
 #define kParamChannelBlur "channelBlur"
-#define kParamChannelBlurLabel "Blur Channel", "Input blur channel from UV. Its values, in pixels and multiplied by Blur Scale, are added to the size of the area of the source image that is sampled for each output pixel, to add extra blur or diffusion to the distortion. If \"Unpremult UV\" is checked, they are divided by alpha, like UV. Negative values are taken as 0. The Box filter gives the smoothest blur; the other filters supersample the source by steps (3x3, 9x9... samples), and the Impulse filter does not blur. 0 (the default): no blur."
+#define kParamChannelBlurLabel "Blur Channel", "Input blur channel from UV. Its values, in pixels and multiplied by Blur Scale, are added to the size of the area of the source image that is sampled for each output pixel, to add extra blur or diffusion to the distortion. If \"Unpremult UV\" is checked, they are divided by alpha, like UV. Negative values are taken as 0, and values larger than the source image as its size. A channel that the UV input does not have (e.g. A of an RGB input) is 0. The Box filter gives the smoothest blur; the other filters supersample the source by steps (3x3, 9x9... samples), and the Impulse filter does not blur. 0 (the default): no blur."
 
 #define kParamBlurScale "blurScale"
 #define kParamBlurScaleLabel "Blur Scale", "The values of the Blur Channel are multiplied by this."
@@ -778,6 +781,16 @@ void PFBarrelCommon::FileReader::dump(void)
 static bool gIsMultiPlaneV1;
 static bool gIsMultiPlaneV2;
 
+// the channels read from the UV clip by IDistort and STMap: indices of _uvChannels and _planeChannels
+enum UVChannelEnum
+{
+    eUVChannelU = 0,
+    eUVChannelV,
+    eUVChannelAlpha,
+    eUVChannelBlur,
+    eUVChannelCount
+};
+
 struct InputPlaneChannel
 {
     Image* img;
@@ -984,38 +997,62 @@ private:
     void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL;
 };
 
-// Add blur (in source pixels) to the size of the source area sampled for an output pixel: the
-// columns (Jxx, Jyx) and (Jxy, Jyy) of the Jacobian are the source footprints of the output pixel's
-// sides along x and y, and blur is added to the length of each. A side of zero length becomes
-// blur pixels long, along the source x or y axis.
-static void
-addBlurToFootprint(double blur,
-                   double *Jxx,
-                   double *Jxy,
-                   double *Jyx,
-                   double *Jyy)
+// The derivatives of the source position (x, y) over the output position (X, Y): its columns (xx, yx)
+// and (xy, yy) are the source footprints of the output pixel's sides along X and Y.
+struct Jacobian
+{
+    double xx, xy; // dx/dX, dx/dY
+    double yx, yy; // dy/dX, dy/dY
+};
+
+// the Jacobian of a composition: a(b(X)), where a is the Jacobian of a and b the one of b
+static Jacobian
+composeJacobians(const Jacobian &a,
+                 const Jacobian &b)
+{
+    const Jacobian j = {
+        a.xx * b.xx + a.xy * b.yx, a.xx * b.xy + a.xy * b.yy,
+        a.yx * b.xx + a.yy * b.yx, a.yx * b.xy + a.yy * b.yy
+    };
+
+    return j;
+}
+
+// Add blur (in source pixels) to the size of the source area sampled for an output pixel: blur is
+// added to the length of each side of the footprint j. A side of zero length becomes blur pixels long,
+// along the source x or y axis. The blur is clamped to [0, maxBlur] (a NaN blur is 0): a huge or
+// infinite blur (e.g. unpremultiplied by a tiny alpha) would give an infinite or NaN footprint, and a
+// footprint far larger than the source only costs time.
+static Jacobian
+addBlurToFootprint(const Jacobian &j,
+                   double blur,
+                   double maxBlur)
 {
     if ( !(blur > 0.) ) {
-        return; // also for a NaN blur
+        return j; // also for a NaN blur
     }
-    const double nx = std::sqrt(*Jxx * *Jxx + *Jyx * *Jyx);
+    blur = (std::min)(blur, maxBlur);
+    Jacobian r = j;
+    const double nx = std::sqrt(j.xx * j.xx + j.yx * j.yx);
     if (nx > 0.) {
         const double k = (nx + blur) / nx;
-        *Jxx *= k;
-        *Jyx *= k;
+        r.xx *= k;
+        r.yx *= k;
     } else {
-        *Jxx = blur;
-        *Jyx = 0.;
+        r.xx = blur;
+        r.yx = 0.;
     }
-    const double ny = std::sqrt(*Jxy * *Jxy + *Jyy * *Jyy);
+    const double ny = std::sqrt(j.xy * j.xy + j.yy * j.yy);
     if (ny > 0.) {
         const double k = (ny + blur) / ny;
-        *Jxy *= k;
-        *Jyy *= k;
+        r.xy *= k;
+        r.yy *= k;
     } else {
-        *Jxy = 0.;
-        *Jyy = blur;
+        r.xy = 0.;
+        r.yy = blur;
     }
+
+    return r;
 }
 
 template <class PIX, int nComponents, int maxValue, DistortionPluginEnum plugin, FilterEnum filter, bool clamp>
@@ -1025,7 +1062,7 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
     unused(rs);
     assert(nComponents == 1 || nComponents == 3 || nComponents == 4);
     assert(_dstImg);
-    assert(!(plugin == eDistortionPluginSTMap || plugin == eDistortionPluginIDistort) || _planeChannels.size() == 4);
+    assert(!(plugin == eDistortionPluginSTMap || plugin == eDistortionPluginIDistort) || _planeChannels.size() == eUVChannelCount);
 
     // required for STMap and LensDistortion
     //if (plugin == eDistortionPluginSTMap || _outputMode == eOutputModeSTMap) {
@@ -1034,6 +1071,12 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
     int srcy1 = int(std::ceil(_format.y1));
     int srcy2 = int(std::floor(_format.y2));
     //}
+    // the largest blur, in source pixels: the larger dimension of the source image (at least 1)
+    double maxBlur = 1.;
+    if (_srcImg) {
+        const OfxRectI& srcBounds = _srcImg->getBounds();
+        maxBlur = (std::max)( maxBlur, (double)(std::max)(srcBounds.x2 - srcBounds.x1, srcBounds.y2 - srcBounds.y1) );
+    }
     float tmpPix[4] = {0.f, 0.f, 0.f, 0.f};
     for (int y = procWindow.y1; y < procWindow.y2; y++) {
         if ( _effect.abort() ) {
@@ -1050,52 +1093,52 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
             switch (plugin) {
             case eDistortionPluginSTMap:
             case eDistortionPluginIDistort: {
-                const PIX *uPix    = getPix(0, x, y  );
-                const PIX *uPix_xn = getPix(0, x + 1, y  );
-                const PIX *uPix_xp = getPix(0, x - 1, y  );
-                const PIX *uPix_yn = getPix(0, x, y + 1);
-                const PIX *uPix_yp = getPix(0, x, y - 1);
+                const PIX *uPix    = getPix(eUVChannelU, x, y  );
+                const PIX *uPix_xn = getPix(eUVChannelU, x + 1, y  );
+                const PIX *uPix_xp = getPix(eUVChannelU, x - 1, y  );
+                const PIX *uPix_yn = getPix(eUVChannelU, x, y + 1);
+                const PIX *uPix_yp = getPix(eUVChannelU, x, y - 1);
                 const PIX *vPix, *vPix_xn, *vPix_xp, *vPix_yn, *vPix_yp;
-                if (_planeChannels[1].img == _planeChannels[0].img) {
+                if (_planeChannels[eUVChannelV].img == _planeChannels[eUVChannelU].img) {
                     vPix    = uPix;
                     vPix_xn = uPix_xn;
                     vPix_xp = uPix_xp;
                     vPix_yn = uPix_yn;
                     vPix_yp = uPix_yp;
                 } else {
-                    vPix =    getPix(1, x, y  );
-                    vPix_xn = getPix(1, x + 1, y  );
-                    vPix_xp = getPix(1, x - 1, y  );
-                    vPix_yn = getPix(1, x, y + 1);
-                    vPix_yp = getPix(1, x, y - 1);
+                    vPix =    getPix(eUVChannelV, x, y  );
+                    vPix_xn = getPix(eUVChannelV, x + 1, y  );
+                    vPix_xp = getPix(eUVChannelV, x - 1, y  );
+                    vPix_yn = getPix(eUVChannelV, x, y + 1);
+                    vPix_yp = getPix(eUVChannelV, x, y - 1);
                 }
                 const PIX *aPix, *aPix_xn, *aPix_xp, *aPix_yn, *aPix_yp;
-                if (_planeChannels[2].img == _planeChannels[0].img) {
+                if (_planeChannels[eUVChannelAlpha].img == _planeChannels[eUVChannelU].img) {
                     aPix = uPix;
                     aPix_xn = uPix_xn;
                     aPix_xp = uPix_xp;
                     aPix_yn = uPix_yn;
                     aPix_yp = uPix_yp;
-                } else if (_planeChannels[2].img == _planeChannels[1].img) {
+                } else if (_planeChannels[eUVChannelAlpha].img == _planeChannels[eUVChannelV].img) {
                     aPix = vPix;
                     aPix_xn = vPix_xn;
                     aPix_xp = vPix_xp;
                     aPix_yn = vPix_yn;
                     aPix_yp = vPix_yp;
                 } else {
-                    aPix =    getPix(2, x, y  );
-                    aPix_xn = getPix(2, x + 1, y  );
-                    aPix_xp = getPix(2, x - 1, y  );
-                    aPix_yn = getPix(2, x, y + 1);
-                    aPix_yp = getPix(2, x, y - 1);
+                    aPix =    getPix(eUVChannelAlpha, x, y  );
+                    aPix_xn = getPix(eUVChannelAlpha, x + 1, y  );
+                    aPix_xp = getPix(eUVChannelAlpha, x - 1, y  );
+                    aPix_yn = getPix(eUVChannelAlpha, x, y + 1);
+                    aPix_yp = getPix(eUVChannelAlpha, x, y - 1);
                 }
                 // compute gradients before wrapping
-                double u = getVal(0, uPix, NULL);
-                double v = getVal(1, vPix, NULL);
-                a = getVal(2, aPix, NULL);
+                double u = getVal(eUVChannelU, uPix, NULL);
+                double v = getVal(eUVChannelV, vPix, NULL);
+                a = getVal(eUVChannelAlpha, aPix, NULL);
                 unpremult(a, &u, &v);
                 if (filter != eFilterImpulse) {
-                    blur = getVal(3, getPix(3, x, y), NULL);
+                    blur = getVal(eUVChannelBlur, getPix(eUVChannelBlur, x, y), NULL);
                     if ( _unpremultUV && (a != 0.) ) {
                         blur /= a;
                     }
@@ -1104,19 +1147,19 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
 
                 double ux, uy, vx, vy;
                 {
-                    double u_xn = getVal(0, uPix_xn, uPix);
-                    double u_xp = getVal(0, uPix_xp, uPix);
-                    double u_yn = getVal(0, uPix_yn, uPix);
-                    double u_yp = getVal(0, uPix_yp, uPix);
-                    double v_xn = getVal(1, vPix_xn, vPix);
-                    double v_xp = getVal(1, vPix_xp, vPix);
-                    double v_yn = getVal(1, vPix_yn, vPix);
-                    double v_yp = getVal(1, vPix_yp, vPix);
+                    double u_xn = getVal(eUVChannelU, uPix_xn, uPix);
+                    double u_xp = getVal(eUVChannelU, uPix_xp, uPix);
+                    double u_yn = getVal(eUVChannelU, uPix_yn, uPix);
+                    double u_yp = getVal(eUVChannelU, uPix_yp, uPix);
+                    double v_xn = getVal(eUVChannelV, vPix_xn, vPix);
+                    double v_xp = getVal(eUVChannelV, vPix_xp, vPix);
+                    double v_yn = getVal(eUVChannelV, vPix_yn, vPix);
+                    double v_yp = getVal(eUVChannelV, vPix_yp, vPix);
                     if (_unpremultUV) {
-                        unpremult(getVal(2, aPix_xn, aPix), &u_xn, &v_xn);
-                        unpremult(getVal(2, aPix_xp, aPix), &u_xp, &v_xp);
-                        unpremult(getVal(2, aPix_yn, aPix), &u_yn, &v_yn);
-                        unpremult(getVal(2, aPix_yp, aPix), &u_yp, &v_yp);
+                        unpremult(getVal(eUVChannelAlpha, aPix_xn, aPix), &u_xn, &v_xn);
+                        unpremult(getVal(eUVChannelAlpha, aPix_xp, aPix), &u_xp, &v_xp);
+                        unpremult(getVal(eUVChannelAlpha, aPix_yn, aPix), &u_yn, &v_yn);
+                        unpremult(getVal(eUVChannelAlpha, aPix_yp, aPix), &u_yp, &v_yp);
                     }
                     ux = (u_xn - u_xp) / 2.;
                     vx = (v_xn - v_xp) / 2.;
@@ -1181,16 +1224,15 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
                 break;
             }
             } // switch
-            double Jxx = 1., Jxy = 0., Jyx = 0., Jyy = 1.;
+            // the footprint of the output pixel in the source, before the upstream (concatenated) transform,
+            // with the blur, in the pixels of the image that this effect sees (the transformed source)
+            Jacobian J = {1., 0., 0., 1.};
+            if (filter != eFilterImpulse) {
+                const Jacobian S = {sxx, sxy, syx, syy};
+                J = addBlurToFootprint(S, blur, maxBlur);
+            }
             bool atInfinity = false; // the source position is at infinity: nothing to sample
-            if (_transformIsIdentity) {
-                if (filter != eFilterImpulse) {
-                    Jxx = sxx;
-                    Jxy = sxy;
-                    Jyx = syx;
-                    Jyy = syy;
-                }
-            } else {
+            if (!_transformIsIdentity) {
                 const Matrix3x3 & H = _srcTransformInverse;
                 double transformedx = H(0,0) * sx + H(0,1) * sy + H(0,2);
                 double transformedy = H(1,0) * sx + H(1,1) * sy + H(1,2);
@@ -1204,16 +1246,18 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
                     sx = transformedx / transformedz;
                     sy = transformedy / transformedz;
                     if (filter != eFilterImpulse) {
-                        Jxx = (H(0,0) * transformedz - transformedx * H(2,0)) / (transformedz * transformedz);
-                        Jxy = (H(0,1) * transformedz - transformedx * H(2,1)) / (transformedz * transformedz);
-                        Jyx = (H(1,0) * transformedz - transformedy * H(2,0)) / (transformedz * transformedz);
-                        Jyy = (H(1,1) * transformedz - transformedy * H(2,1)) / (transformedz * transformedz);
+                        // the footprint in the original source: the Jacobian of the inverse upstream
+                        // transform, times the footprint in the transformed source
+                        const double z2 = transformedz * transformedz;
+                        const Jacobian JH = {
+                            (H(0,0) * transformedz - transformedx * H(2,0)) / z2,
+                            (H(0,1) * transformedz - transformedx * H(2,1)) / z2,
+                            (H(1,0) * transformedz - transformedy * H(2,0)) / z2,
+                            (H(1,1) * transformedz - transformedy * H(2,1)) / z2
+                        };
+                        J = composeJacobians(JH, J);
                     }
                 }
-            }
-            
-            if ( !atInfinity && (filter != eFilterImpulse) ) {
-                addBlurToFootprint(blur, &Jxx, &Jxy, &Jyx, &Jyy);
             }
 
             if (atInfinity) {
@@ -1231,7 +1275,7 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
                 if (filter == eFilterImpulse) {
                     ofxsFilterInterpolate2D<PIX, nComponents, filter, clamp>(sx, sy, _srcImg, _blackOutside, tmpPix);
                 } else {
-                    ofxsFilterInterpolate2DSuper<PIX, nComponents, filter, clamp>(sx, sy, Jxx, Jxy, Jyx, Jyy, _srcImg, _blackOutside, tmpPix);
+                    ofxsFilterInterpolate2DSuper<PIX, nComponents, filter, clamp>(sx, sy, J.xx, J.xy, J.yx, J.yy, _srcImg, _blackOutside, tmpPix);
                 }
                 if (_multiplyByUVAlpha) {
                     for (unsigned c = 0; c < nComponents; ++c) {
@@ -1406,10 +1450,10 @@ public:
         _processA = fetchBooleanParam(kParamProcessA);
         assert(_processR && _processG && _processB && _processA);
         if ( (plugin == eDistortionPluginIDistort) || (plugin == eDistortionPluginSTMap) ) {
-            _uvChannels[0] = fetchChoiceParam(kParamChannelU);
-            _uvChannels[1] = fetchChoiceParam(kParamChannelV);
-            _uvChannels[2] = fetchChoiceParam(kParamChannelA);
-            _uvChannels[3] = fetchChoiceParam(kParamChannelBlur);
+            _uvChannels[eUVChannelU] = fetchChoiceParam(kParamChannelU);
+            _uvChannels[eUVChannelV] = fetchChoiceParam(kParamChannelV);
+            _uvChannels[eUVChannelAlpha] = fetchChoiceParam(kParamChannelA);
+            _uvChannels[eUVChannelBlur] = fetchChoiceParam(kParamChannelBlur);
             if (gIsMultiPlaneV1 || gIsMultiPlaneV2) {
 
                 {
@@ -1440,7 +1484,7 @@ public:
             _blurScale = fetchDoubleParam(kParamBlurScale);
             _uvOffset = fetchDouble2DParam(kParamUVOffset);
             _uvScale = fetchDouble2DParam(kParamUVScale);
-            assert(_uvChannels[0] && _uvChannels[1] && _uvChannels[2] && _uvChannels[3] && _unpremultUV &&
+            assert(_uvChannels[eUVChannelU] && _uvChannels[eUVChannelV] && _uvChannels[eUVChannelAlpha] && _uvChannels[eUVChannelBlur] && _unpremultUV &&
                    _multiplyByUVAlpha && _blurScale && _uvOffset && _uvScale);
             if (plugin == eDistortionPluginSTMap) {
                 _uWrap = fetchChoiceParam(kParamWrapU);
@@ -1448,7 +1492,7 @@ public:
                 assert(_uWrap && _vWrap);
             }
         } else {
-            _uvChannels[0] = _uvChannels[1] = _uvChannels[2] = _uvChannels[3] = NULL;
+            std::fill(_uvChannels, _uvChannels + eUVChannelCount, (ChoiceParam*)NULL);
         }
 
         /* if (gIsMultiPlane) {
@@ -1653,7 +1697,7 @@ private:
     BooleanParam* _processG;
     BooleanParam* _processB;
     BooleanParam* _processA;
-    ChoiceParam* _uvChannels[4]; // U, V, Alpha, Blur
+    ChoiceParam* _uvChannels[eUVChannelCount]; // indexed by UVChannelEnum
     BooleanParam* _unpremultUV;
     BooleanParam* _multiplyByUVAlpha;
     DoubleParam* _blurScale;
@@ -2440,10 +2484,11 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
         if (gIsMultiPlaneV1 || gIsMultiPlaneV2) {
             BitDepthEnum srcBitDepth = eBitDepthNone;
             std::map<Clip*, std::map<std::string, Image*> > fetchedPlanes;
-            for (int i = 0; i < 4; ++i) {
+            for (int i = 0; i < eUVChannelCount; ++i) {
                 InputPlaneChannel p;
                 p.channelIndex = i;
-                p.fillZero = false;
+                // a missing channel is 1 (opaque) for U, V and Alpha, as before, but 0 (no blur) for Blur
+                p.fillZero = (i == eUVChannelBlur);
                 //if (_uvClip) {
                 Clip* clip = 0;
                 MultiPlane::ImagePlaneDesc plane;
@@ -2491,7 +2536,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
                     // This may happen if the user selected  the hard-coded Alpha channel and the input is RGB
                     if (p.channelIndex >= p.img->getPixelComponentCount()) {
                         p.img = 0;
-                        p.fillZero = p.channelIndex != 3;
+                        p.fillZero = (p.channelIndex != 3) || (i == eUVChannelBlur);
                     }
                 }
 
@@ -2504,17 +2549,17 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
             InputChannelEnum vChannel = eInputChannelG;
             InputChannelEnum aChannel = eInputChannelA;
             InputChannelEnum blurChannel = eInputChannel0;
-            if (_uvChannels[0]) {
-                uChannel = (InputChannelEnum)_uvChannels[0]->getValueAtTime(time);
+            if (_uvChannels[eUVChannelU]) {
+                uChannel = (InputChannelEnum)_uvChannels[eUVChannelU]->getValueAtTime(time);
             }
-            if (_uvChannels[1]) {
-                vChannel = (InputChannelEnum)_uvChannels[1]->getValueAtTime(time);
+            if (_uvChannels[eUVChannelV]) {
+                vChannel = (InputChannelEnum)_uvChannels[eUVChannelV]->getValueAtTime(time);
             }
-            if (_uvChannels[2]) {
-                aChannel = (InputChannelEnum)_uvChannels[2]->getValueAtTime(time);
+            if (_uvChannels[eUVChannelAlpha]) {
+                aChannel = (InputChannelEnum)_uvChannels[eUVChannelAlpha]->getValueAtTime(time);
             }
-            if (_uvChannels[3]) {
-                blurChannel = (InputChannelEnum)_uvChannels[3]->getValueAtTime(time);
+            if (_uvChannels[eUVChannelBlur]) {
+                blurChannel = (InputChannelEnum)_uvChannels[eUVChannelBlur]->getValueAtTime(time);
             }
 
             Image* uv = NULL;
@@ -2566,7 +2611,8 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
                 InputPlaneChannel b;
                 b.channelIndex = getChannelIndex(blurChannel, uvComponents);
                 b.img = (b.channelIndex >= 0) ? uv : NULL;
-                b.fillZero = (b.channelIndex >= 0) ? false : !(blurChannel == eInputChannel1 || blurChannel == eInputChannelA);
+                // a missing channel (e.g. A of an RGB or disconnected UV input) is no blur; 1 only for the constant 1
+                b.fillZero = (b.channelIndex >= 0) ? false : (blurChannel != eInputChannel1);
                 planeChannels.push_back(b);
             }
         }
@@ -2606,7 +2652,9 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
     if ( (_plugin == eDistortionPluginIDistort) || (_plugin == eDistortionPluginSTMap) ) {
         unpremultUV = _unpremultUV->getValueAtTime(time);
         multiplyByUVAlpha = _multiplyByUVAlpha->getValueAtTime(time);
-        // the blur is in full-scale pixels, like the IDistort displacement
+        // the blur is in full-scale pixels, like the IDistort displacement. It is a length in any
+        // direction, so it needs an isotropic render scale: kSupportsMultipleClipPARs is false and hosts
+        // render at the same scale in x and y (only renderScale.x is used).
         blurScale = _blurScale->getValueAtTime(time) * args.renderScale.x;
         _uvOffset->getValueAtTime(time, uOffset, vOffset);
         _uvScale->getValueAtTime(time, uScale, vScale);
@@ -4100,6 +4148,37 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
                 page->addChild(*param);
             }
         }
+        // added in version 2.1 (#303); their defaults keep the old output
+        {
+            BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMultiplyByUVAlpha);
+            param->setLabelAndHint(kParamMultiplyByUVAlphaLabel);
+            param->setDefault(true);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        if (gIsMultiPlaneV2) {
+            ChoiceParamDescriptor* param = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clipsForChannels, kParamChannelBlur, kParamChannelBlurLabel);
+            param->setDefault(eInputChannel0);
+        } else {
+            ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamChannelBlur);
+            param->setLabelAndHint(kParamChannelBlurLabel);
+            MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true /*addConstants*/, !gIsMultiPlaneV1 /*addOnlyColorPlane*/);
+            param->setDefault(eInputChannel0);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamBlurScale);
+            param->setLabelAndHint(kParamBlurScaleLabel);
+            param->setDefault(1.);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(0., 10.);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
         {
             Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamUVOffset);
             param->setLabelAndHint(kParamUVOffsetLabel);
@@ -5038,43 +5117,6 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
 #endif
     ofxsPremultDescribeParams(desc, page);
     ofxsMaskMixDescribeParams(desc, page);
-
-    // parameters added in version 2.1 (#303), at the end; their defaults keep the old output
-    if ( (plugin == eDistortionPluginIDistort) ||
-         ( plugin == eDistortionPluginSTMap) ) {
-        {
-            BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMultiplyByUVAlpha);
-            param->setLabelAndHint(kParamMultiplyByUVAlphaLabel);
-            param->setDefault(true);
-            if (page) {
-                page->addChild(*param);
-            }
-        }
-        std::vector<std::string> clipsForChannels(1);
-        clipsForChannels[0] = kClipUV;
-        if (gIsMultiPlaneV2) {
-            ChoiceParamDescriptor* param = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clipsForChannels, kParamChannelBlur, kParamChannelBlurLabel);
-            param->setDefault(eInputChannel0);
-        } else {
-            ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamChannelBlur);
-            param->setLabelAndHint(kParamChannelBlurLabel);
-            MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true /*addConstants*/, !gIsMultiPlaneV1 /*addOnlyColorPlane*/);
-            param->setDefault(eInputChannel0);
-            if (page) {
-                page->addChild(*param);
-            }
-        }
-        {
-            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamBlurScale);
-            param->setLabelAndHint(kParamBlurScaleLabel);
-            param->setDefault(1.);
-            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
-            param->setDisplayRange(0., 10.);
-            if (page) {
-                page->addChild(*param);
-            }
-        }
-    }
 } // >::describeInContext
 
 template<DistortionPluginEnum plugin, int majorVersion>

@@ -683,6 +683,12 @@ tests=(
     # 3/5 and 4/5 white (mean 0.7); without blur (Blur Scale 0), they are white.
     "IDistort blur|net.sf.openfx.IDistort|general|float|mean=0.7,0.7,0.7,0.7||-i Source=checker:64 -i UV=solid:0,0,4,1 -i Mask=none channelBlur=2 filter=1 --frames 0 --window 64,10,66,20"
     "IDistort blur scale 0|net.sf.openfx.IDistort|general|float|mean=1,1,1,1||-i Source=checker:64 -i UV=solid:0,0,4,1 -i Mask=none channelBlur=2 blurScale=0 filter=1 --frames 0 --window 64,10,66,20"
+    # the same at render scale 0.5: the blur is in full-scale pixels, so the area is 1+2 pixels wide
+    # at x=32 and 33 (the edge is at x=32): 2/3 and 1 white (mean 0.833; 0.7 if the blur ignored the scale)
+    "IDistort blur scale 0.5|net.sf.openfx.IDistort|general|float|mean=0.8333,0.8333,0.8333,0.8333||-i Source=checker:64 -i UV=solid:0,0,4,1 -i Mask=none channelBlur=2 filter=1 --scale 0.5 --frames 0 --window 32,5,34,10"
+    # a huge blur (1e30, unpremultiplied by alpha 1e-30: inf without the clamp to the source size) is
+    # finite: the average of the solid source
+    "IDistort blur huge|net.sf.openfx.IDistort|general|float|mean=0.5,0.5,0.5,1||-i Source=solid:0.5,0.5,0.5,1 -i UV=solid:0,0,1,1e-30 -i Mask=none channelBlur=2 unpremultUV=1 multiplyByUVAlpha=0 blurScale=1e30 filter=1 --frames 0 --window 300,300,302,302"
     # FrameBlend Min/Max where no frame is used (FgM > 0 everywhere): 0 (it was +-infinity)
     "FrameBlend Min no frame|net.sf.openfx.FrameBlend|filter|*|mean=0,0,0,0||-i Source=solid:0.5,0.5,0.5,1 -i FgM=solid:1,1,1,1 -i Mask=none operation=Min"
     "FrameBlend Max no frame|net.sf.openfx.FrameBlend|filter|*|mean=0,0,0,0||-i Source=solid:0.5,0.5,0.5,1 -i FgM=solid:1,1,1,1 -i Mask=none operation=Max"
