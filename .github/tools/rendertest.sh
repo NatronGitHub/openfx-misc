@@ -430,6 +430,7 @@ tests=(
     "Unpremult|net.sf.openfx.Unpremult|filter|*|mean=0.25,0.5,0.75,0.25||-i Source=solid:0.0625,0.125,0.1875,0.25"
     "Unpremult invert|net.sf.openfx.Unpremult|filter|*|mean=0.25,0.5,0.75,0.75||-i Source=solid:0.0625,0.125,0.1875,0.75 invert=1"
     # Invert swaps the constant channels (premultChannel 4: 0, 5: 1): Unpremult by 1 - 0 is an identity
+    # (Premult is not: the hostDemo input is not PreMultiplied, and Premult changes that state)
     "Premult invert 0|net.sf.openfx.Premult|filter|*|mean=0.25,0.5,0.75,0.25||-i Source=solid:0.25,0.5,0.75,0.25 premultChannel=4 invert=1"
     "Premult invert 1|net.sf.openfx.Premult|filter|*|mean=0,0,0,0.25||-i Source=solid:0.25,0.5,0.75,0.25 premultChannel=5 invert=1"
     "Unpremult invert 0|net.sf.openfx.Unpremult|filter|*|identity+mean=0.25,0.5,0.75,0.25||-i Source=solid:0.25,0.5,0.75,0.25 premultChannel=4 invert=1"

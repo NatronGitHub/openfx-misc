@@ -186,8 +186,8 @@ public:
         _processA = processA;
     }
 
-    // Use maxValue minus the sampled premult channel. The constants (no premult channel image)
-    // are not inverted here: setupAndProcess() swaps them.
+    // Use maxValue minus the premult channel image (0 where it has no pixel). The constants
+    // (no premult channel image) are not inverted here: setupAndProcess() swaps them.
     void setInvert(bool invert) { _invert = invert; }
 };
 
@@ -315,7 +315,8 @@ private:
                 if (srcPix) {
                     if ( (_premultChanIndex >= 0 || !_premultWith1IfNoImage) && (processR || processG || processB || processA) ) {
                         PIX alpha = premultPix ? premultPix[_premultChanIndex] : 0.;
-                        if (_invert && premultPix) {
+                        if (_invert && _premultChanImg) {
+                            // also where the premult channel image has no pixel (0 there): 1 - 0
                             alpha = (PIX)(maxValue - alpha);
                         }
                         for (int c = 0; c < nComponents; c++) {
