@@ -323,17 +323,17 @@ def hostdemo_command(prefix):
 
 
 # hostDemo --describe results by plug-in identifier, for the process (one
-# pytest session or xdist worker): the clips of each context, or the
+# pytest session or xdist worker): the contexts that it describes, or the
 # PluginMissing error of a plug-in that is not installed.
 _DESCRIPTIONS = {}
 
 
-def describe(prefix, plugin, work):
-    """The clips of a plug-in's contexts, from hostDemo --describe.
+def _describe_contexts(prefix, plugin, work):
+    """The contexts of a plug-in that hostDemo --describe can describe.
 
     Returns:
-        A dict from context ("filter", "general", ...) to a dict from clip
-        name to its "optional" flag (Output excluded).
+        A dict from context ("filter", "general", ...) to its --describe
+        JSON object (with "clips" and "params").
     """
     if plugin in _DESCRIPTIONS:
         if isinstance(_DESCRIPTIONS[plugin], CaseError):
@@ -356,18 +356,44 @@ def describe(prefix, plugin, work):
                         % (plugin, path))
     with open(path) as f:
         contexts = json.load(f)["contexts"]
-    result = {}
-    for name, context in contexts.items():
-        if context.get("ok"):
-            short = name.replace("OfxImageEffectContext", "").lower()
-            result[short] = {c["name"]: c["optional"]
-                             for c in context["clips"]
-                             if c["name"] != "Output"}
+    result = {name.replace("OfxImageEffectContext", "").lower(): context
+              for name, context in contexts.items() if context.get("ok")}
     if not result:
         raise CaseError("hostDemo cannot describe %s in any context"
                         % plugin)
     _DESCRIPTIONS[plugin] = result
     return result
+
+
+def describe(prefix, plugin, work):
+    """The clips of a plug-in's contexts, from hostDemo --describe.
+
+    Returns:
+        A dict from context ("filter", "general", ...) to a dict from clip
+        name to its "optional" flag (Output excluded).
+    """
+    return {short: {c["name"]: c["optional"] for c in context["clips"]
+                    if c["name"] != "Output"}
+            for short, context in _describe_contexts(
+                prefix, plugin, work).items()}
+
+
+def describe_params(prefix, plugin, work):
+    """The visible params of a plug-in, in definition order.
+
+    Pages, groups and secret params are left out. The params are those of
+    the context that the cases use by default (filter, else general, else
+    generator, else the first one).
+
+    Returns:
+        A list of param names.
+    """
+    contexts = _describe_contexts(prefix, plugin, work)
+    context = next((c for c in ("filter", "general", "generator")
+                    if c in contexts), next(iter(contexts)))
+    return [p["name"] for p in contexts[context]["params"]
+            if p["type"] not in ("OfxParamTypePage", "OfxParamTypeGroup")
+            and not p["secret"]]
 
 
 def ofx_input_spec(name, case_dir):
@@ -538,17 +564,22 @@ def compare(case, nuke_results, ofx_results):
     return worst, where
 
 
-def case_id(case):
-    """The test id of a case: "<plug-in>/<case name>".
+def plugin_name(identifier):
+    """The short name of a plug-in, for test ids.
 
-    The plug-in is the last part of the OFX identifier, without "Plugin"
-    and with "CImg" at the end (e.g. Merge, BlurCImg).
+    It is the last part of the OFX identifier, without "Plugin" and with
+    "CImg" at the end (e.g. Merge, BlurCImg).
     """
-    plugin = case["ofx"][0].split(".")[-1]
+    plugin = identifier.split(".")[-1]
     plugin = re.sub(r"Plugin$", "", plugin)
     if plugin.startswith("CImg"):
         plugin = plugin[len("CImg"):] + "CImg"
-    plugin = plugin[0].upper() + plugin[1:]
+    return plugin[0].upper() + plugin[1:]
+
+
+def case_id(case):
+    """The test id of a case: "<plug-in>/<case name>" (see plugin_name)."""
+    plugin = plugin_name(case["ofx"][0])
     name = case["name"].replace("[0, 1]", "0-1")
     first, _, rest = name.partition(" ")
     nuke_class = re.sub(r"\d+$", "", case["nuke"][0]).lower()
@@ -558,6 +589,71 @@ def case_id(case):
     name = re.sub(r"[\[\]]", "", name)
     name = re.sub(r" +", " ", name.replace(",", " "))
     return "%s/%s" % (plugin, name)
+
+
+# The Nuke knobs that are not parameters of the node, by knob class: tabs,
+# group and line separators, labels, obsolete and Python callback knobs.
+NOT_PARAM_KNOBS = ("Tab_Knob", "Text_Knob", "Obsolete_Knob", "PythonKnob")
+# Nuke's tab of the knobs that every node has (name, label, lifetime...).
+COMMON_TAB = "Node"
+
+
+def knob_order_script(node_classes, result_path):
+    """A Python script for `nuke -t` that lists the knobs of nodes.
+
+    The script creates one node of each class and writes to result_path a
+    JSON dict from node class to the names of its knobs in panel order,
+    without the knobs of the Node tab, the hidden ones, and those that are
+    not parameters (NOT_PARAM_KNOBS).
+    """
+    return "\n".join([
+        "import json",
+        "import nuke",
+        "results = {}",
+        "for node_class in %r:" % (list(node_classes),),
+        "    node = getattr(nuke.nodes, node_class)()",
+        "    tab = ''",
+        "    names = []",
+        "    for knob in node.allKnobs():",
+        "        if knob.Class() == 'Tab_Knob' and knob.label():",
+        "            tab = knob.label()",
+        "        if (tab == %r or knob.Class() in %r or not knob.name()"
+        % (COMMON_TAB, NOT_PARAM_KNOBS),
+        "                or knob.getFlag(nuke.INVISIBLE)"
+        " or not knob.visible()):",
+        "            continue",
+        "        names.append(knob.name())",
+        "    results[node_class] = names",
+        "with open(%r, 'w') as f:" % result_path,
+        "    json.dump(results, f)",
+    ]) + "\n"
+
+
+def nuke_knob_orders(nuke, node_classes, work):
+    """The knobs of Nuke nodes in panel order, from one Nuke process.
+
+    A Nuke Non-Commercial session allows only 10 node objects: pass at
+    most about 8 classes.
+
+    Returns:
+        A dict from node class to a list of knob names (see
+        knob_order_script).
+    """
+    name = "knobs_" + "_".join(node_classes)
+    script = os.path.join(work, name + ".nuke.py")
+    result_path = os.path.join(work, name + ".nuke.json")
+    if os.path.exists(result_path):
+        os.remove(result_path)
+    with open(script, "w") as f:
+        f.write(knob_order_script(node_classes, result_path))
+    log = os.path.join(work, name + ".nuke.log")
+    status = run_command([nuke, "--nc", "-t", script], log, NUKE_TIMEOUT,
+                         cwd=work)
+    if status != 0 or not os.path.exists(result_path):
+        raise CaseError("Nuke failed (exit status %d), see %s"
+                        % (status, log))
+    with open(result_path) as f:
+        return json.load(f)
 
 
 def check_nuke(nuke, work):

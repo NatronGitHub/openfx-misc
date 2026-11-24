@@ -33,6 +33,29 @@ class Renderer:
         self.nuke = nuke
         self.prefix = prefix
         self.work = work
+        self._knob_orders = {}  # Nuke node class -> knob names
+
+    def knob_order(self, node_class, batch):
+        """The knobs of a Nuke node in panel order (knob_order_script).
+
+        The first call runs one Nuke process for the classes of batch
+        (which contains node_class) that are not known yet.
+        """
+        if node_class not in self._knob_orders:
+            todo = [c for c in batch if c not in self._knob_orders]
+            self._knob_orders.update(
+                harness.nuke_knob_orders(self.nuke, todo, self.work))
+        return self._knob_orders[node_class]
+
+    def param_order(self, plugin):
+        """The visible params of a plug-in, in definition order.
+
+        A plug-in that is not installed skips the test.
+        """
+        try:
+            return harness.describe_params(self.prefix, plugin, self.work)
+        except harness.PluginMissing as ex:
+            pytest.skip(str(ex))
 
     def check(self, case):
         """Renders a case and asserts that both sides match.
