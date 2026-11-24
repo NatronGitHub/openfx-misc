@@ -1460,12 +1460,22 @@ filterKernel(FilterEnum filter,
 }
 
 
-// The weights of the separable blur along one axis: pixel first + n * stride has weight weights[n].
+// a cell of the strided separable blur along one axis: [lo, hi) in pixels, and its weight
+struct CellSpan
+{
+    double lo;
+    double hi;
+    double weight;
+};
+
+// The weights of the separable blur along one axis: pixel first + n * stride has weight weights[n]
+// (cells: the cells read with a stride, reused from pixel to pixel).
 struct SeparableWeights
 {
     int first = 0;
     int stride = 1;
     std::vector<double> weights;
+    std::vector<CellSpan> cells;
 };
 
 // the weights for a sample at c (pixel i covers [i, i+1), its center is i + 0.5) and a kernel width
@@ -1559,30 +1569,67 @@ separableBlurSample(const Image *srcImg,
         }
     };
     const double zero[4] = {0., 0., 0., 0.};
-    for (std::size_t j = 0; j < wys.weights.size(); ++j) {
-        const int ty = wys.first + static_cast<int>(j) * wys.stride;
-        for (std::size_t i = 0; i < wxs.weights.size(); ++i) {
-            const int tx = wxs.first + static_cast<int>(i) * wxs.stride;
-            const double wgt = wxs.weights[i] * wys.weights[j];
-            double v[4] = {0., 0., 0., 0.};
-            if (cells) {
+    if (cells) {
+        // the cells along each axis. The cells entirely outside the image all read the same thing: black
+        // (blackOutside: dropped), or the edge (merged into one cell just outside, with their summed weight),
+        // so that a kernel much wider than the image reads few cells
+        bool blackRead = false;
+        auto axisCells = [&](SeparableWeights &sw, int lo, int hi) {
+            std::vector<CellSpan> *spans = &sw.cells;
+            spans->clear();
+            double below = 0.;
+            double above = 0.;
+            for (std::size_t n = 0; n < sw.weights.size(); ++n) {
+                const int t = sw.first + static_cast<int>(n) * sw.stride;
                 // the cell of the tap: stride pixels wide, centred on the tap's pixel center
-                const double xa = tx + 0.5 - 0.5 * wxs.stride;
-                const double xb = xa + wxs.stride;
-                const double ya = ty + 0.5 - 0.5 * wys.stride;
-                const double yb = ya + wys.stride;
-                const SummedAreaTable::Sums m = areaMean(*sat, nComponents, xa, ya, xb, yb, blackOutside);
-                for (int c = 0; c < nComponents; ++c) {
-                    v[c] = m[c];
-                }
-                if (clamp) {
-                    extend(v);
-                    const bool partlyOutside = (xa < b.x1) || (xb > b.x2) || (ya < b.y1) || (yb > b.y2);
-                    if (blackOutside && partlyOutside) {
-                        extend(zero);
+                const double ca = t + 0.5 - 0.5 * sw.stride;
+                const double cb = ca + sw.stride;
+                if ( (cb <= lo) || (ca >= hi) ) {
+                    if (blackOutside) {
+                        blackRead = true;
+                    } else if (cb <= lo) {
+                        below += sw.weights[n];
+                    } else {
+                        above += sw.weights[n];
                     }
+                    continue;
                 }
-            } else {
+                spans->push_back( CellSpan{ca, cb, sw.weights[n]} );
+                blackRead = blackRead || ( blackOutside && ( (ca < lo) || (cb > hi) ) );
+            }
+            if (below != 0.) {
+                spans->push_back( CellSpan{lo - 1., static_cast<double>(lo), below} ); // the edge, repeated
+            }
+            if (above != 0.) {
+                spans->push_back( CellSpan{static_cast<double>(hi), hi + 1., above} );
+            }
+        };
+        axisCells(wxs, b.x1, b.x2);
+        axisCells(wys, b.y1, b.y2);
+        const std::vector<CellSpan> &xs = wxs.cells;
+        const std::vector<CellSpan> &ys = wys.cells;
+        if (clamp && blackRead) {
+            extend(zero);
+        }
+        for (const CellSpan &cy : ys) {
+            for (const CellSpan &cx : xs) {
+                const SummedAreaTable::Sums m = areaMean(*sat, nComponents, cx.lo, cy.lo, cx.hi, cy.hi, blackOutside);
+                if (clamp) {
+                    extend( m.data() );
+                }
+                const double wgt = cx.weight * cy.weight;
+                for (int c = 0; c < nComponents; ++c) {
+                    acc[c] += wgt * m[c];
+                }
+            }
+        }
+    } else {
+        for (std::size_t j = 0; j < wys.weights.size(); ++j) {
+            const int ty = wys.first + static_cast<int>(j) * wys.stride;
+            for (std::size_t i = 0; i < wxs.weights.size(); ++i) {
+                const int tx = wxs.first + static_cast<int>(i) * wxs.stride;
+                const double wgt = wxs.weights[i] * wys.weights[j];
+                double v[4] = {0., 0., 0., 0.};
                 int x = tx;
                 int y = ty;
                 const bool outside = (x < b.x1) || (x >= b.x2) || (y < b.y1) || (y >= b.y2);
@@ -1604,9 +1651,9 @@ separableBlurSample(const Image *srcImg,
                 if (clamp) {
                     extend(v);
                 }
-            }
-            for (int c = 0; c < nComponents; ++c) {
-                acc[c] += wgt * v[c];
+                for (int c = 0; c < nComponents; ++c) {
+                    acc[c] += wgt * v[c];
+                }
             }
         }
     }
