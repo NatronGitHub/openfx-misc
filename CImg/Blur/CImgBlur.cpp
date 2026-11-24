@@ -186,6 +186,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 "Optionally, the image can be multiplied by the alpha channel on input (premultiplied), and divided by the alpha channel on output (unpremultiplied), so that if RGB contain an image and Alpha contains a mask, the output is an image where the RGB is smeared from the non-zero areas of the mask to the zero areas of the same mask.\n" \
 "To get the classical single unpremult-blur-premult, use 'Slices'=1 and set the size to the size of the blur kernel. However, near the mask borders, a frontier can be seen between the non-blurred area (this inside of the mask) and the blurred area. Using more blur sizes will give a much smoother transition.\n" \
 "The idea for the builtup blurs to expand RGB comes from the EdgeExtend effect for Nuke by Frank Rueter (except the blurs were merged from the smallest to the largest, and here it is done the other way round), with suggestions by Lucas Pfaff.\n" \
+"This is not the built-in EdgeExtend node of other compositing applications, which has different controls.\n" \
 "CImg is a free, open-source library distributed under the CeCILL-C " \
 "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
 "It can be used in commercial applications (see http://cimg.eu)."

@@ -56,7 +56,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "Algorithm description:\n" \
     "Keith Jack, \"Video Demystified\", Independent Pub Group (Computer), 1996, pp. 214-222, http://www.ee-techs.com/circuit/video-demy5.pdf\n" \
     "A simplified version is described in:\n" \
-    "[2] High Quality Chroma Key, Michael Ashikhmin, http://www.cs.utah.edu/~michael/chroma/\n"
+    "[2] High Quality Chroma Key, Michael Ashikhmin, http://www.cs.utah.edu/~michael/chroma/\n" \
+    "This is an angle keyer in the YCbCr chroma plane (Acceptance and Suppression Angle), not the ChromaKeyer node of other compositing applications, which has different controls. For a colour-difference keyer with despill, see PIK.\n"
 
 #define kPluginIdentifier "net.sf.openfx.ChromaKeyerPlugin"
 // history:
