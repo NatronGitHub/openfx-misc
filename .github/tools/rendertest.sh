@@ -597,6 +597,13 @@ tests=(
     # (--window: the same pixels as the full render), and a fractional time
     "Radial scale 0.5|net.sf.openfx.Radial|general|*|mean=0.231,0.231,0.231,0.231||-i Source=none -i Mask=none --scale 0.5"
     "Transform scale 0.5|net.sf.openfx.TransformPlugin|filter|float|mean=0.31,0.31,0.31,0.31||-i Source=checker:32 rotate=30 scale=0.8,0.8 --scale 0.5"
+    # CornerPin "Set to input format" (#270): the "from" points are the input format (hostDemo's
+    # PAL SD, 768x576 canonical; the project on OFX 1.4 hosts, the same here), not its RoD (rod:);
+    # "Set to input rod" still copies the RoD
+    "CornerPin set to input format|net.sf.openfx.CornerPinPlugin|filter|float|value:from1=0,0+value:from2=768,0+value:from3=768,576+value:from4=0,576||-i Source=rod:10,20,300,200 -s setToInputFormat --frames 0"
+    # a 64x48 PFM at (100,50): its format (in canonical coordinates, x times the PAR 768/720) is not the project's
+    "CornerPin set to input format, file|net.sf.openfx.CornerPinPlugin|filter|float|value:from1=106.666667,50+value:from2=174.933333,50+value:from3=174.933333,98+value:from4=106.666667,98||-i Source=file:autocrop.pfm@100,50 -s setToInputFormat --frames 0"
+    "CornerPin set to input rod|net.sf.openfx.CornerPinPlugin|filter|float|value:from1=10,20+value:from2=300,20+value:from3=300,200+value:from4=10,200||-i Source=rod:10,20,300,200 -s setToInputRod --frames 0"
     "CImgBlur scale 0.5|net.sf.cimg.CImgBlur|filter|float|mean=0.497,0.497,0.497,0.497||-i Source=checker:8 -i Mask=none size=5,5 expandRoD=0 --scale 0.5"
     # filter=2: Box (FIR). The default IIR filters have an infinite support, so
     # their tiles differ slightly (up to 0.003) from the full render.
