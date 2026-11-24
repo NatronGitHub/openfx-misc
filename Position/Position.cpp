@@ -39,6 +39,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "PositionOFX"
 #define kPluginGrouping "Transform"
 #define kPluginDescription "Translate an image by an integer number of pixels.\n" \
+    "The region of definition moves with the image, and outside it the image is black and transparent: the gap between the original and the moved image is not filled. " \
+    "To fill it with the edge pixels, put an AdjustRoD (Border Conditions: Nearest, Add Pixels at least the translation) before Position.\n" \
     "This plugin does not concatenate transforms."
 #define kPluginIdentifier "net.sf.openfx.Position"
 // version 1.1: on hosts that ignore normalised defaults (e.g. DaVinci Resolve), the default translation

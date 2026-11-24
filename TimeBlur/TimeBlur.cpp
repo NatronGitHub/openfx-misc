@@ -54,9 +54,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginIdentifier "net.sf.openfx.TimeBlur"
 // History:
 // version 1.0: initial version
+// version 1.1: the Shutter can be up to 1000 frames and the custom shutter offset +-1000 (they were
+//              limited to 2 and +-1; SupportExt#205, part of #273)
 // version 2.0: use kNatronOfxParamProcess* parameters
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1

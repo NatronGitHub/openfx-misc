@@ -75,8 +75,12 @@
 # that does not write its output when hostDemo renders it anyway (the spec says
 # the host should not call render then; hostDemo stops at that render), and an
 # empty region of definition (nothing to render, e.g. FrameRange outside its
-# range). The plug-ins that cannot run in hostDemo (OpenGL only, ...) are in the
-# SKIP list below, with the reason. Known bugs are expected failures (XFAIL, in
+# range). The plug-ins that cannot run in hostDemo are in the SKIP list below, with
+# the reason. The OpenGL-only plug-ins (OPENGL below) are described with hostDemo
+# --opengl-describe (a host that says it supports OpenGL render), and not rendered
+# when they need OpenGL (kOfxImageEffectPropOpenGLRenderSupported "needed": hostDemo
+# cannot render with OpenGL); a build where they also render on the CPU (OSMesa)
+# renders them as the other plug-ins. Known bugs are expected failures (XFAIL, in
 # the XFAIL list, each with its GitHub issue), with the message that their
 # failure must show: an XFAIL render that passes (XPASS) fails the test, so that
 # the list is updated (except with SMOKETEST_XPASS_OK=1).
@@ -102,13 +106,19 @@ BUNDLES=(Misc:168 CImg:40 Shadertoy:1 Test:6)
 # prefixes, which can be combined, only work at the start of the reason or description
 # field of the SKIP, IDENTITY and XFAIL lists).
 SKIP=(
-    "net.sf.openfx.Shadertoy|OpenGL only: hostDemo has no OpenGL render suite (describe fails)"
-    "net.sf.openfx.TestOpenGL|OpenGL only (Test bundle): hostDemo has no OpenGL render suite (describe fails)"
     "net.sf.openfx.ColorLookupPlugin|needs parametric parameters, which hostDemo does not advertise (kOfxParamHostPropSupportsParametric: describeInContext throws kOfxStatErrMissingHostFeature)"
     "net.sf.openfx.HueCorrect|needs parametric parameters, which hostDemo does not advertise (kOfxParamHostPropSupportsParametric: describeInContext throws kOfxStatErrMissingHostFeature)"
     "net.sf.openfx.HueKeyer|needs parametric parameters, which hostDemo does not advertise (kOfxParamHostPropSupportsParametric: describeInContext throws kOfxStatErrMissingHostFeature)"
     "net.sf.openfx.TimeBufferRead|debug:reads the buffer of a TimeBufferWrite instance of the same name, in the same host process (getClipPreferences fails: No TimeBuffer exists with name \"\")"
     "net.sf.openfx.TimeBufferWrite|debug:writes the buffer of a TimeBufferRead instance of the same name, in the same host process (render fails: No TimeBuffer exists with name \"\")"
+)
+# The OpenGL-only plug-ins: "identifier regex|why" (the whole identifier). They are described
+# with hostDemo --opengl-describe (only they: it changes the host description), and their
+# renders are skipped when a context says they need OpenGL ("needed"). An entry that matches
+# no plug-in is stale, as in SKIP.
+OPENGL=(
+    "net.sf.openfx.Shadertoy|OpenGL only unless built with OSMesa (CPU rendering)"
+    "net.sf.openfx.TestOpenGL|OpenGL only unless built with OSMesa (Test bundle)"
 )
 # The plug-ins that are identity effects with their default parameters, and do not write
 # their output when hostDemo renders them anyway: "identifier regex[:major][@context]|why"
@@ -123,7 +133,7 @@ IDENTITY=(
     "net.sf.openfx.Retime|debug:an identity at the default speed (1: whole source frames)"
     "net.sf.openfx.TestGroups|debug:an identity unless Force Copy is set (Test bundle)"
 )
-# (the entries of SKIP, IDENTITY, INPUTS, PARAMS and XFAIL are split at "|": no "|" in the regexes)
+# (the entries of SKIP, OPENGL, IDENTITY, INPUTS, PARAMS and XFAIL are split at "|": no "|" in the regexes)
 # Inputs that replace the default ones: "identifier regex[@context]|Clip=spec ...".
 # DATA is the directory of the files made below (square32.pfm: a 32x32 white Pf,
 # box5.pfm: a 5x5 white PF).
@@ -204,7 +214,11 @@ if [ "$1" = --describe-job ]; then
     mkdir -p "$d"
     cd "$d"
     exec 2>> describe.log
-    watchdog describe.log "$bundle" -p "$id" -m "$major" --describe describe.json
+    gl=()
+    # the OpenGL-only plug-ins (OPENGL): describe them as a host with OpenGL render
+    # (if grep fails, e.g. no file: no flag)
+    if grep -qxF "$id" "$SMOKETEST_WORK/opengl-ids.txt"; then gl=(--opengl-describe); fi
+    watchdog describe.log "$bundle" -p "$id" -m "$major" "${gl[@]}" --describe describe.json
     echo "$status" > status
     exit 0
 fi
@@ -350,6 +364,7 @@ echo "$(wc -l < "$work/plugins.txt" | tr -d ' ') plug-ins (identifier and major 
 
 # The lists, for the Python scripts below (one entry per line)
 printf '%s\n' "${SKIP[@]}" > "$work/skip.txt"
+printf '%s\n' "${OPENGL[@]}" > "$work/opengl.txt"
 printf '%s\n' "${INPUTS[@]}" > "$work/inputs.txt"
 printf '%s\n' "${PARAMS[@]}" > "$work/params.txt"
 printf '%s\n' "${XFAIL[@]}" > "$work/xfail.txt"
@@ -366,6 +381,35 @@ pfm("square32.pfm", "Pf", 32, 32, 1.)
 pfm("box5.pfm", "PF", 5, 5, 1.)
 EOF
 
+# Does hostDemo have --opengl-describe (openfx#312), and an OpenGL render suite
+# (OFX_SUPPORTS_OPENGLRENDER)? An older hostDemo rejects the option, one without the suite
+# says so: both name the option in an "Error:" line, a capable one only says that the dummy
+# plug-in is not found. Without it, the plug-ins of OPENGL are skipped.
+gl_ok=1
+if ( cd "$work" && OFX_PLUGIN_PATH=$work/path/none "$HOSTDEMO" --no-std-paths --no-cache --quiet \
+         --opengl-describe -p smoketest.probe --describe probe.json 2>&1 ) | grep -q '^Error: .*opengl-describe'; then
+    gl_ok=0
+    echo "note: $HOSTDEMO has no --opengl-describe (or no OpenGL render suite): the OPENGL plug-ins are skipped"
+fi
+# The plug-ins of OPENGL: opengl-map.txt ("identifier|reason", for the render list) and
+# opengl-ids.txt (the identifiers to describe with --opengl-describe, for the describe workers)
+python3 -I - "$work" "$gl_ok" << 'EOF'
+import os
+import re
+import sys
+work, gl_ok = sys.argv[1], sys.argv[2] == "1"
+with open(os.path.join(work, "opengl.txt")) as f:
+    rules = [line.rstrip("\n").split("|", 1) for line in f if line.strip()]
+with open(os.path.join(work, "plugins.txt")) as f:
+    pids = sorted(set(line.split()[1] for line in f))
+found = [(pid, next(r for rx, r in rules if re.fullmatch(rx, pid)))
+         for pid in pids if any(re.fullmatch(rx, pid) for rx, _ in rules)]
+with open(os.path.join(work, "opengl-map.txt"), "w") as f:
+    f.writelines("%s|%s\n" % p for p in found)
+with open(os.path.join(work, "opengl-ids.txt"), "w") as f:
+    f.writelines(pid + "\n" for pid, _ in found if gl_ok)
+EOF
+
 # Describe each plug-in (in parallel). A worker that fails (xargs exit status 123)
 # leaves no status file: its plug-ins fail below.
 export HOSTDEMO SMOKETEST_WORK=$work SMOKETEST_TIMEOUT SMOKETEST_OFX14=$ofx14
@@ -377,9 +421,10 @@ tr '\n' '\0' < "$work/plugins.txt" | xargs -r -0 -n 1 -P "$jobs" "$0" --describe
 # The render jobs, one per line: "name|bundle|id|major|context|depth|Clip=spec;...|
 # PARAMS entry number|hostDemo argument;...|differs:N entry number" (the last three are
 # empty for a default render)
-python3 -I - "$work" "$quick" "${SMOKETEST_DEBUG:-0}" "$ofx14" > "$work/jobs.txt" 2> "$work/describe-results.txt" << 'EOF' ||
+python3 -I - "$work" "$quick" "${SMOKETEST_DEBUG:-0}" "$ofx14" "$gl_ok" > "$work/jobs.txt" 2> "$work/describe-results.txt" << 'EOF' ||
 import json, os, re, sys
 work, quick, debug, ofx14 = sys.argv[1], sys.argv[2] == "1", sys.argv[3] == "1", sys.argv[4] == "1"
+gl_ok = sys.argv[5] == "1"
 def entries(name):
     return [l.rstrip("\n") for l in open(os.path.join(work, name)) if l.strip()]
 def only_in(desc):
@@ -395,6 +440,8 @@ for s in entries("skip.txt"):
     keep, reason = only_in(reason)
     if keep:
         skip.append((rx, reason))
+# OPENGL: identifier -> reason (opengl-map.txt)
+opengl = dict(s.split("|", 1) for s in entries("opengl-map.txt"))
 overrides = []
 for s in entries("inputs.txt"):
     m = re.fullmatch(r"([^@|]*)(?:@(filter|general))?\|(.*)", s)
@@ -417,11 +464,14 @@ def text(path):
         return open(path, errors="replace").read().strip().replace("\n", " / ")
     except OSError:
         return "(no log)"
-# describe-results.txt: "SKIP|tag|identifier||reason" or "FAIL|tag|identifier|context|message"
-# (context: empty for hostDemo --describe failures)
+# describe-results.txt: "SKIP|tag|identifier||reason", "FAIL|tag|identifier|context|message"
+# (context: empty for hostDemo --describe failures) or "DESC|tag|identifier||reason" (OPENGL:
+# described, not rendered)
 for line in open(os.path.join(work, "plugins.txt")):
     bundle, pid, major = line.split()
     reason = next((r for rx, r in skip if re.fullmatch(rx, pid)), None)
+    if reason is None and pid in opengl and not gl_ok:
+        reason = "OpenGL only, and this hostDemo has no --opengl-describe: " + opengl[pid]
     tag = "%s v%s" % (pid, major)
     if reason:
         print("SKIP|%s|%s||%s" % (tag, pid, reason), file=sys.stderr)
@@ -441,6 +491,9 @@ for line in open(os.path.join(work, "plugins.txt")):
         continue
     contexts = desc["contexts"]
     generator = "OfxImageEffectContextGenerator" in contexts
+    # OPENGL: described with --opengl-describe; not rendered where it needs OpenGL
+    gl_reason = opengl.get(pid)
+    gl_only = False
     n = 0
     info = {}  # context -> (inputs, depths), for PARAMS
     for ctx in ("filter", "general"):
@@ -492,6 +545,10 @@ for line in open(os.path.join(work, "plugins.txt")):
         info[ctx] = (ins, ds)
         if skipped:
             continue
+        if gl_reason is not None and c["flags"].get("openGLRenderSupported") == "needed":
+            # hostDemo cannot render with OpenGL (--opengl-describe is refused without --describe)
+            gl_only = True
+            continue
         for depth in ds:
             print("%s-v%s-%s-%s|%s|%s|%s|%s|%s|%s|||" % (pid, major, ctx, depth, bundle, pid, major, ctx,
                                                        depth, ins))
@@ -510,7 +567,10 @@ for line in open(os.path.join(work, "plugins.txt")):
         print("%s-v%s-%s-%s-params%d|%s|%s|%s|%s|%s|%s|%d|%s|%s" % (pid, major, ctx, depth, i + 1, bundle, pid,
                                                                  major, ctx, depth, ins, i + 1, ";".join(words), ref))
         n += 1
-    if n == 0:
+    if gl_only:
+        print("DESC|%s|%s||described only (needs OpenGL render, which hostDemo lacks): %s"
+              % (tag, pid, gl_reason), file=sys.stderr)
+    if n == 0 and not gl_only:
         print("FAIL|%s|%s||no render: no filter or general context, or no supported depth (contexts: %s)"
               % (tag, pid, " ".join(contexts)), file=sys.stderr)
 EOF
@@ -565,13 +625,17 @@ for x in entries("skip.txt"):
     keep, reason = debug_only(reason)
     if keep:
         skip.append((rx, x))
+# OPENGL: an entry that matches no plug-in is stale, as in SKIP
+opengl_entries = entries("opengl.txt")
+skip += [(x.split("|", 1)[0], x) for x in opengl_entries]
 used = set()  # the entries of XFAIL, IDENTITY and SKIP that were used (PARAMS: params_used)
 params_used = set()  # the numbers of the PARAMS entries that were rendered
 order = ["ok", "SKIP", "XFAIL", "XPASS", "FAIL"]
 plugins = {}  # plug-in (identifier and major version) -> worst result
 nrender = dict((k, 0) for k in order)
 NOREF = "PARAMS renders without a default render to compare to"
-notes = {"identity": set(), "empty RoD": set(), NOREF: set()}
+DESCRIBED = "described only, OpenGL render needed (OPENGL)"
+notes = {"identity": set(), "empty RoD": set(), NOREF: set(), DESCRIBED: set()}
 # hostDemo is built with the OFX_EXTENSIONS_* of the plug-ins (-DOFX_BUILD_HOSTDEMO=ON):
 # it always renders both views of a stereo frame (the report has no view count), except
 # with --ofx14 (one view, outputs without the l/r suffix)
@@ -643,6 +707,10 @@ for line in open(os.path.join(work, "describe-results.txt")):
     kind, tag, pid, ctx, msg = line.rstrip("\n").split("|", 4)
     if kind == "SKIP":
         res = "SKIP"
+    elif kind == "DESC":
+        # an OPENGL plug-in that needs OpenGL: described, not rendered
+        res = "ok"
+        notes[DESCRIBED].add(tag)
     else:
         major = tag.rsplit(" v", 1)[1]
         # a describe failure: the XFAIL entries without a depth, and without a context
@@ -793,7 +861,7 @@ print("slowest renders: " + ", ".join("%s %ds" % (n, s) for s, n in times[:5]))
 # partial build) or SMOKETEST_XPASS_OK (then they are warnings).
 stale = []
 if not mode.startswith("only"):
-    stale += ["SKIP     " + x for rx, x in skip if x not in used]
+    stale += [("OPENGL   " if x in opengl_entries else "SKIP     ") + x for rx, x in skip if x not in used]
     stale += ["PARAMS   " + x for i, x in enumerate(entries("params.txt")) if i + 1 not in params_used]
 if mode.startswith("full"):
     stale += ["XFAIL    " + x[6] for x in xfail if x[6] not in used]
