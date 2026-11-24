@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o ChromaKeyer.o ofxsLut.o
+PLUGINOBJECTS = ofxsThreadSuite.o ChromaKeyer.o ofxsLut.o
 PLUGINNAME = ChromaKeyer
 RESOURCES = net.sf.openfx.ChromaKeyerPlugin.png net.sf.openfx.ChromaKeyerPlugin.svg
 

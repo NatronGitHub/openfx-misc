@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o Roto.o
+PLUGINOBJECTS = ofxsThreadSuite.o Roto.o
 PLUGINNAME = Roto
 RESOURCES = net.sf.openfx.RotoPlugin.png net.sf.openfx.RotoPlugin.svg
 

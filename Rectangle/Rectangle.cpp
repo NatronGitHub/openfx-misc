@@ -44,6 +44,7 @@
 #include "ofxNatron.h"
 #endif
 #include "ofxsThreadSuite.h"
+#include "ShapeDraw.h"
 
 #ifdef __APPLE__
 #ifndef GL_SILENCE_DEPRECATION
@@ -93,7 +94,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              With Process A and an opaque Source, Source is mapped to RGBA like the output, so that an
 //              RGB Source is not read as RGBA (out of bounds) (#254).
 // version 2.2 (unreleased, fixed in place): not a pass-through when Process A is checked and Source is Opaque,
-//              since the Output is then UnPremultiplied (issue #328)
+//              since the Output is then UnPremultiplied (issue #328);
+//              add the Premultiply, Replace and Invert parameters (default off: the output is unchanged) (#288)
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 2 // Increment this when you have fixed a bug or made it faster.
 
@@ -205,6 +207,7 @@ protected:
     OfxPointD _cornerRadius;
     double _softness;
     RGBAValues _color0, _color1;
+    ShapeDraw::Options _drawOptions; // Premultiply, Replace, Invert
 
 public:
     RectangleProcessorBase(ImageEffect &instance)
@@ -220,6 +223,7 @@ public:
         , _processA(false)
         , _angle(0.)
         , _softness(0.)
+        , _drawOptions()
     {
         _btmLeft.x = _btmLeft.y = _size.x = _size.y = 0.;
         _cornerRadius.x = _cornerRadius.y = 0.;
@@ -256,7 +260,8 @@ public:
                    bool processR,
                    bool processG,
                    bool processB,
-                   bool processA)
+                   bool processA,
+                   const ShapeDraw::Options& drawOptions)
     {
         _btmLeft = btmLeft;
         _size = size;
@@ -270,6 +275,7 @@ public:
         _processG = processG;
         _processB = processB;
         _processA = processA;
+        _drawOptions = drawOptions;
     }
 };
 
@@ -362,7 +368,7 @@ private:
     // processed channels, then apply the mask and mix and write dstPix.
     // Shared by process() and processRotated(), which only differ in how they compute tmpPix.
     template<bool processR, bool processG, bool processB, bool processA>
-    void writePixel(float tmpPix[4],
+    void writePixel(float tmpPix[5],
                     const PIX* srcPix,
                     int x,
                     int y,
@@ -386,6 +392,8 @@ private:
                 srcPixRGBA[3] = srcPix[nComponents - 1];
             }
         }
+        // Premultiply and Replace; tmpPix[4] is the shape weight
+        ShapeDraw::prepareSource<processR, processG, processB, processA>(_drawOptions, tmpPix[4], srcPixRGBA);
         tmpPix[0] = processR ? (tmpPix[0] + srcPixRGBA[0] * (1.f - a)) : srcPixRGBA[0];
         tmpPix[1] = processG ? (tmpPix[1] + srcPixRGBA[1] * (1.f - a)) : srcPixRGBA[1];
         tmpPix[2] = processB ? (tmpPix[2] + srcPixRGBA[2] * (1.f - a)) : srcPixRGBA[2];
@@ -407,7 +415,7 @@ private:
             return processRotated<processR, processG, processB, processA>(procWindow, rs);
         }
 
-        float tmpPix[4] = {0.f, 0.f, 0.f, 0.f};
+        float tmpPix[5] = {0.f, 0.f, 0.f, 0.f, 0.f}; // RGBA and the shape weight
         double par = _dstImg->getPixelAspectRatio();
         if (par <= 0.) {
             par = 1.;
@@ -443,6 +451,7 @@ private:
                     tmpPix[1] = (float)_color0.g;
                     tmpPix[2] = (float)_color0.b;
                     tmpPix[3] = (float)_color0.a;
+                    tmpPix[4] = 0.f; // the shape weight
                 } else {
                     float a = 1.; // mix factor with the outside
                     // test if the center of the pixel is within one of the rounded corners
@@ -491,6 +500,7 @@ private:
                             tmpPix[1] = (float)_color0.g;
                             tmpPix[2] = (float)_color0.b;
                             tmpPix[3] = (float)_color0.a;
+                            tmpPix[4] = 0.f; // the shape weight
                         } else {
                             // maybe inside
 
@@ -508,6 +518,7 @@ private:
                                 tmpPix[1] = (float)_color0.g;
                                 tmpPix[2] = (float)_color0.b;
                                 tmpPix[3] = (float)_color0.a;
+                                tmpPix[4] = 0.f; // the shape weight
                             } else {
                                 // always consider the value closest top the center to avoid discontinuities/artifacts
                                 if (_softness <= 0) {
@@ -516,6 +527,7 @@ private:
                                     tmpPix[1] = (float)_color1.g;
                                     tmpPix[2] = (float)_color1.b;
                                     tmpPix[3] = (float)_color1.a;
+                                    tmpPix[4] = 1.f;
                                 } else {
                                     // compute the non-round rect coeff (tx*ty) first.
                                     float tx, ty;
@@ -560,6 +572,7 @@ private:
                                         tmpPix[1] = (float)_color1.g;
                                         tmpPix[2] = (float)_color1.b;
                                         tmpPix[3] = (float)_color1.a;
+                                        tmpPix[4] = 1.f;
                                     } else {
                                         //if (_plinear) {
                                         //    // it seems to be the way Nuke does it... I could understand t*t, but why t*t*t?
@@ -569,6 +582,7 @@ private:
                                         tmpPix[1] = (float)_color0.g * (1.f - t) + (float)_color1.g * t;
                                         tmpPix[2] = (float)_color0.b * (1.f - t) + (float)_color1.b * t;
                                         tmpPix[3] = (float)_color0.a * (1.f - t) + (float)_color1.a * t;
+                                        tmpPix[4] = t;
                                     }
                                 }
 
@@ -604,6 +618,7 @@ private:
                             tmpPix[1] = (float)_color1.g;
                             tmpPix[2] = (float)_color1.b;
                             tmpPix[3] = (float)_color1.a;
+                            tmpPix[4] = 1.f;
                         } else {
                             float tx, ty;
                             if (dx >= softness.x) {
@@ -622,6 +637,7 @@ private:
                                 tmpPix[1] = (float)_color1.g;
                                 tmpPix[2] = (float)_color1.b;
                                 tmpPix[3] = (float)_color1.a;
+                                tmpPix[4] = 1.f;
                             } else {
                                 //if (_plinear) {
                                 //    // it seems to be the way Nuke does it... I could understand t*t, but why t*t*t?
@@ -631,6 +647,7 @@ private:
                                 tmpPix[1] = (float)_color0.g * (1.f - t) + (float)_color1.g * t;
                                 tmpPix[2] = (float)_color0.b * (1.f - t) + (float)_color1.b * t;
                                 tmpPix[3] = (float)_color0.a * (1.f - t) + (float)_color1.a * t;
+                                tmpPix[4] = t;
                             }
                         }
                     }
@@ -642,6 +659,7 @@ private:
                         tmpPix[1] = (float)_color0.g * (1.f - a) + tmpPix[1] * a;
                         tmpPix[2] = (float)_color0.b * (1.f - a) + tmpPix[2] * a;
                         tmpPix[3] = (float)_color0.a * (1.f - a) + tmpPix[3] * a;
+                        tmpPix[4] *= a;
                     }
                 }
                 writePixel<processR, processG, processB, processA>(tmpPix, srcPix, x, y, dstPix);
@@ -656,7 +674,7 @@ private:
     template<bool processR, bool processG, bool processB, bool processA>
     void processRotated(const OfxRectI& procWindow, const OfxPointD& rs)
     {
-        float tmpPix[4] = {0.f, 0.f, 0.f, 0.f};
+        float tmpPix[5] = {0.f, 0.f, 0.f, 0.f, 0.f}; // RGBA and the shape weight
         double par = _dstImg->getPixelAspectRatio();
         if (par <= 0.) {
             par = 1.;
@@ -701,6 +719,7 @@ private:
                     tmpPix[1] = (float)_color0.g;
                     tmpPix[2] = (float)_color0.b;
                     tmpPix[3] = (float)_color0.a;
+                    tmpPix[4] = 0.f; // the shape weight
                 } else {
                     double a = 1.; // mix factor with the outside
                     // test if the center of the pixel is within one of the rounded corners
@@ -731,6 +750,7 @@ private:
                             tmpPix[1] = (float)_color0.g;
                             tmpPix[2] = (float)_color0.b;
                             tmpPix[3] = (float)_color0.a;
+                            tmpPix[4] = 0.f; // the shape weight
                         } else {
                             if (_softness <= 0) {
                                 // solid color
@@ -738,6 +758,7 @@ private:
                                 tmpPix[1] = (float)_color1.g;
                                 tmpPix[2] = (float)_color1.b;
                                 tmpPix[3] = (float)_color1.a;
+                                tmpPix[4] = 1.f;
                             } else {
                                 // compute the non-round rect coeff (tx*ty) first.
                                 float tx = (dx >= _softness) ? 1.f : (float)rampSmooth( (std::max)(dx, 0.) / _softness );
@@ -765,11 +786,13 @@ private:
                                     tmpPix[1] = (float)_color1.g;
                                     tmpPix[2] = (float)_color1.b;
                                     tmpPix[3] = (float)_color1.a;
+                                    tmpPix[4] = 1.f;
                                 } else {
                                     tmpPix[0] = (float)_color0.r * (1.f - t) + (float)_color1.r * t;
                                     tmpPix[1] = (float)_color0.g * (1.f - t) + (float)_color1.g * t;
                                     tmpPix[2] = (float)_color0.b * (1.f - t) + (float)_color1.b * t;
                                     tmpPix[3] = (float)_color0.a * (1.f - t) + (float)_color1.a * t;
+                                    tmpPix[4] = t;
                                 }
                             }
 
@@ -799,6 +822,7 @@ private:
                             tmpPix[1] = (float)_color1.g;
                             tmpPix[2] = (float)_color1.b;
                             tmpPix[3] = (float)_color1.a;
+                            tmpPix[4] = 1.f;
                         } else {
                             float tx = (dx >= _softness) ? 1.f : (float)rampSmooth(dx / _softness);
                             float ty = (dy >= _softness) ? 1.f : (float)rampSmooth(dy / _softness);
@@ -808,11 +832,13 @@ private:
                                 tmpPix[1] = (float)_color1.g;
                                 tmpPix[2] = (float)_color1.b;
                                 tmpPix[3] = (float)_color1.a;
+                                tmpPix[4] = 1.f;
                             } else {
                                 tmpPix[0] = (float)_color0.r * (1.f - t) + (float)_color1.r * t;
                                 tmpPix[1] = (float)_color0.g * (1.f - t) + (float)_color1.g * t;
                                 tmpPix[2] = (float)_color0.b * (1.f - t) + (float)_color1.b * t;
                                 tmpPix[3] = (float)_color0.a * (1.f - t) + (float)_color1.a * t;
+                                tmpPix[4] = t;
                             }
                         }
                     }
@@ -824,6 +850,7 @@ private:
                         tmpPix[1] = (float)_color0.g * (1.f - af) + tmpPix[1] * af;
                         tmpPix[2] = (float)_color0.b * (1.f - af) + tmpPix[2] * af;
                         tmpPix[3] = (float)_color0.a * (1.f - af) + tmpPix[3] * af;
+                        tmpPix[4] *= af;
                     }
                 }
                 writePixel<processR, processG, processB, processA>(tmpPix, srcPix, x, y, dstPix);
@@ -854,6 +881,7 @@ public:
         , _color0(NULL)
         , _color1(NULL)
         , _expandRoD(NULL)
+        , _draw(*this, kParamColor0, kParamColor1)
     {
 
         _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -925,6 +953,21 @@ private:
     DoubleParam* _mix;
     BooleanParam* _maskApply;
     BooleanParam* _maskInvert;
+    ShapeDraw::Params _draw; // the Draw options and the colors
+
+    // the R, G, B and A checkboxes (for the clip preferences)
+    ShapeDraw::Params::ProcessChannels processChannels() const
+    {
+        return { _processR->getValue(), _processG->getValue(), _processB->getValue(), _processA->getValue() };
+    }
+
+    // true if Mix is 1 and no Mask applies, at the current time (for the clip preferences)
+    bool isFullMix() const
+    {
+        const bool masked = _maskClip && _maskClip->isConnected() && ( !_maskApply || _maskApply->getValue() );
+
+        return !masked && (_mix->getValue() == 1.);
+    }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1021,9 +1064,9 @@ RectanglePlugin::setupAndProcess(RectangleProcessorBase &processor,
     }
     double angle = _angle->getValueAtTime(time);
     double softness = _softness->getValueAtTime(time);
-    RGBAValues color0, color1;
-    _color0->getValueAtTime(time, color0.r, color0.g, color0.b, color0.a);
-    _color1->getValueAtTime(time, color1.r, color1.g, color1.b, color1.a);
+    const ShapeDraw::Colors<RGBAValues> colors = _draw.colors<RGBAValues>(time);
+    const RGBAValues& color0 = colors.color0;
+    const RGBAValues& color1 = colors.color1;
 
     bool processR = _processR->getValueAtTime(time);
     bool processG = _processG->getValueAtTime(time);
@@ -1037,7 +1080,8 @@ RectanglePlugin::setupAndProcess(RectangleProcessorBase &processor,
                         softness,
                         color0, color1,
                         mix,
-                        processR, processG, processB, processA);
+                        processR, processG, processB, processA,
+                        _draw.options(time));
     // Call the base class process member, this will call the derived templated process code
     processor.process();
 } // RectanglePlugin::setupAndProcess
@@ -1109,6 +1153,10 @@ RectanglePlugin::isIdentity(const IsIdentityArguments &args,
         // pass-through would keep the Source premultiplication (issue #328)
         return false;
     }
+    if ( _draw.outputIsPremultipliedByShape( processChannels(), _srcClip, isFullMix() ) ) {
+        // the Output is PreMultiplied (see getClipPreferences()), also where Mix is 0
+        return false;
+    }
     const double time = args.time;
     double mix = _mix->getValueAtTime(time);
 
@@ -1118,7 +1166,7 @@ RectanglePlugin::isIdentity(const IsIdentityArguments &args,
         return true;
     }
 
-    {
+    if ( !_draw.changesSource(time, _srcClip) ) {
         bool processR = _processR->getValueAtTime(time);
         bool processG = _processG->getValueAtTime(time);
         bool processB = _processB->getValueAtTime(time);
@@ -1130,11 +1178,12 @@ RectanglePlugin::isIdentity(const IsIdentityArguments &args,
         }
     }
 
-    RGBAValues color0, color1;
-    _color0->getValueAtTime(time, color0.r, color0.g, color0.b, color0.a);
-    _color1->getValueAtTime(time, color1.r, color1.g, color1.b, color1.a);
+    const ShapeDraw::Colors<RGBAValues> colors = _draw.colors<RGBAValues>(time);
+    const RGBAValues& color0 = colors.color0;
+    const RGBAValues& color1 = colors.color1;
     if ( (color0.r == 0.) && (color0.g == 0.) && (color0.b == 0.) && (color0.a == 0.) &&
-         (color1.r == 0.) && (color1.g == 0.) && (color1.b == 0.) && (color1.a == 0.) ) {
+         (color1.r == 0.) && (color1.g == 0.) && (color1.b == 0.) && (color1.a == 0.) &&
+         !_draw.changesSource(time, _srcClip) ) {
         identityClip = _srcClip;
 
         return true;
@@ -1187,6 +1236,10 @@ RectanglePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
             clipPreferences.setClipComponents(*_srcClip, ePixelComponentRGBA);
             clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
         }
+        if ( _draw.outputIsPremultipliedByShape( processChannels(), _srcClip, isFullMix() ) ) {
+            // the output alpha is the shape, and the Source RGB are multiplied by it
+            clipPreferences.setOutputPremultiplication(eImagePreMultiplied);
+        }
     }
 
     // if no input is connected, output is continuous
@@ -1216,8 +1269,9 @@ RectanglePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
             return true;
         }
     }
-    RGBAValues color0;
-    _color0->getValueAtTime(time, color0.r, color0.g, color0.b, color0.a);
+    const ShapeDraw::Colors<RGBAValues> colors = _draw.colors<RGBAValues>(time);
+    const RGBAValues& color0 = colors.color0;
+    const RGBAValues& color1 = colors.color1;
     GeneratorExtentEnum extent = (GeneratorExtentEnum)_extent->getValue();
     if ( (extent != eGeneratorExtentFormat) &&
          ( (color0.r != 0.) || (color0.g != 0.) || (color0.b != 0.) || (color0.a != 0.) ) ) {
@@ -1230,9 +1284,10 @@ RectanglePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         //rod.x1 = rod.y1 = kOfxFlagInfiniteMin;
         //rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
     }
-    RGBAValues color1;
-    _color1->getValueAtTime(time, color1.r, color1.g, color1.b, color1.a);
-    if ( (color1.r == 0.) && (color1.g == 0.) && (color1.b == 0.) && (color1.a == 0.) ) {
+    // nothing to draw if both colors are black and transparent (with Extent = Format, Color 0 may not
+    // be: then the format is drawn, below)
+    if ( (color1.r == 0.) && (color1.g == 0.) && (color1.b == 0.) && (color1.a == 0.) &&
+         (color0.r == 0.) && (color0.g == 0.) && (color0.b == 0.) && (color0.a == 0.) ) {
         if ( _srcClip && _srcClip->isConnected() ) {
             // nothing to draw: return default region of definition
             return false;
@@ -1516,6 +1571,9 @@ RectanglePluginFactory::describeInContext(ImageEffectDescriptor &desc,
 
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
+        // triggers the clip preferences (see ShapeDraw::Params::outputIsPremultipliedByShape()), and may still
+        // animate, as in Natron 2.5.0: the declared state follows the time of the last clip preferences call
+        desc.addClipPreferencesSlaveParam(*param);
         param->setLabel(kParamProcessRLabel);
         param->setHint(kParamProcessRHint);
         param->setDefault(true);
@@ -1526,6 +1584,9 @@ RectanglePluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
+        // triggers the clip preferences (see ShapeDraw::Params::outputIsPremultipliedByShape()), and may still
+        // animate, as in Natron 2.5.0: the declared state follows the time of the last clip preferences call
+        desc.addClipPreferencesSlaveParam(*param);
         param->setLabel(kParamProcessGLabel);
         param->setHint(kParamProcessGHint);
         param->setDefault(true);
@@ -1536,6 +1597,9 @@ RectanglePluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
+        // triggers the clip preferences (see ShapeDraw::Params::outputIsPremultipliedByShape()), and may still
+        // animate, as in Natron 2.5.0: the declared state follows the time of the last clip preferences call
+        desc.addClipPreferencesSlaveParam(*param);
         param->setLabel(kParamProcessBLabel);
         param->setHint(kParamProcessBHint);
         param->setDefault(true);
@@ -1606,6 +1670,7 @@ RectanglePluginFactory::describeInContext(ImageEffectDescriptor &desc,
     // color0
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor0);
+        desc.addClipPreferencesSlaveParam(*param); // its alpha, and the RGB of Color 0: see ShapeDraw::Params::outputIsPremultipliedByShape()
         param->setLabel(kParamColor0Label);
         param->setDefault(0, 0, 0, 0);
         if (page) {
@@ -1616,6 +1681,7 @@ RectanglePluginFactory::describeInContext(ImageEffectDescriptor &desc,
     // color1
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor1);
+        desc.addClipPreferencesSlaveParam(*param); // its alpha: see ShapeDraw::Params::outputIsPremultipliedByShape()
         param->setLabel(kParamColor1Label);
         param->setDefault(1., 1., 1., 1. );
         if (page) {
@@ -1635,6 +1701,9 @@ RectanglePluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
 
     ofxsMaskMixDescribeParams(desc, page);
+
+    // new parameters go at the end, with defaults that keep the output of older versions
+    ShapeDraw::describeParams(desc, page);
 } // RectanglePluginFactory::describeInContext
 
 static RectanglePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);

@@ -38,7 +38,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "ShuffleOFX"
 #define kPluginGrouping "Channel"
 #define kPluginDescription "Rearrange channels from one or two inputs and/or convert to different bit depth or components. No colorspace conversion is done (mapping is linear, even for 8-bit and 16-bit types).\n" \
-    "In the filter context (a single input, e.g. in hosts that only have filters), the A and B channels both read the Source input."
+    "In the filter context (a single input, e.g. in hosts that only have filters), the A and B channels both read the Source input.\n" \
+    "On hosts with multiplane support, each Shuffle writes one output layer (Output Layer), with up to 4 channels: use several Shuffle nodes to write several layers."
+#define kPluginDescriptionDefaultB "\n" \
+    "With two inputs, R, G, B and A all come from B by default. To copy the alpha of A onto the color of B, set A to A.Color.A."
 #define kPluginDescriptionVersion4 "\n" \
     "Version 4 fixes a bug of version 3 on hosts that do not support the multiplane extension of Nuke and Natron (Nuke and Natron are not affected): " \
     "version 3 read the A channels from the B input and the B channels from the A input, and it was the identity of the A input " \
@@ -1802,9 +1805,9 @@ ShufflePluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     if (majorVersion >= 4) {
-        desc.setPluginDescription(kPluginDescription kPluginDescriptionVersion4);
+        desc.setPluginDescription(kPluginDescription kPluginDescriptionDefaultB kPluginDescriptionVersion4);
     } else if (majorVersion == 3) {
-        desc.setPluginDescription(kPluginDescription kPluginDescriptionVersion3);
+        desc.setPluginDescription(kPluginDescription kPluginDescriptionDefaultB kPluginDescriptionVersion3);
     } else {
         desc.setPluginDescription(kPluginDescription);
     }

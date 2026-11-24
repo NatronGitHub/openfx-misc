@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o SpriteSheet.o ofxsRectangleInteract.o ofxsGenerator.o
+PLUGINOBJECTS = ofxsThreadSuite.o SpriteSheet.o ofxsRectangleInteract.o ofxsGenerator.o
 PLUGINNAME = SpriteSheet
 #RESOURCES = net.sf.openfx.SpriteSheetPlugin.png net.sf.openfx.SpriteSheetPlugin.svg
 

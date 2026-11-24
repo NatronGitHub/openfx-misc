@@ -8,6 +8,9 @@ and they are separate from openfx-misc's own tests (`.github/tools`).
 - `cases.py`: the input images and the cases (one test each).
 - `harness.py`: the Nuke and hostDemo runners, PFM files and comparison.
 - `test_compatibility.py`, `conftest.py`, `pytest.ini`: the pytest suite.
+- `test_param_order.py`: for each plug-in with cases, its parameters must
+  be in the same relative order as the knobs of the Nuke node (maintainer
+  rule, 2026-11-24); name differences are mapped in the test.
 
 A case that matches is a plain test. A known difference is a strict
 expected failure whose reason is the GitHub issue that records it (label

@@ -1082,6 +1082,12 @@ ReformatPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &de
         }
     }
 
+    // filter, clamp, black outside, then Preserve BBox (the order of Foundry's Reformat panel)
+    ofxsFilterDescribeParamsInterpolate2D(desc, page, /*blackOutsideDefault*/ false, eFilterSetSinc);
+
+    // after the filter parameters (issue #270): off, the supersampling of the previous versions
+    ofxsFilterDescribeParamPrefilter(desc, page);
+
     // Preserve bounding box
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPreserveBoundingBox);
@@ -1094,12 +1100,6 @@ ReformatPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &de
             page->addChild(*param);
         }
     }
-
-    // clamp, filter, black outside
-    ofxsFilterDescribeParamsInterpolate2D(desc, page, /*blackOutsideDefault*/ false, eFilterSetSinc);
-
-    // after the filter parameters (issue #270): off, the supersampling of the previous versions
-    ofxsFilterDescribeParamPrefilter(desc, page);
 } // ReformatPluginFactory::describeInContext
 
 template<unsigned int majorVersion>

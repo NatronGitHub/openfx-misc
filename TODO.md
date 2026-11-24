@@ -6,7 +6,7 @@ The Normalize button should only compute the white and black points from values 
 
 #### ZDefocusCImg
 
-Add an icon (net.sf.cimg.CImgZDefocus.png/.svg). Test in a host (Natron) with a depth map and a DiscBlades bokeh kernel.
+Test in a host (Natron) with a depth map and a DiscBlades bokeh kernel.
 
 #### ImageStatistics
 
