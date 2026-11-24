@@ -33,6 +33,7 @@ class Renderer:
         self.nuke = nuke
         self.prefix = prefix
         self.work = work
+        self._knob_orders = {}  # Nuke node class -> knob names
 
     def check(self, case):
         """Renders a case and asserts that both sides match.
@@ -47,6 +48,44 @@ class Renderer:
         assert worst <= case["tolerance"], (
             "max diff %.3g > tolerance %.3g at %s"
             % (worst, case["tolerance"], where))
+
+    def knob_order(self, node_class, batch):
+        """The knobs of a Nuke node in panel order.
+
+        The first call for a class runs one Nuke process for the classes
+        of its batch that are not known yet.
+
+        Args:
+            node_class: the Nuke node class.
+            batch: the classes listed by the same Nuke process (at most
+                about 8, with node_class).
+
+        Returns:
+            A list of knob names (see harness.KNOB_ORDER_SCRIPT).
+        """
+        if node_class not in self._knob_orders:
+            todo = [c for c in batch if c not in self._knob_orders]
+            self._knob_orders.update(
+                harness.nuke_knob_orders(self.nuke, todo, self.work))
+        return self._knob_orders[node_class]
+
+    def param_order(self, plugin, context=None):
+        """The visible params of a plug-in, in definition order.
+
+        A plug-in that is not installed skips the test.
+
+        Args:
+            plugin: the OFX plug-in identifier.
+            context: the OFX context, or None for the default.
+
+        Returns:
+            A list of param names (see harness.describe_params).
+        """
+        try:
+            return harness.describe_params(self.prefix, plugin, self.work,
+                                           context)
+        except harness.PluginMissing as ex:
+            pytest.skip(str(ex))
 
 
 @pytest.fixture(scope="session")
