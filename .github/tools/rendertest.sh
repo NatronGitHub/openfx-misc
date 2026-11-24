@@ -822,6 +822,13 @@ tests=(
     "CImgExpression J periodic|net.sf.cimg.CImgExpression|filter|float|mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=J(0,-500,0,1,2)"
     "CImgExpression J Neumann|net.sf.cimg.CImgExpression|filter|float|mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=J(0,-500,0,2,1)"
     "CImgExpression J Dirichlet|net.sf.cimg.CImgExpression|filter|float|mean=0.033,0.066,0.099,0.132||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=J(0.5,-500,0,2,0)"
+    # #297: X and Y are the pixel coordinates in the full-size image, at any render scale (x and y are
+    # buffer indices at the render scale). At scale 0.5, X=2x: the mean of X/720 on the 360 columns is
+    # 359/720, and of Y/576 on the 288 rows 287/576 (x/720 would give 179.5/720). Alpha is not processed.
+    "CImgExpression X Y scale 0.5|net.sf.cimg.CImgExpression|filter|float|mean=0.498611,0.498264,0.498611,1+tol=0.0001||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=if(c%2,Y/576,X/720) --scale 0.5"
+    "CImgExpression X Y|net.sf.cimg.CImgExpression|filter|float|mean=0.499306,0.499132,0.499306,1+tol=0.0001||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=if(c%2,Y/576,X/720)"
+    # the '*' (parallel evaluation) prefix stays the first character of the expression
+    "CImgExpression * prefix|net.sf.cimg.CImgExpression|filter|float|mean=0.5,0.5,0.5,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=*0.5"
     # symmetric_eigen() on the rank-deficient structure tensors of flat images and ramps
     # (GreycLab/gmic#221: NaN eigenvectors when the compiler contracts to FMAs): no NaN
     # output pixels (the float outputs are checked for NaN)
