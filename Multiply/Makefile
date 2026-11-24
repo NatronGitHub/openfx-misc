@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o Multiply.o
+PLUGINOBJECTS = ofxsThreadSuite.o Multiply.o
 PLUGINNAME = Multiply
 RESOURCES = net.sf.openfx.MultiplyPlugin.png net.sf.openfx.MultiplyPlugin.svg
 

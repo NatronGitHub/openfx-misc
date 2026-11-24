@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o TimeBlur.o NoTimeBlur.o ofxsShutter.o
+PLUGINOBJECTS = ofxsThreadSuite.o TimeBlur.o NoTimeBlur.o ofxsShutter.o
 PLUGINNAME = TimeBlur
 RESOURCES = net.sf.openfx.TimeBlur.png net.sf.openfx.TimeBlur.svg net.sf.openfx.NoTimeBlurPlugin.png net.sf.openfx.NoTimeBlurPlugin.svg
 

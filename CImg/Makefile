@@ -1,5 +1,5 @@
 # (ofxsLut required for ChromaBlur)
-PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o \
+PLUGINOBJECTS = ofxsThreadSuite.o \
 ofxsLut.o \
 CImgBilateral.o \
 CImgBlur.o \

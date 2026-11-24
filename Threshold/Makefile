@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o Threshold.o
+PLUGINOBJECTS = ofxsThreadSuite.o Threshold.o
 PLUGINNAME = Threshold
 RESOURCES =
 

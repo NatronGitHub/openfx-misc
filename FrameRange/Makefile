@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o FrameRange.o
+PLUGINOBJECTS = ofxsThreadSuite.o FrameRange.o
 PLUGINNAME = FrameRange
 RESOURCES = net.sf.openfx.FrameRange.png net.sf.openfx.FrameRange.svg
 

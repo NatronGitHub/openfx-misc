@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o Gamma.o
+PLUGINOBJECTS = ofxsThreadSuite.o Gamma.o
 PLUGINNAME = Gamma
 RESOURCES = net.sf.openfx.GammaPlugin.png
 

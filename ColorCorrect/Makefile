@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o ColorCorrect.o
+PLUGINOBJECTS = ofxsThreadSuite.o ColorCorrect.o
 PLUGINNAME = ColorCorrect
 RESOURCES = net.sf.openfx.ColorCorrectPlugin.png net.sf.openfx.ColorCorrectPlugin.svg
 

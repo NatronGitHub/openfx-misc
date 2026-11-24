@@ -205,9 +205,9 @@ Licenses
 --------
 openfx-misc is free software, under the GNU General Public License, version 2
 or later: see LICENSE.txt. The bundles also contain third-party code, whose
-licenses are in LICENSES/: openfx's Support library (BSD 3-clause) and
-TinyThread++ (zlib) in every bundle, freeglut's text renderer and pixman's blend
-modes (MIT) in Misc.ofx, CImg (CeCILL-C) and pocketfft (BSD 3-clause) in
+licenses are in LICENSES/: openfx's Support library (BSD 3-clause) in every
+bundle, freeglut's text renderer and pixman's blend modes
+(MIT) in Misc.ofx, CImg (CeCILL-C) and pocketfft (BSD 3-clause) in
 CImg.ofx, and, in LICENSES/<bundle>/, those of the libraries linked statically
 into a bundle or bundled with it (e.g. Mesa and LLVM in the OSMesa Shadertoy),
 which are also in <bundle>.ofx.bundle/Contents/Resources/licenses/.
@@ -288,8 +288,6 @@ licenses() {
     # (openfx's current LICENSE.md, then the original LICENSE of the older files)
     { [ ! -f "$src/openfx/LICENSE.md" ] || { cat "$src/openfx/LICENSE.md"; echo; }; cat "$src/openfx/LICENSE"; } \
         > "$dir/LICENSES/openfx-Support-BSD-3-Clause.txt"
-    # (SupportExt's THREADS component, in every bundle)
-    notice_block "$src/SupportExt/tinythread.cpp" "Marcus Geelnard" > "$dir/LICENSES/TinyThread++-zlib.txt"
     [ -z "$extra" ] || cp -R "$extra"/. "$dir/LICENSES/"
     for b in "$@"; do
         bn=$(basename "$b" .ofx.bundle)
@@ -324,7 +322,7 @@ licenses() {
 
 src=$PWD
 case "$fft" in pocketfft|pow2|fftw3) ;; *) echo "ERROR: --fft $fft (pocketfft, pow2 or fftw3)"; exit 2 ;; esac
-for f in LICENSE openfx/LICENSE SupportExt/ofxsMerging.h SupportExt/tinythread.cpp; do
+for f in LICENSE openfx/LICENSE SupportExt/ofxsMerging.h; do
     [ -f "$src/$f" ] || { echo "ERROR: $src/$f not found: run from the top of the source tree"; exit 1; }
 done
 if command -v sha256sum > /dev/null; then

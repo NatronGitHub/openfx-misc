@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o OneView.o
+PLUGINOBJECTS = ofxsThreadSuite.o OneView.o
 PLUGINNAME = OneView
 RESOURCES = net.sf.openfx.oneViewPlugin.png net.sf.openfx.oneViewPlugin.svg
 

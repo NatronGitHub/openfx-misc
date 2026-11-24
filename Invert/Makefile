@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o Invert.o
+PLUGINOBJECTS = ofxsThreadSuite.o Invert.o
 PLUGINNAME = Invert
 RESOURCES = net.sf.openfx.Invert.png net.sf.openfx.Invert.svg
 

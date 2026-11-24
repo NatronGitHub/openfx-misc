@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o MatteMonitor.o
+PLUGINOBJECTS = ofxsThreadSuite.o MatteMonitor.o
 PLUGINNAME = MatteMonitor
 #RESOURCES = net.sf.openfx.MatteMonitorPlugin.png
 
