@@ -44,6 +44,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "This can be used for example to simulate lens defocus (bokeh) with an arbitrary aperture shape, such as the one produced by the DiscBlades generator.\n" \
     "\n" \
     "Each channel of Source is convolved by the corresponding channel of Filter (or by the Filter luminance or alpha, see the 'Filter Channel' parameter). " \
+    "With the default Filter Channel (RGBA), a colored Filter thus gives a different kernel for each channel; to use a single kernel for all channels, set Filter Channel to Alpha. " \
     "The kernel is the Filter image inside its region of definition (or the bounding box of its non-zero pixels, if smaller). " \
     "If 'Normalize' is checked, the result is divided by the sum of the kernel values, so that the overall image brightness is preserved.\n" \
     "\n" \
@@ -94,7 +95,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamFilterChannel "filterChannel"
 #define kParamFilterChannelLabel "Filter Channel"
-#define kParamFilterChannelHint "Which channel(s) of the Filter input are used as the convolution kernel."
+#define kParamFilterChannelHint "Which channel(s) of the Filter input are used as the convolution kernel. With RGBA (the default), a colored Filter gives a different kernel for each channel; Alpha uses a single kernel for all channels."
 #define kParamFilterChannelOptionRGBA "RGBA", "Each Source channel is convolved by the same channel of Filter. If Filter has a single (alpha) channel, it is used for all Source channels. If Filter has no alpha channel, the Source alpha is convolved by the Filter luminance.", "rgba"
 #define kParamFilterChannelOptionLuminance "Luminance", "All Source channels are convolved by the Filter luminance (Rec.709 luminance of RGB, or alpha if Filter has a single channel).", "luminance"
 #define kParamFilterChannelOptionAlpha "Alpha", "All Source channels are convolved by the Filter alpha (or by its luminance if Filter has no alpha channel).", "alpha"
