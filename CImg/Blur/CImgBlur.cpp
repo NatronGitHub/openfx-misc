@@ -179,21 +179,21 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginNameEdgeExtend          "EdgeExtendCImg"
 #define kPluginDescriptionEdgeExtend \
-"Fill a matte (i.e. a non-opaque color image with an alpha channel) by extending the edges of the matte. This effect does nothing an an opaque image.\n" \
+"Fill a matte (i.e. a non-opaque color image with an alpha channel) by extending the edges of the matte. This effect does nothing on an opaque image.\n" \
 "If the input matte comes from a keyer, the alpha channel of the matte should be first eroded by a small amount to remove pixels containing mixed foreground/background colors. If not, these mixed colors may be extended instead of the pure foreground colors.\n" \
 "The filling process works by iteratively blurring the image, and merging the non-blurred image over the image to get to the next iteration. There are exactly 'Slices' such operations. The blur size at each iteration is linearly increasing.\n" \
 "'Size' is thus the total size of the edge extension, and 'Slices' is an indicator of the precision: the more slices there are, the sharper is the final image near the original edges.\n" \
 "Optionally, the image can be multiplied by the alpha channel on input (premultiplied), and divided by the alpha channel on output (unpremultiplied), so that if RGB contain an image and Alpha contains a mask, the output is an image where the RGB is smeared from the non-zero areas of the mask to the zero areas of the same mask.\n" \
-"The 'Size' parameter gives the size of the largest blur kernel, 'Count' gives the number of blur kernels, and 'Ratio' gives the ratio between consecutive blur kernel sizes. The size of the smallest blur kernel is thus 'Size'/'Ratio'^('Count'-1)\n" \
-"To get the classical single unpremult-blur-premult, use 'Count'=1 and set the size to the size of the blur kernel. However, near the mask borders, a frontier can be seen between the non-blurred area (this inside of the mask) and the blurred area. Using more blur sizes will give a much smoother transition.\n" \
+"To get the classical single unpremult-blur-premult, use 'Slices'=1 and set the size to the size of the blur kernel. However, near the mask borders, a frontier can be seen between the non-blurred area (this inside of the mask) and the blurred area. Using more blur sizes will give a much smoother transition.\n" \
 "The idea for the builtup blurs to expand RGB comes from the EdgeExtend effect for Nuke by Frank Rueter (except the blurs were merged from the smallest to the largest, and here it is done the other way round), with suggestions by Lucas Pfaff.\n" \
+"This is not the built-in EdgeExtend node of other compositing applications, which has different controls.\n" \
 "CImg is a free, open-source library distributed under the CeCILL-C " \
 "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
 "It can be used in commercial applications (see http://cimg.eu)."
 
 #define kPluginNameEdgeDetect          "EdgeDetectCImg"
 #define kPluginDescriptionEdgeDetect \
-"Perform edge detection by computing the image gradient magnitude. Optionally, edge detection can be preceded by blurring, and followed by erosion and thresholding. In most cases, EdgeDetect is followed a Grade node to extract the proper edges and generate a mask from these.\n" \
+"Perform edge detection by computing the image gradient magnitude. Optionally, edge detection can be preceded by blurring, and followed by erosion (or dilation, with a negative Erode Size) and non-maxima suppression. There is no threshold: in most cases, EdgeDetect is followed by a Grade node to extract the proper edges and generate a mask from these.\n" \
 "\n" \
 "For color or multi-channel images, several edge detection algorithms are proposed to combine the gradients computed in each channel:\n" \
 "- Separate: the gradient magnitude is computed in each channel separately, and the output is a color edge image.\n" \
@@ -225,12 +225,15 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 4.0: the default is to blur all channels including alpha (see processAlpha in describeInContext)
 // version 4.0: added cropToFormat parameter on Natron (this line said 4.1, but the minor version was not incremented)
 // versions 3.1 (kept for Blur, Laplacian, ChromaBlur, Bloom) and 4.1: premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79);
-//              EdgeExtend has no premult parameter and stays 4.0
+//              EdgeExtend has no premult parameter and stayed 4.0 for these
+// versions 3.1 (Blur, Bloom) and 4.1 (Blur, Bloom, ErodeBlur): not an identity (pass-through) when the Alpha Threshold changes the alpha, or when ErodeBlur remaps or clamps the values, even with a small size (issue #324);
+// EdgeExtend version 4.1: not an identity (pass-through) with a small size (below about 0.24 with the Gaussian filters, 1 with Box, Triangle
+//              and Quadratic, at full resolution, more at proxy scales), since the render merges the image over itself (issue #337);
 // EdgeDetect version 5.0: fix the gradient direction in RMS multichannel mode (only EdgeDetect has version 5);
 //              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79)
 #define kPluginVersionMajorEdgeDetect 5
 #define kPluginVersionMinorOld 1 // version 3, kept for backward compatibility
-#define kPluginVersionMinorEdgeExtend 0
+#define kPluginVersionMinorEdgeExtend 1
 #define kPluginVersionMajor 4 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -413,7 +416,7 @@ enum EdgeDetectMultiChannelEnum
 
 #define kParamEdgeDetectErode "erodeSize"
 #define kParamEdgeDetectErodeLabel "Erode Size"
-#define kParamEdgeDetectErodeHint "Size of the erosion performed after edge detection."
+#define kParamEdgeDetectErodeHint "Size of the erosion performed after edge detection. A negative value performs a dilation."
 
 #define kParamEdgeDetectBlur "blurSize"
 #define kParamEdgeDetectBlurLabel "Blur Size"
@@ -1391,7 +1394,7 @@ public:
         }
 
         if (_blurPlugin == eBlurPluginEdgeExtend) {
-            params.sizey = params.sizex = params.edgeExtendSize; // used for RoD/RoI/identity
+            params.sizey = params.sizex = params.edgeExtendSize; // used for RoD/RoI
         } else if (_blurPlugin == eBlurPluginEdgeDetect) {
             params.sizey = params.sizex = _edgeDetectBlur->getValueAtTime(time);
         } else if (_blurPlugin != eBlurPluginErodeBlur) {
@@ -2000,7 +2003,7 @@ public:
                 *ptr = (*ptr < t0) ? 0.f : ((*ptr > t1) ? 1.f : static_cast<float>((*ptr - t0) / (t1 - t0)) );
             }
         }
-        if (params.alphaThreshold > 0. && alphaChannel != -1) {
+        if ( thresholdsAlpha(params, alphaChannel != -1) ) {
             cimg_forXY(cimg, x, y) {
                 float& alpha = cimg(x, y, 0, alphaChannel);
                 if (alpha < params.alphaThreshold) {
@@ -2013,22 +2016,47 @@ public:
         }
     } // render
 
+    // true if render() zeroes the alpha values below the Alpha Threshold
+    static bool thresholdsAlpha(const CImgBlurParams& params,
+                                bool hasAlphaChannel)
+    {
+        return params.alphaThreshold > 0. && hasAlphaChannel;
+    }
+
     virtual bool isIdentity(const IsIdentityArguments &args,
                             const CImgBlurParams& params) OVERRIDE FINAL
     {
         if (_blurPlugin == eBlurPluginLaplacian) {
             return false;
         }
+        if (_blurPlugin == eBlurPluginEdgeExtend) {
+            // EdgeExtend merges the image over its blurred version Slices times, even when the blur
+            // does nothing (blur() is not skipped for EdgeExtend): where alpha is below 1, A over A
+            // is not A, so the render is not a copy at any size (issue #337). This keeps the output
+            // continuous when Size goes to 0 (on a flat area, the blur does nothing at any size).
+            return false;
+        }
+        if (_blurPlugin == eBlurPluginErodeBlur) {
+            // ErodeBlur remaps the values with its two thresholds and clamps them to [0,1], even when
+            // the blur does nothing (issue #324). Even with erodeSize = 0 (thresholds 0 and 1), the
+            // clamp changes the float images (the only depth supported) that are not in [0,1].
+            return false;
+        }
         if ( (_blurPlugin == eBlurPluginSharpen || _blurPlugin == eBlurPluginSoften) && params.sharpenSoftenAmount == 0. ) {
             return true;
         }
-        if (params.edgeExtendPremult != params.edgeExtendUnpremult) {
-            return false;
-        }
-
         double sx, sy;
         sx = args.renderScale.x * params.sizex;
         sy = args.renderScale.y * params.sizey;
+
+        // Blur, Bloom: the Alpha Threshold changes the alpha even when the blur does not, unless
+        // render() returns before applying it, when blur() is skipped (issue #324)
+        // (render() processes all the channels when there is no Process A parameter)
+        const bool processA = !_processA || _processA->getValueAtTime(args.time);
+        if ( thresholdsAlpha( params, renderHasAlphaChannel(_srcClip ? _srcClip->getPixelComponentCount() : 0, processA) ) &&
+             !blurIsSkipped(params.filter, sx, params.orderX, sy, params.orderY, 1.) ) {
+            return false;
+        }
 
         if (_blurPlugin == eBlurPluginBloom) {
             // size of the largest blur kernel
@@ -2042,9 +2070,7 @@ public:
             // the Gaussian filter still returned identity for size < 1.2 (nsigma < 0.5).
             // Now it uses  the Deriche filter, which is a good approximation.
             // Deriche works for size >= 0.24 (nsigma >= 0.1).
-            float sigmax = (float)(sx / 2.4);
-            float sigmay = (float)(sy / 2.4);
-            ret = (sigmax < 0.1 && sigmay < 0.1 && params.orderX == 0 && params.orderY == 0);
+            ret = gaussianIsNoOp(params.filter, sx, params.orderX, sy, params.orderY, 1.);
         } else if ( (params.filter == eFilterBox) || (params.filter == eFilterTriangle) || (params.filter == eFilterQuadratic) ) {
             ret = (sx <= 1 && sy <= 1 && params.orderX == 0 && params.orderY == 0);
         } else {
@@ -2063,6 +2089,34 @@ public:
     // describeInContext function for plugin factories
     static void describeInContext(ImageEffectDescriptor& desc, ContextEnum context, int majorVersion, int minorVersion, BlurPluginEnum blurPlugin = eBlurPluginBlur);
 
+    // true if blur() does not modify the image and returns false: a (quasi-)Gaussian blur with a
+    // tiny sigma, except for Bloom, EdgeExtend and Laplacian (render() then returns early, except for
+    // these). Used by blur() and isIdentity().
+    bool blurIsSkipped(FilterEnum filter,
+                       double sx, int orderX,
+                       double sy, int orderY,
+                       double scale) const
+    {
+        return (_blurPlugin != eBlurPluginBloom) && (_blurPlugin != eBlurPluginEdgeExtend) && (_blurPlugin != eBlurPluginLaplacian) &&
+               gaussianIsNoOp(filter, sx, orderX, sy, orderY, scale);
+    }
+
+    // true for a (quasi-)Gaussian filter with a sigma too small to blur (and no derivative). Used by
+    // blurIsSkipped() and isIdentity().
+    static bool gaussianIsNoOp(FilterEnum filter,
+                               double sx, int orderX,
+                               double sy, int orderY,
+                               double scale)
+    {
+        if ( (filter != eFilterQuasiGaussian) && (filter != eFilterGaussian) ) {
+            return false;
+        }
+        const float sigmax = static_cast<float>(sx * scale / 2.4);
+        const float sigmay = static_cast<float>(sy * scale / 2.4);
+
+        return (sigmax < 0.1) && (sigmay < 0.1) && (orderX == 0) && (orderY == 0);
+    }
+
     // returns true if the image was actually modified
     bool blur(FilterEnum filter,
               double sx, int orderX,
@@ -2070,12 +2124,12 @@ public:
               double scale, bool boundary,
               cimg_library::CImg<cimgpix_t>& cimg_blur)
     {
+        if ( blurIsSkipped(filter, sx, orderX, sy, orderY, scale) ) {
+            return false;
+        }
         if ( (filter == eFilterQuasiGaussian) || (filter == eFilterGaussian) ) {
             float sigmax = (float)(sx * scale / 2.4);
             float sigmay = (float)(sy * scale / 2.4);
-            if ( (_blurPlugin != eBlurPluginBloom) && (_blurPlugin != eBlurPluginEdgeExtend) && (_blurPlugin != eBlurPluginLaplacian) && (sigmax < 0.1) && (sigmay < 0.1) && (orderX == 0) && (orderY == 0) ) {
-                return false;
-            }
             // VanVliet filter was inexistent before 1.53, and buggy before CImg.h from
             // 57ffb8393314e5102c00e5f9f8fa3dcace179608 Thu Dec 11 10:57:13 2014 +0100
             if (filter == eFilterGaussian) {

@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o DiscBlades.o ofxsRectangleInteract.o ofxsGenerator.o
+PLUGINOBJECTS = ofxsThreadSuite.o DiscBlades.o ofxsRectangleInteract.o ofxsGenerator.o
 PLUGINNAME = DiscBlades
 RESOURCES =
 

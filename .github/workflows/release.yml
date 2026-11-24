@@ -305,8 +305,8 @@ jobs:
           SMOKETEST_BUNDLES="net.sf.openfx.DenoiseSharpen:1" HOSTDEMO="$PWD/install/bin/hostDemo" .github/tools/smoketest.sh install-denoisesharpen
           SMOKETEST_BUNDLES="net.sf.openfx.NoOpPlugin:1" HOSTDEMO="$PWD/install/bin/hostDemo" .github/tools/smoketest.sh install-noop
       - name: Render test of the shipped Shadertoy (OSMesa)
-        # smoketest.sh skips Shadertoy (the OpenGL-only one doesn't describe in hostDemo); the
-        # OSMesa one of the full set renders on the CPU
+        # the smoke test above also renders this Shadertoy (it renders on the CPU; an OpenGL-only
+        # one is described only, smoketest.sh's OPENGL list); this checks its output
         timeout-minutes: 5
         run: |
           "$TOOLS"/render-shadertoy-osmesa.sh install/OFX/Plugins install/bin/hostDemo
@@ -329,16 +329,16 @@ jobs:
     # the full set, then two Shadertoy-only builds (one per architecture)
     timeout-minutes: 120
     # GitHub-hosted arm64 runner; universal bundles (CMAKE_OSX_ARCHITECTURES), built with
-    # the system Xcode clang and SDK, for macOS 14 and later (CMakeLists.txt's default
-    # CMAKE_OSX_DEPLOYMENT_TARGET; OFX_DEPLOY_STRICT_MINOS). No
-    # OpenMP (as ci.yml: MacPorts' libomp is built for the runner's macOS): the bundles only
-    # need system libraries. MacPorts (never Homebrew) provides the tools. With
+    # the system Xcode clang and SDK, for macOS 14 and later (CMAKE_OSX_DEPLOYMENT_TARGET=14.0,
+    # passed explicitly; OFX_DEPLOY_STRICT_MINOS). No OpenMP: MacPorts' libomp is built for
+    # the runner's macOS (minos 15), so bundles with it would not load on macOS 14. The
+    # bundles only need system libraries. MacPorts (never Homebrew) provides the tools. With
     # OSMESA_RELEASE, a Shadertoy-only build with the prebuilt OSMesa (one per architecture,
     # see below, so it is not part of the main build).
     needs: preflight
     runs-on: macos-15
     env:
-      MACOS_OPTIONS: -DOFX_USE_OPENMP=OFF -DOFX_DEPLOY_STRICT_MINOS=ON
+      MACOS_OPTIONS: -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 -DOFX_USE_OPENMP=OFF -DOFX_DEPLOY_STRICT_MINOS=ON
     steps:
       - name: Checkout
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
@@ -437,8 +437,8 @@ jobs:
           SMOKETEST_BUNDLES="net.sf.openfx.DenoiseSharpen:1" HOSTDEMO="$PWD/install/bin/hostDemo" .github/tools/smoketest.sh install-denoisesharpen
           SMOKETEST_BUNDLES="net.sf.openfx.NoOpPlugin:1" HOSTDEMO="$PWD/install/bin/hostDemo" .github/tools/smoketest.sh install-noop
       - name: Render test of the shipped Shadertoy (OSMesa)
-        # smoketest.sh skips Shadertoy (the OpenGL-only one doesn't describe in hostDemo); the
-        # lipo-merged OSMesa one (also in the full set) renders on the CPU: each architecture
+        # smoketest.sh only describes the full set's Shadertoy here (OpenGL only: its OPENGL
+        # list); the lipo-merged OSMesa one renders on the CPU: each architecture
         # that the runner can run (x86_64 through Rosetta, if installed), with the universal
         # hostDemo
         if: env.SHADERTOY_OSMESA != ''

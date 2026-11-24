@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o Quantize.o randomGenerator.o
+PLUGINOBJECTS = ofxsThreadSuite.o Quantize.o randomGenerator.o
 PLUGINNAME = Quantize
 #RESOURCES = net.sf.openfx.Quantize.png net.sf.openfx.Quantize.svg
 

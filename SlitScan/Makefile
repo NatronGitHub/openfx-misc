@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o SlitScan.o
+PLUGINOBJECTS = ofxsThreadSuite.o SlitScan.o
 PLUGINNAME = SlitScan
 RESOURCES = net.sf.openfx.SlitScan.png net.sf.openfx.SlitScan.svg
 

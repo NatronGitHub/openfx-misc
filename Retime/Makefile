@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o Retime.o
+PLUGINOBJECTS = ofxsThreadSuite.o Retime.o
 PLUGINNAME = Retime
 RESOURCES = net.sf.openfx.Retime.png net.sf.openfx.Retime.svg
 

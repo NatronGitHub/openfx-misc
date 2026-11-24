@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o ColorSuppress.o
+PLUGINOBJECTS = ofxsThreadSuite.o ColorSuppress.o
 PLUGINNAME = ColorSuppress
 #RESOURCES = net.sf.openfx.ColorSuppress.png net.sf.openfx.ColorSuppress.svg
 

@@ -42,12 +42,15 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "This can be used to create crepuscular rays (also called God rays) by setting the scale and center parameters: scale governs the length of rays, and center should be set to the Sun or light position (which may be outside of the image).\n" \
     "Setting toColor to black and gamma to 1 causes an exponential decay which is very similar to the real crepuscular rays.\n" \
     "This can also be used to create directional blur using a fixed number of samples (as opposed to DirBlur, which uses an adaptive sampling method).\n" \
+    "Translate, rotate, scale and skew are combined into one transform, as in Transform, and each intermediate image uses that transform with all of them interpolated by the same amount, so they can be combined freely: for example, translate and skew are applied together with scale and rotate.\n" \
     "This plugin concatenates transforms upstream."
 
 #define kPluginIdentifier "net.sf.openfx.GodRays"
 // SupportExt#179, in the current minor versions (not released yet, so no further bump): with the Box
 //              filter, the thin band just outside the source image is black (Black Outside) or the
 //              edge colour, not about 4x the edge value (garbage).
+// SupportExt#183, also in the current minor versions: the Mask checkbox works on hosts where the mask
+//              always looks connected (DaVinci Resolve).
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 // 1.1: a Gamma of magnitude below 1e-8 (e.g. 0) interpolates the colors geometrically, the limit of the "gamma"

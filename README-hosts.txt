@@ -242,7 +242,9 @@ suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,OfxMemorySuite,Ofx
 - the OFX Log is "/Applications/ofxTestLog.txt"
 - the OFX plugin cache is in "~/Library/Application Support/Sony/Catalyst Edit/2015.1/plugincache.xml
 
-* Sony Vegas 12
+* Sony Vegas / VEGAS Pro (MAGIX)
+
+Version 12:
 
 OFX API version 1.1
 hostName=com.sonycreativesoftware.vegas
@@ -276,15 +278,143 @@ supportsCascadingChoices=0
 supportsChannelSelector=0
 suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,OfxMemorySuite,OfxMultiThreadSuite,OfxMessageSuite,OfxMessageSuiteV2,OfxProgressSuite,OfxTimeLineSuite,OfxImageEffectOpenGLRenderSuite,OfxVegasProgressSuite,OfxVegasStereoscopicImageEffectSuite,OfxVegasKeyframeSuite,OfxOpenCLProgramSuite,
 
+Version 15:
+
+OFX API version 1.1
+hostName=com.sonycreativesoftware.vegas
+hostLabel=VEGAS Pro 15.0
+hostVersion=15.416.0 ()
+hostIsBackground=0
+supportsOverlays=0
+supportsDrawSuite=0
+supportsMultiResolution=0
+supportsTiles=0
+temporalClipAccess=1
+supportedComponents=OfxImageComponentNone,OfxImageComponentRGBA,OfxImageComponentAlpha
+supportedContexts=OfxImageEffectContextGeneral,OfxImageEffectContextGenerator,OfxImageEffectContextFilter,OfxImageEffectContextTransition,OfxImageEffectContextRetimer,OfxImageEffectContextPaint
+supportedPixelDepths=OfxBitDepthByte,OfxBitDepthFloat
+supportsMultipleClipDepths=0
+supportsMultipleClipPARs=0
+supportsSetableFrameRate=0
+supportsSetableFielding=0
+sequentialRender=0
+numCPUs=1
+supportsRenderQualityDraft=0
+supportsStringAnimation=1
+supportsCustomInteract=0
+supportsChoiceAnimation=1
+supportsStrChoice=0
+supportsStrChoiceAnimation=0
+supportsBooleanAnimation=1
+supportsCustomAnimation=0
+supportsParametricParameter=0
+supportsParametricAnimation=0
+canTransform=0
+nativeOrigin=kOfxImageEffectHostPropNativeOriginBottomLeft
+osHandle=0
+supportsCPURender=1
+supportsOpenGLRender=0
+supportsOpenCLRender=0
+supportsCudaRender=0
+supportsCudaStream=0
+supportsMetalRender=0
+supportsMetalTexture=0
+colourManagementStyle=OfxImageEffectColourManagementNone
+colourManagementAvailableConfigs=
+supportsCamera=0
+isMultiPlanar=0
+maxParameters=1000
+maxPages=0
+pageRowCount=0
+pageColumnCount=0
+supportsProgressSuite=1
+supportsTimeLineSuite=1
+supportsMessageSuiteV2=1
+isNatron=0
+supportsDynamicChoices=0
+supportsCascadingChoices=0
+supportsChannelSelector=0
+canDistort=0
+supportsInteractKeyModifiers=0
+nativeOverlays=
+supportedCursors=
+suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,OfxMemorySuite,OfxMultiThreadSuite,OfxMessageSuite,OfxMessageSuiteV2,OfxProgressSuite,OfxTimeLineSuite,OfxInteractSuite,OfxImageEffectOpenGLRenderSuite,OfxOpenCLProgramSuite,OfxVegasProgressSuite,OfxVegasStereoscopicImageEffectSuite,OfxVegasKeyframeSuite,OfxHWndInteractSuite
+
+Version 19:
+
+OFX API version 1.1
+hostName=com.vegascreativesoftware.vegas
+hostLabel=VEGAS Pro 19.0
+hostVersion=19.651.0 (VEGAS Pro 19.0)
+hostIsBackground=0
+supportsOverlays=0
+supportsDrawSuite=0
+supportsMultiResolution=0
+supportsTiles=0
+temporalClipAccess=1
+supportedComponents=OfxImageComponentNone,OfxImageComponentRGBA,OfxImageComponentAlpha
+supportedContexts=OfxImageEffectContextGeneral,OfxImageEffectContextGenerator,OfxImageEffectContextFilter,OfxImageEffectContextTransition,OfxImageEffectContextRetimer,OfxImageEffectContextPaint
+supportedPixelDepths=OfxBitDepthByte,OfxBitDepthFloat
+supportsMultipleClipDepths=0
+supportsMultipleClipPARs=0
+supportsSetableFrameRate=0
+supportsSetableFielding=0
+sequentialRender=0
+numCPUs=1
+supportsRenderQualityDraft=0
+supportsStringAnimation=1
+supportsCustomInteract=0
+supportsChoiceAnimation=1
+supportsStrChoice=0
+supportsStrChoiceAnimation=0
+supportsBooleanAnimation=1
+supportsCustomAnimation=0
+supportsParametricParameter=0
+supportsParametricAnimation=0
+canTransform=0
+nativeOrigin=kOfxImageEffectHostPropNativeOriginBottomLeft
+osHandle=0
+supportsCPURender=1
+supportsOpenGLRender=1
+supportsOpenCLRender=0
+supportsCudaRender=0
+supportsCudaStream=0
+supportsMetalRender=0
+supportsMetalTexture=0
+colourManagementStyle=OfxImageEffectColourManagementNone
+colourManagementAvailableConfigs=
+supportsCamera=0
+isMultiPlanar=0
+maxParameters=1000
+maxPages=0
+pageRowCount=0
+pageColumnCount=0
+supportsProgressSuite=1
+supportsTimeLineSuite=1
+supportsMessageSuiteV2=1
+isNatron=0
+supportsDynamicChoices=0
+supportsCascadingChoices=0
+supportsChannelSelector=0
+canDistort=0
+supportsInteractKeyModifiers=0
+nativeOverlays=
+supportedCursors=
+suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,OfxMemorySuite,OfxMultiThreadSuite,OfxMessageSuite,OfxMessageSuiteV2,OfxProgressSuite,OfxTimeLineSuite,OfxInteractSuite,OfxImageEffectOpenGLRenderSuite,OfxOpenCLProgramSuite,OfxVegasProgressSuite,OfxVegasStereoscopicImageEffectSuite,OfxVegasKeyframeSuite,OfxHWndInteractSuite
+
 Caveats/Bugs (see https://github.com/NatronGitHub/openfx-misc/issues/66):
-- no OfxInteractSuite and supportsOverlays=0: overlays (and custom interacts) are never shown.
-- no OfxParametricParameterSuite: plugins with parametric (curve) parameters cannot be described.
-- only RGBA and Alpha components, only 8-bit and float pixel depths (no 16-bit).
-- the render scale in the action arguments is not set on the images (kOfxImageEffectPropRenderScale is always 1 on images, e.g. 0.25 in the inArgs with "Auto" preview quality, but the images are at the inArgs scale). The Support library ignores the image render scale when the host name starts with com.sonycreativesoftware.vegas.
+- host name: VEGAS Pro 12 and 15 report com.sonycreativesoftware.vegas, VEGAS Pro 19 reports com.vegascreativesoftware.vegas (later versions probably too; not checked). Code that detects VEGAS by host name must check both.
+- overlays and custom interacts: VEGAS Pro 12 has no OfxInteractSuite. VEGAS Pro 15 and 19 list OfxInteractSuite and OfxHWndInteractSuite, but report supportsOverlays=0 (so overlays aren't shown) and supportsCustomInteract=0.
+- no OfxParametricParameterSuite (supportsParametricParameter=0 in VEGAS Pro 15 and 19): plugins with parametric (curve) parameters cannot be described.
+- only RGBA and Alpha components, only 8-bit and float pixel depths (no 16-bit), no multiple clip depths or PARs (VEGAS Pro 12, 15 and 19).
+- OpenGL render: VEGAS Pro 15 reports supportsOpenGLRender=0, VEGAS Pro 19 reports supportsOpenGLRender=1 (both list OfxImageEffectOpenGLRenderSuite).
+- the render scale in the action arguments is not set on the images (kOfxImageEffectPropRenderScale is always 1 on images, e.g. 0.25 in the inArgs with "Auto" preview quality, but the images are at the inArgs scale). The Support library ignores the image render scale when the host name starts with com.sonycreativesoftware.vegas or (since NatronGitHub/openfx#313) com.vegascreativesoftware.vegas (VEGAS Pro 19; whether VEGAS Pro 19 and later have the same bug is not known). This only turns off the Support library's render scale checks, which exist in debug builds only (without it, they fail the renders of a VEGAS Pro 19 preview); release builds do not check, so their output does not change.
 - generator plugins ("Generated Media") are instantiated in the generator context, which Natron never uses for plugins that also support the general context: code paths specific to that context (e.g. a NULL source clip) are only exercised there.
-- crashes are caught by the VEGAS crash handler: Windows Event Viewer does not log them, and no crash dump is available. The OFX log of debug builds and the "More Information" logs of the crash handler are the only sources of information.
-- VEGAS Pro 15 and later (MAGIX) were tested with recent openfx-misc builds, but their host description is not documented yet (the host name may differ from com.sonycreativesoftware.vegas):
-  - Shadertoy: VEGAS Pro 15 finds no plugin in Shadertoy.ofx, and VEGAS Pro 2027 reports that OfxImageEffectActionDescribeInContext fails in all contexts (Shadertoy needs OpenGL render when it is built without OSMesa).
+- crashes are usually caught by the VEGAS crash handler: Windows Event Viewer does not log them, and no crash dump is available. The OFX log of debug builds and the "More Information" logs of the crash handler are then the only sources of information. Some crashes skip the handler: a VEGAS Pro 23 crash was logged by Event Viewer (heap corruption, exception 0xc0000374 in ntdll.dll), and a VEGAS Pro 2027 crash showed no crash handler and left nothing in Event Viewer.
+- VEGAS Pro 15, 19, 23, 2026 and 2027 were tested with recent openfx-misc builds. There is no host description yet for VEGAS Pro 23, 2026 and 2027:
+  - Shadertoy: it appears in none of VEGAS Pro 15, 19, 23, 2026 and 2027, neither as an effect nor as generated media. VEGAS Pro 15 finds no plugin in Shadertoy.ofx (it reports supportsOpenGLRender=0, and Shadertoy needs OpenGL render when it is built without OSMesa). VEGAS Pro 2027 reports that OfxImageEffectActionDescribeInContext fails in all contexts; since only that action fails, VEGAS Pro 2027 very likely reports supportsOpenGLRender=1 (an inference: its host description is not known). VEGAS Pro 19 reports supportsOpenGLRender=1, so the cause there is not known yet.
+  - NoOp: works in VEGAS Pro 15, but its "Clip Info..." button does nothing. VEGAS Pro 23, 2026 and 2027 crash when its settings panel is opened (heap corruption in VEGAS Pro 23). These crashes happened with two copies of NoOp installed at once (the Misc bundle and the NoOp bundle), and have not been retested with NoOp alone.
+  - VEGAS Pro 2027 is more stable than VEGAS Pro 15 with most plugins that crashed VEGAS Pro 15, but crashes when opening PlasmaCImg, TestGroupsOFX, TestOpenGL and ContactSheetOFX.
   - float-only plugins (all CImg plugins, ContactSheet, LayerContactSheet) misbehaved or crashed. If the host gives them images that are not float, they now fail cleanly instead of writing past the end of the image buffers: render returns kOfxStatFailed and posts a persistent error message that asks to set the project pixel format to 32-bit floating point (the message is cleared by the next successful render).
 
 * Blackmagic Fusion
