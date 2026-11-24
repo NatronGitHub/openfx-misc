@@ -187,6 +187,11 @@ public:
 
     virtual void changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName) OVERRIDE;
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE;
+    // In the general context, map Source and Output to the same components (render() needs them to
+    // be the same). Plug-ins that override getClipPreferences() must call this one first.
+    // CImgOperatorPluginHelper intentionally doesn't: it maps its two inputs to the output's
+    // default components instead (CImgOperator.h).
+    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE;
     static OFX::PageParamDescriptor* describeInContextBegin(bool sourceIsOptional,
                                                             OFX::ImageEffectDescriptor &desc,
                                                             OFX::ContextEnum context,
