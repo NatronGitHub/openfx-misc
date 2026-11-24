@@ -1216,7 +1216,8 @@ RadialPluginFactory::describeInContext(ImageEffectDescriptor &desc,
 
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
-        param->setAnimates(false); // triggers the clip preferences: see ShapeDraw::Params::outputIsPremultipliedByShape()
+        // triggers the clip preferences (see ShapeDraw::Params::outputIsPremultipliedByShape()), and may still
+        // animate, as in Natron 2.5.0: the declared state follows the time of the last clip preferences call
         desc.addClipPreferencesSlaveParam(*param);
         param->setLabel(kParamProcessRLabel);
         param->setHint(kParamProcessRHint);
@@ -1228,7 +1229,8 @@ RadialPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
-        param->setAnimates(false); // triggers the clip preferences: see ShapeDraw::Params::outputIsPremultipliedByShape()
+        // triggers the clip preferences (see ShapeDraw::Params::outputIsPremultipliedByShape()), and may still
+        // animate, as in Natron 2.5.0: the declared state follows the time of the last clip preferences call
         desc.addClipPreferencesSlaveParam(*param);
         param->setLabel(kParamProcessGLabel);
         param->setHint(kParamProcessGHint);
@@ -1240,7 +1242,8 @@ RadialPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
-        param->setAnimates(false); // triggers the clip preferences: see ShapeDraw::Params::outputIsPremultipliedByShape()
+        // triggers the clip preferences (see ShapeDraw::Params::outputIsPremultipliedByShape()), and may still
+        // animate, as in Natron 2.5.0: the declared state follows the time of the last clip preferences call
         desc.addClipPreferencesSlaveParam(*param);
         param->setLabel(kParamProcessBLabel);
         param->setHint(kParamProcessBHint);
