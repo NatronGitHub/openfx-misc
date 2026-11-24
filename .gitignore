@@ -187,6 +187,7 @@ CImg/gmic.h
 CImg/gmic.cpp
 CImg/gmic_def.h
 ofxTestLog.txt
+ofxPluginLog.txt
 
 # QtCreator user files
 *.creator.user

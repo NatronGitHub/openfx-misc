@@ -104,8 +104,8 @@ OfxImageEffectPropPlanarIOEnabled (render arg? images are represented by planes 
 - extra clip property kOfxImageClipPropThumbnail (with a k)
 
 Misc:
-- the working directory when plugin code is executed, (where the ofxTextLog.txt file is written) is "/Applications/DaVinci Resolve/DaVinci Resolve.app/Contents/Resources/"
-- OFX Log is "/Applications/DaVinci Resolve/DaVinci Resolve.app/Contents/Resources/ofxTestLog.txt"
+- the working directory when plugin code is executed, (where the debug-build OFX log is written) is "/Applications/DaVinci Resolve/DaVinci Resolve.app/Contents/Resources/"
+- OFX Log is "/Applications/DaVinci Resolve/DaVinci Resolve.app/Contents/Resources/ofxPluginLog.txt" (ofxTestLog.txt with openfx before 1.5.1)
 - the OFX plugins cache is in "/Library/Application Support/Blackmagic Design/DaVinci Resolve/OFXPluginCache.xml"
 
 * Nuke
@@ -239,7 +239,7 @@ suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,OfxMemorySuite,Ofx
 - undocumented plugin descriptor property: OfxCatalystImageEffectHidden
 - undocumented param property OfxCatalystParamPropNeedsProgress
 
-- the OFX Log is "/Applications/ofxTestLog.txt"
+- the OFX Log is "/Applications/ofxPluginLog.txt" (ofxTestLog.txt with openfx before 1.5.1)
 - the OFX plugin cache is in "~/Library/Application Support/Sony/Catalyst Edit/2015.1/plugincache.xml
 
 * Sony Vegas / VEGAS Pro (MAGIX)
