@@ -60,6 +60,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              Also: R, G, B from the color plane of an input and A from another plane was taken for an
 //              identity, so the alpha was not written.
 // version 2.2, 3.2: the same identity fix as in 4.0 (the alpha read from another plane was not written)
+//              In 4.0, 3.2 and 2.2 (unreleased), whether the output has an alpha channel is read from the
+//              outputComponents parameter, so R, G, B from an RGB input and A from an Alpha input is not
+//              taken for an identity of the RGB input (the alpha was 1).
 #define kPluginVersionMajor 4 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -819,8 +822,13 @@ ShufflePlugin::isIdentityInternal(double time,
         
 
         // The A choice is written only if the output has an alpha channel (RGBA or Alpha).
-        const int dstComponents = dstPlane.getNumComponents();
-        const bool dstHasAlpha = dstPlane.isColorPlane() && (dstComponents == 4 || dstComponents == 1);
+        // The components of the color plane are those of the outputComponents parameter (see
+        // getClipPreferences()), not those of dstPlane: its plane was listed when the channel menus were
+        // built, i.e. with the Output clip components that the host had before applying our clip
+        // preferences (e.g. RGB when the inputs are RGB and Alpha, although the output is RGBA).
+        const PixelComponentEnum dstColorComponents = getOutputComponents(time);
+        const bool dstHasAlpha = dstPlane.isColorPlane() &&
+                                 (dstColorComponents == ePixelComponentRGBA || dstColorComponents == ePixelComponentAlpha);
         const int nChannelsChecked = dstHasAlpha ? 4 : 3;
         int expectedIndex = -1;
         for (int i = 0; i < nChannelsChecked; ++i) {
