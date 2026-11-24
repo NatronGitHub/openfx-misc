@@ -792,20 +792,28 @@ tests=(
     "IDistort blur huge cubic|net.sf.openfx.IDistort|general|float|mean=0.5,0.5,0.5,1||-i Source=solid:0.5,0.5,0.5,1 -i UV=solid:0,0,1,1e-30 -i Mask=none channelBlur=2 unpremultUV=1 blurScale=1e30 --frames 0 --window 300,300,302,302"
     # the full frame with that blur: the taps are bounded, so it takes seconds, not hours
     "IDistort blur huge full frame|net.sf.openfx.IDistort|general|float|maxsec=120+mean=0.5,0.5,0.5,1||-i Source=solid:0.5,0.5,0.5,1 -i UV=solid:0,0,1,1e-30 -i Mask=none channelBlur=2 unpremultUV=1 blurScale=1e30 --frames 0"
+    "IDistort blur huge box full frame|net.sf.openfx.IDistort|general|float|maxsec=120+mean=0.5,0.5,0.5,1||-i Source=solid:0.5,0.5,0.5,1 -i UV=solid:0,0,1,1e-30 -i Mask=none channelBlur=2 unpremultUV=1 blurScale=1e30 filter=1 --frames 0"
     # a blur of 128 square pixels (a Cubic kernel 1 + 128/PAR = 121 pixels wide along x, sampled every 4
     # pixels), 40 pixels right of the edge of a 512-pixel checker at x=512: the white part of the kernel
     # is 0.8126 (a kernel of another width gives another value)
     "IDistort blur 128|net.sf.openfx.IDistort|general|float|mean=0.8126,0.8126,0.8126,0.8126||-i Source=checker:512 -i UV=solid:0,0,128,1 -i Mask=none channelBlur=2 --frames 0 --window 552,300,553,301"
+    # a blur of 64 square pixels on a 1-pixel checker: the kernel (61 pixels wide along x, 65 along y) is
+    # sampled every 2 x 3 pixels, each tap the mean of its 2x3 cell (a summed-area table), so the output is
+    # 0.5 everywhere (point samples every 2 pixels would read only white or only black)
+    "IDistort blur 64 checker 1|net.sf.openfx.IDistort|general|float|range=0.499,0.501+mean=0.5,0.5,0.5,0.5||-i Source=checker:1 -i UV=solid:0,0,64,1 -i Mask=none channelBlur=2 --frames 0 --window 200,200,232,232"
+    # Clamp with Black Outside: at x=0, a Rifman kernel 1 + 8/PAR = 8.5 pixels wide reads 0.5588 of white
+    # (the rest is the black outside), and the clamp to the values read (black included) keeps it
+    "IDistort blur clamp black outside|net.sf.openfx.IDistort|general|float|tol=2e-3+mean=0.5588,0.5588,0.5588,0.5588||-i Source=solid:1,1,1,1 -i UV=solid:0,0,8,1 -i Mask=none channelBlur=2 filter=6 clamp=1 black_outside=1 --frames 0 --window 0,100,1,101"
     # Clamp with the separable blur: Rifman's negative lobes would ring around the edges; clamped, the
     # values are within the source's [0, 1]
     "IDistort blur clamp|net.sf.openfx.IDistort|general|float|range=0,1||-i Source=checker:16 -i UV=solid:0,0,6,1 -i Mask=none channelBlur=2 filter=6 clamp=1 --frames 0 --window 40,40,120,120"
     # a blur that varies (blur = 8 x the ramp), rendered in a window: the tile matches the full render
     "IDistort blur ramp tile|net.sf.openfx.IDistort|general|float|nonconst+tile||-i Source=checker:8 -i UV=ramp -i Mask=none channelBlur=2 blurScale=8 --frames 0 --window 100,100,300,250"
-    # IDistort 3.0 takes U in square pixels: U = 4 moves by 4/PAR = 3.75 pixels along x, so with the
-    # Bilinear filter (filter=2) pixel 60 samples x = 64.25, 0.75 white; version 2 samples 64.5, white
     # Unpremult UV with a UV alpha of 0: no UV, transparent black (version 3; version 2 multiplies by 0)
     "IDistort unpremult alpha 0|net.sf.openfx.IDistort|general|float|mean=0,0,0,0||-i Source=solid:0.5,0.5,0.5,1 -i UV=solid:0,0,0,0 -i Mask=none unpremultUV=1 --frames 0"
     "STMap unpremult alpha 0|net.sf.openfx.STMap|general|float|mean=0,0,0,0||-i Source=solid:0.5,0.5,0.5,1 -i UV=solid:0,0,0,0 -i Mask=none unpremultUV=1 --frames 0"
+    # IDistort 3.0 takes U in square pixels: U = 4 moves by 4/PAR = 3.75 pixels along x, so with the
+    # Bilinear filter (filter=2) pixel 60 samples x = 64.25, 0.75 white; version 2 samples 64.5, white
     "IDistort U square pixels|net.sf.openfx.IDistort|general|float|mean=0.75,0.75,0.75,0.75||-i Source=checker:64 -i UV=solid:4,0,0,1 -i Mask=none filter=2 --frames 0 --window 60,10,61,11"
     "IDistort v2 U pixels|net.sf.openfx.IDistort|general|float|mean=1,1,1,1||-m 2 -i Source=checker:64 -i UV=solid:4,0,0,1 -i Mask=none filter=2 --frames 0 --window 60,10,61,11"
     # FrameBlend Min/Max where no frame is used (FgM > 0 everywhere): 0 (it was +-infinity)

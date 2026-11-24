@@ -160,7 +160,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 #define kPluginVersionMinorV2 1 // the minor version of the obsolete version 2 (IDistort and STMap)
-#define kPluginVersionUVSquarePixels 3 // the first IDistort and STMap version with the version-3 behaviour (UVBehaviourEnum)
+// the first IDistort and STMap version with the version-3 behaviour (UVBehaviourEnum)
+constexpr int kPluginVersionUVSquarePixels = 3;
 
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
@@ -961,6 +962,102 @@ private:
 
 // The "filter" and "clamp" template parameters allow filter-specific optimization
 // by the compiler, using the same generic code for all filters.
+// A summed-area table of the source image, built once per render (version 3, with a blur): the exact
+// integral of the image (piecewise constant over each pixel) over any rectangle, in O(1). It gives the
+// mean of each cell of the strided separable blur (so that a wide blur does not alias) and the Box
+// filter's area integral for any blur size.
+class SummedAreaTable
+{
+public:
+    // S(i, j): the sum of the pixels of bounds.x1 + [0, i) x bounds.y1 + [0, j), for each component
+    template <class PIX, int nComponents>
+    void build(const Image &img)
+    {
+        _bounds = img.getBounds();
+        _n = nComponents;
+        _w = (std::max)(0, _bounds.x2 - _bounds.x1);
+        _h = (std::max)(0, _bounds.y2 - _bounds.y1);
+        _s.assign( static_cast<std::size_t>(_w + 1) * static_cast<std::size_t>(_h + 1) * _n, 0. );
+        for (int j = 0; j < _h; ++j) {
+            std::vector<double> row(_n, 0.);
+            for (int i = 0; i < _w; ++i) {
+                const PIX *p = static_cast<const PIX *>( img.getPixelAddress(_bounds.x1 + i, _bounds.y1 + j) );
+                for (int c = 0; c < _n; ++c) {
+                    row[c] += p ? static_cast<double>(p[c]) : 0.;
+                    corner(i + 1, j + 1)[c] = corner(i + 1, j)[c] + row[c];
+                }
+            }
+        }
+    }
+
+    bool empty() const { return _s.empty() || (_w == 0) || (_h == 0); }
+
+    const OfxRectI& bounds() const { return _bounds; }
+
+    // the integral over [x1, x2] x [y1, y2] (pixel coordinates; the parts outside the image count as 0)
+    void integrate(double x1,
+                   double y1,
+                   double x2,
+                   double y2,
+                   double *sum) const
+    {
+        for (int c = 0; c < _n; ++c) {
+            sum[c] = at(x2, y2, c) - at(x1, y2, c) - at(x2, y1, c) + at(x1, y1, c);
+        }
+    }
+
+private:
+    double *corner(int i, int j) { return &_s[ ( static_cast<std::size_t>(j) * (_w + 1) + i ) * _n ]; }
+    const double *corner(int i, int j) const { return &_s[ ( static_cast<std::size_t>(j) * (_w + 1) + i ) * _n ]; }
+
+    // the integral over [x1, X] x [y1, Y]: S interpolated bilinearly, exact for a piecewise constant image
+    double at(double X,
+              double Y,
+              int c) const
+    {
+        const double fx = (std::max)( 0., (std::min)(X - _bounds.x1, static_cast<double>(_w) ) );
+        const double fy = (std::max)( 0., (std::min)(Y - _bounds.y1, static_cast<double>(_h) ) );
+        const int i = (std::min)(static_cast<int>(fx), _w - 1);
+        const int j = (std::min)(static_cast<int>(fy), _h - 1);
+        const double ax = fx - i;
+        const double ay = fy - j;
+        const double s00 = corner(i, j)[c];
+        const double s10 = corner(i + 1, j)[c];
+        const double s01 = corner(i, j + 1)[c];
+        const double s11 = corner(i + 1, j + 1)[c];
+
+        return s00 + ax * (s10 - s00) + ay * (s01 - s00) + ax * ay * (s11 - s10 - s01 + s00);
+    }
+
+    OfxRectI _bounds = {0, 0, 0, 0};
+    int _n = 0;
+    int _w = 0;
+    int _h = 0;
+    std::vector<double> _s;
+};
+
+// the part of the cell [a, b) (pixels) that the image [lo, hi) covers: blackOutside, the clipped cell
+// (the rest counts as 0); else, the clipped cell, or the edge pixel if the cell is outside (its mean is
+// then the edge's)
+static void
+clipCell(int lo,
+         int hi,
+         bool blackOutside,
+         int *a,
+         int *b)
+{
+    const int ca = (std::max)(*a, lo);
+    const int cb = (std::min)(*b, hi);
+    if ( (cb > ca) || blackOutside ) {
+        *a = ca;
+        *b = (std::max)(ca, cb);
+
+        return;
+    }
+    *a = (*b <= lo) ? lo : (hi - 1);
+    *b = *a + 1;
+}
+
 template <class PIX, int nComponents, int maxValue, DistortionPluginEnum plugin, FilterEnum filter, bool clamp>
 class DistortionProcessor
     : public DistortionProcessorBase
@@ -1024,7 +1121,22 @@ private:
         }
     }
 
+    void preProcess() OVERRIDE FINAL
+    {
+        // version 3 with a blur channel: the summed-area table of the source (read-only while rendering)
+        _sat = SummedAreaTable();
+        const InputPlaneChannel *blurChannel =
+            (_planeChannels.size() == eUVChannelCount) ? &_planeChannels[eUVChannelBlur] : nullptr;
+        const bool blurred = blurChannel && (blurChannel->img || !blurChannel->fillZero) &&
+                             ( (_blurScaleX > 0.) || (_blurScaleY > 0.) );
+        if ( (_uvBehaviour == eUVBehaviourV3) && blurred && (filter != eFilterImpulse) && _srcImg ) {
+            _sat.build<PIX, nComponents>(*_srcImg);
+        }
+    }
+
     void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL;
+
+    SummedAreaTable _sat;
 };
 
 // The derivatives of the source position (x, y) over the output position (X, Y): its columns (xx, yx)
@@ -1048,38 +1160,41 @@ composeJacobians(const Jacobian &a,
     return j;
 }
 
-// Version 2: add blur (in source pixels) to the size of the source area sampled for an output pixel: blur
-// is added to the length of each side of the footprint j. A side of zero length becomes blur pixels long,
-// along the source x or y axis. The blur is clamped to [0, maxBlur] (a NaN blur is 0): a huge or
-// infinite blur (e.g. unpremultiplied by a tiny alpha) would give an infinite or NaN footprint, and a
+// Add blur (in source pixels) to the size of the source area sampled for an output pixel: blurX is added to
+// the length of the footprint's side along x, blurY to the one along y (version 2: the same blur, in
+// pixels along x; version 3 with the Box filter: the blur in square pixels). A side of zero length becomes
+// that long, along the source x or y axis. The blurs are clamped to [0, maxBlur] (a NaN blur is 0): a huge
+// or infinite blur (e.g. unpremultiplied by a tiny alpha) would give an infinite or NaN footprint, and a
 // footprint far larger than the source only costs time.
 static Jacobian
 addBlurToFootprint(const Jacobian &j,
-                   double blur,
+                   double blurX,
+                   double blurY,
                    double maxBlur)
 {
-    if ( !(blur > 0.) ) {
-        return j; // also for a NaN blur
+    blurX = (blurX > 0.) ? (std::min)(blurX, maxBlur) : 0.; // also for a NaN blur
+    blurY = (blurY > 0.) ? (std::min)(blurY, maxBlur) : 0.;
+    if ( (blurX == 0.) && (blurY == 0.) ) {
+        return j;
     }
-    blur = (std::min)(blur, maxBlur);
     Jacobian r = j;
     const double nx = std::sqrt(j.xx * j.xx + j.yx * j.yx);
     if (nx > 0.) {
-        const double k = (nx + blur) / nx;
+        const double k = (nx + blurX) / nx;
         r.xx *= k;
         r.yx *= k;
     } else {
-        r.xx = blur;
+        r.xx = blurX;
         r.yx = 0.;
     }
     const double ny = std::sqrt(j.xy * j.xy + j.yy * j.yy);
     if (ny > 0.) {
-        const double k = (ny + blur) / ny;
+        const double k = (ny + blurY) / ny;
         r.xy *= k;
         r.yy *= k;
     } else {
         r.xy = 0.;
-        r.yy = blur;
+        r.yy = blurY;
     }
 
     return r;
@@ -1217,11 +1332,15 @@ separableWeights(FilterEnum filter,
 }
 
 // the separable blur of the source at (sx, sy), with kernel widths (wx, wy) >= 1: transparent black
-// outside the source (blackOutside), or the nearest edge pixel. With clamp, the result is clamped to the
-// range of the pixels read, as the other filters clamp to their neighbours.
+// outside the source (blackOutside), or the nearest edge pixel. With a stride (a wide kernel), each tap is
+// the mean of its stride x stride cell (from the summed-area table sat, if not empty), so that a wide blur
+// does not alias. With clamp, the result is clamped to the range of the values read (taps or cell means,
+// and 0 for the black outside): this differs from the other filters, which clamp to their central
+// neighbours.
 template <class PIX, int nComponents, bool clamp>
 static void
 separableBlurSample(const Image *srcImg,
+                    const SummedAreaTable &sat,
                     bool blackOutside,
                     FilterEnum filter,
                     double sx,
@@ -1244,39 +1363,77 @@ separableBlurSample(const Image *srcImg,
     }
     separableWeights(filter, sx, wx, &wxs);
     separableWeights(filter, sy, wy, &wys);
+    const bool cells = ( (wxs.stride > 1) || (wys.stride > 1) ) && !sat.empty();
     double acc[4] = {0., 0., 0., 0.};
     double lo[4] = {0., 0., 0., 0.};
     double hi[4] = {0., 0., 0., 0.};
     bool any = false;
-    for (std::size_t j = 0; j < wys.weights.size(); ++j) {
-        int y = wys.first + static_cast<int>(j) * wys.stride;
-        if ( (y < b.y1) || (y >= b.y2) ) {
-            if (blackOutside) {
-                continue;
-            }
-            y = (y < b.y1) ? b.y1 : (b.y2 - 1);
+    // the range of the values read, for clamp
+    auto extend = [&](const double *v) {
+        for (int c = 0; c < nComponents; ++c) {
+            lo[c] = any ? (std::min)(lo[c], v[c]) : v[c];
+            hi[c] = any ? (std::max)(hi[c], v[c]) : v[c];
         }
+        any = true;
+    };
+    const double zero[4] = {0., 0., 0., 0.};
+    for (std::size_t j = 0; j < wys.weights.size(); ++j) {
+        const int ty = wys.first + static_cast<int>(j) * wys.stride;
         for (std::size_t i = 0; i < wxs.weights.size(); ++i) {
-            int x = wxs.first + static_cast<int>(i) * wxs.stride;
-            if ( (x < b.x1) || (x >= b.x2) ) {
-                if (blackOutside) {
+            const int tx = wxs.first + static_cast<int>(i) * wxs.stride;
+            const double wgt = wxs.weights[i] * wys.weights[j];
+            double v[4] = {0., 0., 0., 0.};
+            if (cells) {
+                // the cell of the tap, clipped to the image
+                int xa = tx - (wxs.stride - 1) / 2;
+                int xb = xa + wxs.stride;
+                int ya = ty - (wys.stride - 1) / 2;
+                int yb = ya + wys.stride;
+                const double area = static_cast<double>(xb - xa) * (yb - ya);
+                clipCell(b.x1, b.x2, blackOutside, &xa, &xb);
+                clipCell(b.y1, b.y2, blackOutside, &ya, &yb);
+                const double covered = static_cast<double>(xb - xa) * (yb - ya);
+                if (covered > 0.) {
+                    double sum[4];
+                    sat.integrate(xa, ya, xb, yb, sum);
+                    // blackOutside: the uncovered part is black; else the clipped (or edge) cell
+                    const double norm = blackOutside ? area : covered;
+                    for (int c = 0; c < nComponents; ++c) {
+                        v[c] = sum[c] / norm;
+                    }
+                }
+                if (clamp) {
+                    extend(v);
+                    if ( blackOutside && (covered < area) ) {
+                        extend(zero);
+                    }
+                }
+            } else {
+                int x = tx;
+                int y = ty;
+                const bool outside = (x < b.x1) || (x >= b.x2) || (y < b.y1) || (y >= b.y2);
+                if (outside && blackOutside) {
+                    if (clamp) {
+                        extend(zero); // the black outside is read too
+                    }
                     continue;
                 }
-                x = (x < b.x1) ? b.x1 : (b.x2 - 1);
-            }
-            const PIX *p = static_cast<const PIX *>( srcImg->getPixelAddress(x, y) );
-            if (!p) {
-                continue;
-            }
-            const double wgt = wxs.weights[i] * wys.weights[j];
-            for (int c = 0; c < nComponents; ++c) {
-                acc[c] += wgt * p[c];
+                x = (std::max)( b.x1, (std::min)(x, b.x2 - 1) );
+                y = (std::max)( b.y1, (std::min)(y, b.y2 - 1) );
+                const PIX *p = static_cast<const PIX *>( srcImg->getPixelAddress(x, y) );
+                if (!p) {
+                    continue;
+                }
+                for (int c = 0; c < nComponents; ++c) {
+                    v[c] = p[c];
+                }
                 if (clamp) {
-                    lo[c] = any ? (std::min)(lo[c], static_cast<double>(p[c])) : p[c];
-                    hi[c] = any ? (std::max)(hi[c], static_cast<double>(p[c])) : p[c];
+                    extend(v);
                 }
             }
-            any = true;
+            for (int c = 0; c < nComponents; ++c) {
+                acc[c] += wgt * v[c];
+            }
         }
     }
     for (int c = 0; c < nComponents; ++c) {
@@ -1285,6 +1442,43 @@ separableBlurSample(const Image *srcImg,
             v = (std::max)( lo[c], (std::min)(v, hi[c]) );
         }
         tmpPix[c] = static_cast<float>(v);
+    }
+}
+
+// the version-3 Box filter with a blur: the mean of the source over the bounding box of the footprint J
+// (as ofxsFilterInterpolate2DSuper's Box), from the summed-area table, in O(1) for any blur. Outside the
+// image: black (blackOutside), else the mean of the covered part.
+template <int nComponents>
+static void
+boxBlurSample(const SummedAreaTable &sat,
+              bool blackOutside,
+              double sx,
+              double sy,
+              const Jacobian &J,
+              float *tmpPix)
+{
+    std::fill(tmpPix, tmpPix + nComponents, 0.f);
+    const double hx = 0.5 * ( std::abs(J.xx) + std::abs(J.xy) );
+    const double hy = 0.5 * ( std::abs(J.yx) + std::abs(J.yy) );
+    if ( sat.empty() || !(hx > 0.) || !(hy > 0.) ||
+         !(std::abs(sx) < kSeparableBlurMaxPosition) || !(std::abs(sy) < kSeparableBlurMaxPosition) ) {
+        return;
+    }
+    const OfxRectI &b = sat.bounds();
+    double x1 = sx - hx, x2 = sx + hx, y1 = sy - hy, y2 = sy + hy;
+    const double area = (x2 - x1) * (y2 - y1);
+    x1 = (std::max)(x1, static_cast<double>(b.x1));
+    x2 = (std::min)(x2, static_cast<double>(b.x2));
+    y1 = (std::max)(y1, static_cast<double>(b.y1));
+    y2 = (std::min)(y2, static_cast<double>(b.y2));
+    if ( (x2 <= x1) || (y2 <= y1) ) {
+        return; // outside the image (not blackOutside: the edge colour is not extended this far)
+    }
+    double sum[4];
+    sat.integrate(x1, y1, x2, y2, sum);
+    const double norm = blackOutside ? area : (x2 - x1) * (y2 - y1);
+    for (int c = 0; c < nComponents; ++c) {
+        tmpPix[c] = static_cast<float>(sum[c] / norm);
     }
 }
 
@@ -1459,11 +1653,17 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
             // footprint, there the blur is also added to it).
             Jacobian J = {1., 0., 0., 1.};
             Jacobian JH = {1., 0., 0., 1.}; // the Jacobian of the inverse upstream transform
-            const bool separableBlur = (_uvBehaviour == eUVBehaviourV3) && (filter != eFilterImpulse) &&
-                                       (filter != eFilterBox) && (blur > 0.);
+            // the blur along x and y, in pixels at the render scale, in [0, maxBlur] (a negative Blur Scale
+            // or blur value is no blur; NaN too)
+            const double bx = (blur * _blurScaleX > 0.) ? (std::min)(blur * _blurScaleX, maxBlur) : 0.;
+            const double by = (blur * _blurScaleY > 0.) ? (std::min)(blur * _blurScaleY, maxBlur) : 0.;
+            const bool blurred = (bx > 0.) || (by > 0.);
+            const bool v3 = (_uvBehaviour == eUVBehaviourV3);
+            const bool separableBlur = v3 && blurred && (filter != eFilterImpulse) && (filter != eFilterBox);
+            const bool boxBlur = v3 && blurred && (filter == eFilterBox) && !_sat.empty();
             if (filter != eFilterImpulse) {
                 const Jacobian S = {sxx, sxy, syx, syy};
-                J = separableBlur ? S : addBlurToFootprint(S, blur * _blurScaleX, maxBlur);
+                J = separableBlur ? S : addBlurToFootprint(S, bx, by, maxBlur);
             }
             bool atInfinity = false; // the source position is at infinity: nothing to sample
             if (!_transformIsIdentity) {
@@ -1511,18 +1711,18 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
             } else {
                 if (filter == eFilterImpulse) {
                     ofxsFilterInterpolate2D<PIX, nComponents, filter, clamp>(sx, sy, _srcImg, _blackOutside, tmpPix);
+                } else if (boxBlur) {
+                    boxBlurSample<nComponents>(_sat, _blackOutside, sx, sy, J, tmpPix);
                 } else if (separableBlur) {
                     // the kernel widths, in source pixels: the extent of the footprint along x and y (the
                     // bounding box of the output pixel in the source, at least 1 pixel), plus the extent of
                     // the blur (bx, by in the pixels of the transformed source) through the upstream transform
-                    const double bx = (std::min)(blur * _blurScaleX, maxBlur);
-                    const double by = (std::min)(blur * _blurScaleY, maxBlur);
                     const double maxWidth = 2 * maxBlur + 1; // a wild UV gradient must not cost hours either
                     const double wx = (std::min)( (std::max)(1., std::abs(J.xx) + std::abs(J.xy)) +
                                                   std::abs(JH.xx) * bx + std::abs(JH.xy) * by, maxWidth );
                     const double wy = (std::min)( (std::max)(1., std::abs(J.yx) + std::abs(J.yy)) +
                                                   std::abs(JH.yx) * bx + std::abs(JH.yy) * by, maxWidth );
-                    separableBlurSample<PIX, nComponents, clamp>(_srcImg, _blackOutside, filter, sx, sy,
+                    separableBlurSample<PIX, nComponents, clamp>(_srcImg, _sat, _blackOutside, filter, sx, sy,
                                                                  wx, wy, blurWeightsX, blurWeightsY, tmpPix);
                 } else {
                     ofxsFilterInterpolate2DSuper<PIX, nComponents, filter, clamp>(sx, sy, J.xx, J.xy, J.yx, J.yy, _srcImg, _blackOutside, tmpPix);
@@ -1741,7 +1941,7 @@ public:
                 assert(_uWrap && _vWrap);
             }
         } else {
-            std::fill(_uvChannels, _uvChannels + eUVChannelCount, (ChoiceParam*)NULL);
+            std::fill(_uvChannels, _uvChannels + eUVChannelCount, nullptr);
         }
 
         /* if (gIsMultiPlane) {
@@ -2807,7 +3007,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
                 aChannel = (InputChannelEnum)_uvChannels[eUVChannelAlpha]->getValueAtTime(time);
             }
             if (_uvChannels[eUVChannelBlur]) {
-                blurChannel = (InputChannelEnum)_uvChannels[eUVChannelBlur]->getValueAtTime(time);
+                blurChannel = static_cast<InputChannelEnum>( _uvChannels[eUVChannelBlur]->getValueAtTime(time) );
             }
 
             Image* uv = NULL;
