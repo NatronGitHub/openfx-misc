@@ -141,10 +141,10 @@ CImgFilterPluginHelperBase::changedClip(const InstanceChangedArgs &args,
 }
 
 void
-CImgFilterPluginHelperBase::throwBitDepthUnsupported()
+cimgThrowBitDepthUnsupported(ImageEffect& effect)
 {
-    setPersistentMessage(Message::eMessageError, "", kCImgFilterBitDepthUnsupportedMessage);
-    throwSuiteStatusException(kOfxStatFailed);
+    effect.setPersistentMessage(Message::eMessageError, "", kCImgFilterBitDepthUnsupportedMessage);
+    throw OFX::Exception::Suite(kOfxStatFailed); // as throwSuiteStatusException(kOfxStatFailed)
 }
 
 void

@@ -193,7 +193,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginNameEdgeDetect          "EdgeDetectCImg"
 #define kPluginDescriptionEdgeDetect \
-"Perform edge detection by computing the image gradient magnitude. Optionally, edge detection can be preceded by blurring, and followed by erosion and thresholding. In most cases, EdgeDetect is followed a Grade node to extract the proper edges and generate a mask from these.\n" \
+"Perform edge detection by computing the image gradient magnitude. Optionally, edge detection can be preceded by blurring, and followed by erosion (or dilation, with a negative Erode Size) and non-maxima suppression. There is no threshold: in most cases, EdgeDetect is followed by a Grade node to extract the proper edges and generate a mask from these.\n" \
 "\n" \
 "For color or multi-channel images, several edge detection algorithms are proposed to combine the gradients computed in each channel:\n" \
 "- Separate: the gradient magnitude is computed in each channel separately, and the output is a color edge image.\n" \
@@ -414,7 +414,7 @@ enum EdgeDetectMultiChannelEnum
 
 #define kParamEdgeDetectErode "erodeSize"
 #define kParamEdgeDetectErodeLabel "Erode Size"
-#define kParamEdgeDetectErodeHint "Size of the erosion performed after edge detection."
+#define kParamEdgeDetectErodeHint "Size of the erosion performed after edge detection. A negative value performs a dilation."
 
 #define kParamEdgeDetectBlur "blurSize"
 #define kParamEdgeDetectBlurLabel "Blur Size"

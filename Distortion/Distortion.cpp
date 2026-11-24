@@ -356,10 +356,10 @@ enum OutputModeEnum {
 };
 
 #define kParamK1 "k1"
-#define kParamK1Label "K1", "Nuke: First radial distortion coefficient (coefficient for r^2)."
+#define kParamK1Label "K1", "Nuke: First radial distortion coefficient, k1 in xu = xd / (1 + k1*r^2 + k2*r^4) (without Squeeze and Asymmetric), where xd and xu are the distorted and undistorted positions relative to the distortion center, and r is the distance from xd to the distortion center, in units of half the largest format dimension."
 
 #define kParamK2 "k2"
-#define kParamK2Label "K2", "Nuke: Second radial distortion coefficient (coefficient for r^4)."
+#define kParamK2Label "K2", "Nuke: Second radial distortion coefficient, k2 in xu = xd / (1 + k1*r^2 + k2*r^4) (see K1)."
 
 #if 0
 #define kParamK3 "k3"
@@ -4233,7 +4233,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
             param->appendOption(kParamDistortionDirectionOptionDistort);
             assert(param->getNOptions() == eDirectionUndistort);
             param->appendOption(kParamDistortionDirectionOptionUndistort);
-            param->setDefault((int)eDirectionDistort); // same default as in Nuke, and also the most straightforward (non-iterative) transform for most models
+            param->setDefault((int)eDirectionDistort); // the most straightforward (non-iterative) transform for most models
             if (page) {
                 page->addChild(*param);
             }
