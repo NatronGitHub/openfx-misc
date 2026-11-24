@@ -562,6 +562,13 @@ tests=(
     "HSLToRGB l=0|net.sf.openfx.HSLToRGB|filter|*|mean=0,0,0,1||-i Source=solid:0.3,0.5,0,1"
     "RGBToHSI subnormal|net.sf.openfx.RGBToHSI|filter|float|mean=0,1,0,1||-i Source=solid:1e-40,0,0,1"
     "RGBToHSL near white|net.sf.openfx.RGBToHSL|filter|float|mean=0.1667,1,1,1||-i Source=solid:1,1,0.99999994,1"
+    # the conventions in the ColorTransform descriptions (#296): HSV of the values as given (no
+    # transfer function), hue in [0,1): (0.25,0.5,0.125) -> H = (2 - 1/3)/6, S = 0.375/0.5, V = 0.5;
+    # Y'CbCr in the video range: white -> Y' = 235/255 (with the rounded coefficients: 0.921745),
+    # Cb = Cr = 128/255 (Cb 0.001 lower); 601 encodes with sRGB: grey 0.5 -> R'G'B' 0.7353570
+    "RGBToHSV as given|net.sf.openfx.RGBToHSV|filter|float|tol=1e-5+mean=0.2777778,0.75,0.5,1||-i Source=solid:0.25,0.5,0.125,1"
+    "RGBToYCbCr709 white|net.sf.openfx.RGBToYCbCr709|filter|float|tol=1e-5+mean=0.921745,0.5009608,0.5019608,1||-i Source=solid:1,1,1,1"
+    "RGBToYCbCr601 grey|net.sf.openfx.RGBToYCbCr601|filter|float|tol=1e-5+mean=0.6944167,0.5019608,0.5019608,1||-i Source=solid:0.5,0.5,0.5,1"
     # degenerate inputs that used to give NaN (or inf) pixels, which check() rejects. Grade:
     # gamma 0 maps values above 1 to FLT_MAX (was +inf), premultiplied by alpha 0 (was NaN).
     "Grade gamma 0 alpha 0|net.sf.openfx.GradePlugin|filter|*|mean=0,0,0,0||-i Source=solid:2,0.5,1,0 -i Mask=none gamma=0,0,0,0 premult=1"
