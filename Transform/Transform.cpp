@@ -47,7 +47,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDirBlurName "DirBlurOFX"
 #define kPluginDirBlurGrouping "Filter"
 #define kPluginDirBlurDescription "Apply directional blur to an image.\n" \
-    "The image is averaged along the path from no transform to the transform given by the parameters (from its opposite to it when Centered is checked), so the blur follows that transform:\n" \
+    "The output is a weighted average of the image along the path from no transform to the transform given by the parameters, scaled by Amount (from its opposite to it when Centered is checked; Fading sets the weights), so the blur follows that transform:\n" \
     "- zoom blur: set Scale (e.g. 1.1) around Center;\n" \
     "- radial (spin) blur: set Rotate around Center;\n" \
     "- linear blur: set Translate.\n" \
