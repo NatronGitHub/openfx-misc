@@ -44,11 +44,10 @@ typedef OFX::MultiThread::AutoMutex AutoMutex;
 }
 #else
 // some OFX hosts do not have mutex handling in the MT-Suite (e.g. Sony Catalyst Edit)
-// prefer using the fast mutex by Marcus Geelnard http://tinythreadpp.bitsnbites.eu/
-#include "fast_mutex.h"
+#include <mutex>
 namespace {
-typedef tthread::fast_mutex Mutex;
-typedef OFX::MultiThread::AutoMutexT<tthread::fast_mutex> AutoMutex;
+typedef std::mutex Mutex;
+typedef OFX::MultiThread::AutoMutexT<std::mutex> AutoMutex;
 }
 #endif
 
@@ -569,6 +568,9 @@ private:
             }
 
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+            if (!dstPix) {
+                continue; // outside the image bounds (the render window should be inside them)
+            }
             double sumLine[nValues]; // partial sum to avoid underflows
             std::fill(sumLine, sumLine + nValues, 0.);
 
@@ -656,6 +658,9 @@ private:
             }
 
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+            if (!dstPix) {
+                continue; // outside the image bounds (the render window should be inside them)
+            }
             double sumLine_p2[nValues]; // partial sum to avoid underflows
             std::fill(sumLine_p2, sumLine_p2 + nValues, 0.);
 
@@ -766,6 +771,9 @@ private:
             }
 
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+            if (!dstPix) {
+                continue; // outside the image bounds (the render window should be inside them)
+            }
             double sumLine_p3[nValues]; // partial sum to avoid underflows
             double sumLine_p4[nValues]; // partial sum to avoid underflows
             std::fill(sumLine_p3, sumLine_p3 + nValues, 0.);
@@ -946,6 +954,9 @@ private:
             }
 
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+            if (!dstPix) {
+                continue; // outside the image bounds (the render window should be inside them)
+            }
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
                 double luma = luminance(dstPix);
@@ -1091,6 +1102,9 @@ private:
             }
 
             const PIX *rowPix = (const PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+            if (!rowPix) {
+                continue; // outside the image bounds (the render window should be inside them)
+            }
             // the first pixel in the box, from the left
             int x1 = procWindow.x1;
             while ( x1 < procWindow.x2 && !isIn(rowPix + (x1 - procWindow.x1) * nComponents) ) {

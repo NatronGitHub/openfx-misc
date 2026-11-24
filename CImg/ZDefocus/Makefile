@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o \
+PLUGINOBJECTS = ofxsThreadSuite.o \
 CImgZDefocus.o \
 CImgFilter.o
 
@@ -14,7 +14,10 @@ ofxsParams.o
 
 PLUGINNAME = CImgZDefocus
 
-RESOURCES =
+# ls *png *.svg|sort |sed -e 's!$! \\!'
+RESOURCES = \
+net.sf.cimg.CImgZDefocus.png \
+net.sf.cimg.CImgZDefocus.svg \
 
 TOP_SRCDIR = ../..
 include $(TOP_SRCDIR)/Makefile.master

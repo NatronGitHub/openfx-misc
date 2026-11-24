@@ -50,6 +50,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "(D. Tschumperlé, L. Brun), ICIP'09 " \
     "(https://tschumperle.users.greyc.fr/publications/tschumperle_icip09.pdf).\n" \
     "Uses the 'blur_patch' function from the CImg library.\n" \
+    "This is a patch-based smoother with no noise analysis, not the Denoise node of other compositing applications. For wavelet denoising with noise analysis, see DenoiseSharpen.\n" \
     "CImg is a free, open-source library distributed under the CeCILL-C " \
     "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
     "It can be used in commercial applications (see http://cimg.eu)."

@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o KeyMix.o
+PLUGINOBJECTS = ofxsThreadSuite.o KeyMix.o
 PLUGINNAME = KeyMix
 #RESOURCES = net.sf.openfx.KeyMixO.png net.sf.openfx.KeyMix.svg
 

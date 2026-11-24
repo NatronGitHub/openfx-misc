@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o Anaglyph.o
+PLUGINOBJECTS = ofxsThreadSuite.o Anaglyph.o
 PLUGINNAME = Anaglyph
 RESOURCES = net.sf.openfx.anaglyphPlugin.png net.sf.openfx.anaglyphPlugin.svg
 

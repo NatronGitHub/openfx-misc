@@ -38,11 +38,10 @@ typedef OFX::MultiThread::AutoMutex AutoMutex;
 }
 #else
 // some OFX hosts do not have mutex handling in the MT-Suite (e.g. Sony Catalyst Edit)
-// prefer using the fast mutex by Marcus Geelnard http://tinythreadpp.bitsnbites.eu/
-#include "fast_mutex.h"
+#include <mutex>
 namespace {
-typedef tthread::fast_mutex Mutex;
-typedef OFX::MultiThread::AutoMutexT<tthread::fast_mutex> AutoMutex;
+typedef std::mutex Mutex;
+typedef OFX::MultiThread::AutoMutexT<std::mutex> AutoMutex;
 }
 #endif
 
@@ -57,7 +56,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "Algorithm description:\n" \
     "Keith Jack, \"Video Demystified\", Independent Pub Group (Computer), 1996, pp. 214-222, http://www.ee-techs.com/circuit/video-demy5.pdf\n" \
     "A simplified version is described in:\n" \
-    "[2] High Quality Chroma Key, Michael Ashikhmin, http://www.cs.utah.edu/~michael/chroma/\n"
+    "[2] High Quality Chroma Key, Michael Ashikhmin, http://www.cs.utah.edu/~michael/chroma/\n" \
+    "This is an angle keyer in the YCbCr chroma plane (Acceptance and Suppression Angle), not the ChromaKeyer node of other compositing applications, which has different controls. For a colour-difference keyer with despill, see PIK.\n"
 
 #define kPluginIdentifier "net.sf.openfx.ChromaKeyerPlugin"
 // history:

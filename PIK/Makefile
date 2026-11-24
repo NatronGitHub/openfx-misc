@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o PIK.o ofxsLut.o
+PLUGINOBJECTS = ofxsThreadSuite.o PIK.o ofxsLut.o
 PLUGINNAME = PIK
 RESOURCES = net.sf.openfx.PIK.png net.sf.openfx.PIK.svg fr.inria.PIKColor.png fr.inria.PIKColor.svg PIKColor.gizmo PIKColor.py
 

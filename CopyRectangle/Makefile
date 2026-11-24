@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o CopyRectangle.o ofxsRectangleInteract.o
+PLUGINOBJECTS = ofxsThreadSuite.o CopyRectangle.o ofxsRectangleInteract.o
 PLUGINNAME = CopyRectangle
 #RESOURCES = net.sf.openfx.CopyRectanglePlugin.png net.sf.openfx.CopyRectanglePlugin.svg
 

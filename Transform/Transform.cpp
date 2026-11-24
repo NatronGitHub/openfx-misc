@@ -47,6 +47,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDirBlurName "DirBlurOFX"
 #define kPluginDirBlurGrouping "Filter"
 #define kPluginDirBlurDescription "Apply directional blur to an image.\n" \
+    "The output is a weighted average of the image along the path from no transform to the transform given by the parameters, scaled by Amount (from its opposite to it when Centered is checked; Fading sets the weights), so the blur follows that transform:\n" \
+    "- zoom blur: set Scale (e.g. 1.1) around Center;\n" \
+    "- radial (spin) blur: set Rotate around Center;\n" \
+    "- linear blur: set Translate.\n" \
+    "This is not the DirBlur node of other compositing applications: it has no blur type, length or angle controls; use the transform parameters instead.\n" \
     "This plugin concatenates transforms upstream."
 #define kPluginDirBlurIdentifier "net.sf.openfx.DirBlur"
 // History (Transform, TransformMasked, DirBlur):

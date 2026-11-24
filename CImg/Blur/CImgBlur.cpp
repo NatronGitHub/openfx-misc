@@ -179,14 +179,14 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginNameEdgeExtend          "EdgeExtendCImg"
 #define kPluginDescriptionEdgeExtend \
-"Fill a matte (i.e. a non-opaque color image with an alpha channel) by extending the edges of the matte. This effect does nothing an an opaque image.\n" \
+"Fill a matte (i.e. a non-opaque color image with an alpha channel) by extending the edges of the matte. This effect does nothing on an opaque image.\n" \
 "If the input matte comes from a keyer, the alpha channel of the matte should be first eroded by a small amount to remove pixels containing mixed foreground/background colors. If not, these mixed colors may be extended instead of the pure foreground colors.\n" \
 "The filling process works by iteratively blurring the image, and merging the non-blurred image over the image to get to the next iteration. There are exactly 'Slices' such operations. The blur size at each iteration is linearly increasing.\n" \
 "'Size' is thus the total size of the edge extension, and 'Slices' is an indicator of the precision: the more slices there are, the sharper is the final image near the original edges.\n" \
 "Optionally, the image can be multiplied by the alpha channel on input (premultiplied), and divided by the alpha channel on output (unpremultiplied), so that if RGB contain an image and Alpha contains a mask, the output is an image where the RGB is smeared from the non-zero areas of the mask to the zero areas of the same mask.\n" \
-"The 'Size' parameter gives the size of the largest blur kernel, 'Count' gives the number of blur kernels, and 'Ratio' gives the ratio between consecutive blur kernel sizes. The size of the smallest blur kernel is thus 'Size'/'Ratio'^('Count'-1)\n" \
-"To get the classical single unpremult-blur-premult, use 'Count'=1 and set the size to the size of the blur kernel. However, near the mask borders, a frontier can be seen between the non-blurred area (this inside of the mask) and the blurred area. Using more blur sizes will give a much smoother transition.\n" \
+"To get the classical single unpremult-blur-premult, use 'Slices'=1 and set the size to the size of the blur kernel. However, near the mask borders, a frontier can be seen between the non-blurred area (this inside of the mask) and the blurred area. Using more blur sizes will give a much smoother transition.\n" \
 "The idea for the builtup blurs to expand RGB comes from the EdgeExtend effect for Nuke by Frank Rueter (except the blurs were merged from the smallest to the largest, and here it is done the other way round), with suggestions by Lucas Pfaff.\n" \
+"This is not the built-in EdgeExtend node of other compositing applications, which has different controls.\n" \
 "CImg is a free, open-source library distributed under the CeCILL-C " \
 "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
 "It can be used in commercial applications (see http://cimg.eu)."
@@ -225,13 +225,15 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 4.0: the default is to blur all channels including alpha (see processAlpha in describeInContext)
 // version 4.0: added cropToFormat parameter on Natron (this line said 4.1, but the minor version was not incremented)
 // versions 3.1 (kept for Blur, Laplacian, ChromaBlur, Bloom) and 4.1: premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79);
-//              EdgeExtend has no premult parameter and stays 4.0
+//              EdgeExtend has no premult parameter and stayed 4.0 for these
 // versions 3.1 (Blur, Bloom) and 4.1 (Blur, Bloom, ErodeBlur): not an identity (pass-through) when the Alpha Threshold changes the alpha, or when ErodeBlur remaps or clamps the values, even with a small size (issue #324);
+// EdgeExtend version 4.1: not an identity (pass-through) with a small size (below about 0.24 with the Gaussian filters, 1 with Box, Triangle
+//              and Quadratic, at full resolution, more at proxy scales), since the render merges the image over itself (issue #337);
 // EdgeDetect version 5.0: fix the gradient direction in RMS multichannel mode (only EdgeDetect has version 5);
 //              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79)
 #define kPluginVersionMajorEdgeDetect 5
 #define kPluginVersionMinorOld 1 // version 3, kept for backward compatibility
-#define kPluginVersionMinorEdgeExtend 0
+#define kPluginVersionMinorEdgeExtend 1
 #define kPluginVersionMajor 4 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -1392,7 +1394,7 @@ public:
         }
 
         if (_blurPlugin == eBlurPluginEdgeExtend) {
-            params.sizey = params.sizex = params.edgeExtendSize; // used for RoD/RoI/identity
+            params.sizey = params.sizex = params.edgeExtendSize; // used for RoD/RoI
         } else if (_blurPlugin == eBlurPluginEdgeDetect) {
             params.sizey = params.sizex = _edgeDetectBlur->getValueAtTime(time);
         } else if (_blurPlugin != eBlurPluginErodeBlur) {
@@ -2027,6 +2029,13 @@ public:
         if (_blurPlugin == eBlurPluginLaplacian) {
             return false;
         }
+        if (_blurPlugin == eBlurPluginEdgeExtend) {
+            // EdgeExtend merges the image over its blurred version Slices times, even when the blur
+            // does nothing (blur() is not skipped for EdgeExtend): where alpha is below 1, A over A
+            // is not A, so the render is not a copy at any size (issue #337). This keeps the output
+            // continuous when Size goes to 0 (on a flat area, the blur does nothing at any size).
+            return false;
+        }
         if (_blurPlugin == eBlurPluginErodeBlur) {
             // ErodeBlur remaps the values with its two thresholds and clamps them to [0,1], even when
             // the blur does nothing (issue #324). Even with erodeSize = 0 (thresholds 0 and 1), the
@@ -2036,10 +2045,6 @@ public:
         if ( (_blurPlugin == eBlurPluginSharpen || _blurPlugin == eBlurPluginSoften) && params.sharpenSoftenAmount == 0. ) {
             return true;
         }
-        if (params.edgeExtendPremult != params.edgeExtendUnpremult) {
-            return false;
-        }
-
         double sx, sy;
         sx = args.renderScale.x * params.sizex;
         sy = args.renderScale.y * params.sizey;

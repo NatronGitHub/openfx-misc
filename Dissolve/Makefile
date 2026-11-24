@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o Dissolve.o
+PLUGINOBJECTS = ofxsThreadSuite.o Dissolve.o
 PLUGINNAME = Dissolve
 RESOURCES = net.sf.openfx.DissolvePlugin.png net.sf.openfx.DissolvePlugin.svg
 

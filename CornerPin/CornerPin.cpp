@@ -59,6 +59,7 @@
 #endif
 
 #include "ofxsOGLTextRenderer.h"
+#include "ofxsCoords.h"
 #include "ofxsTransform3x3.h"
 #include "ofxsThreadSuite.h"
 #include "ofxsOGLHiDPI.h"
@@ -134,6 +135,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 // 2.1: overlay point selection, host selection rectangle param (Natron);
 //      the inverse of a transform matrix with huge entries (e.g. a concatenated source transform) no longer overflows to NaN or 0 (SupportExt #81)
+// 1.1 and 2.1 (unreleased, fixed in place): new "Set to input format" button (appended), which copies the
+//      input format into the "from" points (issue #270); "Set to input rod" is unchanged.
 
 #define POINT_SIZE 5
 // Pick tolerance in screen pixels, through kOfxInteractPropPixelScale. As in RectangleInteract and
@@ -185,6 +188,10 @@ static const char* const kParamFrom[4] = {
 #define kParamCopyInputRoD "setToInputRod"
 #define kParamCopyInputRoDLabel "Set to input rod"
 #define kParamCopyInputRoDHint "Copy the values from the source region of definition into the \"from\" points."
+
+#define kParamCopyInputFormat "setToInputFormat"
+#define kParamCopyInputFormatLabel "Set to input format"
+#define kParamCopyInputFormatHint "Copy the format of the source (its frame, without the overscan or the crop of the region of definition) into the \"from\" points. On hosts that do not give the clip format, the project extent (the full frame) is used."
 
 #define kParamOverlayPoints "overlayPoints"
 #define kParamOverlayPointsLabel "Overlay Points"
@@ -332,6 +339,12 @@ private:
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
 
 private:
+    // the format of the source clip, in canonical coordinates (the project extent if the host gives no format)
+    OfxRectD getSrcFormatCanonical() const;
+
+    // "Set to input rod" and "Set to input format": set the "from" points to the corners of rect
+    void setFromPointsToRect(const InstanceChangedArgs &args, const std::string &paramName, const OfxRectD &rect);
+
     // NON-GENERIC
     Double2DParam* _to[4];
     BooleanParam* _enable[4];
@@ -519,6 +532,47 @@ copyPoint(Double2DParam* from,
     }
 }
 
+OfxRectD
+CornerPinPlugin::getSrcFormatCanonical() const
+{
+    OfxRectD rect = {0., 0., 0., 0.};
+#ifdef OFX_EXTENSIONS_NATRON
+    OfxRectI format = {0, 0, 0, 0};
+    _srcClip->getFormat(format); // in pixels at render scale 1 (kOfxImageClipPropFormat)
+    if ( !Coords::rectIsEmpty(format) ) {
+        const OfxPointD rsOne = {1., 1.};
+        Coords::toCanonical(format, rsOne, _srcClip->getPixelAspectRatio(), &rect);
+
+        return rect;
+    }
+#endif
+    // no format from the host: the project format, from 0,0 to kOfxImageEffectPropProjectExtent ("the
+    // extent is always rooted at 0,0")
+    const OfxPointD extent = getProjectExtent();
+    rect.x1 = 0.;
+    rect.y1 = 0.;
+    rect.x2 = extent.x;
+    rect.y2 = extent.y;
+
+    return rect;
+}
+
+void
+CornerPinPlugin::setFromPointsToRect(const InstanceChangedArgs &args,
+                                     const std::string &paramName,
+                                     const OfxRectD &rect)
+{
+    EditBlock eb(*this, paramName);
+    _from[0]->setValue(rect.x1, rect.y1);
+    _from[1]->setValue(rect.x2, rect.y1);
+    _from[2]->setValue(rect.x2, rect.y2);
+    _from[3]->setValue(rect.x1, rect.y2);
+    changedTransform(args);
+    if ( (args.reason == eChangeUserEdit) && !_srcClipChanged->getValue() ) {
+        _srcClipChanged->setValue(true);
+    }
+}
+
 void
 CornerPinPlugin::changedParam(const InstanceChangedArgs &args,
                               const std::string &paramName)
@@ -541,16 +595,11 @@ CornerPinPlugin::changedParam(const InstanceChangedArgs &args,
     //printf("srcClipChanged=%s\n", _srcClipChanged->getValue() ? "true" : "false");
     if (paramName == kParamCopyInputRoD) {
         if ( _srcClip && _srcClip->isConnected() ) {
-            EditBlock eb(*this, paramName);
-            const OfxRectD & srcRoD = _srcClip->getRegionOfDefinition(time);
-            _from[0]->setValue(srcRoD.x1, srcRoD.y1);
-            _from[1]->setValue(srcRoD.x2, srcRoD.y1);
-            _from[2]->setValue(srcRoD.x2, srcRoD.y2);
-            _from[3]->setValue(srcRoD.x1, srcRoD.y2);
-            changedTransform(args);
-            if ( (args.reason == eChangeUserEdit) && !_srcClipChanged->getValue() ) {
-                _srcClipChanged->setValue(true);
-            }
+            setFromPointsToRect( args, paramName, _srcClip->getRegionOfDefinition(time) );
+        }
+    } else if (paramName == kParamCopyInputFormat) {
+        if ( _srcClip && _srcClip->isConnected() ) {
+            setFromPointsToRect( args, paramName, getSrcFormatCanonical() );
         }
     } else if (paramName == kParamCopyFrom) {
         EditBlock eb(*this, paramName);
@@ -1709,6 +1758,23 @@ CornerPinPluginDescribeInContext(ImageEffectDescriptor &desc,
     }
 } // CornerPinPluginDescribeInContext
 
+// "Set to input format", appended after all the other parameters (issue #270), in the "from" group
+static void
+CornerPinPluginDescribeInContextAppended(ImageEffectDescriptor &desc,
+                                         PageParamDescriptor *page)
+{
+    PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamCopyInputFormat);
+    param->setLabel(kParamCopyInputFormatLabel);
+    param->setHint(kParamCopyInputFormatHint);
+    GroupParamDescriptor* group = dynamic_cast<GroupParamDescriptor*>( desc.getParamDescriptor(kGroupFrom) );
+    if (group) {
+        param->setParent(*group);
+    }
+    if (page) {
+        page->addChild(*param);
+    }
+}
+
 mDeclarePluginFactoryVersioned(CornerPinPluginFactory, {ofxsThreadSuiteCheck();}, {});
 template<unsigned int majorVersion>
 void
@@ -1748,6 +1814,8 @@ CornerPinPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &d
         param->setEvaluateOnChange(false);
         page->addChild(*param);
     }
+
+    CornerPinPluginDescribeInContextAppended(desc, page);
 }
 
 template<unsigned int majorVersion>
@@ -1797,6 +1865,8 @@ CornerPinMaskedPluginFactory<majorVersion>::describeInContext(ImageEffectDescrip
         param->setEvaluateOnChange(false);
         page->addChild(*param);
     }
+
+    CornerPinPluginDescribeInContextAppended(desc, page);
 }
 
 template<unsigned int majorVersion>

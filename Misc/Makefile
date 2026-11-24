@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o \
+PLUGINOBJECTS = ofxsThreadSuite.o \
 ofxsFileOpen.o \
 ofxsGenerator.o \
 ofxsLut.o \

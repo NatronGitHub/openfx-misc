@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o HueCorrect.o HueCorrect1.o ofxsLut.o
+PLUGINOBJECTS = ofxsThreadSuite.o HueCorrect.o HueCorrect1.o ofxsLut.o
 PLUGINNAME = HueCorrect
 RESOURCES = \
 net.sf.openfx.HueCorrect.png \

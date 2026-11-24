@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o TimeBuffer.o
+PLUGINOBJECTS = ofxsThreadSuite.o TimeBuffer.o
 PLUGINNAME = TimeBuffer
 #RESOURCES = net.sf.openfx.TimeBufferRead.png net.sf.openfx.TimeBufferRead.svg net.sf.openfx.TimeBufferWrite.png net.sf.openfx.TimeBufferWrite.svg
 

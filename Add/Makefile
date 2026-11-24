@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o Add.o
+PLUGINOBJECTS = ofxsThreadSuite.o Add.o
 PLUGINNAME = Add
 RESOURCES = net.sf.openfx.AddPlugin.png
 

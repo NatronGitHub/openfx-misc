@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o Keyer.o
+PLUGINOBJECTS = ofxsThreadSuite.o Keyer.o
 PLUGINNAME = Keyer
 RESOURCES = net.sf.openfx.KeyerPlugin.png net.sf.openfx.KeyerPlugin.svg
 

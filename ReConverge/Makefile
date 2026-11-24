@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o ReConverge.o ofxsOGLTextRenderer.o ofxsOGLFontData.o
+PLUGINOBJECTS = ofxsThreadSuite.o ReConverge.o ofxsOGLTextRenderer.o ofxsOGLFontData.o
 PLUGINNAME = ReConverge
 
 TOP_SRCDIR = ..

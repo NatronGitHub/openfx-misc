@@ -475,6 +475,15 @@ tests=(
     # filters. Invert also inverts alpha by default.
     "Invert solid|net.sf.openfx.Invert|filter|*|mean=0.75,0.5,0,0||-i Source=solid:0.25,0.5,1,1 -i Mask=none"
     "Invert checker|net.sf.openfx.Invert|filter|*|nonconst+changed:Source||-i Source=checker:16 -i Mask=none"
+    # Clamp (issue #294, off by default) clamps the inverted channels to [0,1]: superwhite and
+    # superblack give 0 and 1 (also on byte and short inputs, where the solid is clamped)
+    "Invert out of range|net.sf.openfx.Invert|filter|float|mean=-0.5,1.5,0.75,0||-i Source=solid:1.5,-0.5,0.25,1 -i Mask=none"
+    "Invert clamp|net.sf.openfx.Invert|filter|*|mean=0,1,0.75,0||-i Source=solid:1.5,-0.5,0.25,1 -i Mask=none clamp=1"
+    # (that case also passes without Clamp on byte and short, where the solid is clamped.) With
+    # Premultiplied, a colour above alpha unpremultiplies above 1, also on byte and short: R 0.75
+    # at alpha 0.5 is 1.5, inverted -0.5, clamped 0, premultiplied 0, mixed 0.5 with the source:
+    # 0.375 (0.25 without Clamp). G (1, inverted 0) and B (0.5, inverted 0.5): 0.25
+    "Invert clamp premult|net.sf.openfx.Invert|filter|*|mean=0.375,0.25,0.25,0.5||-i Source=solid:0.75,0.5,0.25,0.5 -i Mask=none premult=1 NatronOfxParamProcessA=0 mix=0.5 clamp=1"
     "Grade solid|net.sf.openfx.GradePlugin|filter|*|mean=0.5,1,0.25,1||-i Source=solid:0.25,0.5,0.125,1 -i Mask=none multiply=2,2,2,2"
     "Grade ramp masked|net.sf.openfx.GradePlugin|filter|*|nonconst+changed:Source||-i Source=ramp -i Mask=checker:32 gamma=2,2,2,2"
     "Merge over solid|net.sf.openfx.MergePlugin|filter|*|mean=0.5,0,0.5,1||-i A=solid:0.5,0,0,0.5 -i Source=solid:0,0,1,1 -i Mask=none"
@@ -514,6 +523,9 @@ tests=(
     "Crop out of Source|net.sf.openfx.CropPlugin|filter|*|mean=0,0,0,0||-i Source=ramp bottomLeft=-100,-100 size=920,776 --frames 0 --window -90,-90,-10,-10"
     # saturation 0: the Rec.709 luminance
     "ColorCorrect|net.sf.openfx.ColorCorrectPlugin|filter|*|mean=0.465,0.465,0.465,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none MasterSaturation=0,0,0,0"
+    # Saturation -1 (issue #292): a check of the formula, 2 * luma - colour, luma (Rec. 709) 0.4649.
+    # It does not test the new minimum: hostDemo does not clamp parameters to their range
+    "Saturation negative formula|net.sf.openfx.SaturationPlugin|filter|*|notidentity+mean=0.6798,0.4298,0.1798,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none saturation=-1"
     "Clamp|net.sf.openfx.Clamp|filter|*|mean=1,0,0.5,1||-i Source=solid:1.5,-0.5,0.5,1 -i Mask=none"
     # WhiteBalance. The default (source 6504 K, i.e. D65, and the working space white
     # target) is an identity in the D65 working spaces (Rec. 709, Rec. 2020)
@@ -562,6 +574,13 @@ tests=(
     "HSLToRGB l=0|net.sf.openfx.HSLToRGB|filter|*|mean=0,0,0,1||-i Source=solid:0.3,0.5,0,1"
     "RGBToHSI subnormal|net.sf.openfx.RGBToHSI|filter|float|mean=0,1,0,1||-i Source=solid:1e-40,0,0,1"
     "RGBToHSL near white|net.sf.openfx.RGBToHSL|filter|float|mean=0.1667,1,1,1||-i Source=solid:1,1,0.99999994,1"
+    # the conventions in the ColorTransform descriptions (#296): HSV of the values as given (no
+    # transfer function), hue in [0,1): (0.25,0.5,0.125) -> H = (2 - 1/3)/6, S = 0.375/0.5, V = 0.5;
+    # Y'CbCr in the video range: white -> Y' = 235/255 (with the rounded coefficients: 0.921745),
+    # Cb = Cr = 128/255 (Cb 0.001 lower); 601 encodes with sRGB: grey 0.5 -> R'G'B' 0.7353570
+    "RGBToHSV as given|net.sf.openfx.RGBToHSV|filter|float|tol=1e-5+mean=0.2777778,0.75,0.5,1||-i Source=solid:0.25,0.5,0.125,1"
+    "RGBToYCbCr709 white|net.sf.openfx.RGBToYCbCr709|filter|float|tol=1e-5+mean=0.921745,0.5009608,0.5019608,1||-i Source=solid:1,1,1,1"
+    "RGBToYCbCr601 grey|net.sf.openfx.RGBToYCbCr601|filter|float|tol=1e-5+mean=0.6944167,0.5019608,0.5019608,1||-i Source=solid:0.5,0.5,0.5,1"
     # degenerate inputs that used to give NaN (or inf) pixels, which check() rejects. Grade:
     # gamma 0 maps values above 1 to FLT_MAX (was +inf), premultiplied by alpha 0 (was NaN).
     "Grade gamma 0 alpha 0|net.sf.openfx.GradePlugin|filter|*|mean=0,0,0,0||-i Source=solid:2,0.5,1,0 -i Mask=none gamma=0,0,0,0 premult=1"
@@ -576,6 +595,18 @@ tests=(
     # ColorCorrect: gamma 0 in the shadows (was pow(2, 1/0) = inf), whose weight is 0 at luminance 2 (was 0 * inf = NaN)
     "ColorCorrect gamma 0|net.sf.openfx.ColorCorrectPlugin|filter|float|mean=2,2,2,1||-i Source=solid:2,2,2,1 -i Mask=none ShadowsGamma=0,0,0,0"
     "ColorCorrect gamma 0.001|net.sf.openfx.ColorCorrectPlugin|filter|float|mean=10,10,10,1||-i Source=solid:10,10,10,1 -i Mask=none ShadowsGamma=0.001,0.001,0.001,0.001"
+    # Roto: by default the shape (the Roto input) is drawn over the Source alpha only (Process A, the
+    # R, G and B of the Source are kept); Premultiply multiplies the Source RGB by the shape alpha; Replace
+    # draws on black in the drawn channels
+    "Roto default alpha|net.sf.openfx.RotoPlugin|general|*|mean=0.25,0.5,0.75,0.5||-i Source=solid:0.25,0.5,0.75,0 -i Roto=solid:1,1,1,0.5"
+    "Roto premultiply|net.sf.openfx.RotoPlugin|general|*|mean=0.25,0.25,0.25,1||-i Source=solid:0.5,0.5,0.5,1 -i Roto=solid:1,1,1,0.5 premultiply=1"
+    "Roto replace|net.sf.openfx.RotoPlugin|general|*|mean=0.5,0.5,0.5,0.5||-i Source=solid:0.5,0.5,0.5,1 -i Roto=solid:0.2,0.2,0.2,0.5 replace=1"
+    # Premultiply with Replace and A: the output alpha is the shape alpha, the output is premultiplied
+    "Roto premultiply replace|net.sf.openfx.RotoPlugin|general|*|premult=PreMultiplied+mean=0.25,0.25,0.25,0.5||-i Source=solid:0.5,0.5,0.5,1 -i Roto=solid:1,1,1,0.5 premultiply=1 replace=1"
+    # outside the Roto RoD (no Roto image: transparent black), Replace clears the alpha and
+    # Premultiply the RGB: not a pass-through
+    "Roto replace outside RoD|net.sf.openfx.RotoPlugin|general|*|notidentity+mean=0.5,0.5,0.5,0||-i Source=solid:0.5,0.5,0.5,1 -i Roto=rod:100,100,200,200 replace=1 --frames 0 --window 0,0,4,4"
+    "Roto premultiply outside RoD|net.sf.openfx.RotoPlugin|general|*|notidentity+mean=0,0,0,1||-i Source=solid:0.5,0.5,0.5,1 -i Roto=rod:100,100,200,200 premultiply=1 --frames 0 --window 0,0,4,4"
     # PLogLin: the undefined conversions pass the channels through (were 1/0 and log of inf)
     "PLogLin nGamma 0|net.sf.openfx.PLogLin|filter|*|mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none nGamma=0,0,0"
     "PLogLin linRef 0|net.sf.openfx.PLogLin|filter|*|mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none operation=1 linRef=0,0,0"
@@ -631,12 +662,68 @@ tests=(
     # render scale 0.5 (the means are those of the full-scale renders), tiles
     # (--window: the same pixels as the full render), and a fractional time
     "Radial scale 0.5|net.sf.openfx.Radial|general|*|mean=0.231,0.231,0.231,0.231||-i Source=none -i Mask=none --scale 0.5"
+    # Radial (softness 0) and Rectangle (a 200x200 shape at 100,100) over a solid Source: Invert draws Color 0 (black and
+    # transparent) inside and Color 1 (white) outside; Premultiply sets the Source RGB to black outside of the
+    # shape (with nothing drawn), or inside with Invert; Replace draws on black in the drawn channels (here inside
+    # and outside). With Replace and an opaque Source, the output is premultiplied (UnPremultiplied without Replace).
+    "Radial invert inside|net.sf.openfx.Radial|general|*|mean=0.5,0.5,0.5,1||-i Source=solid:0.5,0.5,0.5,1 -i Mask=none bottomLeft=100,100 size=200,200 softness=0 invert=1 --frames 0 --window 199,199,201,201"
+    "Radial invert outside|net.sf.openfx.Radial|general|*|mean=1,1,1,1||-i Source=solid:0.5,0.5,0.5,1 -i Mask=none bottomLeft=100,100 size=200,200 softness=0 invert=1 --frames 0 --window 400,400,410,410"
+    "Radial premultiply outside|net.sf.openfx.Radial|general|*|notidentity+mean=0,0,0,1||-i Source=solid:0.5,0.5,0.5,1 -i Mask=none bottomLeft=100,100 size=200,200 softness=0 color1=0,0,0,0 premultiply=1 --frames 0 --window 400,400,410,410"
+    "Radial premultiply invert inside|net.sf.openfx.Radial|general|*|notidentity+mean=0,0,0,1||-i Source=solid:0.5,0.5,0.5,1 -i Mask=none bottomLeft=100,100 size=200,200 softness=0 color1=0,0,0,0 premultiply=1 invert=1 --frames 0 --window 199,199,201,201"
+    "Radial premultiply invert outside|net.sf.openfx.Radial|general|*|mean=0.5,0.5,0.5,1||-i Source=solid:0.5,0.5,0.5,1 -i Mask=none bottomLeft=100,100 size=200,200 softness=0 color1=0,0,0,0 premultiply=1 invert=1 --frames 0 --window 400,400,410,410"
+    "Radial replace inside|net.sf.openfx.Radial|general|*|mean=0.2,0.2,0.2,0.5||-i Source=solid:0.5,0.5,0.5,1 -i Mask=none bottomLeft=100,100 size=200,200 softness=0 color1=0.2,0.2,0.2,0.5 replace=1 --frames 0 --window 199,199,201,201"
+    "Radial replace outside|net.sf.openfx.Radial|general|*|notidentity+mean=0,0,0,0||-i Source=solid:0.5,0.5,0.5,1 -i Mask=none bottomLeft=100,100 size=200,200 softness=0 color1=0.2,0.2,0.2,0.5 replace=1 --frames 0 --window 400,400,410,410"
+    "Radial premultiply replace opaque|net.sf.openfx.Radial|general|*|premult=PreMultiplied+notidentity||-i Source=file:autocrop.pfm#opaque -i Mask=none bottomLeft=10,8 size=32,16 premultiply=1 replace=1"
+    "Radial premultiply opaque|net.sf.openfx.Radial|general|*|premult=UnPreMultiplied+notidentity||-i Source=file:autocrop.pfm#opaque -i Mask=none bottomLeft=10,8 size=32,16 premultiply=1"
+    "Rectangle invert inside|net.sf.openfx.Rectangle|general|*|mean=0.5,0.5,0.5,1||-i Source=solid:0.5,0.5,0.5,1 -i Mask=none bottomLeft=100,100 size=200,200 invert=1 --frames 0 --window 199,199,201,201"
+    "Rectangle invert outside|net.sf.openfx.Rectangle|general|*|mean=1,1,1,1||-i Source=solid:0.5,0.5,0.5,1 -i Mask=none bottomLeft=100,100 size=200,200 invert=1 --frames 0 --window 400,400,410,410"
+    "Rectangle premultiply outside|net.sf.openfx.Rectangle|general|*|notidentity+mean=0,0,0,1||-i Source=solid:0.5,0.5,0.5,1 -i Mask=none bottomLeft=100,100 size=200,200 color1=0,0,0,0 premultiply=1 --frames 0 --window 400,400,410,410"
+    "Rectangle premultiply invert inside|net.sf.openfx.Rectangle|general|*|notidentity+mean=0,0,0,1||-i Source=solid:0.5,0.5,0.5,1 -i Mask=none bottomLeft=100,100 size=200,200 color1=0,0,0,0 premultiply=1 invert=1 --frames 0 --window 199,199,201,201"
+    "Rectangle premultiply invert outside|net.sf.openfx.Rectangle|general|*|mean=0.5,0.5,0.5,1||-i Source=solid:0.5,0.5,0.5,1 -i Mask=none bottomLeft=100,100 size=200,200 color1=0,0,0,0 premultiply=1 invert=1 --frames 0 --window 400,400,410,410"
+    "Rectangle replace inside|net.sf.openfx.Rectangle|general|*|mean=0.2,0.2,0.2,0.5||-i Source=solid:0.5,0.5,0.5,1 -i Mask=none bottomLeft=100,100 size=200,200 color1=0.2,0.2,0.2,0.5 replace=1 --frames 0 --window 199,199,201,201"
+    "Rectangle replace outside|net.sf.openfx.Rectangle|general|*|notidentity+mean=0,0,0,0||-i Source=solid:0.5,0.5,0.5,1 -i Mask=none bottomLeft=100,100 size=200,200 color1=0.2,0.2,0.2,0.5 replace=1 --frames 0 --window 400,400,410,410"
+    "Rectangle premultiply replace opaque|net.sf.openfx.Rectangle|general|*|premult=PreMultiplied+notidentity||-i Source=file:autocrop.pfm#opaque -i Mask=none bottomLeft=10,8 size=32,16 premultiply=1 replace=1"
+    "Rectangle premultiply opaque|net.sf.openfx.Rectangle|general|*|premult=UnPreMultiplied+notidentity||-i Source=file:autocrop.pfm#opaque -i Mask=none bottomLeft=10,8 size=32,16 premultiply=1"
+    # Premultiply in the softness: the Source RGB times the shape weight (0.399 here, the output with Color 1 white)
+    "Rectangle softness weight|net.sf.openfx.Rectangle|general|float|mean=0.399,0.399,0.399,0.399||-i Source=none -i Mask=none bottomLeft=100,100 size=200,200 softness=40 --frames 0 --window 110,199,111,201"
+    "Rectangle premultiply softness|net.sf.openfx.Rectangle|general|*|mean=0.1995,0.1995,0.1995,1||-i Source=solid:0.5,0.5,0.5,1 -i Mask=none bottomLeft=100,100 size=200,200 softness=40 color1=0,0,0,0 premultiply=1 --frames 0 --window 110,199,111,201"
+    # Extent = Format with no Source: the RoD is the format, also when only Color 0 is not black (here with Invert)
+    "Radial format invert|net.sf.openfx.Radial|general|*|nonconst+mean=0.769,0.769,0.769,0.769||-i Source=none -i Mask=none extent=0 invert=1"
+    # Rectangle: the shape is the format, with a softness so that Invert draws Color 1 near its edges (it was an
+    # empty RoD, a constant output)
+    "Rectangle format invert|net.sf.openfx.Rectangle|general|*|nonconst||-i Source=none -i Mask=none extent=0 softness=50 invert=1"
+    # a coloured transparent Color 0 (red) is drawn outside: the output is not premultiplied
+    "Rectangle premultiply replace red color0|net.sf.openfx.Rectangle|general|*|premult=UnPreMultiplied+notidentity||-i Source=file:autocrop.pfm#opaque -i Mask=none bottomLeft=10,8 size=32,16 color0=1,0,0,0 premultiply=1 replace=1"
+    "Radial premultiply replace red color0|net.sf.openfx.Radial|general|*|premult=UnPreMultiplied+notidentity||-i Source=file:autocrop.pfm#opaque -i Mask=none bottomLeft=10,8 size=32,16 color0=1,0,0,0 premultiply=1 replace=1"
+    # with Invert, Color 0 (red) is drawn inside, where the alpha is 0: not premultiplied; a red Color 1 is drawn
+    # outside, where the alpha is 1: premultiplied
+    "Radial premultiply replace invert red color0|net.sf.openfx.Radial|general|*|premult=UnPreMultiplied||-i Source=file:autocrop.pfm#opaque -i Mask=none bottomLeft=10,8 size=32,16 color0=1,0,0,0 premultiply=1 replace=1 invert=1"
+    "Radial premultiply replace invert red color1|net.sf.openfx.Radial|general|*|premult=PreMultiplied||-i Source=file:autocrop.pfm#opaque -i Mask=none bottomLeft=10,8 size=32,16 color1=1,0,0,1 premultiply=1 replace=1 invert=1"
+    # R is not drawn: the red of Color 0 does not count
+    "Radial premultiply replace red color0 R off|net.sf.openfx.Radial|general|*|premult=PreMultiplied||-i Source=file:autocrop.pfm#opaque -i Mask=none bottomLeft=10,8 size=32,16 color0=1,0,0,0 premultiply=1 replace=1 NatronOfxParamProcessR=0"
     "Transform scale 0.5|net.sf.openfx.TransformPlugin|filter|float|mean=0.31,0.31,0.31,0.31||-i Source=checker:32 rotate=30 scale=0.8,0.8 --scale 0.5"
+    # CornerPin "Set to input format" (#270): the "from" points are the input format (hostDemo's
+    # PAL SD, 768x576 canonical; the project on OFX 1.4 hosts, the same here), not its RoD (rod:);
+    # "Set to input rod" still copies the RoD
+    "CornerPin set to input format|net.sf.openfx.CornerPinPlugin|filter|float|value:from1=0,0+value:from2=768,0+value:from3=768,576+value:from4=0,576||-i Source=rod:10,20,300,200 -s setToInputFormat --frames 0"
+    # a 64x48 PFM at (100,50): its format (in canonical coordinates, x times the PAR 768/720) is not the project's
+    "CornerPin set to input format, file|net.sf.openfx.CornerPinPlugin|filter|float|value:from1=106.666667,50+value:from2=174.933333,50+value:from3=174.933333,98+value:from4=106.666667,98||-i Source=file:autocrop.pfm@100,50 -s setToInputFormat --frames 0"
+    "CornerPin set to input rod|net.sf.openfx.CornerPinPlugin|filter|float|value:from1=10,20+value:from2=300,20+value:from3=300,200+value:from4=10,200||-i Source=rod:10,20,300,200 -s setToInputRod --frames 0"
     "CImgBlur scale 0.5|net.sf.cimg.CImgBlur|filter|float|mean=0.497,0.497,0.497,0.497||-i Source=checker:8 -i Mask=none size=5,5 expandRoD=0 --scale 0.5"
     # filter=2: Box (FIR). The default IIR filters have an infinite support, so
     # their tiles differ slightly (up to 0.003) from the full render.
     "CImgBlur tile|net.sf.cimg.CImgBlur|filter|float|nonconst+tile||-i Source=checker:8 -i Mask=none size=5,5 expandRoD=0 filter=2 --frames 0 --window 100,100,300,250"
     "Merge tile|net.sf.openfx.MergePlugin|filter|float|nonconst+tile||-i A=checker:16 -i Source=ramp -i Mask=none --frames 0 --window 50,60,250,200"
+    # Merge "Range From" (#277): in the general context, Merge 3 passes B's frame range by default, or
+    # A's (hostDemo's inputs all have the frames 0 to 25, so this only checks which input is used, by
+    # disconnecting the other); the host default if that input is disconnected, in the filter context,
+    # and in Merge 2 (no parameter: Natron 2.5 projects keep their frame range)
+    "Merge range from B|net.sf.openfx.MergePlugin|general|float|timedomain=0,25||-i A=none -i B=ramp -i Mask=none --frames 0"
+    "Merge range from B, no B|net.sf.openfx.MergePlugin|general|float|timedomain=default||-i A=checker:16 -i B=none -i Mask=none --frames 0"
+    "Merge range from A|net.sf.openfx.MergePlugin|general|float|timedomain=0,25||-i A=checker:16 -i B=none -i Mask=none rangeFrom=A --frames 0"
+    "Merge range from A, no A|net.sf.openfx.MergePlugin|general|float|timedomain=default||-i A=none -i B=ramp -i Mask=none rangeFrom=A --frames 0"
+    "Merge range, filter context (host default: getTimeDomain is general context only)|net.sf.openfx.MergePlugin|filter|float|timedomain=default||-i A=checker:16 -i Source=ramp -i Mask=none --frames 0"
+    "Merge 2 range, host default|net.sf.openfx.MergePlugin|general|float|timedomain=default||-m 2 -i A=checker:16 -i B=ramp -i Mask=none --frames 0"
     # ReConverge (checked on view 0, the left view): Shift Both, disparity 11 and offset 3: each
     # half is truncated separately (trunc(5.5) + trunc(1.5) = 6, where
     # trunc((11 + 3) / 2) would give 7), so the left view is shifted right by 6 pixels: the first
@@ -659,6 +746,9 @@ tests=(
     "ErodeBlur small|eu.cimg.ErodeBlur|filter|float|notidentity+mean=0.5,0.5,0.5,0.4286||-i Source=solid:0.5,0.5,0.5,0.5 -i Mask=none size=0.25"
     "CImgBlur alpha threshold|net.sf.cimg.CImgBlur|filter|float|notidentity+mean=0.25,0.5,0.75,0||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none alphaThreshold=0.6 filter=2"
     "CImgBlur size 0|net.sf.cimg.CImgBlur|filter|float|identity+mean=0.25,0.5,0.75,0.5||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none alphaThreshold=0.6"
+    # EdgeExtend merges the image over its blurred version even when the size is too small to blur:
+    # A over A is not A where alpha < 1 (5 slices: alpha 1 - 0.5^32, RGB 0.5 * alpha), not an identity (issue #337)
+    "EdgeExtend small|eu.cimg.EdgeExtend|filter|float|notidentity+mean=0.5,1,1.5,1||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none edgeExtendSize=0.1"
     # FrameBlend, one frame (relative range -1..-1, at t=1: frame 0 of the default pattern, which
     # changes with time, so that the render reads the right frame; view 0 is red): not a copy of that frame with Mix, a mask, an unprocessed channel (from
     # the current frame; with Mix 1 and no mask, it was 0), Product with Decay (the frame times
@@ -668,10 +758,16 @@ tests=(
     "FrameBlend one frame mix|net.sf.openfx.FrameBlend|filter|*|notidentity+mean=0.5,0,0,1||-i Source=default -i FgM=none -i Mask=none frameRange=-1,-1 mix=0.5 --frames 1"
     "FrameBlend one frame mask|net.sf.openfx.FrameBlend|filter|*|notidentity+mean=0.5,0,0,1||-i Source=default -i FgM=none -i Mask=solid:0.5,0.5,0.5,0.5 frameRange=-1,-1 --frames 1"
     "FrameBlend one frame no A|net.sf.openfx.FrameBlend|filter|*|notidentity+mean=0.25,0.5,0.75,0.5||-i Source=solid:0.25,0.5,0.75,0.5 -i FgM=none -i Mask=none frameRange=-1,-1 NatronOfxParamProcessA=0"
-    "FrameBlend one frame product|net.sf.openfx.FrameBlend|filter|float|notidentity+mean=0.125,0.25,0.375,0.5||-i Source=solid:0.25,0.5,0.75,1 -i FgM=none -i Mask=none frameRange=-1,-1 operation=Product decay=0.5"
+    "FrameBlend one frame product|net.sf.openfx.FrameBlend|filter|*|notidentity+mean=0.125,0.25,0.375,0.5||-i Source=solid:0.25,0.5,0.75,1 -i FgM=none -i Mask=none frameRange=-1,-1 operation=Product decay=0.5"
+    # Product of one frame with Decay 0: a copy on byte and short images (maxValue * A / maxValue,
+    # issue #335), not on float images (infinite values are made finite)
+    "FrameBlend one frame product no decay|net.sf.openfx.FrameBlend|filter|byte short|identity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i FgM=none -i Mask=none frameRange=-1,-1 operation=Product"
+    "FrameBlend one frame product no decay float|net.sf.openfx.FrameBlend|filter|float|notidentity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i FgM=none -i Mask=none frameRange=-1,-1 operation=Product"
     "FrameBlend one frame min|net.sf.openfx.FrameBlend|filter|*|identity+mean=0.002,0,0,1||-i Source=default -i FgM=none -i Mask=none frameRange=-1,-1 operation=Min --frames 1"
     "FrameBlend one frame average byte|net.sf.openfx.FrameBlend|filter|byte|identity+mean=0.002,0,0,1||-i Source=default -i FgM=none -i Mask=none frameRange=-1,-1 --frames 1"
     "FrameBlend one frame average float|net.sf.openfx.FrameBlend|filter|float|notidentity+mean=0.002,0,0,1||-i Source=default -i FgM=none -i Mask=none frameRange=-1,-1 --frames 1"
+    # Product of 2 frames of 0.5: 0.25 at all depths (it was almost 0 on byte and short images, issue #335)
+    "FrameBlend Product|net.sf.openfx.FrameBlend|filter|*|notidentity+mean=0.25,0.25,0.25,0.25||-i Source=solid:0.5,0.5,0.5,0.5 -i FgM=none -i Mask=none operation=Product frameRange=-1,0"
     "FrameBlend 2 one frame interval 2|net.sf.openfx.FrameBlend|filter|*|mean=0.998,0,0,1||-m 2 -i Source=default -i FgM=none -i Mask=none frameRange=-1,-1 frameInterval=2 --frames 2"
     # LensDistortion 3DE Anamorphic 4 with zero coefficients: Squeeze 1 (the default) is an
     # identity, another squeeze is not (issue #326; it tested Squeeze 0)
@@ -718,6 +814,16 @@ tests=(
     "KeyMix no A inverted|net.sf.openfx.KeyMix|filter|*|notidentity+mean=0.125,0.25,0.375,0.5||-i A=none -i Source=solid:0.25,0.5,0.75,1 -i Mask=solid:0.5,0.5,0.5,0.5 maskInvert=1"
     "KeyMix inverted out of mask|net.sf.openfx.KeyMix|filter|*|notidentity+mean=1,1,1,1||-i A=solid:1,1,1,1 -i Source=solid:0.25,0.5,0.75,1 -i Mask=file:autocrop.pfm maskInvert=1 --frames 0 --window 100,100,200,200"
     "KeyMix out of mask|net.sf.openfx.KeyMix|filter|*|identity+mean=0.25,0.5,0.75,1||-i A=solid:1,1,1,1 -i Source=solid:0.25,0.5,0.75,1 -i Mask=file:autocrop.pfm --frames 0 --window 100,100,200,200"
+    # KeyMix Bounding Box (issue #278), with autocrop.pfm (64x48, 1/6 white: 512 pixels, opaque) as inputs
+    # and a mask: only the chosen bounding box is rendered. Union: B at (0,0) and A at (100,50) give
+    # the box (0,0)-(164,98), 0.5 * 512 + 0.5 * 512 white in 164 * 98 pixels: 0.0319 (B or A alone
+    # would give 0.0833). B (RGB): 0.5 * A + 0.5 * B = 0.5 + 0.5/6 in the B box. A, with alpha from
+    # B: A in the A box. Where the output is B (no A channel), the RoD is B's whatever the choice:
+    # B in its box, 1/6 (the A RoD, the project frame, would give 0.0012)
+    "KeyMix bbox union|net.sf.openfx.KeyMix|filter|*|tol=0.002+mean=0.0319,0.0319,0.0319,0.1911||-i A=file:autocrop.pfm@100,50 -i Source=file:autocrop.pfm -i Mask=solid:0.5,0.5,0.5,0.5"
+    "KeyMix bbox B|net.sf.openfx.KeyMix|filter|*|mean=0.5833,0.5833,0.5833,1||-i A=solid:1,1,1,1 -i Source=file:autocrop.pfm -i Mask=solid:0.5,0.5,0.5,0.5 bbox=1"
+    "KeyMix bbox A|net.sf.openfx.KeyMix|filter|*|mean=0.1667,0.1667,0.1667,1||-i A=file:autocrop.pfm -i Source=solid:0,0,0,1 -i Mask=solid:1,1,1,1 bbox=2 NatronOfxParamProcessA=0"
+    "KeyMix bbox A no channel|net.sf.openfx.KeyMix|filter|*|identity+mean=0.1667,0.1667,0.1667,1||-i A=solid:1,1,1,1 -i Source=file:autocrop.pfm -i Mask=solid:1,1,1,1 bbox=2 NatronOfxParamProcessR=0 NatronOfxParamProcessG=0 NatronOfxParamProcessB=0 NatronOfxParamProcessA=0"
     # HSVTool (issue #322): the default Output Alpha (Hue, full range) sets alpha to 1, even with Mix
     # 0; Clamp Black (on by default) clamps float images; a gain other than 1 adjusts (saturation
     # 2/3 -> 0.5 here); outside the mask, a non-Source Output Alpha is 0. With Output Alpha = Source,
@@ -766,6 +872,8 @@ tests=(
     "LensDistortion 3DE b=-2|net.sf.openfx.LensDistortion|general|float|mean=0.5,0.5,1,1||-i Source=checker:16 model=5 tde4_B_Cylindric_Bending=-2 outputMode=STMap"
     # FrameBlend Min/Max where no frame is used (FgM > 0 everywhere): 0 (it was +-infinity)
     "FrameBlend Min no frame|net.sf.openfx.FrameBlend|filter|*|mean=0,0,0,0||-i Source=solid:0.5,0.5,0.5,1 -i FgM=solid:1,1,1,1 -i Mask=none operation=Min"
+    # Product where no frame is used: the initial value, white (it was almost black on byte and short images, issue #335)
+    "FrameBlend Product no frame|net.sf.openfx.FrameBlend|filter|*|mean=1,1,1,1||-i Source=solid:0.5,0.5,0.5,1 -i FgM=solid:1,1,1,1 -i Mask=none operation=Product"
     "FrameBlend Max no frame|net.sf.openfx.FrameBlend|filter|*|mean=0,0,0,0||-i Source=solid:0.5,0.5,0.5,1 -i FgM=solid:1,1,1,1 -i Mask=none operation=Max"
     "FrameBlend Min|net.sf.openfx.FrameBlend|filter|*|mean=0.5,0.25,0.75,1||-i Source=solid:0.5,0.25,0.75,1 -i FgM=none -i Mask=none operation=Min frameRange=-2,0"
     # Retime (#309), general context, float, on hostDemo's default input (frames 0 to 25, red = t in

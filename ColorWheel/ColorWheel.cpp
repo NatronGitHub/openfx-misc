@@ -42,7 +42,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Image"
 #define kPluginDescription "Generate an image with a color wheel.\n" \
     "\n" \
-    "The color wheel occupies the full area, minus a one-pixel black and transparent border\n" \
+    "The color wheel occupies the full area, minus a one-pixel black and transparent border. To set its size and position, set Extent to Size and use Bottom Left and Size.\n" \
     "\n" \
     "See also: https://web.archive.org/web/20220807183203/http://www.opticalenquiry.com/nuke/index.php?title=Constant,_CheckerBoard,_ColorBars,_ColorWheel"
 #define kPluginIdentifier "net.sf.openfx.ColorWheel"
@@ -85,7 +85,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamGamma "gamma"
 #define kParamGammaLabel "Gamma"
-#define kParamGammaHint "Sets the overall gamma level of the color wheel."
+#define kParamGammaHint "Sets the overall gamma level of the color wheel: each R, G and B value is raised to the power 1/Gamma. The default (0.45) makes the wheel darker; 1 gives a linear wheel (the HSV to RGB conversion only). A value of 0 sets each channel to 1 where it is at least 1, and to 0 elsewhere."
 #define kParamGammaDefault 0.45
 
 #define kParamRotate "rotate"

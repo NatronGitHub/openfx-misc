@@ -64,10 +64,10 @@ it; the steps are the same as steps 3 to 6 below. Its `LICENSE.txt` is openfx-mi
 (GPLv2 or later), and `LICENSES/` has the licenses of the third-party code in the bundles
 (openfx's Support library; freeglut's text renderer and pixman's blend modes, from SupportExt,
 in Misc; CImg, with the CeCILL-C text, and pocketfft; and Mesa and LLVM in the OSMesa Shadertoy, which
-also carries them in `Shadertoy.ofx.bundle/Contents/Resources/licenses`), and TinyThread++
-(zlib) in every bundle. Misc also contains `Misc/randomGenerator.cpp` (MT19937, GNU Library
-GPL v2 or later) and the Yadif code of `Deinterlace/Deinterlace.cpp` (from FFmpeg, LGPL 2.1
-or later), distributed under the GPL as part of Misc. Distortion's PFBarrel (`.pfb`) file
+also carries them in `Shadertoy.ofx.bundle/Contents/Resources/licenses`). Misc also contains
+`Misc/randomGenerator.cpp` (MT19937, GNU Library GPL v2 or later) and the Yadif code of
+`Deinterlace/Deinterlace.cpp` (from FFmpeg, LGPL 2.1 or later), distributed under the GPL as part of Misc.
+Distortion's PFBarrel (`.pfb`) file
 reader contains code "Copyright (C) 2011 The Pixel Farm Ltd", distributed under the GPL as part
 of Misc.
 

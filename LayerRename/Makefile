@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o LayerRename.o ofxsMultiPlane.o
+PLUGINOBJECTS = ofxsThreadSuite.o LayerRename.o ofxsMultiPlane.o
 PLUGINNAME = LayerRename
 
 TOP_SRCDIR = ..

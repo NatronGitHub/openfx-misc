@@ -22,6 +22,7 @@
  */
 
 //#include <iostream>
+#include <algorithm> // min, max
 
 #include "ofxsImageEffect.h"
 #include "ofxsThreadSuite.h"
@@ -45,6 +46,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
 // version 2.1: premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79)
+//              (unreleased, added in place) Clamp parameter, off by default: the inverted channels are
+//              clamped to [0,1] (issue #294)
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -88,6 +91,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamProcessBHint  "Invert blue channel."
 #define kParamProcessAHint  "Invert alpha channel."
 
+#define kParamClamp "clamp"
+#define kParamClampLabel "Clamp"
+#define kParamClampHint "Clamp the inverted channels to [0,1], before premultiplication, masking and mixing. Values below 0 or above 1 (e.g. superblacks and superwhites) otherwise give inverted values above 1 or below 0."
+
 #define kParamPremultChanged "premultChanged"
 
 
@@ -107,6 +114,7 @@ protected:
     int _premultChannel;
     double _mix;
     bool _maskInvert;
+    bool _clamp;
 
 public:
     /** @brief no arg ctor */
@@ -123,6 +131,7 @@ public:
         , _premultChannel(3)
         , _mix(1.)
         , _maskInvert(false)
+        , _clamp(false)
     {
     }
 
@@ -149,6 +158,18 @@ public:
         _premult = premult;
         _premultChannel = premultChannel;
         _mix = mix;
+    }
+
+    /** @brief clamp the inverted channels to [0,1] */
+    void setClamp(bool clamp) { _clamp = clamp; }
+
+protected:
+    /** @brief 1 - v, clamped to [0,1] if Clamp is checked */
+    float invert(float v) const
+    {
+        const float i = 1.f - v;
+
+        return _clamp ? (std::min)( (std::max)(i, 0.f), 1.f ) : i;
     }
 };
 
@@ -192,10 +213,10 @@ public:
 
                 // do we have a source image to scale up
                 ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, _premult, _premultChannel);
-                tmpPix[0] = processR ? (1.f - unpPix[0]) : unpPix[0];
-                tmpPix[1] = processG ? (1.f - unpPix[1]) : unpPix[1];
-                tmpPix[2] = processB ? (1.f - unpPix[2]) : unpPix[2];
-                tmpPix[3] = processA ? (1.f - unpPix[3]) : unpPix[3];
+                tmpPix[0] = processR ? invert(unpPix[0]) : unpPix[0];
+                tmpPix[1] = processG ? invert(unpPix[1]) : unpPix[1];
+                tmpPix[2] = processB ? invert(unpPix[2]) : unpPix[2];
+                tmpPix[3] = processA ? invert(unpPix[3]) : unpPix[3];
                 ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
 
                 // increment the dst pixel
@@ -221,6 +242,7 @@ public:
         , _processG(NULL)
         , _processB(NULL)
         , _processA(NULL)
+        , _clamp(NULL)
         , _premult(NULL)
         , _premultChannel(NULL)
         , _mix(NULL)
@@ -245,6 +267,8 @@ public:
         _processB = fetchBooleanParam(kParamProcessB);
         _processA = fetchBooleanParam(kParamProcessA);
         assert(_processR && _processG && _processB && _processA);
+        _clamp = fetchBooleanParam(kParamClamp);
+        assert(_clamp);
         _premult = fetchBooleanParam(kParamPremult);
         _premultChannel = fetchChoiceParam(kParamPremultChannel);
         assert(_premult && _premultChannel);
@@ -281,6 +305,7 @@ private:
     BooleanParam* _processG;
     BooleanParam* _processB;
     BooleanParam* _processA;
+    BooleanParam* _clamp;
     BooleanParam* _premult;
     ChoiceParam* _premultChannel;
     DoubleParam* _mix;
@@ -369,6 +394,7 @@ InvertPlugin::setupAndProcess(InvertBase &processor,
     double mix;
     _mix->getValueAtTime(args.time, mix);
     processor.setValues(processR, processG, processB, processA, premult, premultChannel, mix);
+    processor.setClamp( _clamp->getValueAtTime(args.time) );
 
     // set the images
     processor.setDstImg( dst.get() );
@@ -598,6 +624,15 @@ InvertPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamProcessALabel);
         param->setHint(kParamProcessAHint);
         param->setDefault(true);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamClamp);
+        param->setLabel(kParamClampLabel);
+        param->setHint(kParamClampHint);
+        param->setDefault(false); // projects saved before 2.1 get false, and render the same
         if (page) {
             page->addChild(*param);
         }
