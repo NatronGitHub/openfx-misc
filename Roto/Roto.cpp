@@ -81,10 +81,6 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamProcessAHint  "Process alpha channel."
 #endif
 
-#define kParamPremult "premultiply"
-#define kParamPremultLabel "Premultiply"
-#define kParamPremultHint "Premultiply the red, green and blue channels with the alpha channel produced by the mask."
-
 #ifdef OFX_EXTENSIONS_NATRON
 #define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentXY || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
 #else

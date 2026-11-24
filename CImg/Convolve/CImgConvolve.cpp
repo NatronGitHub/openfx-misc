@@ -62,7 +62,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginIdentifier    "net.sf.cimg.CImgConvolve"
 // History:
-// version 1.0: initial version
+// version 1.0: initial version; in the general context, Output has the components of Source (with an RGB
+//              Source and an RGBA Filter, Natron gave an RGBA Output, and the render failed) (issue #251)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 

@@ -164,6 +164,12 @@ cimgPadRect(const OfxRectI& rect,
     "The source image has other components than the output (e.g. RGB and RGBA), " \
     "and this plug-in needs them to be the same. Convert the source to the output's components first."
 
+// The CImg plug-ins only support float images (they only declare eBitDepthFloat). If the host
+// gives another depth anyway, post an error message that explains it and throw kOfxStatFailed
+// (the render action doc: "kOfxStatFailed, something wrong, but no error code appropriate,
+// plugin to post message"). A later successful render clears the message.
+[[noreturn]] void cimgThrowBitDepthUnsupported(OFX::ImageEffect& effect);
+
 class CImgFilterPluginHelperBase
     : public OFX::ImageEffect
 {
@@ -181,6 +187,11 @@ public:
 
     virtual void changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName) OVERRIDE;
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE;
+    // In the general context, map Source and Output to the same components (render() needs them to
+    // be the same). Plug-ins that override getClipPreferences() must call this one first.
+    // CImgOperatorPluginHelper intentionally doesn't: it maps its two inputs to the output's
+    // default components instead (CImgOperator.h).
+    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE;
     static OFX::PageParamDescriptor* describeInContextBegin(bool sourceIsOptional,
                                                             OFX::ImageEffectDescriptor &desc,
                                                             OFX::ContextEnum context,
@@ -199,11 +210,8 @@ public:
                                      bool hasMask = true);
 
 protected:
-    // The CImg plug-ins only support float images (they only declare eBitDepthFloat). If the host
-    // gives another depth anyway, post an error message that explains it and throw kOfxStatFailed
-    // (the render action doc: "kOfxStatFailed, something wrong, but no error code appropriate,
-    // plugin to post message"). A later successful render clears the message.
-    void throwBitDepthUnsupported();
+    // see cimgThrowBitDepthUnsupported()
+    [[noreturn]] void throwBitDepthUnsupported() { cimgThrowBitDepthUnsupported(*this); }
 
     // The source and output components must match (the copies to the temporary image use the
     // output's). If the host gives other components, post a message and throw kOfxStatFailed,
