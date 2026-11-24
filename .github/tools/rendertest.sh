@@ -31,10 +31,13 @@
 # - the output at the first time does not have the expected mean value (mean=r,g,b,a,
 #   normalized to [0,1], within 0.01 or within the tolerance given by tol=),
 #   the effect is not an identity at all times though it should be (identity:
-#   the isIdentity action), does not have the expected components (comps=RGBA,
-#   RGB or Alpha), is constant though it should not be (nonconst), or
+#   the isIdentity action), is an identity at some time though its render changes
+#   the input (notidentity: a host would pass the input through), does not have
+#   the expected components (comps=RGBA, RGB or Alpha), is constant though it should not be (nonconst), or
 #   is not the same region of the full render (tile: for a --window render),
 #   renders the same image at different times (framesdiffer: --frames), or
+#   does not have the expected maximum value (max=r,g,b,a, as mean=), e.g. the peak
+#   of a blurred impulse, which gives the blur size,
 #   is the same image as an input (changed:Clip: the CRC32 of the output
 #   must differ from the one of the input Clip, copied at the same depth by
 #   Invert with no channel to process; NoOp would be simpler, but its debug
@@ -161,6 +164,10 @@ pfm("convsrc.pfm", 720, 576, lambda x, y, c: ((x * 7919 + y * 104729 + c * 4099)
 pfm("convk.pfm", 7, 5, lambda x, y, c: 1. + ((x * 3 + y * 5 + c * 7) % 11))
 # vramp.pfm: a 720x576 PF vertical ramp, (y + 0.5) / 576 at row y (for the Y axis of GodRays scale 0)
 pfm("vramp.pfm", 720, 576, lambda x, y, c: (y + 0.5) / 576.)
+# impulse.pfm: a 64x48 PF, black except a white pixel at (32,24) (for the "max" check of a blur);
+# delta.pfm: a 1x1 PF kernel (for the "conv" check of an output that must be its input)
+pfm("impulse.pfm", 64, 48, lambda x, y, c: 1. if (x, y) == (32, 24) else 0.)
+pfm("delta.pfm", 1, 1, lambda x, y, c: 1.)
 EOF2
 
 # check REPORT DEPTH EXPECT [CLIP=CRC32...]: check the --report JSON file of a
@@ -223,6 +230,12 @@ if out0:
                 errors.append("t=0: constant output, expected an image")
         elif expect.startswith("tol="):
             pass
+        elif expect.startswith("max="):
+            want = [float(v) for v in expect[4:].split(",")]
+            got = [None if v is None else v / scale for v in out0["max"]]
+            if None in got or len(want) != len(got) or any(abs(a - b) > tol for a, b in zip(got, want)):
+                errors.append("t=0: max %s, expected %s (tolerance %g)" % (",".join("%.7g" % v if v is not None else "null" for v in got), expect[4:], tol))
+            desc += " max=%s" % ",".join("null" if v is None else "%.3g" % v for v in got)
         elif expect.startswith("mean="):
             want = [float(v) for v in expect[5:].split(",")]
             if None in mean:
@@ -234,6 +247,10 @@ if out0:
             ids = [(k.get("isIdentity") or {}).get("identity") for k in renders]
             if not all(ids):
                 errors.append("not an identity at all times: %s" % ids)
+        elif expect == "notidentity":
+            ids = [(k.get("isIdentity") or {}).get("identity") for k in renders]
+            if any(ids):
+                errors.append("an identity at some time, though the render changes the input: %s" % ids)
         elif expect.startswith("comps="):
             if out0["comps"] != expect[6:]:
                 errors.append("t=0: components %s, expected %s" % (out0["comps"], expect[6:]))
@@ -424,6 +441,18 @@ tests=(
     "Grade ramp masked|net.sf.openfx.GradePlugin|filter|*|nonconst+changed:Source||-i Source=ramp -i Mask=checker:32 gamma=2,2,2,2"
     "Merge over solid|net.sf.openfx.MergePlugin|filter|*|mean=0.5,0,0.5,1||-i A=solid:0.5,0,0,0.5 -i Source=solid:0,0,1,1 -i Mask=none"
     "Merge over checker|net.sf.openfx.MergePlugin|filter|*|nonconst+changed:A+changed:Source||-i A=checker:16 -i Source=ramp -i Mask=none"
+    # Keyer, luminance key with the defaults (A = 0.5, B = C = 1): the foreground key 0.625 gives
+    # the background key 0.25, alpha 0.75 (Intermediate output: the color is the source; no byte depth).
+    # Invert (issue #280) inverts the key, before the Inside Mask (alpha >= 0.5 here) is applied,
+    # and is ignored in None mode (no keying: alpha 0)
+    "Keyer|net.sf.openfx.KeyerPlugin|general|short float|mean=0.625,0.625,0.625,0.75||-i Source=solid:0.625,0.625,0.625,1 -i Bg=none -i InM=none -i OutM=none"
+    "Keyer invert|net.sf.openfx.KeyerPlugin|general|short float|mean=0.625,0.625,0.625,0.25||-i Source=solid:0.625,0.625,0.625,1 -i Bg=none -i InM=none -i OutM=none invert=1"
+    "Keyer invert inside mask|net.sf.openfx.KeyerPlugin|general|short float|mean=0.625,0.625,0.625,0.5||-i Source=solid:0.625,0.625,0.625,1 -i Bg=none -i InM=solid:0.5,0.5,0.5,0.5 -i OutM=none invert=1"
+    "Keyer invert None mode|net.sf.openfx.KeyerPlugin|general|short float|mean=0.625,0.625,0.625,0||-i Source=solid:0.625,0.625,0.625,1 -i Bg=none -i InM=none -i OutM=none mode=3 invert=1"
+    # Screen mode, despill 1, Unpremultiplied output: Invert inverts alpha but not the despill
+    # amount, which uses the key without Invert (the colour is the same)
+    "Keyer screen despill|net.sf.openfx.KeyerPlugin|general|short float|mean=0.1,0.141,0.1,0.341||-i Source=solid:0.1,0.8,0.1,1 -i Bg=none -i InM=none -i OutM=none mode=2 keyColor=0,1,0 despill=1 show=2"
+    "Keyer screen despill invert|net.sf.openfx.KeyerPlugin|general|short float|mean=0.1,0.141,0.1,0.659||-i Source=solid:0.1,0.8,0.1,1 -i Bg=none -i InM=none -i OutM=none mode=2 keyColor=0,1,0 despill=1 show=2 invert=1"
     "CImgBlur|net.sf.cimg.CImgBlur|filter|float|nonconst+changed:Source||-i Source=checker:8 -i Mask=none size=5,5 expandRoD=0"
     "CImgBlur expandRoD|net.sf.cimg.CImgBlur|filter|float|nonconst+changed:Source||-i Source=checker:8 -i Mask=none size=5,5"
     "Transform|net.sf.openfx.TransformPlugin|filter|*|nonconst+changed:Source||-i Source=checker:32 rotate=30 scale=0.8,0.8"
@@ -587,6 +616,37 @@ tests=(
     "Shuffle 3 filter|net.sf.openfx.ShufflePlugin|filter|float|mean=0.75,0.5,0.25,1||-m 3 -i Source=solid:0.25,0.5,0.75,1 outputR=8 outputB=6"
     "Shuffle 2 filter|net.sf.openfx.ShufflePlugin|filter|float|mean=0.75,0.5,0.25,1||-m 2 -i Source=solid:0.25,0.5,0.75,1 outputR=2 outputB=0"
     "Shuffle filter comps|net.sf.openfx.ShufflePlugin|filter|*|comps=RGBA+mean=0.75,0.5,0.25,1||-i Source=solid:0.25,0.5,0.75,1 outputComponents=1 outputR=8 outputB=6"
+    # isIdentity is false where the render does not copy the input (a host would pass the input
+    # through instead of rendering). KeyMix: out of A, but in the mask, the output is
+    # B * (1 - mask * mix), here 0, not B (issue #321).
+    "KeyMix out of A|net.sf.openfx.KeyMix|filter|*|notidentity+mean=0,0,0,0||-i A=file:autocrop.pfm -i Source=solid:0.25,0.5,0.75,1 -i Mask=solid:1,1,1,1 --frames 0 --window 100,100,200,200"
+    # no mask (Mask disconnected): the mask is 0, the output is B
+    "KeyMix no mask|net.sf.openfx.KeyMix|filter|*|identity+mean=0.25,0.5,0.75,1||-i A=solid:1,1,1,1 -i Source=solid:0.25,0.5,0.75,1 -i Mask=none"
+    # A disconnected, inverted mask 0.5: B * 0.5; inverted mask, out of its RoD: the mask is 1, A
+    "KeyMix no A inverted|net.sf.openfx.KeyMix|filter|*|notidentity+mean=0.125,0.25,0.375,0.5||-i A=none -i Source=solid:0.25,0.5,0.75,1 -i Mask=solid:0.5,0.5,0.5,0.5 maskInvert=1"
+    "KeyMix inverted out of mask|net.sf.openfx.KeyMix|filter|*|notidentity+mean=1,1,1,1||-i A=solid:1,1,1,1 -i Source=solid:0.25,0.5,0.75,1 -i Mask=file:autocrop.pfm maskInvert=1 --frames 0 --window 100,100,200,200"
+    "KeyMix out of mask|net.sf.openfx.KeyMix|filter|*|identity+mean=0.25,0.5,0.75,1||-i A=solid:1,1,1,1 -i Source=solid:0.25,0.5,0.75,1 -i Mask=file:autocrop.pfm --frames 0 --window 100,100,200,200"
+    # HSVTool (issue #322): the default Output Alpha (Hue, full range) sets alpha to 1, even with Mix
+    # 0; Clamp Black (on by default) clamps float images; a gain other than 1 adjusts (saturation
+    # 2/3 -> 0.5 here); outside the mask, a non-Source Output Alpha is 0. With Output Alpha = Source,
+    # the alpha is the source alpha (it was 0), also with Premultiply.
+    "HSVTool default alpha|net.sf.openfx.HSVToolPlugin|filter|*|notidentity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none"
+    "HSVTool mix 0 alpha|net.sf.openfx.HSVToolPlugin|filter|*|notidentity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none mix=0"
+    "HSVTool clamp black|net.sf.openfx.HSVToolPlugin|filter|float|notidentity+mean=0,0.5,0.75,1||-i Source=solid:-0.25,0.5,0.75,1 -i Mask=none outputAlpha=0"
+    "HSVTool gain|net.sf.openfx.HSVToolPlugin|filter|*|notidentity+mean=0.375,0.5625,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none outputAlpha=0 clampBlack=0 saturationAdjustmentGain=0"
+    "HSVTool out of mask|net.sf.openfx.HSVToolPlugin|filter|*|notidentity+mean=0.25,0.5,0.75,0||-i Source=solid:0.25,0.5,0.75,1 -i Mask=file:autocrop.pfm hueRotation=120 --frames 0 --window 100,100,200,200"
+    # no adjustment, Output Alpha = Source: an identity (Clamp Black does not change byte images)
+    "HSVTool no clamp|net.sf.openfx.HSVToolPlugin|filter|*|identity+mean=0.25,0.5,0.75,0.5||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none outputAlpha=0 clampBlack=0"
+    "HSVTool clamp byte|net.sf.openfx.HSVToolPlugin|filter|byte|identity+mean=0.25,0.5,0.75,0.5||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none outputAlpha=0"
+    # Output Alpha = Source: an identity with Mix 0 (even with Clamp Black on float), or outside the mask
+    "HSVTool source mix 0|net.sf.openfx.HSVToolPlugin|filter|*|identity+mean=0.25,0.5,0.75,0.5||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none outputAlpha=0 hueRotation=120 mix=0"
+    "HSVTool source out of mask|net.sf.openfx.HSVToolPlugin|filter|*|identity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=file:autocrop.pfm outputAlpha=0 hueRotation=120 --frames 0 --window 100,100,200,200"
+    # byte, Premultiply, Clamp White: a colour above its alpha is clamped (R 0.5 / 0.25 = 2 -> 1)
+    "HSVTool clamp white premult|net.sf.openfx.HSVToolPlugin|filter|byte|notidentity+mean=0.25,0.25,0.25,0.25||-i Source=solid:0.5,0.25,0.25,0.25 -i Mask=none outputAlpha=0 clampBlack=0 clampWhite=1 premult=1"
+    "HSVTool source alpha|net.sf.openfx.HSVToolPlugin|filter|*|mean=0.75,0.25,0.5,0.5||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none outputAlpha=0 clampBlack=0 hueRotation=120"
+    "HSVTool premult|net.sf.openfx.HSVToolPlugin|filter|*|mean=0.375,0.125,0.25,0.5||-i Source=solid:0.125,0.25,0.375,0.5 -i Mask=none outputAlpha=0 clampBlack=0 premult=1 hueRotation=120"
+    # DenoiseSharpen, RGB color model, R unchecked: B is denoised (issue #323)
+    "DenoiseSharpen B, not R|net.sf.openfx.DenoiseSharpen|filter|float|notidentity+changed:Source||--frames 0 -i Source=file:convsrc.pfm -i Mask=none analysisLock=1 colorModel=3 NatronOfxParamProcessR=0 crbbNoiseLevelHigh=0.02"
     # ImageStatistics: the analysis buttons (pressed with -s, instanceChanged with
     # kOfxChangeUserEdited) set keys at the analyzed frames; the output is the input.
     # hostDemo's input frame range is 0..25. HSVL: hue in degrees, L=(min+max)/2. The ramp is (x+0.5)/720.
@@ -653,6 +713,29 @@ tests=(
     # not padded to 1024x1024) by a 7x5 kernel: the exact linear convolution, without a CImg
     # "non 2^N dimension" error, whatever the FFT library (CImgFFTConvolve.h)
     "CImgConvolve 720x576|net.sf.cimg.CImgConvolve|filter|float|conv=convsrc.pfm,convk.pfm||--frames 0 -i Source=file:convsrc.pfm -i Filter=file:convk.pfm -i Mask=none filterCenter=2"
+    # ZDefocus (NatronGitHub/openfx-misc#266). A sharp sky (disparity 0) with Disparity with
+    # Offset and a Focus Point (the image center) on the sky: the output is the input (without
+    # Blur Inside).
+    "CImgZDefocus sky focus|net.sf.cimg.CImgZDefocus|general|float|conv=convsrc.pfm,delta.pfm||--frames 0 -i Source=file:convsrc.pfm -i Depth=solid:0,0,0,1 -i Filter=none depthType=2 useFocusPoint=1 blurInside=0"
+    # A depth map with a focus of 0: the radius is Size*|1 - 0/z| = Size everywhere (Size 2, a disc
+    # whose center weight is 0.126)
+    "CImgZDefocus depth focus 0|net.sf.cimg.CImgZDefocus|general|float|max=0.126,0.126,0.126,1+tol=0.003||--frames 0 -i Source=file:impulse.pfm -i Depth=solid:3,3,3,1 -i Filter=none depthType=0 useFocusPoint=0 focus=0 size=2 maxSize=20 slices=10 aperture=1 blurInside=0"
+    # Disparity with Offset: blur radius = Size*|d - d_f| = 10*0.2 = 2 pixels, a disc whose center
+    # weight is 0.126 (Disparity would give a radius of 10*(0.3/0.1 - 1) = 20 pixels: 0.0008)
+    "CImgZDefocus disparity offset|net.sf.cimg.CImgZDefocus|general|float|max=0.126,0.126,0.126,1+tol=0.003||--frames 0 -i Source=file:impulse.pfm -i Depth=solid:0.3,0.3,0.3,1 -i Filter=none depthType=2 useFocusPoint=0 focus=0.1 size=10 maxSize=20 slices=10 aperture=1"
+    # Blur Inside (on by default): an in-focus impulse gets the 3x3 kernel [0.125, 0.75, 0.125]^2,
+    # whose center weight is 0.5625
+    "CImgZDefocus blur inside|net.sf.cimg.CImgZDefocus|general|float|max=0.5625,0.5625,0.5625,1+tol=0.0005||--frames 0 -i Source=file:impulse.pfm -i Depth=solid:2,2,2,1 -i Filter=none depthType=0 useFocusPoint=0 focus=2"
+    # Blur Inside only blurs the pixels with no blur: a pixel just out of focus (radius 0.05, so
+    # 2.5% in the 2-pixel slice) is not blurred by it: its peak is 0.978, not 0.5625
+    "CImgZDefocus blur inside, slightly out of focus|net.sf.cimg.CImgZDefocus|general|float|max=0.978,0.978,0.978,1+tol=0.003||--frames 0 -i Source=file:impulse.pfm -i Depth=solid:2.01,2.01,2.01,1 -i Filter=none depthType=0 useFocusPoint=0 focus=2 size=10 maxSize=20 slices=10 aperture=1"
+    # A disparity map with a focus of 0: the ratio disparity/focus is infinite, so every pixel with
+    # a disparity above 0 is blurred by Maximum Size (2 pixels: center weight 0.126)
+    "CImgZDefocus disparity focus 0|net.sf.cimg.CImgZDefocus|general|float|max=0.126,0.126,0.126,1+tol=0.003||--frames 0 -i Source=file:impulse.pfm -i Depth=solid:0.5,0.5,0.5,1 -i Filter=none depthType=1 useFocusPoint=0 focus=0 size=1 maxSize=2 slices=10 aperture=1 blurInside=0"
+    # The Depth of Focus is a dead zone, subtracted from the normalized defocus:
+    # radius = Size*(|1 - d/d_f| - dof/2) = 10*(1.667 - 0.305) = 13.6 pixels, center weight
+    # 0.0019 (in disparity units, 6.5 pixels: 0.0087)
+    "CImgZDefocus depth of focus|net.sf.cimg.CImgZDefocus|general|float|max=0.00186,0.00186,0.00186,1+tol=0.0003||--frames 0 -i Source=file:impulse.pfm -i Depth=solid:0.8,0.8,0.8,1 -i Filter=none depthType=1 useFocusPoint=0 focus=0.3 depthOfFocus=0.61 size=10 maxSize=20 slices=10 aperture=1"
     # TimeDissolve, In 1 and Out 10 (the defaults): the In and Out frames are part of the dissolve
     # (issue #320). The curve abscissa is 0 at the frame before In and 1 at the frame after Out:
     # frame 0 is A, frame 11 is B, and with the smoothstep curve (hostDemo has no parametric
