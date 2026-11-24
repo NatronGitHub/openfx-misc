@@ -21,7 +21,9 @@
  * OFX FrameHold plugin.
  */
 
+#include <algorithm>
 #include <cmath>
+#include <string>
 #include <stdio.h> // for snprintf & _snprintf
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #  ifndef NOMINMAX
@@ -55,8 +57,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              host should not call render after isIdentity returns true, but some hosts (e.g. hostDemo) do;
 //              a NULL Source image (disconnected input) renders black instead of crashing (SupportExt copyPixels);
 //              the sublabel shows the frame as the host displays it (kOfxImageClipPropDisplayTimeOffset, display only);
-//              First Frame is set to the current frame when the user connects the Source and First Frame is still
-//              its default (0, not animated), and a "Set to Current Frame" button sets it (#307)
+//              a "Set to Current Frame" button sets First Frame; on Natron >= 2.6, connecting the Source sets First Frame
+//              to the current frame if it was never set (#307)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -69,11 +71,14 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamFirstFrame "firstFrame"
 #define kParamFirstFrameLabel "First Frame"
-#define kParamFirstFrameHint "Reference input frame (the frame to hold if increment is 0). When the Source is connected and First Frame is still 0 and not animated, it is set to the current frame."
+#define kParamFirstFrameHint "Reference input frame (the frame to hold if increment is 0). On Natron 2.6 and later, connecting the Source sets it to the current frame if it was never set."
 #define kParamFirstFrameDefault 0
+// Whether First Frame was set: by the user, by Set to Current Frame, or from the current frame when the Source
+// was connected. Secret, saved with the project.
+#define kParamFirstFrameInitialised "firstFrameInitialised"
 #define kParamSetToCurrentFrame "setToCurrentFrame"
 #define kParamSetToCurrentFrameLabel "Set to Current Frame"
-#define kParamSetToCurrentFrameHint "Set First Frame to the current frame (a key at the current frame if First Frame is animated)."
+#define kParamSetToCurrentFrameHint "Set First Frame to the current frame, within the frame range of the Source (a key at that frame if First Frame is animated)."
 #define kParamIncrement "increment"
 #define kParamIncrementLabel "Increment"
 #define kParamIncrementHint "If increment is 0, only the \"firstFrame\" will be held. If it is positive, every multiple of \"increment\" plus \"firstFrame\" will be held for \"increment\" frames afterwards (before if it is negative)."
@@ -91,6 +96,7 @@ public:
         , _srcClip(NULL)
         , _firstFrame(NULL)
         , _increment(NULL)
+        , _firstFrameInitialised(NULL)
         , _sublabel(NULL)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -105,8 +111,9 @@ public:
 
         _firstFrame = fetchIntParam(kParamFirstFrame);
         _increment = fetchIntParam(kParamIncrement);
+        _firstFrameInitialised = fetchBooleanParam(kParamFirstFrameInitialised);
         _sublabel = fetchStringParam(kNatronOfxParamStringSublabelName);
-        assert(_firstFrame && _increment && _sublabel);
+        assert(_firstFrame && _increment && _firstFrameInitialised && _sublabel);
 
         // finally
         syncPrivateData();
@@ -138,12 +145,15 @@ private:
 
     void setFirstFrameToCurrentFrame(double time);
 
+    static bool hostSkipsChangedClipOnLoad();
+
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;            /**< @brief Mandated output clips */
     Clip *_srcClip;            /**< @brief Mandated input clips */
     IntParam  *_firstFrame;
     IntParam  *_increment;
+    BooleanParam *_firstFrameInitialised;
     StringParam *_sublabel;
 };
 
@@ -192,19 +202,42 @@ FrameHoldPlugin::updateSublabel(double time)
 }
 
 // Set First Frame to the frame at time (the current frame of the host, from an instance changed action),
-// rounded to the nearest frame: a key at that time if First Frame is animated.
+// rounded to the nearest frame and clamped to the frame range of the Source if it is connected (as
+// FrameRange does): a key at that frame if First Frame is animated.
 void
 FrameHoldPlugin::setFirstFrameToCurrentFrame(double time)
 {
-    const int frame = static_cast<int>( std::floor(time + 0.5) );
+    int frame = static_cast<int>( std::floor(time + 0.5) );
 
+    if ( _srcClip && _srcClip->isConnected() ) {
+        const OfxRangeD range = _srcClip->getFrameRange();
+        const double first = std::ceil(range.min);
+        const double last = std::floor(range.max);
+        if (first <= last) {
+            frame = static_cast<int>( std::max( first, std::min(last, static_cast<double>(frame)) ) );
+        }
+    }
     if (_firstFrame->getNumKeys() > 0) {
-        _firstFrame->setValueAtTime(time, frame);
+        _firstFrame->setValueAtTime(frame, frame);
     } else {
         _firstFrame->setValue(frame);
     }
+    _firstFrameInitialised->setValue(true);
     // the instance changed action of this plugin edit does not update the sublabel
     updateSublabel(time);
+}
+
+// Whether the host does not call the clip changed action while it loads a project, so that changedClip only
+// sees connections made by the user. The OFX spec counts "loading values from files or presets" as user edits
+// (kOfxChangeUserEdited, ofxCore.h), and an old project has no firstFrameInitialised to protect its First
+// Frame: only Natron 2.6 and later are known to skip it.
+bool
+FrameHoldPlugin::hostSkipsChangedClipOnLoad()
+{
+    const ImageEffectHostDescription& host = *getImageEffectHostDescription();
+
+    return host.hostName == "fr.inria.Natron" &&
+           ( (host.versionMajor > 2) || ( (host.versionMajor == 2) && (host.versionMinor >= 6) ) );
 }
 
 void
@@ -268,7 +301,13 @@ void
 FrameHoldPlugin::changedParam(const InstanceChangedArgs &args,
                               const std::string &paramName)
 {
-    if ( ( (paramName == kParamFirstFrame) || (paramName == kParamIncrement) ) && (args.reason == eChangeUserEdit) ) {
+    if ( (paramName == kParamFirstFrame) && (args.reason == eChangeUserEdit) ) {
+        // a value set by the user (or loaded with a project) is never replaced on connect
+        if ( !_firstFrameInitialised->getValue() ) {
+            _firstFrameInitialised->setValue(true);
+        }
+        updateSublabel(args.time);
+    } else if ( (paramName == kParamIncrement) && (args.reason == eChangeUserEdit) ) {
         updateSublabel(args.time);
     } else if ( (paramName == kParamSetToCurrentFrame) && (args.reason == eChangeUserEdit) ) {
         setFirstFrameToCurrentFrame(args.time);
@@ -282,11 +321,12 @@ FrameHoldPlugin::changedClip(const InstanceChangedArgs &args,
     if ( (clipName != kOfxImageEffectSimpleSourceClipName) || (args.reason != eChangeUserEdit) ) {
         return;
     }
-    // As FrameRange does with its range: when the user connects the Source and First Frame is still its
-    // default, hold the current frame rather than frame 0, which is usually outside the input range (#307).
-    // Project loads are not user edits, so saved values are never changed.
-    if ( _srcClip && _srcClip->isConnected() && (_firstFrame->getNumKeys() == 0) &&
-         (_firstFrame->getValue() == kParamFirstFrameDefault) ) {
+    // As FrameRange does with its range: when the Source is connected and First Frame was never set, hold the
+    // current frame rather than frame 0, which is usually outside the input range (#307). Loading a project
+    // is a user edit too (ofxCore.h, kOfxChangeUserEdited), so this only runs on hosts that do not call
+    // changedClip while loading, and firstFrameInitialised keeps a First Frame that was set.
+    if ( hostSkipsChangedClipOnLoad() && _srcClip && _srcClip->isConnected() &&
+         !_firstFrameInitialised->getValue() && (_firstFrame->getNumKeys() == 0) ) {
         setFirstFrameToCurrentFrame(args.time);
 
         return;
@@ -387,6 +427,18 @@ FrameHoldPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamSetToCurrentFrame);
         param->setLabel(kParamSetToCurrentFrameLabel);
         param->setHint(kParamSetToCurrentFrameHint);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    // firstFrameInitialised
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamFirstFrameInitialised);
+        param->setDefault(false);
+        param->setIsSecretAndDisabled(true); // always secret
+        param->setAnimates(false);
+        param->setEvaluateOnChange(false);
         if (page) {
             page->addChild(*param);
         }
