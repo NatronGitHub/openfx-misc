@@ -643,6 +643,45 @@ tests=(
     # render scale 0.5 (the means are those of the full-scale renders), tiles
     # (--window: the same pixels as the full render), and a fractional time
     "Radial scale 0.5|net.sf.openfx.Radial|general|*|mean=0.231,0.231,0.231,0.231||-i Source=none -i Mask=none --scale 0.5"
+    # Radial (softness 0) and Rectangle (a 200x200 shape at 100,100) over a solid Source: Invert draws Color 0 (black and
+    # transparent) inside and Color 1 (white) outside; Premultiply sets the Source RGB to black outside of the
+    # shape (with nothing drawn), or inside with Invert; Replace draws on black in the drawn channels (here inside
+    # and outside). With Replace and an opaque Source, the output is premultiplied (UnPremultiplied without Replace).
+    "Radial invert inside|net.sf.openfx.Radial|general|*|mean=0.5,0.5,0.5,1||-i Source=solid:0.5,0.5,0.5,1 -i Mask=none bottomLeft=100,100 size=200,200 softness=0 invert=1 --frames 0 --window 199,199,201,201"
+    "Radial invert outside|net.sf.openfx.Radial|general|*|mean=1,1,1,1||-i Source=solid:0.5,0.5,0.5,1 -i Mask=none bottomLeft=100,100 size=200,200 softness=0 invert=1 --frames 0 --window 400,400,410,410"
+    "Radial premultiply outside|net.sf.openfx.Radial|general|*|notidentity+mean=0,0,0,1||-i Source=solid:0.5,0.5,0.5,1 -i Mask=none bottomLeft=100,100 size=200,200 softness=0 color1=0,0,0,0 premultiply=1 --frames 0 --window 400,400,410,410"
+    "Radial premultiply invert inside|net.sf.openfx.Radial|general|*|notidentity+mean=0,0,0,1||-i Source=solid:0.5,0.5,0.5,1 -i Mask=none bottomLeft=100,100 size=200,200 softness=0 color1=0,0,0,0 premultiply=1 invert=1 --frames 0 --window 199,199,201,201"
+    "Radial premultiply invert outside|net.sf.openfx.Radial|general|*|mean=0.5,0.5,0.5,1||-i Source=solid:0.5,0.5,0.5,1 -i Mask=none bottomLeft=100,100 size=200,200 softness=0 color1=0,0,0,0 premultiply=1 invert=1 --frames 0 --window 400,400,410,410"
+    "Radial replace inside|net.sf.openfx.Radial|general|*|mean=0.2,0.2,0.2,0.5||-i Source=solid:0.5,0.5,0.5,1 -i Mask=none bottomLeft=100,100 size=200,200 softness=0 color1=0.2,0.2,0.2,0.5 replace=1 --frames 0 --window 199,199,201,201"
+    "Radial replace outside|net.sf.openfx.Radial|general|*|notidentity+mean=0,0,0,0||-i Source=solid:0.5,0.5,0.5,1 -i Mask=none bottomLeft=100,100 size=200,200 softness=0 color1=0.2,0.2,0.2,0.5 replace=1 --frames 0 --window 400,400,410,410"
+    "Radial premultiply replace opaque|net.sf.openfx.Radial|general|*|premult=PreMultiplied+notidentity||-i Source=file:autocrop.pfm#opaque -i Mask=none bottomLeft=10,8 size=32,16 premultiply=1 replace=1"
+    "Radial premultiply opaque|net.sf.openfx.Radial|general|*|premult=UnPreMultiplied+notidentity||-i Source=file:autocrop.pfm#opaque -i Mask=none bottomLeft=10,8 size=32,16 premultiply=1"
+    "Rectangle invert inside|net.sf.openfx.Rectangle|general|*|mean=0.5,0.5,0.5,1||-i Source=solid:0.5,0.5,0.5,1 -i Mask=none bottomLeft=100,100 size=200,200 invert=1 --frames 0 --window 199,199,201,201"
+    "Rectangle invert outside|net.sf.openfx.Rectangle|general|*|mean=1,1,1,1||-i Source=solid:0.5,0.5,0.5,1 -i Mask=none bottomLeft=100,100 size=200,200 invert=1 --frames 0 --window 400,400,410,410"
+    "Rectangle premultiply outside|net.sf.openfx.Rectangle|general|*|notidentity+mean=0,0,0,1||-i Source=solid:0.5,0.5,0.5,1 -i Mask=none bottomLeft=100,100 size=200,200 color1=0,0,0,0 premultiply=1 --frames 0 --window 400,400,410,410"
+    "Rectangle premultiply invert inside|net.sf.openfx.Rectangle|general|*|notidentity+mean=0,0,0,1||-i Source=solid:0.5,0.5,0.5,1 -i Mask=none bottomLeft=100,100 size=200,200 color1=0,0,0,0 premultiply=1 invert=1 --frames 0 --window 199,199,201,201"
+    "Rectangle premultiply invert outside|net.sf.openfx.Rectangle|general|*|mean=0.5,0.5,0.5,1||-i Source=solid:0.5,0.5,0.5,1 -i Mask=none bottomLeft=100,100 size=200,200 color1=0,0,0,0 premultiply=1 invert=1 --frames 0 --window 400,400,410,410"
+    "Rectangle replace inside|net.sf.openfx.Rectangle|general|*|mean=0.2,0.2,0.2,0.5||-i Source=solid:0.5,0.5,0.5,1 -i Mask=none bottomLeft=100,100 size=200,200 color1=0.2,0.2,0.2,0.5 replace=1 --frames 0 --window 199,199,201,201"
+    "Rectangle replace outside|net.sf.openfx.Rectangle|general|*|notidentity+mean=0,0,0,0||-i Source=solid:0.5,0.5,0.5,1 -i Mask=none bottomLeft=100,100 size=200,200 color1=0.2,0.2,0.2,0.5 replace=1 --frames 0 --window 400,400,410,410"
+    "Rectangle premultiply replace opaque|net.sf.openfx.Rectangle|general|*|premult=PreMultiplied+notidentity||-i Source=file:autocrop.pfm#opaque -i Mask=none bottomLeft=10,8 size=32,16 premultiply=1 replace=1"
+    "Rectangle premultiply opaque|net.sf.openfx.Rectangle|general|*|premult=UnPreMultiplied+notidentity||-i Source=file:autocrop.pfm#opaque -i Mask=none bottomLeft=10,8 size=32,16 premultiply=1"
+    # Premultiply in the softness: the Source RGB times the shape weight (0.399 here, the output with Color 1 white)
+    "Rectangle softness weight|net.sf.openfx.Rectangle|general|float|mean=0.399,0.399,0.399,0.399||-i Source=none -i Mask=none bottomLeft=100,100 size=200,200 softness=40 --frames 0 --window 110,199,111,201"
+    "Rectangle premultiply softness|net.sf.openfx.Rectangle|general|*|mean=0.1995,0.1995,0.1995,1||-i Source=solid:0.5,0.5,0.5,1 -i Mask=none bottomLeft=100,100 size=200,200 softness=40 color1=0,0,0,0 premultiply=1 --frames 0 --window 110,199,111,201"
+    # Extent = Format with no Source: the RoD is the format, also when only Color 0 is not black (here with Invert)
+    "Radial format invert|net.sf.openfx.Radial|general|*|nonconst+mean=0.769,0.769,0.769,0.769||-i Source=none -i Mask=none extent=0 invert=1"
+    # Rectangle: the shape is the format, with a softness so that Invert draws Color 1 near its edges (it was an
+    # empty RoD, a constant output)
+    "Rectangle format invert|net.sf.openfx.Rectangle|general|*|nonconst||-i Source=none -i Mask=none extent=0 softness=50 invert=1"
+    # a coloured transparent Color 0 (red) is drawn outside: the output is not premultiplied
+    "Rectangle premultiply replace red color0|net.sf.openfx.Rectangle|general|*|premult=UnPreMultiplied+notidentity||-i Source=file:autocrop.pfm#opaque -i Mask=none bottomLeft=10,8 size=32,16 color0=1,0,0,0 premultiply=1 replace=1"
+    "Radial premultiply replace red color0|net.sf.openfx.Radial|general|*|premult=UnPreMultiplied+notidentity||-i Source=file:autocrop.pfm#opaque -i Mask=none bottomLeft=10,8 size=32,16 color0=1,0,0,0 premultiply=1 replace=1"
+    # with Invert, Color 0 (red) is drawn inside, where the alpha is 0: not premultiplied; a red Color 1 is drawn
+    # outside, where the alpha is 1: premultiplied
+    "Radial premultiply replace invert red color0|net.sf.openfx.Radial|general|*|premult=UnPreMultiplied||-i Source=file:autocrop.pfm#opaque -i Mask=none bottomLeft=10,8 size=32,16 color0=1,0,0,0 premultiply=1 replace=1 invert=1"
+    "Radial premultiply replace invert red color1|net.sf.openfx.Radial|general|*|premult=PreMultiplied||-i Source=file:autocrop.pfm#opaque -i Mask=none bottomLeft=10,8 size=32,16 color1=1,0,0,1 premultiply=1 replace=1 invert=1"
+    # R is not drawn: the red of Color 0 does not count
+    "Radial premultiply replace red color0 R off|net.sf.openfx.Radial|general|*|premult=PreMultiplied||-i Source=file:autocrop.pfm#opaque -i Mask=none bottomLeft=10,8 size=32,16 color0=1,0,0,0 premultiply=1 replace=1 NatronOfxParamProcessR=0"
     "Transform scale 0.5|net.sf.openfx.TransformPlugin|filter|float|mean=0.31,0.31,0.31,0.31||-i Source=checker:32 rotate=30 scale=0.8,0.8 --scale 0.5"
     "CImgBlur scale 0.5|net.sf.cimg.CImgBlur|filter|float|mean=0.497,0.497,0.497,0.497||-i Source=checker:8 -i Mask=none size=5,5 expandRoD=0 --scale 0.5"
     # filter=2: Box (FIR). The default IIR filters have an infinite support, so
