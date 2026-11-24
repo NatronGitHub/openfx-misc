@@ -673,22 +673,30 @@ tests=(
     "LensDistortion 3DE filmback 0|net.sf.openfx.LensDistortion|general|float|mean=0.5,0.5,1,1||-i Source=checker:16 model=2 tde4_filmback_width_cm=0 outputMode=STMap"
     "LensDistortion 3DE b=-2|net.sf.openfx.LensDistortion|general|float|mean=0.5,0.5,1,1||-i Source=checker:16 model=5 tde4_B_Cylindric_Bending=-2 outputMode=STMap"
     # IDistort and STMap (#303), float (the UV input has the output depth, and only float UV values
-    # are supported): the output is multiplied by the UV alpha (Multiply by UV Alpha, the default), or not.
-    "IDistort UV alpha|net.sf.openfx.IDistort|general|float|mean=0.25,0.25,0.25,0.5||-i Source=solid:0.5,0.5,0.5,1 -i UV=solid:0,0,0,0.5 -i Mask=none"
-    "IDistort no UV alpha|net.sf.openfx.IDistort|general|float|mean=0.5,0.5,0.5,1||-i Source=solid:0.5,0.5,0.5,1 -i UV=solid:0,0,0,0.5 -i Mask=none multiplyByUVAlpha=0"
-    "STMap UV alpha|net.sf.openfx.STMap|general|float|mean=0.25,0.25,0.25,0.5||-i Source=solid:0.5,0.5,0.5,1 -i UV=solid:0.5,0.5,0,0.5 -i Mask=none"
-    "STMap no UV alpha|net.sf.openfx.STMap|general|float|mean=0.5,0.5,0.5,1||-i Source=solid:0.5,0.5,0.5,1 -i UV=solid:0.5,0.5,0,0.5 -i Mask=none multiplyByUVAlpha=0"
-    # Blur Channel B = 4 pixels, Box filter (filter=1): the sampled area is 5 pixels wide. The pixels
-    # x=64 and 65 are white (the edge of a 64-pixel checker is at x=64), and their 5-pixel areas are
-    # 3/5 and 4/5 white (mean 0.7); without blur (Blur Scale 0), they are white.
-    "IDistort blur|net.sf.openfx.IDistort|general|float|mean=0.7,0.7,0.7,0.7||-i Source=checker:64 -i UV=solid:0,0,4,1 -i Mask=none channelBlur=2 filter=1 --frames 0 --window 64,10,66,20"
+    # are supported). Version 3 does not multiply the output by the UV alpha; version 2 (-m 2,
+    # obsolete) does.
+    "IDistort UV alpha|net.sf.openfx.IDistort|general|float|mean=0.5,0.5,0.5,1||-i Source=solid:0.5,0.5,0.5,1 -i UV=solid:0,0,0,0.5 -i Mask=none"
+    "IDistort v2 UV alpha|net.sf.openfx.IDistort|general|float|mean=0.25,0.25,0.25,0.5||-m 2 -i Source=solid:0.5,0.5,0.5,1 -i UV=solid:0,0,0,0.5 -i Mask=none"
+    "STMap UV alpha|net.sf.openfx.STMap|general|float|mean=0.5,0.5,0.5,1||-i Source=solid:0.5,0.5,0.5,1 -i UV=solid:0.5,0.5,0,0.5 -i Mask=none"
+    "STMap v2 UV alpha|net.sf.openfx.STMap|general|float|mean=0.25,0.25,0.25,0.5||-m 2 -i Source=solid:0.5,0.5,0.5,1 -i UV=solid:0.5,0.5,0,0.5 -i Mask=none"
+    # Blur Channel B = 4 (square) pixels, across the edge of a 64-pixel checker at x=64: the pixels x=64
+    # and 65 are white without blur (Blur Scale 0). The blur along x is 4 / PAR = 3.75 pixels (hostDemo's
+    # PAR is 768/720), so with the Box filter (filter=1) the sampled area is 4.75 pixels wide: 2.875/4.75
+    # and 3.875/4.75 white (mean 0.7105; version 2, in x pixels: 5 pixels wide, 3/5 and 4/5, mean 0.7).
+    # The default Cubic filter is a separable kernel 4.75 pixels wide along x, evaluated every
+    # round(64/4.75) = 13/64 of its support: (k(0)+2k(13/64)+...)/... gives a mean of 0.6922.
+    "IDistort blur box|net.sf.openfx.IDistort|general|float|mean=0.7105,0.7105,0.7105,0.7105||-i Source=checker:64 -i UV=solid:0,0,4,1 -i Mask=none channelBlur=2 filter=1 --frames 0 --window 64,10,66,20"
+    "IDistort v2 blur box|net.sf.openfx.IDistort|general|float|mean=0.7,0.7,0.7,0.7||-m 2 -i Source=checker:64 -i UV=solid:0,0,4,1 -i Mask=none channelBlur=2 filter=1 --frames 0 --window 64,10,66,20"
+    "IDistort blur cubic|net.sf.openfx.IDistort|general|float|tol=2e-3+mean=0.6922,0.6922,0.6922,0.6922||-i Source=checker:64 -i UV=solid:0,0,4,1 -i Mask=none channelBlur=2 --frames 0 --window 64,10,66,20"
     "IDistort blur scale 0|net.sf.openfx.IDistort|general|float|mean=1,1,1,1||-i Source=checker:64 -i UV=solid:0,0,4,1 -i Mask=none channelBlur=2 blurScale=0 filter=1 --frames 0 --window 64,10,66,20"
-    # the same at render scale 0.5: the blur is in full-scale pixels, so the area is 1+2 pixels wide
-    # at x=32 and 33 (the edge is at x=32): 2/3 and 1 white (mean 0.833; 0.7 if the blur ignored the scale)
-    "IDistort blur scale 0.5|net.sf.openfx.IDistort|general|float|mean=0.8333,0.8333,0.8333,0.8333||-i Source=checker:64 -i UV=solid:0,0,4,1 -i Mask=none channelBlur=2 filter=1 --scale 0.5 --frames 0 --window 32,5,34,10"
+    # the same at render scale 0.5: the blur is in full-scale pixels, so the Box area is 1 + 1.875 pixels
+    # wide at x=32 and 33 (the edge is at x=32): 1.9375/2.875 and 1 white (mean 0.837; 0.7 if the blur
+    # ignored the scale)
+    "IDistort blur scale 0.5|net.sf.openfx.IDistort|general|float|mean=0.837,0.837,0.837,0.837||-i Source=checker:64 -i UV=solid:0,0,4,1 -i Mask=none channelBlur=2 filter=1 --scale 0.5 --frames 0 --window 32,5,34,10"
     # a huge blur (1e30, unpremultiplied by alpha 1e-30: inf without the clamp to the source size) is
-    # finite: the average of the solid source
-    "IDistort blur huge|net.sf.openfx.IDistort|general|float|mean=0.5,0.5,0.5,1||-i Source=solid:0.5,0.5,0.5,1 -i UV=solid:0,0,1,1e-30 -i Mask=none channelBlur=2 unpremultUV=1 multiplyByUVAlpha=0 blurScale=1e30 filter=1 --frames 0 --window 300,300,302,302"
+    # finite: the average of the solid source, with the Box and the Cubic filters
+    "IDistort blur huge|net.sf.openfx.IDistort|general|float|mean=0.5,0.5,0.5,1||-i Source=solid:0.5,0.5,0.5,1 -i UV=solid:0,0,1,1e-30 -i Mask=none channelBlur=2 unpremultUV=1 blurScale=1e30 filter=1 --frames 0 --window 300,300,302,302"
+    "IDistort blur huge cubic|net.sf.openfx.IDistort|general|float|mean=0.5,0.5,0.5,1||-i Source=solid:0.5,0.5,0.5,1 -i UV=solid:0,0,1,1e-30 -i Mask=none channelBlur=2 unpremultUV=1 blurScale=1e30 --frames 0 --window 300,300,302,302"
     # FrameBlend Min/Max where no frame is used (FgM > 0 everywhere): 0 (it was +-infinity)
     "FrameBlend Min no frame|net.sf.openfx.FrameBlend|filter|*|mean=0,0,0,0||-i Source=solid:0.5,0.5,0.5,1 -i FgM=solid:1,1,1,1 -i Mask=none operation=Min"
     "FrameBlend Max no frame|net.sf.openfx.FrameBlend|filter|*|mean=0,0,0,0||-i Source=solid:0.5,0.5,0.5,1 -i FgM=solid:1,1,1,1 -i Mask=none operation=Max"
