@@ -39,7 +39,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Channel"
 #define kPluginDescription "Rearrange channels from one or two inputs and/or convert to different bit depth or components. No colorspace conversion is done (mapping is linear, even for 8-bit and 16-bit types).\n" \
     "In the filter context (a single input, e.g. in hosts that only have filters), the A and B channels both read the Source input.\n" \
-    "Each Shuffle writes one output layer (Output Layer), with up to 4 channels: use several Shuffle nodes to write several layers."
+    "On hosts with multiplane support, each Shuffle writes one output layer (Output Layer), with up to 4 channels: use several Shuffle nodes to write several layers."
 #define kPluginDescriptionDefaultB "\n" \
     "With two inputs, R, G, B and A all come from B by default. To copy the alpha of A onto the color of B, set A to A.Color.A."
 #define kPluginDescriptionVersion4 "\n" \
