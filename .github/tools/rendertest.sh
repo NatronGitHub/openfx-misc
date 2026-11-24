@@ -8,6 +8,7 @@
 # Usage (from the top of the source tree): .github/tools/rendertest.sh [DIR...]
 # RENDERTEST_ONLY=ERE: only the renders whose label (the first field of the test
 # list below) matches the extended regular expression ERE, e.g. ^CImgConvolve.
+# RENDERTEST_TIMEOUT=N: kill a hostDemo run after N seconds (default 300; not on Windows).
 # The plugins are the *.ofx.bundle found under the DIRs, which should be the
 # build directories of one configuration, e.g. Misc/Linux-64-release
 # CImg/Linux-64-release. Without DIRs, the *-$CONFIG directories of the source
@@ -423,10 +424,21 @@ print([k for k in r["renders"] if k["time"] == 0 and not k.get("view")][0]["outp
 
 # hostdemo LOG ARGS...: run hostDemo with its output in LOG. The subshell
 # keeps the shell's message about a crash (e.g. "Segmentation fault") in LOG.
+# On Linux and macOS, a render that takes more than RENDERTEST_TIMEOUT seconds
+# (default 300) is killed by SIGALRM (perl's alarm survives exec), so that a
+# hang fails instead of blocking the test.
+RENDERTEST_TIMEOUT=${RENDERTEST_TIMEOUT:-300}
 hostdemo() {
-    local log=$1
+    local log=$1 status=0
     shift
-    ( "$HOSTDEMO" --no-std-paths --no-cache --quiet "$@"; exit $? ) > "$log" 2>&1
+    if [ $windows = 1 ]; then
+        ( "$HOSTDEMO" --no-std-paths --no-cache --quiet "$@"; exit $? ) > "$log" 2>&1
+        return
+    fi
+    ( exec perl -e 'alarm shift; exec @ARGV or die "$!\n"' "$RENDERTEST_TIMEOUT" \
+           "$HOSTDEMO" --no-std-paths --no-cache --quiet "$@" ) > "$log" 2>&1 || status=$?
+    [ "$status" != 142 ] || echo "timeout: killed after ${RENDERTEST_TIMEOUT}s" >> "$log"
+    return "$status"
 }
 
 # The renders, one per line: "label|plugin id|context|depths|expected output|
@@ -782,6 +794,21 @@ tests=(
     # vramp(center + (p - center) * 32 / k) over k = 1..32 is 0.578 (the old code gave 0.907)
     "GodRays scale 0 Y|net.sf.openfx.GodRays|filter|float|mean=0.578,0.578,0.578,1||-i Source=file:vramp.pfm center=200,150 scale=5,0 --window 280,200,312,232"
     "GodRays scale 0 uniform|net.sf.openfx.GodRays|filter|float|mean=0.578,0.578,0.578,1||-i Source=file:vramp.pfm center=200,150 uniform=1 scale=0,5 --window 280,200,312,232"
+    # SupportExt#185: with Mix < 1 and no mask, the RoD of TransformMasked and CornerPinMasked was the
+    # transformed one, without the source, which the output blends with, and the RoI did not fetch
+    # the source under the output. Translated by 200 (187.5 pixels at the PAR 768/720), the output is
+    # now the whole project: 0.5 (half the source) on the left 187.5 pixels, 1 elsewhere, a mean of
+    # 0.870 (it was 0.824 and 0.857: no left part, and only half the source on part of the right)
+    "TransformMasked mix 0.5|net.sf.openfx.TransformMaskedPlugin|general|*|mean=0.870,0.870,0.870,0.870+tol=0.005||-i Source=solid:1,1,1,1 -i Mask=none translate=200,0 mix=0.5"
+    "CornerPinMasked mix 0.5|net.sf.openfx.CornerPinMaskedPlugin|general|*|mean=0.870,0.870,0.870,0.870+tol=0.005||-i Source=solid:1,1,1,1 -i Mask=none to1=200,0 to2=920,0 to3=920,576 to4=200,576 mix=0.5"
+    # SupportExt#184: DirBlur with Motion Blur 0 rendered 0.999 of the transform (a 337.16 pixel
+    # translation instead of 337.5 here). The mean of the shifted ramp on the window is 162.5/720
+    # (it was 0.226291)
+    "DirBlur motion blur 0|net.sf.openfx.DirBlur|general|float|mean=0.225694,0.225694,0.225694,0.225694+tol=0.0001||-i Source=ramp -i Mask=none translate=360,0 motionBlur=0 --window 400,100,600,200"
+    # SupportExt#205-#207 (part of #273): a huge shutter (hosts may not clamp to the 1000-frame range) gives an
+    # infinite RoD; the RoD loop, which samples the shutter every quarter frame, did not end before #207
+    "Transform shutter 1e30|net.sf.openfx.TransformPlugin|filter|float|nonconst||-i Source=ramp motionBlur=1 shutter=1e30"
+    "TransformMasked shutter 1e30|net.sf.openfx.TransformMaskedPlugin|general|float|nonconst||-i Source=ramp -i Mask=none motionBlur=1 shutter=1e30"
     # Rand with density 0 computed 0/0 for its noise level
     "Rand density 0|net.sf.openfx.Noise|general|*|mean=0,0,0,0||-i Source=none density=0"
     "ImageStatistics auto crop seq|net.sf.openfx.ImageStatistics|filter|float|value:autoCropSize=34.133333,16+keys:autoCropBottomLeft=26+keys:autoCropSize=26+keyrange:autoCropSize=0,25||-i Source=file:autocrop.pfm@100,50 -s analyzeSequenceAutoCrop"
