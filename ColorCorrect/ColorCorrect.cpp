@@ -604,7 +604,9 @@ private:
         if (_mixLuminance != 0.) {
             // shift r, g and b by the same value: all the Luminance Math formulas are then shifted
             // by that value (their weights sum to 1, or the maximum), so that 1 gives the input luminance
-            const double shift = _mixLuminance * ( l - luminance(p.r, p.g, p.b, _luminanceMath) );
+            // the input luminance in double (l is the float of the tone range lookup)
+            const double lIn = luminance(*r, *g, *b, _luminanceMath);
+            const double shift = _mixLuminance * ( lIn - luminance(p.r, p.g, p.b, _luminanceMath) );
             p.r += shift;
             p.g += shift;
             p.b += shift;
@@ -634,15 +636,14 @@ private:
                           double *g,
                           double *b)
     {
-        const double s = (std::max)(0., s_scale);
-        const double h = (std::max)(0., h_scale);
-        const double m = (std::max)(0., 1. - s_scale - h_scale);
+        const double s = ofxsClamp(s_scale, 0, 1);
+        const double h = ofxsClamp(h_scale, 0, 1);
+        const double m = ofxsClamp(1. - s - h, 0, 1);
         const double gray = 0.5 * m + h;
         const double sm = 4. * s * m; // 1 at s = m = 0.5
         const double mh = 4. * m * h; // 1 at m = h = 0.5
-        const double rb = gray + 0.25 * (mh - sm);
-        *r = *b = (std::max)( 0., (std::min)(rb, 1.) );
-        *g = (std::max)( 0., (std::min)(gray + 0.25 * (sm - mh), 1.) );
+        *r = *b = ofxsClamp(gray + 0.25 * (mh - sm), 0, 1);
+        *g = ofxsClamp(gray + 0.25 * (sm - mh), 0, 1);
     }
 
     double lookupTableValue(int curve, double parametricPos) const

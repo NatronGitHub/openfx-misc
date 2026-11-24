@@ -502,6 +502,8 @@ tests=(
     # ColorCorrect Mix Luminance 1: gain 2 doubles the color, and the same value is added to R, G and B so that
     # the Rec. 709 luminance is the input one (0.4648756): 2 * (0.25,0.5,0.75) - 0.4648756
     "ColorCorrect mix luminance|net.sf.openfx.ColorCorrectPlugin|filter|float|tol=1e-4+mean=0.0351244,0.5351244,1.0351244,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none MasterGain=2,2,2,2 mixLuminance=1"
+    # Mix Luminance 0.5: half of that shift, 2 * (0.25,0.5,0.75) - 0.4648756 / 2
+    "ColorCorrect mix luminance 0.5|net.sf.openfx.ColorCorrectPlugin|filter|float|tol=1e-4+mean=0.2675622,0.7675622,1.2675622,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none MasterGain=2,2,2,2 mixLuminance=0.5"
     # ColorCorrect Test: the tone range of the input luminance, gray in the midtones (luminance 0.465),
     # green half-way in the shadows ramp (0.045: shadows 0.5, midtones 0.5), magenta half-way in the
     # highlights ramp (0.75: midtones 0.5, highlights 0.5)
