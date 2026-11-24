@@ -53,7 +53,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 2.0: support multiplane
 // version 2.1: add kParamSetGBAFromR
 // version 3.0: B input is now the default, pass-through when plugin is disabled
-// version 3.1: fix crashes and failed renders in the filter context, and when the default input (B) is disconnected
+// version 3.1: fix crashes and failed renders in the filter context (with the multiplane suites, its channel
+//              choices list the Source channels), and when the default input (B) is disconnected
 // version 4.0: on hosts without the multiplane suites, the A channels read the A input and the B channels the B input
 //              (version 3 swapped them, which is kept so that version 3 projects render the same)
 //              Also: R, G, B from the color plane of an input and A from another plane was taken for an
@@ -1921,11 +1922,9 @@ ShufflePluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
     gIsMultiPlanar = false;
 #endif
 
-    // The filter context is not supported with the multiplane suites: the A. and B. channel options
-    // cannot resolve to the single Source clip. Natron and Nuke instantiate Shuffle in the general context.
-    if (!gIsMultiPlanarV1 && !gIsMultiPlanarV2) {
-        desc.addSupportedContext(eContextFilter);
-    }
+    // With the multiplane suites, the channel choices of the filter context list the Source planes only
+    // (see describeInContext()).
+    desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
 } // ShufflePluginFactory::describe
 
@@ -2076,19 +2075,26 @@ ShufflePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &des
         }
     }
 
-    std::vector<std::string> clipsForChannels(2);
-    clipsForChannels[0] = kClipA; //this->getMajorVersion() < 3 ? kClipA : kClipB;
-    clipsForChannels[1] = kClipB; //this->getMajorVersion() < 3 ? kClipB : kClipA;
+    // With the multiplane suites, the options of the channel choices are matched with the clips that the
+    // instance gives (fetchDynamicMultiplaneChoiceParameter): with several clips they have a clip prefix
+    // ("A.", "B."), with one clip they have none. The filter context only has Source, which the instance
+    // gives as its only clip (issue #255): list Source only, so that the options are those of that clip.
+    // The A channels are its first options (R, G, B, A, as in the A.r to A.a options of two clips).
+    const bool channelsFromSourceOnly = (context == eContextFilter) && (gIsMultiPlanarV1 || gIsMultiPlanarV2);
+    const std::vector<std::string> clipsForChannels = channelsFromSourceOnly ?
+        std::vector<std::string>{kOfxImageEffectSimpleSourceClipName} :
+        std::vector<std::string>{kClipA, kClipB};
+    const bool defaultIsA = (this->getMajorVersion() < 3) || channelsFromSourceOnly;
 
     if (gSupportsRGB || gSupportsRGBA) {
         // outputR
         if (gIsMultiPlanarV1 || gIsMultiPlanarV2) {
             ChoiceParamDescriptor* r = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clipsForChannels, kParamOutputR, kParamOutputRLabel, kParamOutputRHint);
-            r->setDefault(this->getMajorVersion() < 3 ? eInputChannelAR : eInputChannelBR);
+            r->setDefault(defaultIsA ? eInputChannelAR : eInputChannelBR);
             ChoiceParamDescriptor* g = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clipsForChannels, kParamOutputG, kParamOutputGLabel, kParamOutputGHint);
-            g->setDefault(this->getMajorVersion() < 3 ? eInputChannelAG : eInputChannelBG);
+            g->setDefault(defaultIsA ? eInputChannelAG : eInputChannelBG);
             ChoiceParamDescriptor* b = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clipsForChannels, kParamOutputB, kParamOutputBLabel, kParamOutputBHint);
-            b->setDefault(this->getMajorVersion() < 3 ? eInputChannelAB : eInputChannelBB);
+            b->setDefault(defaultIsA ? eInputChannelAB : eInputChannelBB);
         } else {
             {
                 ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputR);
@@ -2126,7 +2132,7 @@ ShufflePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &des
     if (gSupportsRGBA || gSupportsAlpha) {
         if (gIsMultiPlanarV1 || gIsMultiPlanarV2) {
             ChoiceParamDescriptor* a = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clipsForChannels, kParamOutputA, kParamOutputALabel, kParamOutputAHint);
-            a->setDefault(this->getMajorVersion() < 3 ? eInputChannelAA : eInputChannelBA);
+            a->setDefault(defaultIsA ? eInputChannelAA : eInputChannelBA);
         } else {
             {
                 ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputA);
