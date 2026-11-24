@@ -203,11 +203,13 @@ FrameHoldPlugin::updateSublabel(double time)
 
 // Set First Frame to the frame at time (the current frame of the host, from an instance changed action),
 // rounded to the nearest frame and clamped to the frame range of the Source if it is connected (as
-// FrameRange does): a key at that frame if First Frame is animated.
+// FrameRange does). If First Frame is animated, the key is at the current frame (rounded, not clamped),
+// with the clamped value.
 void
 FrameHoldPlugin::setFirstFrameToCurrentFrame(double time)
 {
-    int frame = static_cast<int>( std::floor(time + 0.5) );
+    const int currentFrame = static_cast<int>( std::floor(time + 0.5) );
+    int frame = currentFrame;
 
     if ( _srcClip && _srcClip->isConnected() ) {
         const OfxRangeD range = _srcClip->getFrameRange();
@@ -218,7 +220,7 @@ FrameHoldPlugin::setFirstFrameToCurrentFrame(double time)
         }
     }
     if (_firstFrame->getNumKeys() > 0) {
-        _firstFrame->setValueAtTime(frame, frame);
+        _firstFrame->setValueAtTime(currentFrame, frame);
     } else {
         _firstFrame->setValue(frame);
     }
@@ -324,9 +326,12 @@ FrameHoldPlugin::changedClip(const InstanceChangedArgs &args,
     // As FrameRange does with its range: when the Source is connected and First Frame was never set, hold the
     // current frame rather than frame 0, which is usually outside the input range (#307). Loading a project
     // is a user edit too (ofxCore.h, kOfxChangeUserEdited), so this only runs on hosts that do not call
-    // changedClip while loading, and firstFrameInitialised keeps a First Frame that was set.
+    // changedClip while loading, and firstFrameInitialised keeps a First Frame that was set. First Frame must
+    // also still be its default: an old project has no flag, and a value set from a script, an expression or
+    // a link does not set it.
     if ( hostSkipsChangedClipOnLoad() && _srcClip && _srcClip->isConnected() &&
-         !_firstFrameInitialised->getValue() && (_firstFrame->getNumKeys() == 0) ) {
+         !_firstFrameInitialised->getValue() && (_firstFrame->getNumKeys() == 0) &&
+         (_firstFrame->getValue() == kParamFirstFrameDefault) ) {
         setFirstFrameToCurrentFrame(args.time);
 
         return;
