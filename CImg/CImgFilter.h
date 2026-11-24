@@ -187,6 +187,11 @@ public:
 
     virtual void changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName) OVERRIDE;
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE;
+    // In the general context, map Source and Output to the same components (render() needs them to
+    // be the same). Plug-ins that override getClipPreferences() must call this one first.
+    // CImgOperatorPluginHelper intentionally doesn't: it maps its two inputs to the output's
+    // default components instead (CImgOperator.h).
+    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE;
     static OFX::PageParamDescriptor* describeInContextBegin(bool sourceIsOptional,
                                                             OFX::ImageEffectDescriptor &desc,
                                                             OFX::ContextEnum context,
@@ -360,6 +365,15 @@ public:
                         ) = 0;
     virtual bool isIdentity(const OFX::IsIdentityArguments & /*args*/,
                             const Params& /*params*/) { return false; };
+
+    // true if the image passed to render() has an alpha channel (its alphaChannel argument is not -1):
+    // Alpha and RGBA images with Process A, when the components can be remapped. Used by render() and
+    // by the isIdentity() of the plug-ins.
+    bool renderHasAlphaChannel(int nComponents,
+                               bool processA) const
+    {
+        return _supportsComponentRemapping && processA && ( (nComponents == 1) || (nComponents == 4) );
+    }
 
     // 0: Black/Dirichlet, 1: Nearest/Neumann, 2: Repeat/Periodic
     virtual int getBoundary(const Params& /*params*/) { return 0; }
@@ -738,8 +752,9 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         }
         assert(tmpPixelComponentCount == cimgSpectrum);
     } else {
+        const bool hasAlphaChannel = renderHasAlphaChannel(tmpPixelComponentCount, processA);
         if (tmpPixelComponentCount == 1) {
-            if (processA) {
+            if (hasAlphaChannel) {
                 assert(cimgSpectrum == 1);
                 srcChannel[0] = 0;
                 alphaChannel = 0;
@@ -761,7 +776,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
                 srcChannel[c] = 2;
                 ++c;
             }
-            if ( processA && (tmpPixelComponentCount >= 4) ) {
+            if (hasAlphaChannel) {
                 srcChannel[c] = 3;
                 alphaChannel = c;
                 ++c;

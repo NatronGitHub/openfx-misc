@@ -33,7 +33,9 @@
 #   the effect is not an identity at all times though it should be (identity:
 #   the isIdentity action), is an identity at some time though its render changes
 #   the input (notidentity: a host would pass the input through), does not have
-#   the expected components (comps=RGBA, RGB or Alpha), is constant though it should not be (nonconst), or
+#   the expected components (comps=RGBA, RGB or Alpha) or output premultiplication
+#   (premult=Opaque, PreMultiplied or UnPreMultiplied: the clip preferences), is
+#   constant though it should not be (nonconst), or
 #   is not the same region of the full render (tile: for a --window render),
 #   renders the same image at different times (framesdiffer: --frames), or
 #   does not have the expected maximum value (max=r,g,b,a, as mean=), e.g. the peak
@@ -168,6 +170,10 @@ pfm("vramp.pfm", 720, 576, lambda x, y, c: (y + 0.5) / 576.)
 # delta.pfm: a 1x1 PF kernel (for the "conv" check of an output that must be its input)
 pfm("impulse.pfm", 64, 48, lambda x, y, c: 1. if (x, y) == (32, 24) else 0.)
 pfm("delta.pfm", 1, 1, lambda x, y, c: 1.)
+# diffa.pfm, diffb.pfm: 64x48 PF solid colours (0.25,0.5,0.75) and (0.5,0.5,0.25), for Difference
+# with opaque inputs (#opaque)
+pfm("diffa.pfm", 64, 48, lambda x, y, c: (0.25, 0.5, 0.75)[c])
+pfm("diffb.pfm", 64, 48, lambda x, y, c: (0.5, 0.5, 0.25)[c])
 EOF2
 
 # check REPORT DEPTH EXPECT [CLIP=CRC32...]: check the --report JSON file of a
@@ -254,6 +260,13 @@ if out0:
         elif expect.startswith("comps="):
             if out0["comps"] != expect[6:]:
                 errors.append("t=0: components %s, expected %s" % (out0["comps"], expect[6:]))
+        elif expect.startswith("premult="):
+            # the kOfxImageEffectPropPreMultiplication values (ofxImageEffect.h)
+            want = {"Opaque": "OfxImageOpaque", "PreMultiplied": "OfxImageAlphaPremultiplied",
+                    "UnPreMultiplied": "OfxImageAlphaUnPremultiplied"}[expect[8:]]
+            got = (r.get("clipPreferences") or {}).get("outputPremultiplication")
+            if got != want:
+                errors.append("output premultiplication %s, expected %s" % (got, want))
         elif expect == "framesdiffer":
             crcs = [(k.get("output") or {}).get("crc32") for k in renders]
             if len(set(crcs)) != len(crcs):
@@ -543,6 +556,16 @@ tests=(
     # PIK: a soft screen replace color with zero Rec.709 luminance (was 0/0 = NaN where alpha
     # is raised to 1 by Clip White, or a huge color with FMA contraction, e.g. on arm64): white
     "PIK replace color lum 0|net.sf.openfx.PIK|general|float|comps=RGBA+mean=0.0045,0.0045,0.0045,1||-i Fg=solid:0,0,0.25,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0,0,1 screenClipMax=0.5 screenReplaceColor=0.072175,0,-0.2126729"
+    # Difference: RGB from B, alpha = gain * sum of the squared RGB differences - offset, in an RGBA
+    # unpremultiplied output (issue #275: RGB inputs gave an RGB output with the matte in blue;
+    # hostDemo's inputs are RGBA, so the RGB case is not tested: only the RGBA output, the alpha
+    # matte and the output premultiplication are checked here). Only the opaque-inputs case can
+    # detect a wrong premultiplication flag: with unpremultiplied inputs, the host default is
+    # already unpremultiplied
+    "Difference|net.sf.openfx.DifferencePlugin|general|*|comps=RGBA+premult=UnPreMultiplied+mean=0.5,0.5,0.25,0.3125||-i A=solid:0.25,0.5,0.75,1 -i B=solid:0.5,0.5,0.25,0.3"
+    # opaque inputs: the output is still unpremultiplied, since alpha is the matte
+    "Difference opaque inputs|net.sf.openfx.DifferencePlugin|general|*|comps=RGBA+premult=UnPreMultiplied+mean=0.5,0.5,0.25,0.3125||-i A=file:diffa.pfm#opaque -i B=file:diffb.pfm#opaque"
+    "Difference gain offset|net.sf.openfx.DifferencePlugin|general|*|comps=RGBA+mean=0.5,0.5,0.25,0.525||-i A=solid:0.25,0.5,0.75,1 -i B=solid:0.5,0.5,0.25,0.3 gain=2 offset=0.1"
     # PIK (version 2 unless -m): the Colorspace (1: Rec. 2020, 2: ACES AP0, 3: ACES AP1) also
     # gives the luminance of the Soft Color screen and inside replace colors, and the conversion of
     # Bg for Use Bg Luminance/Chroma; version 1 always used Rec. 709 there, and is kept so that old
@@ -594,6 +617,35 @@ tests=(
     # inputs differ, so that reading A for B (or B for A) fails.
     "Shuffle|net.sf.openfx.ShufflePlugin|general|*|mean=0.75,0.5,0.25,1||-i A=solid:0.25,0.5,0.75,1 -i B=solid:0.25,0.5,0.75,1 outputR=8 outputB=6"
     "Shuffle B|net.sf.openfx.ShufflePlugin|general|float|mean=0.75,0.5,0.25,1||-i A=ramp -i B=solid:0.25,0.5,0.75,1 outputR=8 outputB=6"
+    # ErodeBlur remaps and clamps the values (here only the alpha, the default) even when the blur
+    # does nothing (size 0.25: (0.5 - 0.125) / 0.875), and the Blur Alpha Threshold zeroes the alpha
+    # even when a box-type filter does not blur (issue #324); with the default (Quasi-Gaussian)
+    # filter and a tiny size, the render skips the threshold: an identity.
+    "ErodeBlur small|eu.cimg.ErodeBlur|filter|float|notidentity+mean=0.5,0.5,0.5,0.4286||-i Source=solid:0.5,0.5,0.5,0.5 -i Mask=none size=0.25"
+    "CImgBlur alpha threshold|net.sf.cimg.CImgBlur|filter|float|notidentity+mean=0.25,0.5,0.75,0||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none alphaThreshold=0.6 filter=2"
+    "CImgBlur size 0|net.sf.cimg.CImgBlur|filter|float|identity+mean=0.25,0.5,0.75,0.5||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none alphaThreshold=0.6"
+    # FrameBlend, one frame (relative range -1..-1, at t=1: frame 0 of the default pattern, which
+    # changes with time, so that the render reads the right frame; view 0 is red): not a copy of that frame with Mix, a mask, an unprocessed channel (from
+    # the current frame; with Mix 1 and no mask, it was 0), Product with Decay (the frame times
+    # 1 - decay), or Average on float images (-0 and infinite values); Min, and Average on byte
+    # images, copy it (issue #325). Version 2, Frame Interval 2: the one-frame range blends that
+    # frame (frame 1 at t=2), as version 2.0 passed it through (it rendered black).
+    "FrameBlend one frame mix|net.sf.openfx.FrameBlend|filter|*|notidentity+mean=0.5,0,0,1||-i Source=default -i FgM=none -i Mask=none frameRange=-1,-1 mix=0.5 --frames 1"
+    "FrameBlend one frame mask|net.sf.openfx.FrameBlend|filter|*|notidentity+mean=0.5,0,0,1||-i Source=default -i FgM=none -i Mask=solid:0.5,0.5,0.5,0.5 frameRange=-1,-1 --frames 1"
+    "FrameBlend one frame no A|net.sf.openfx.FrameBlend|filter|*|notidentity+mean=0.25,0.5,0.75,0.5||-i Source=solid:0.25,0.5,0.75,0.5 -i FgM=none -i Mask=none frameRange=-1,-1 NatronOfxParamProcessA=0"
+    "FrameBlend one frame product|net.sf.openfx.FrameBlend|filter|float|notidentity+mean=0.125,0.25,0.375,0.5||-i Source=solid:0.25,0.5,0.75,1 -i FgM=none -i Mask=none frameRange=-1,-1 operation=Product decay=0.5"
+    "FrameBlend one frame min|net.sf.openfx.FrameBlend|filter|*|identity+mean=0.002,0,0,1||-i Source=default -i FgM=none -i Mask=none frameRange=-1,-1 operation=Min --frames 1"
+    "FrameBlend one frame average byte|net.sf.openfx.FrameBlend|filter|byte|identity+mean=0.002,0,0,1||-i Source=default -i FgM=none -i Mask=none frameRange=-1,-1 --frames 1"
+    "FrameBlend one frame average float|net.sf.openfx.FrameBlend|filter|float|notidentity+mean=0.002,0,0,1||-i Source=default -i FgM=none -i Mask=none frameRange=-1,-1 --frames 1"
+    "FrameBlend 2 one frame interval 2|net.sf.openfx.FrameBlend|filter|*|mean=0.998,0,0,1||-m 2 -i Source=default -i FgM=none -i Mask=none frameRange=-1,-1 frameInterval=2 --frames 2"
+    # LensDistortion 3DE Anamorphic 4 with zero coefficients: Squeeze 1 (the default) is an
+    # identity, another squeeze is not (issue #326; it tested Squeeze 0)
+    "LensDistortion 3DE Anamorphic 4 default|net.sf.openfx.LensDistortion|general|*|identity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 model=6"
+    "LensDistortion 3DE Anamorphic 4 squeeze 2|net.sf.openfx.LensDistortion|general|float|notidentity||-i Source=checker:16 model=6 tde4_Squeeze_X=2"
+    # Rectangle and Radial with Process A on an opaque Source make the Output UnPremultiplied, also
+    # with Mix 0 (issue #328)
+    "Rectangle opaque mix 0|net.sf.openfx.Rectangle|general|*|notidentity||-i Source=file:convsrc.pfm#opaque -i Mask=none mix=0"
+    "Radial opaque mix 0|net.sf.openfx.Radial|general|*|notidentity||-i Source=file:convsrc.pfm#opaque -i Mask=none mix=0"
     # the default: the B input (identity)
     "Shuffle default|net.sf.openfx.ShufflePlugin|general|*|mean=0.5,0.6,0.7,0.8||-i A=solid:0.1,0.2,0.3,0.4 -i B=solid:0.5,0.6,0.7,0.8"
     "Shuffle A and B|net.sf.openfx.ShufflePlugin|general|*|mean=0.3,0.6,0.1,0.8||-i A=solid:0.1,0.2,0.3,0.4 -i B=solid:0.5,0.6,0.7,0.8 outputR=2 outputG=7 outputB=0 outputA=9"
@@ -857,7 +909,7 @@ for t in "${tests[@]}"; do
         fi
     done
 done
-rm -f out.* full.* report.json ref.json autocrop.pfm convsrc.pfm convk.pfm
+rm -f out.* full.* report.json ref.json autocrop.pfm convsrc.pfm convk.pfm diffa.pfm diffb.pfm
 
 if [ $n = 0 ]; then
     echo "no render matches RENDERTEST_ONLY=$RENDERTEST_ONLY"
