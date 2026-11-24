@@ -651,6 +651,13 @@ tests=(
     "Rectangle format invert|net.sf.openfx.Rectangle|general|*|nonconst||-i Source=none -i Mask=none extent=0 softness=50 invert=1"
     # a coloured transparent Color 0 (red) is drawn outside: the output is not premultiplied
     "Rectangle premultiply replace red color0|net.sf.openfx.Rectangle|general|*|premult=UnPreMultiplied+notidentity||-i Source=file:autocrop.pfm#opaque -i Mask=none bottomLeft=10,8 size=32,16 color0=1,0,0,0 premultiply=1 replace=1"
+    "Radial premultiply replace red color0|net.sf.openfx.Radial|general|*|premult=UnPreMultiplied+notidentity||-i Source=file:autocrop.pfm#opaque -i Mask=none bottomLeft=10,8 size=32,16 color0=1,0,0,0 premultiply=1 replace=1"
+    # with Invert, Color 0 (red) is drawn inside, where the alpha is 0: not premultiplied; a red Color 1 is drawn
+    # outside, where the alpha is 1: premultiplied
+    "Radial premultiply replace invert red color0|net.sf.openfx.Radial|general|*|premult=UnPreMultiplied||-i Source=file:autocrop.pfm#opaque -i Mask=none bottomLeft=10,8 size=32,16 color0=1,0,0,0 premultiply=1 replace=1 invert=1"
+    "Radial premultiply replace invert red color1|net.sf.openfx.Radial|general|*|premult=PreMultiplied||-i Source=file:autocrop.pfm#opaque -i Mask=none bottomLeft=10,8 size=32,16 color1=1,0,0,1 premultiply=1 replace=1 invert=1"
+    # R is not drawn: the red of Color 0 does not count
+    "Radial premultiply replace red color0 R off|net.sf.openfx.Radial|general|*|premult=PreMultiplied||-i Source=file:autocrop.pfm#opaque -i Mask=none bottomLeft=10,8 size=32,16 color0=1,0,0,0 premultiply=1 replace=1 NatronOfxParamProcessR=0"
     "Transform scale 0.5|net.sf.openfx.TransformPlugin|filter|float|mean=0.31,0.31,0.31,0.31||-i Source=checker:32 rotate=30 scale=0.8,0.8 --scale 0.5"
     "CImgBlur scale 0.5|net.sf.cimg.CImgBlur|filter|float|mean=0.497,0.497,0.497,0.497||-i Source=checker:8 -i Mask=none size=5,5 expandRoD=0 --scale 0.5"
     # filter=2: Box (FIR). The default IIR filters have an infinite support, so

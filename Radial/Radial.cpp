@@ -1216,6 +1216,8 @@ RadialPluginFactory::describeInContext(ImageEffectDescriptor &desc,
 
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
+        param->setAnimates(false); // triggers the clip preferences: see ShapeDraw::Params::outputIsPremultipliedByShape()
+        desc.addClipPreferencesSlaveParam(*param);
         param->setLabel(kParamProcessRLabel);
         param->setHint(kParamProcessRHint);
         param->setDefault(true);
@@ -1226,6 +1228,8 @@ RadialPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
+        param->setAnimates(false); // triggers the clip preferences: see ShapeDraw::Params::outputIsPremultipliedByShape()
+        desc.addClipPreferencesSlaveParam(*param);
         param->setLabel(kParamProcessGLabel);
         param->setHint(kParamProcessGHint);
         param->setDefault(true);
@@ -1236,6 +1240,8 @@ RadialPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
+        param->setAnimates(false); // triggers the clip preferences: see ShapeDraw::Params::outputIsPremultipliedByShape()
+        desc.addClipPreferencesSlaveParam(*param);
         param->setLabel(kParamProcessBLabel);
         param->setHint(kParamProcessBHint);
         param->setDefault(true);
@@ -1302,7 +1308,7 @@ RadialPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     // color0
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor0);
-        desc.addClipPreferencesSlaveParam(*param); // its alpha: see ShapeDraw::Params::outputIsPremultipliedByShape()
+        desc.addClipPreferencesSlaveParam(*param); // its alpha, and the RGB of Color 0: see ShapeDraw::Params::outputIsPremultipliedByShape()
         param->setLabel(kParamColor0Label);
         param->setDefault(0, 0, 0, 0);
         if (page) {
@@ -1313,7 +1319,7 @@ RadialPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     // color1
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor1);
-        desc.addClipPreferencesSlaveParam(*param); // its alpha: see ShapeDraw::Params::outputIsPremultipliedByShape()
+        desc.addClipPreferencesSlaveParam(*param); // its alpha, and the RGB of Color 0: see ShapeDraw::Params::outputIsPremultipliedByShape()
         param->setLabel(kParamColor1Label);
         param->setDefault(1., 1., 1., 1. );
         if (page) {
