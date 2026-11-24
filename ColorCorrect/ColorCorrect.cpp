@@ -56,7 +56,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 2.2: gamma = 0 gives its limit (0 below 1, 1 at 1, FLT_MAX above 1) instead of dividing by zero,
 //              and the results of a small gamma are capped to FLT_MAX;
 //              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79);
-//              a NaN value no longer converts NaN to int for the curve lookup (undefined behaviour) (#178)
+//              a NaN value no longer converts NaN to int for the curve lookup (undefined behaviour) (#178);
+//              add the Mix Luminance and Test parameters (default 0 and off: the output is unchanged) (#289)
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 2 // Increment this when you have fixed a bug or made it faster.
 
@@ -128,6 +129,19 @@ static const std::string kParamOffset = std::string("Offset");
 #define kParamClampWhiteHint "All colors above 1 on output are set to 1."
 
 #define kParamPremultChanged "premultChanged"
+
+#define kParamMixLuminance "mixLuminance"
+#define kParamMixLuminanceLabel "Mix Luminance"
+#define kParamMixLuminanceHint "How much of the luminance of the input is kept after the color correction. " \
+    "0 keeps the luminance of the corrected image, 1 gives the luminance of the input, by adding the same value to the corrected red, green and blue channels. " \
+    "The luminance is computed with the Luminance Math formula."
+
+#define kParamTest "test"
+#define kParamTestLabel "Test"
+#define kParamTestHint "Replace the red, green and blue channels of the output with the tone range of each pixel: " \
+    "black for the shadows, gray (0.5) for the midtones and white for the highlights. " \
+    "A mixture of shadows and midtones is green, and a mixture of midtones and highlights is magenta. " \
+    "The tone ranges are set by the curves of the Ranges tab, and computed from the luminance of the input."
 
 struct ColorControlValues
 {
@@ -379,6 +393,8 @@ public:
         , _processB(false)
         , _processA(false)
         , _luminanceMath(eLuminanceMathRec709)
+        , _mixLuminance(0.)
+        , _test(false)
     {
     }
 
@@ -400,7 +416,9 @@ public:
                                bool processR,
                                bool processG,
                                bool processB,
-                               bool processA)
+                               bool processA,
+                               double mixLuminance,
+                               bool test)
     {
         _masterValues = master;
         _shadowValues = shadow;
@@ -414,6 +432,8 @@ public:
         _processG = processG;
         _processB = processB;
         _processA = processA;
+        _mixLuminance = mixLuminance;
+        _test = test;
     }
 
 
@@ -440,6 +460,8 @@ protected:
     ColorControlGroup _midtoneValues;
     ColorControlGroup _highlightsValues;
     LuminanceMathEnum _luminanceMath;
+    double _mixLuminance; // 0: the corrected luminance, 1: the input luminance
+    bool _test; // show the tone ranges instead of the corrected colors
 };
 
 // floats don't clamp except if _clampBlack or _clampWhite
@@ -579,6 +601,19 @@ private:
                    _midtoneValues, m_scale,
                    _highlightsValues, h_scale,
                    _masterValues);
+        if (_mixLuminance != 0.) {
+            // shift r, g and b by the same value: all the Luminance Math formulas are then shifted
+            // by that value (their weights sum to 1, or the maximum), so that 1 gives the input luminance
+            // the input luminance in double (l is the float of the tone range lookup)
+            const double lIn = luminance(*r, *g, *b, _luminanceMath);
+            const double shift = _mixLuminance * ( lIn - luminance(p.r, p.g, p.b, _luminanceMath) );
+            p.r += shift;
+            p.g += shift;
+            p.b += shift;
+        }
+        if (_test) {
+            testColor(s_scale, h_scale, &p.r, &p.g, &p.b);
+        }
         if (processR) {
             *r = clamp<float>(p.r, 1);
         }
@@ -591,6 +626,24 @@ private:
         if (processA) {
             *a = clamp<float>(p.a, 1);
         }
+    }
+
+    // the Test color of the tone range weights: black (shadows), gray (midtones) and white
+    // (highlights), green where shadows and midtones mix, magenta where midtones and highlights mix
+    static void testColor(double s_scale,
+                          double h_scale,
+                          double *r,
+                          double *g,
+                          double *b)
+    {
+        const double s = ofxsClamp(s_scale, 0, 1);
+        const double h = ofxsClamp(h_scale, 0, 1);
+        const double m = ofxsClamp(1. - s - h, 0, 1);
+        const double gray = 0.5 * m + h;
+        const double sm = 4. * s * m; // 1 at s = m = 0.5
+        const double mh = 4. * m * h; // 1 at m = h = 0.5
+        *r = *b = ofxsClamp(gray + 0.25 * (mh - sm), 0, 1);
+        *g = ofxsClamp(gray + 0.25 * (sm - mh), 0, 1);
     }
 
     double lookupTableValue(int curve, double parametricPos) const
@@ -714,6 +767,8 @@ public:
         , _maskApply(NULL)
         , _maskInvert(NULL)
         , _premultChanged(NULL)
+        , _mixLuminance(NULL)
+        , _test(NULL)
     {
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -749,6 +804,9 @@ public:
         assert(_mix && _maskInvert);
         _premultChanged = fetchBooleanParam(kParamPremultChanged);
         assert(_premultChanged);
+        _mixLuminance = fetchDoubleParam(kParamMixLuminance);
+        _test = fetchBooleanParam(kParamTest);
+        assert(_mixLuminance && _test);
 
         _processR = fetchBooleanParam(kNatronOfxParamProcessR);
         _processG = fetchBooleanParam(kNatronOfxParamProcessG);
@@ -831,6 +889,8 @@ private:
     BooleanParam* _maskApply;
     BooleanParam* _maskInvert;
     BooleanParam* _premultChanged; // set to true the first time the user connects src
+    DoubleParam* _mixLuminance;
+    BooleanParam* _test;
 };
 
 
@@ -928,9 +988,11 @@ ColorCorrectPlugin::setupAndProcess(ColorCorrecterBase &processor,
     bool processG = _processG->getValueAtTime(time);
     bool processB = _processB->getValueAtTime(time);
     bool processA = _processA->getValueAtTime(time);
+    double mixLuminance = _mixLuminance->getValueAtTime(time);
+    bool test = _test->getValueAtTime(time);
 
     processor.setColorControlValues(masterValues, shadowValues, midtoneValues, highlightValues, luminanceMath, premult, premultChannel, mix,
-                                    processR, processG, processB, processA);
+                                    processR, processG, processB, processA, mixLuminance, test);
     processor.process();
 } // ColorCorrectPlugin::setupAndProcess
 
@@ -1061,7 +1123,7 @@ ColorCorrectPlugin::isIdentity(const IsIdentityArguments &args,
     bool clampBlack, clampWhite;
     _clampBlack->getValueAtTime(args.time, clampBlack);
     _clampWhite->getValueAtTime(args.time, clampWhite);
-    if (clampBlack || clampWhite) {
+    if ( clampBlack || clampWhite || _test->getValueAtTime(args.time) ) {
         return false;
     }
 
@@ -1402,6 +1464,28 @@ ColorCorrectPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setIsSecretAndDisabled(true);
         param->setAnimates(false);
         param->setEvaluateOnChange(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    // new parameters go at the end, with defaults that keep the output of older versions
+    {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamMixLuminance);
+        param->setLabel(kParamMixLuminanceLabel);
+        param->setHint(kParamMixLuminanceHint);
+        param->setDefault(0.);
+        param->setRange(0., 1.);
+        param->setDisplayRange(0., 1.);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamTest);
+        param->setLabel(kParamTestLabel);
+        param->setHint(kParamTestHint);
+        param->setDefault(false);
+        param->setAnimates(false);
         if (page) {
             page->addChild(*param);
         }
