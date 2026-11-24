@@ -466,6 +466,16 @@ tests=(
     # amount, which uses the key without Invert (the colour is the same)
     "Keyer screen despill|net.sf.openfx.KeyerPlugin|general|short float|mean=0.1,0.141,0.1,0.341||-i Source=solid:0.1,0.8,0.1,1 -i Bg=none -i InM=none -i OutM=none mode=2 keyColor=0,1,0 despill=1 show=2"
     "Keyer screen despill invert|net.sf.openfx.KeyerPlugin|general|short float|mean=0.1,0.141,0.1,0.659||-i Source=solid:0.1,0.8,0.1,1 -i Bg=none -i InM=none -i OutM=none mode=2 keyColor=0,1,0 despill=1 show=2 invert=1"
+    # Premult and Unpremult (R, G and B by A by default); Invert uses 1 - A (issue #295)
+    "Premult|net.sf.openfx.Premult|filter|*|mean=0.0625,0.125,0.1875,0.25||-i Source=solid:0.25,0.5,0.75,0.25"
+    "Premult invert|net.sf.openfx.Premult|filter|*|mean=0.1875,0.375,0.5625,0.25||-i Source=solid:0.25,0.5,0.75,0.25 invert=1"
+    "Unpremult|net.sf.openfx.Unpremult|filter|*|mean=0.25,0.5,0.75,0.25||-i Source=solid:0.0625,0.125,0.1875,0.25"
+    "Unpremult invert|net.sf.openfx.Unpremult|filter|*|mean=0.25,0.5,0.75,0.75||-i Source=solid:0.0625,0.125,0.1875,0.75 invert=1"
+    # Invert swaps the constant channels (premultChannel 4: 0, 5: 1): Unpremult by 1 - 0 is an identity
+    # (Premult is not: the hostDemo input is not PreMultiplied, and Premult changes that state)
+    "Premult invert 0|net.sf.openfx.Premult|filter|*|mean=0.25,0.5,0.75,0.25||-i Source=solid:0.25,0.5,0.75,0.25 premultChannel=4 invert=1"
+    "Premult invert 1|net.sf.openfx.Premult|filter|*|mean=0,0,0,0.25||-i Source=solid:0.25,0.5,0.75,0.25 premultChannel=5 invert=1"
+    "Unpremult invert 0|net.sf.openfx.Unpremult|filter|*|identity+mean=0.25,0.5,0.75,0.25||-i Source=solid:0.25,0.5,0.75,0.25 premultChannel=4 invert=1"
     "CImgBlur|net.sf.cimg.CImgBlur|filter|float|nonconst+changed:Source||-i Source=checker:8 -i Mask=none size=5,5 expandRoD=0"
     "CImgBlur expandRoD|net.sf.cimg.CImgBlur|filter|float|nonconst+changed:Source||-i Source=checker:8 -i Mask=none size=5,5"
     "Transform|net.sf.openfx.TransformPlugin|filter|*|nonconst+changed:Source||-i Source=checker:32 rotate=30 scale=0.8,0.8"
