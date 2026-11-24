@@ -156,6 +156,8 @@ enum MergePluginEnum
 // 1.1, 2.1 and 3.0 (unreleased, fixed in place): in the filter context, B is the mandated Source clip
 //      (RGBA or Alpha), and Source and Output are no longer remapped there (issue #217). The general
 //      context, used by Natron, is unchanged.
+// 1.1 and 2.1 (unreleased, fixed in place): with Alpha-only images, B is not passed through when B's R checkbox,
+//      which controls the alpha in these versions, is unchecked (issue #328).
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -340,6 +342,16 @@ unsignedToString(unsigned i)
    http://www.cs.up.ac.za/cs/vpieterse/pub/PieterseEtAl_SAICSIT2010.pdf
  */
 
+// With Alpha-only images (nComponents == 1), the only component is alpha, so it is controlled by the
+// A checkboxes. Versions 1 and 2 used the R checkboxes of A and B for it, which is kept so that old
+// projects render the same. Used by the processor and isIdentity().
+constexpr bool
+alphaUsesAChannel(int nComponents,
+                  unsigned int majorVersion)
+{
+    return (nComponents == 1) && (majorVersion >= 3);
+}
+
 class MergeProcessorBase
     : public ImageProcessor
 {
@@ -472,9 +484,7 @@ private:
         float tmpPix[nComponents];
         float tmpA[nComponents];
         float tmpB[nComponents];
-        // With Alpha-only images, the only component is alpha, so it is controlled by the A checkboxes.
-        // Versions 1 and 2 used the R checkboxes of A and B for it, which is kept so that old projects render the same.
-        const bool alphaFromA = (nComponents == 1) && (_majorVersion >= 3);
+        const bool alphaFromA = alphaUsesAChannel(nComponents, _majorVersion);
 
         for (int c = 0; c < nComponents; ++c) {
             tmpA[c] = tmpB[c] = 0.;
@@ -1340,6 +1350,14 @@ MergePlugin::isIdentity(const IsIdentityArguments &args,
     for (int c = 0; c < 4; ++c) {
         _outputChannels[c]->getValueAtTime(time, outputChannels[c]);
         _bChannels[c]->getValueAtTime(time, srcBChannels[c]);
+    }
+    {
+        // versions 1 and 2, Alpha-only images: B's R checkbox controls the alpha channel, as in the
+        // processor (issue #328)
+        const int nComponents = _dstClip->getPixelComponentCount();
+        if ( (nComponents == 1) && !alphaUsesAChannel( nComponents, getMajorVersion() ) ) {
+            srcBChannels[3] = srcBChannels[0];
+        }
     }
     if (!outputChannels[0] && !outputChannels[1] && !outputChannels[2] && !outputChannels[3] && plane == kFnOfxImagePlaneColour) {
         identityClip = _srcClipB;

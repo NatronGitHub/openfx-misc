@@ -113,6 +113,34 @@ CImgFilterPluginHelperBase::CImgFilterPluginHelperBase(OfxImageEffectHandle hand
     }
 }
 
+// render() copies Source with the output's components, so they must be the same (it refuses
+// others). In the other contexts the host makes them the same: "a plugin cannot change the
+// component type of the Output clip, it will always be the same as the Source clip" (filter
+// context), "the component type of Source and Output will always be the same" (paint context,
+// ofxImageEffectContexts.rst). In the general context, "all input clips may be remapped, as can
+// the output clip" (ofxClipPreferences.rst), and the host's default output components may differ
+// from Source's: the spec's default is "RGBA if any of the inputs is RGBA; otherwise A if the
+// effect has any inputs" (A for an RGB Source with the Alpha Mask); HostSupport-based hosts give
+// RGBA when an Alpha and a non-Alpha input are connected (an RGB Source with the Mask); Natron
+// gives the most components of all the inputs (RGBA for CImgConvolve with an RGB Source and an
+// RGBA Filter). The output follows Source, as with a filter: give both the components the host
+// mapped Source to, which the plug-in declares on Source, and so on Output, which declares the same
+// ones (e.g. RGBA for an RGB Source on EdgeExtend, which only declares RGBA). The unmapped
+// components may not be declared. Natron and HostSupport set the default mapping on the clips
+// before calling this action (issue #251).
+void
+CImgFilterPluginHelperBase::getClipPreferences(ClipPreferencesSetter &clipPreferences)
+{
+    if ( (getContext() != eContextGeneral) || !_srcClip || !_srcClip->isConnected() ) {
+        return;
+    }
+    const PixelComponentEnum srcComponents = _srcClip->getPixelComponents();
+    if ( isSupportedComponents(srcComponents) ) {
+        clipPreferences.setClipComponents(*_srcClip, srcComponents);
+        clipPreferences.setClipComponents(*_dstClip, srcComponents);
+    }
+}
+
 void
 CImgFilterPluginHelperBase::changedClip(const InstanceChangedArgs &args,
                                         const std::string &clipName)
@@ -141,10 +169,10 @@ CImgFilterPluginHelperBase::changedClip(const InstanceChangedArgs &args,
 }
 
 void
-CImgFilterPluginHelperBase::throwBitDepthUnsupported()
+cimgThrowBitDepthUnsupported(ImageEffect& effect)
 {
-    setPersistentMessage(Message::eMessageError, "", kCImgFilterBitDepthUnsupportedMessage);
-    throwSuiteStatusException(kOfxStatFailed);
+    effect.setPersistentMessage(Message::eMessageError, "", kCImgFilterBitDepthUnsupportedMessage);
+    throw OFX::Exception::Suite(kOfxStatFailed); // as throwSuiteStatusException(kOfxStatFailed)
 }
 
 void
