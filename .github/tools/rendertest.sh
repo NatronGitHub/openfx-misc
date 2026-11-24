@@ -812,10 +812,12 @@ tests=(
     "IDistort blur clamp|net.sf.openfx.IDistort|general|float|range=0,1||-i Source=checker:16 -i UV=solid:0,0,6,1 -i Mask=none channelBlur=2 filter=6 clamp=1 --frames 0 --window 40,40,120,120"
     # a blur that varies (blur = 8 x the ramp), rendered in a window: the tile matches the full render
     "IDistort blur ramp tile|net.sf.openfx.IDistort|general|float|nonconst+tile||-i Source=checker:8 -i UV=ramp -i Mask=none channelBlur=2 blurScale=8 --frames 0 --window 100,100,300,250"
-    # a blur of 31 (the constant 1 channel, Blur Scale 31) with a UV gradient (V = 360 x the ramp, so
-    # dv/dx = 0.5): the kernel along y is 1.5 + 31 = 32.5 pixels wide, about 65 taps, so it is strided (cells
-    # from the summed-area table) whatever the render window: the tile matches the full render
-    "IDistort blur stride tile|net.sf.openfx.IDistort|general|float|nonconst+tile||-i Source=checker:4 -i UV=ramp -i Mask=none uvScale=0,360 channelBlur=5 blurScale=31 --frames 0 --window 200,100,330,220"
+    # a blur that varies (B of the ramp x 40: about 20 here, 40 at the right edge) with large UV gradients
+    # (U and V = 14400 x (ramp - 0.5): du/dx = dv/dx = 20), on a 1-pixel checker: the kernels here are about
+    # 80 taps wide along x and y (the samples stay inside the image here), so they are strided (2 x 2 cells). Cells
+    # read 0.5 (point taps with a stride of 2 would read one colour of the checker: 0 or 1), and the tile
+    # matches the full render, whatever blur the rest of the frame has.
+    "IDistort blur stride tile|net.sf.openfx.IDistort|general|float|tile+range=0.45,0.55+tol=0.02+mean=0.5,0.5,0.5,0.5||-i Source=checker:1 -i UV=ramp -i Mask=none uvOffset=0.5,0.5 uvScale=14400,14400 channelBlur=2 blurScale=40 --frames 0 --window 350,200,370,230"
     # Unpremult UV with a UV alpha of 0: no UV, transparent black (version 3; version 2 multiplies by 0)
     "IDistort unpremult alpha 0|net.sf.openfx.IDistort|general|float|mean=0,0,0,0||-i Source=solid:0.5,0.5,0.5,1 -i UV=solid:0,0,0,0 -i Mask=none unpremultUV=1 --frames 0"
     "STMap unpremult alpha 0|net.sf.openfx.STMap|general|float|mean=0,0,0,0||-i Source=solid:0.5,0.5,0.5,1 -i UV=solid:0,0,0,0 -i Mask=none unpremultUV=1 --frames 0"

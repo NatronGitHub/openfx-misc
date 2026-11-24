@@ -1228,14 +1228,23 @@ template <class PIX, int nComponents>
 class LazySummedAreaTable
 {
 public:
-    const SummedAreaTable& get(const Image &img)
+    // the image of the table: set once, before rendering (DistortionProcessor::preProcess)
+    void bind(const Image *img) { _img = img; }
+
+    // the table of the bound image (built on the first call; empty if there is no image)
+    const SummedAreaTable& get()
     {
-        std::call_once(_once, [this, &img]() { _sat.build<PIX, nComponents>(img); });
+        std::call_once(_once, [this]() {
+            if (_img) {
+                _sat.build<PIX, nComponents>(*_img);
+            }
+        });
 
         return _sat;
     }
 
 private:
+    const Image *_img = nullptr;
     std::once_flag _once;
     SummedAreaTable _sat;
 };
@@ -1322,6 +1331,11 @@ private:
             *u /= a;
             *v /= a;
         }
+    }
+
+    void preProcess() OVERRIDE FINAL
+    {
+        _sat.bind(_srcImg); // before the rendering threads
     }
 
     void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL;
@@ -1551,7 +1565,7 @@ separableBlurSample(const Image *srcImg,
     separableWeights(filter, sy, wy, &wys);
     // a stride (a kernel wider than kSeparableBlurMaxTaps pixels) always reads cells, from the table
     const bool cells = (wxs.stride > 1) || (wys.stride > 1);
-    const SummedAreaTable *sat = cells ? &lazySat.get(*srcImg) : nullptr;
+    const SummedAreaTable *sat = cells ? &lazySat.get() : nullptr;
     assert( !cells || !sat->empty() );
     double acc[4] = {0., 0., 0., 0.};
     double lo[4] = {0., 0., 0., 0.};
@@ -1571,14 +1585,50 @@ separableBlurSample(const Image *srcImg,
     const double zero[4] = {0., 0., 0., 0.};
     if (cells) {
         // the cells along each axis. The cells entirely outside the image all read the same thing: black
-        // (blackOutside: dropped), or the edge (merged into one cell just outside, with their summed weight),
-        // so that a kernel much wider than the image reads few cells
+        // (blackOutside: dropped, they add 0), or the edge (merged into cells just outside, with their
+        // summed weights), so that a kernel much wider than the image reads few cells. The positive, the
+        // negative and the zero weights of a side are merged apart, so that the result is the per-cell sum,
+        // also for a non-finite edge (+inf times weights of both signs, or 0, is NaN).
         bool blackRead = false;
+        struct Side
+        {
+            double positive = 0.;
+            double negative = 0.;
+            bool anyPositive = false;
+            bool anyNegative = false;
+            bool anyZero = false;
+
+            void add(double w)
+            {
+                if (w > 0.) {
+                    positive += w;
+                    anyPositive = true;
+                } else if (w < 0.) {
+                    negative += w;
+                    anyNegative = true;
+                } else {
+                    anyZero = true;
+                }
+            }
+
+            void push(double lo, double hi, std::vector<CellSpan> *spans) const
+            {
+                if (anyPositive) {
+                    spans->push_back( CellSpan{lo, hi, positive} );
+                }
+                if (anyNegative) {
+                    spans->push_back( CellSpan{lo, hi, negative} );
+                }
+                if (anyZero) {
+                    spans->push_back( CellSpan{lo, hi, 0.} );
+                }
+            }
+        };
         auto axisCells = [&](SeparableWeights &sw, int lo, int hi) {
             std::vector<CellSpan> *spans = &sw.cells;
             spans->clear();
-            double below = 0.;
-            double above = 0.;
+            Side below;
+            Side above;
             for (std::size_t n = 0; n < sw.weights.size(); ++n) {
                 const int t = sw.first + static_cast<int>(n) * sw.stride;
                 // the cell of the tap: stride pixels wide, centred on the tap's pixel center
@@ -1588,21 +1638,17 @@ separableBlurSample(const Image *srcImg,
                     if (blackOutside) {
                         blackRead = true;
                     } else if (cb <= lo) {
-                        below += sw.weights[n];
+                        below.add(sw.weights[n]);
                     } else {
-                        above += sw.weights[n];
+                        above.add(sw.weights[n]);
                     }
                     continue;
                 }
                 spans->push_back( CellSpan{ca, cb, sw.weights[n]} );
                 blackRead = blackRead || ( blackOutside && ( (ca < lo) || (cb > hi) ) );
             }
-            if (below != 0.) {
-                spans->push_back( CellSpan{lo - 1., static_cast<double>(lo), below} ); // the edge, repeated
-            }
-            if (above != 0.) {
-                spans->push_back( CellSpan{static_cast<double>(hi), hi + 1., above} );
-            }
+            below.push(lo - 1., static_cast<double>(lo), spans); // the edge, repeated
+            above.push(static_cast<double>(hi), hi + 1., spans);
         };
         axisCells(wxs, b.x1, b.x2);
         axisCells(wys, b.y1, b.y2);
@@ -1673,7 +1719,6 @@ separableBlurSample(const Image *srcImg,
 template <class PIX, int nComponents>
 static void
 boxBlurSample(LazySummedAreaTable<PIX, nComponents> &lazySat,
-              const Image &srcImg,
               bool blackOutside,
               double sx,
               double sy,
@@ -1687,7 +1732,7 @@ boxBlurSample(LazySummedAreaTable<PIX, nComponents> &lazySat,
          !(std::abs(sx) < kSeparableBlurMaxPosition) || !(std::abs(sy) < kSeparableBlurMaxPosition) ) {
         return;
     }
-    const SummedAreaTable &sat = lazySat.get(srcImg);
+    const SummedAreaTable &sat = lazySat.get();
     if ( sat.empty() ) {
         return;
     }
@@ -1927,7 +1972,7 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
                 if (filter == eFilterImpulse) {
                     ofxsFilterInterpolate2D<PIX, nComponents, filter, clamp>(sx, sy, _srcImg, _blackOutside, tmpPix);
                 } else if (boxBlur) {
-                    boxBlurSample<PIX, nComponents>(_sat, *_srcImg, _blackOutside, sx, sy, J, tmpPix);
+                    boxBlurSample<PIX, nComponents>(_sat, _blackOutside, sx, sy, J, tmpPix);
                 } else if (separableBlur) {
                     // the kernel widths, in source pixels: the extent of the footprint along x and y (the
                     // bounding box of the output pixel in the source, at least 1 pixel), plus the extent of
