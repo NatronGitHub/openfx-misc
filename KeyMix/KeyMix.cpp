@@ -47,7 +47,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDescription \
     "KeyMix combines two images, A and B, using a third input, the Mask, to choose between them. A typical use is to put a keyed foreground over a background, with the keyer's output as the Mask. Note that the output alpha is a mix of the A and B alphas, not the Mask itself.\n" \
     "\n" \
-    "It copies the pixel from A to B only where the Mask is non-zero. It is the same as the Matte operation, but alpha for input A is taken from an external mask, and the output alpha is mixed between A and B. The output bounding box is the union of A and B, or the bounding box of B or A (Bounding Box parameter). Where the Mask is not used (Mix 0, or no Mask), the output is B, with the bounding box of B.\n" \
+    "It copies the pixel from A to B only where the Mask is non-zero. It is the same as the Matte operation, but alpha for input A is taken from an external mask, and the output alpha is mixed between A and B. The output bounding box is the union of A and B, or the bounding box of B or A (Bounding Box parameter). Where the Mask is not used (Mix 0, no A channel processed, no Mask, or Apply Mask off), the output is B, with the bounding box of B.\n" \
     "\n" \
     "KeyMix can also apply two successive color corrections through a single mask: correct the image twice, then use KeyMix with the uncorrected image as B and the corrected one as A. Masking each color correction separately with the same mask would apply the mask twice at soft edges, which gives artifacts.\n" \
     "\n" \
@@ -66,7 +66,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //      the A RoD: there, the output is B * (1 - mask * mix), not B; it returns B without a mask (Mask
 //      disconnected or Apply Mask off), where the render gives B (issue #321)
 // 1.1 and 2.0 (unreleased, added in place): Bounding Box parameter (Union, B, A), Union by default, which
-//      is the previous output bounding box (issue #278)
+//      is the previous output bounding box (issue #278); where isIdentity returns B (Mix 0, no A channel,
+//      no Mask or Apply Mask off), the RoD is B's (it was the union with A when no A channel was
+//      processed or Apply Mask was off; the pixels are the same)
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -105,7 +107,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamBBox "bbox"
 #define kParamBBoxLabel "Bounding Box"
-#define kParamBBoxHint "What to use as the output image's bounding box, where the Mask is used (where it is not, e.g. with Mix 0 or without a Mask, the output is B, with the bounding box of B)."
+#define kParamBBoxHint "What to use as the output image's bounding box. Where the Mask is not used (Mix 0, no A channel processed, no Mask, or Apply Mask off), the output is B, with the bounding box of B, whatever this choice."
 #define kParamBBoxOptionUnion "Union", "Union of the bounding boxes of A and B.", "union"
 #define kParamBBoxOptionB "B", "Bounding box of input B.", "b"
 #define kParamBBoxOptionA "A", "Bounding box of input A.", "a"
@@ -292,6 +294,23 @@ private:
     {
         return ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected();
     }
+
+    /* is the output B everywhere at time (Mix 0, no A channel, or no mask)? isIdentity then returns B,
+       and getRegionOfDefinition the B RoD */
+    bool outputIsB(double time) const
+    {
+        if (_mix->getValueAtTime(time) == 0.) {
+            return true;
+        }
+        bool anyAChannel = false;
+        for (BooleanParam* const p : _aChannels) {
+            anyAChannel = anyAChannel || p->getValueAtTime(time);
+        }
+
+        // render() always mixes through the mask (domask is true in multiThreadProcessImages): without a
+        // mask image (Mask disconnected, or Apply Mask off), the mask is 0 and the output is B
+        return !anyAChannel || !maskApplied(time);
+    }
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
 private:
@@ -321,10 +340,9 @@ KeyMixPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                     OfxRectD &rod)
 {
     const double time = args.time;
-    double mix = _mix->getValueAtTime(time);
 
-    //Do the same as isIdentity otherwise the result of getRegionOfDefinition() might not be coherent with the RoD of the identity clip.
-    if ( (mix == 0.) || !( _maskClip && _maskClip->isConnected() ) ) {
+    // the same test as isIdentity, so that the RoD is the one of the identity clip, whatever the Bounding Box
+    if ( outputIsB(time) ) {
         if ( _srcClipB->isConnected() ) {
             OfxRectD rodB = _srcClipB->getRegionOfDefinition(time);
             rod = rodB;
@@ -543,30 +561,9 @@ KeyMixPlugin::isIdentity(const IsIdentityArguments &args,
                          , int& /*view*/, std::string& /*plane*/)
 {
     const double time = args.time;
-    double mix;
 
-    _mix->getValueAtTime(time, mix);
-
-    if (mix == 0.) {
-        identityClip = _srcClipB;
-
-        return true;
-    }
-
-    bool aChannels[4];
-    for (int c = 0; c < 4; ++c) {
-        aChannels[c] = _aChannels[c]->getValueAtTime(time);
-    }
-    if (!aChannels[0] && !aChannels[1] && !aChannels[2] && !aChannels[3]) {
-        identityClip = _srcClipB;
-
-        return true;
-    }
-
-    // render() always mixes through the mask (domask is true in multiThreadProcessImages): without a
-    // mask image (Mask disconnected, or Apply Mask off), the mask is 0 and the output is B, as
-    // getRegionOfDefinition() assumes.
-    if ( !maskApplied(time) ) {
+    // as getRegionOfDefinition() assumes
+    if ( outputIsB(time) ) {
         identityClip = _srcClipB;
 
         return true;
