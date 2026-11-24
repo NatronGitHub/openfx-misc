@@ -527,7 +527,7 @@ CornerPinPlugin::getSrcFormatCanonical() const
 {
     OfxRectD rect = {0., 0., 0., 0.};
 #ifdef OFX_EXTENSIONS_NATRON
-    OfxRectI format;
+    OfxRectI format = {0, 0, 0, 0};
     _srcClip->getFormat(format); // in pixels at render scale 1 (kOfxImageClipPropFormat)
     if ( !Coords::rectIsEmpty(format) ) {
         const OfxPointD rsOne = {1., 1.};
