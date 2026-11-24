@@ -37,7 +37,9 @@
 #   (premult=Opaque, PreMultiplied or UnPreMultiplied: the clip preferences), is
 #   constant though it should not be (nonconst), or
 #   is not the same region of the full render (tile: for a --window render),
-#   renders the same image at different times (framesdiffer: --frames), or
+#   renders the same image at different times (framesdiffer: --frames), has a time
+#   domain (the getTimeDomain action, general context) other than the expected one
+#   (timedomain=min,max, or timedomain=default if the plugin lets the host use its default), or
 #   does not have the expected maximum value (max=r,g,b,a, as mean=), e.g. the peak
 #   of a blurred impulse, which gives the blur size,
 #   is the same image as an input (changed:Clip: the CRC32 of the output
@@ -267,6 +269,17 @@ if out0:
             got = (r.get("clipPreferences") or {}).get("outputPremultiplication")
             if got != want:
                 errors.append("output premultiplication %s, expected %s" % (got, want))
+        elif expect.startswith("timedomain="):
+            td = r.get("timeDomain") or {}
+            rng = td.get("range")
+            if expect[11:] == "default":
+                if rng is not None:
+                    errors.append("time domain %s, expected the host default" % rng)
+            else:
+                want = [float(v) for v in expect[11:].split(",")]
+                if rng is None or len(rng) != 2 or any(abs(a - b) > 1e-9 for a, b in zip(rng, want)):
+                    errors.append("time domain %s (%s), expected %s" % (rng, td.get("status"), expect[11:]))
+            desc += " timeDomain=%s" % (",".join("%g" % v for v in rng) if rng else "default")
         elif expect == "framesdiffer":
             crcs = [(k.get("output") or {}).get("crc32") for k in renders]
             if len(set(crcs)) != len(crcs):
@@ -602,6 +615,16 @@ tests=(
     # their tiles differ slightly (up to 0.003) from the full render.
     "CImgBlur tile|net.sf.cimg.CImgBlur|filter|float|nonconst+tile||-i Source=checker:8 -i Mask=none size=5,5 expandRoD=0 filter=2 --frames 0 --window 100,100,300,250"
     "Merge tile|net.sf.openfx.MergePlugin|filter|float|nonconst+tile||-i A=checker:16 -i Source=ramp -i Mask=none --frames 0 --window 50,60,250,200"
+    # Merge "Range From" (#277): in the general context, Merge 3 passes B's frame range by default, or
+    # A's (hostDemo's inputs all have the frames 0 to 25, so this only checks which input is used, by
+    # disconnecting the other); the host default if that input is disconnected, in the filter context,
+    # and in Merge 2 (no parameter: Natron 2.5 projects keep their frame range)
+    "Merge range from B|net.sf.openfx.MergePlugin|general|float|timedomain=0,25||-i A=none -i B=ramp -i Mask=none --frames 0"
+    "Merge range from B, no B|net.sf.openfx.MergePlugin|general|float|timedomain=default||-i A=checker:16 -i B=none -i Mask=none --frames 0"
+    "Merge range from A|net.sf.openfx.MergePlugin|general|float|timedomain=0,25||-i A=checker:16 -i B=none -i Mask=none rangeFrom=A --frames 0"
+    "Merge range from A, no A|net.sf.openfx.MergePlugin|general|float|timedomain=default||-i A=none -i B=ramp -i Mask=none rangeFrom=A --frames 0"
+    "Merge range, filter context|net.sf.openfx.MergePlugin|filter|float|timedomain=default||-i A=checker:16 -i Source=ramp -i Mask=none --frames 0"
+    "Merge 2 range, host default|net.sf.openfx.MergePlugin|general|float|timedomain=default||-m 2 -i A=checker:16 -i B=ramp -i Mask=none --frames 0"
     # ReConverge (checked on view 0, the left view): Shift Both, disparity 11 and offset 3: each
     # half is truncated separately (trunc(5.5) + trunc(1.5) = 6, where
     # trunc((11 + 3) / 2) would give 7), so the left view is shifted right by 6 pixels: the first

@@ -24,6 +24,7 @@
 #include <cmath>
 #include <cstring>
 #include <algorithm>
+#include <vector>
 #include <bitset>
 #ifdef DEBUG
 #include <iostream>
@@ -158,6 +159,9 @@ enum MergePluginEnum
 //      context, used by Natron, is unchanged.
 // 1.1 and 2.1 (unreleased, fixed in place): with Alpha-only images, B is not passed through when B's R checkbox,
 //      which controls the alpha in these versions, is unchecked (issue #328).
+// 3.0 (unreleased, fixed in place): in the general context, the time domain is the frame range of B, or of
+//      A with the new "Range From" parameter (default B), instead of the host default (issue #277).
+//      Rendered images are unchanged. Versions 1 and 2 keep the host default, with no parameter.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -243,6 +247,19 @@ enum BBoxEnum
 #define kParamOutputChannelsA      "OutputChannelsA"
 #define kParamOutputChannelsALabel "A"
 #define kParamOutputChannelsAHint  "Write alpha channel to output."
+
+#define kParamRangeFrom "rangeFrom"
+#define kParamRangeFromLabel "Range From"
+#define kParamRangeFromHint "Which input's frame range is passed to the output (the frame range of the effect). If that input is not connected, the host decides."
+#define kParamRangeFromOptionB "B", "Frame range of input B.", "b"
+#define kParamRangeFromOptionA "A", "Frame range of input A.", "a"
+#define kRangeFromMinMajor 3 // Range From is in versions 3 and later (versions 1 and 2: the host default)
+
+enum RangeFromEnum
+{
+    eRangeFromB = 0,
+    eRangeFromA,
+};
 
 #define kParamAChannelsAChanged "aChannelsChanged" // did the user explicitly change the "A" checkbox for A input?
 #define kParamBChannelsAChanged "bChannelsChanged" // did the user explicitly change the "A" checkbox for B input?
@@ -649,6 +666,8 @@ public:
 
         _bbox = fetchChoiceParam(kParamBBox);
         _alphaMasking = fetchBooleanParam(kParamAlphaMasking);
+        // only in the general context, in versions >= kRangeFromMinMajor
+        _rangeFrom = paramExists(kParamRangeFrom) ? fetchChoiceParam(kParamRangeFrom) : NULL;
         assert(_operation && _operationString && _bbox && _alphaMasking);
         _mix = fetchDoubleParam(kParamMix);
         _maskApply = ( ofxsMaskIsAlwaysConnected( OFX::getImageEffectHostDescription() ) && paramExists(kParamMaskApply) ) ? fetchBooleanParam(kParamMaskApply) : 0;
@@ -685,6 +704,9 @@ private:
     // override the rod call
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
+    // override the time domain action, only called in the general context
+    virtual bool getTimeDomain(OfxRangeD &range) OVERRIDE FINAL;
+
 #ifdef OFX_EXTENSIONS_NUKE
     virtual OfxStatus getClipComponents(const ClipComponentsArguments& args, ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
 #endif
@@ -716,6 +738,7 @@ private:
     StringParam *_operationString;
     ChoiceParam *_bbox;
     BooleanParam *_alphaMasking;
+    ChoiceParam *_rangeFrom;
     DoubleParam* _mix;
     BooleanParam* _maskApply;
     BooleanParam* _maskInvert;
@@ -1328,6 +1351,24 @@ MergePlugin::changedParam(const InstanceChangedArgs &args,
 }
 
 
+// The OFX spec (kOfxImageEffectActionGetTimeDomain) only calls this in the general context; the
+// default is the union of the frame ranges of the non-optional clips (all Merge clips are optional
+// there, so the default is infinite). Versions 1 and 2 (no Range From) keep the host default.
+bool
+MergePlugin::getTimeDomain(OfxRangeD &range)
+{
+    if ( !_rangeFrom || (getContext() != eContextGeneral) ) {
+        return false;
+    }
+    const Clip* clip = ( static_cast<RangeFromEnum>( _rangeFrom->getValue() ) == eRangeFromA ) ? _srcClipAs[0] : _srcClipB;
+    if ( !clip || !clip->isConnected() ) {
+        return false;
+    }
+    range = clip->getFrameRange();
+
+    return true;
+}
+
 bool
 MergePlugin::isIdentity(const IsIdentityArguments &args,
                         Clip * &identityClip,
@@ -1778,6 +1819,22 @@ MergePluginFactory<majorVersion,plugin>::describeInContext(ImageEffectDescriptor
         param->appendOption(kParamBBoxOptionB);
         param->setAnimates(true);
         param->setDefault( (int)eBBoxUnion );
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    // rangeFrom (issue #277): the time domain, only called in the general context
+    if ( (context == eContextGeneral) && (majorVersion >= kRangeFromMinMajor) ) {
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamRangeFrom);
+        param->setLabel(kParamRangeFromLabel);
+        param->setHint(kParamRangeFromHint);
+        assert(param->getNOptions() == (int)eRangeFromB);
+        param->appendOption(kParamRangeFromOptionB);
+        assert(param->getNOptions() == (int)eRangeFromA);
+        param->appendOption(kParamRangeFromOptionA);
+        param->setDefault( (int)eRangeFromB );
+        param->setAnimates(false); // used in getTimeDomain()
         if (page) {
             page->addChild(*param);
         }
