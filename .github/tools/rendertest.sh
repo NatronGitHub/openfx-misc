@@ -502,8 +502,9 @@ tests=(
     "Crop out of Source|net.sf.openfx.CropPlugin|filter|*|mean=0,0,0,0||-i Source=ramp bottomLeft=-100,-100 size=920,776 --frames 0 --window -90,-90,-10,-10"
     # saturation 0: the Rec.709 luminance
     "ColorCorrect|net.sf.openfx.ColorCorrectPlugin|filter|*|mean=0.465,0.465,0.465,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none MasterSaturation=0,0,0,0"
-    # Saturation -1 (issue #292): 2 * luma - colour, luma (Rec. 709) 0.4649
-    "Saturation negative|net.sf.openfx.SaturationPlugin|filter|*|notidentity+mean=0.6798,0.4298,0.1798,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none saturation=-1"
+    # Saturation -1 (issue #292): a check of the formula, 2 * luma - colour, luma (Rec. 709) 0.4649.
+    # It does not test the new minimum: hostDemo does not clamp parameters to their range
+    "Saturation negative formula|net.sf.openfx.SaturationPlugin|filter|*|notidentity+mean=0.6798,0.4298,0.1798,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none saturation=-1"
     "Clamp|net.sf.openfx.Clamp|filter|*|mean=1,0,0.5,1||-i Source=solid:1.5,-0.5,0.5,1 -i Mask=none"
     # WhiteBalance. The default (source 6504 K, i.e. D65, and the working space white
     # target) is an identity in the D65 working spaces (Rec. 709, Rec. 2020)
