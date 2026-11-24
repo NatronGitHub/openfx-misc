@@ -19,7 +19,7 @@
 # Contents/Libraries/, Contents/Frameworks/, or a DLL) but no Contents/Resources/licenses/ is an
 # error, and so is an OSMesa Shadertoy without it.
 #
-# Usage (from the top of the source tree, whose LICENSE, openfx/LICENSE, SupportExt and CImg
+# Usage (from the top of the source tree, whose LICENSE, openfx/LICENSE.md, SupportExt and CImg
 # sources give the license texts; the script itself, its CeCILL-C text and its parameters may come
 # from another checkout, e.g. release.yml's .release-tools):
 #   .github/tools/package-release.sh [--version VERSION] --platform PLATFORM --out DIR \
@@ -285,8 +285,10 @@ licenses() {
     shift
     cp "$src/LICENSE" "$dir/LICENSE.txt"
     mkdir "$dir/LICENSES"
-    # (openfx's current LICENSE.md, then the original LICENSE of the older files)
-    { [ ! -f "$src/openfx/LICENSE.md" ] || { cat "$src/openfx/LICENSE.md"; echo; }; cat "$src/openfx/LICENSE"; } \
+    # (openfx's LICENSE.md, then the Support library's LICENSE; openfx before the
+    # OFX 1.5.1 merge had the original top-level LICENSE instead)
+    { cat "$src/openfx/LICENSE.md"; echo
+      if [ -f "$src/openfx/LICENSE" ]; then cat "$src/openfx/LICENSE"; else cat "$src/openfx/Support/LICENSE"; fi; } \
         > "$dir/LICENSES/openfx-Support-BSD-3-Clause.txt"
     # (SupportExt's THREADS component, in every bundle)
     notice_block "$src/SupportExt/tinythread.cpp" "Marcus Geelnard" > "$dir/LICENSES/TinyThread++-zlib.txt"
@@ -324,7 +326,7 @@ licenses() {
 
 src=$PWD
 case "$fft" in pocketfft|pow2|fftw3) ;; *) echo "ERROR: --fft $fft (pocketfft, pow2 or fftw3)"; exit 2 ;; esac
-for f in LICENSE openfx/LICENSE SupportExt/ofxsMerging.h SupportExt/tinythread.cpp; do
+for f in LICENSE openfx/LICENSE.md SupportExt/ofxsMerging.h SupportExt/tinythread.cpp; do
     [ -f "$src/$f" ] || { echo "ERROR: $src/$f not found: run from the top of the source tree"; exit 1; }
 done
 if command -v sha256sum > /dev/null; then
