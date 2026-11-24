@@ -688,6 +688,16 @@ tests=(
     # their tiles differ slightly (up to 0.003) from the full render.
     "CImgBlur tile|net.sf.cimg.CImgBlur|filter|float|nonconst+tile||-i Source=checker:8 -i Mask=none size=5,5 expandRoD=0 filter=2 --frames 0 --window 100,100,300,250"
     "Merge tile|net.sf.openfx.MergePlugin|filter|float|nonconst+tile||-i A=checker:16 -i Source=ramp -i Mask=none --frames 0 --window 50,60,250,200"
+    # Merge "Range From" (#277): in the general context, Merge 3 passes B's frame range by default, or
+    # A's (hostDemo's inputs all have the frames 0 to 25, so this only checks which input is used, by
+    # disconnecting the other); the host default if that input is disconnected, in the filter context,
+    # and in Merge 2 (no parameter: Natron 2.5 projects keep their frame range)
+    "Merge range from B|net.sf.openfx.MergePlugin|general|float|timedomain=0,25||-i A=none -i B=ramp -i Mask=none --frames 0"
+    "Merge range from B, no B|net.sf.openfx.MergePlugin|general|float|timedomain=default||-i A=checker:16 -i B=none -i Mask=none --frames 0"
+    "Merge range from A|net.sf.openfx.MergePlugin|general|float|timedomain=0,25||-i A=checker:16 -i B=none -i Mask=none rangeFrom=A --frames 0"
+    "Merge range from A, no A|net.sf.openfx.MergePlugin|general|float|timedomain=default||-i A=none -i B=ramp -i Mask=none rangeFrom=A --frames 0"
+    "Merge range, filter context (host default: getTimeDomain is general context only)|net.sf.openfx.MergePlugin|filter|float|timedomain=default||-i A=checker:16 -i Source=ramp -i Mask=none --frames 0"
+    "Merge 2 range, host default|net.sf.openfx.MergePlugin|general|float|timedomain=default||-m 2 -i A=checker:16 -i B=ramp -i Mask=none --frames 0"
     # ReConverge (checked on view 0, the left view): Shift Both, disparity 11 and offset 3: each
     # half is truncated separately (trunc(5.5) + trunc(1.5) = 6, where
     # trunc((11 + 3) / 2) would give 7), so the left view is shifted right by 6 pixels: the first
