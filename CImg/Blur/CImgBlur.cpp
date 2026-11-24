@@ -187,6 +187,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 "The 'Size' parameter gives the size of the largest blur kernel, 'Count' gives the number of blur kernels, and 'Ratio' gives the ratio between consecutive blur kernel sizes. The size of the smallest blur kernel is thus 'Size'/'Ratio'^('Count'-1)\n" \
 "To get the classical single unpremult-blur-premult, use 'Count'=1 and set the size to the size of the blur kernel. However, near the mask borders, a frontier can be seen between the non-blurred area (this inside of the mask) and the blurred area. Using more blur sizes will give a much smoother transition.\n" \
 "The idea for the builtup blurs to expand RGB comes from the EdgeExtend effect for Nuke by Frank Rueter (except the blurs were merged from the smallest to the largest, and here it is done the other way round), with suggestions by Lucas Pfaff.\n" \
+"This is not the EdgeExtend node of other compositing applications, which has different controls.\n" \
 "CImg is a free, open-source library distributed under the CeCILL-C " \
 "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
 "It can be used in commercial applications (see http://cimg.eu)."
