@@ -617,6 +617,35 @@ tests=(
     # inputs differ, so that reading A for B (or B for A) fails.
     "Shuffle|net.sf.openfx.ShufflePlugin|general|*|mean=0.75,0.5,0.25,1||-i A=solid:0.25,0.5,0.75,1 -i B=solid:0.25,0.5,0.75,1 outputR=8 outputB=6"
     "Shuffle B|net.sf.openfx.ShufflePlugin|general|float|mean=0.75,0.5,0.25,1||-i A=ramp -i B=solid:0.25,0.5,0.75,1 outputR=8 outputB=6"
+    # ErodeBlur remaps and clamps the values (here only the alpha, the default) even when the blur
+    # does nothing (size 0.25: (0.5 - 0.125) / 0.875), and the Blur Alpha Threshold zeroes the alpha
+    # even when a box-type filter does not blur (issue #324); with the default (Quasi-Gaussian)
+    # filter and a tiny size, the render skips the threshold: an identity.
+    "ErodeBlur small|eu.cimg.ErodeBlur|filter|float|notidentity+mean=0.5,0.5,0.5,0.4286||-i Source=solid:0.5,0.5,0.5,0.5 -i Mask=none size=0.25"
+    "CImgBlur alpha threshold|net.sf.cimg.CImgBlur|filter|float|notidentity+mean=0.25,0.5,0.75,0||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none alphaThreshold=0.6 filter=2"
+    "CImgBlur size 0|net.sf.cimg.CImgBlur|filter|float|identity+mean=0.25,0.5,0.75,0.5||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none alphaThreshold=0.6"
+    # FrameBlend, one frame (relative range -1..-1, at t=1: frame 0 of the default pattern, which
+    # changes with time, so that the render reads the right frame; view 0 is red): not a copy of that frame with Mix, a mask, an unprocessed channel (from
+    # the current frame; with Mix 1 and no mask, it was 0), Product with Decay (the frame times
+    # 1 - decay), or Average on float images (-0 and infinite values); Min, and Average on byte
+    # images, copy it (issue #325). Version 2, Frame Interval 2: the one-frame range blends that
+    # frame (frame 1 at t=2), as version 2.0 passed it through (it rendered black).
+    "FrameBlend one frame mix|net.sf.openfx.FrameBlend|filter|*|notidentity+mean=0.5,0,0,1||-i Source=default -i FgM=none -i Mask=none frameRange=-1,-1 mix=0.5 --frames 1"
+    "FrameBlend one frame mask|net.sf.openfx.FrameBlend|filter|*|notidentity+mean=0.5,0,0,1||-i Source=default -i FgM=none -i Mask=solid:0.5,0.5,0.5,0.5 frameRange=-1,-1 --frames 1"
+    "FrameBlend one frame no A|net.sf.openfx.FrameBlend|filter|*|notidentity+mean=0.25,0.5,0.75,0.5||-i Source=solid:0.25,0.5,0.75,0.5 -i FgM=none -i Mask=none frameRange=-1,-1 NatronOfxParamProcessA=0"
+    "FrameBlend one frame product|net.sf.openfx.FrameBlend|filter|float|notidentity+mean=0.125,0.25,0.375,0.5||-i Source=solid:0.25,0.5,0.75,1 -i FgM=none -i Mask=none frameRange=-1,-1 operation=Product decay=0.5"
+    "FrameBlend one frame min|net.sf.openfx.FrameBlend|filter|*|identity+mean=0.002,0,0,1||-i Source=default -i FgM=none -i Mask=none frameRange=-1,-1 operation=Min --frames 1"
+    "FrameBlend one frame average byte|net.sf.openfx.FrameBlend|filter|byte|identity+mean=0.002,0,0,1||-i Source=default -i FgM=none -i Mask=none frameRange=-1,-1 --frames 1"
+    "FrameBlend one frame average float|net.sf.openfx.FrameBlend|filter|float|notidentity+mean=0.002,0,0,1||-i Source=default -i FgM=none -i Mask=none frameRange=-1,-1 --frames 1"
+    "FrameBlend 2 one frame interval 2|net.sf.openfx.FrameBlend|filter|*|mean=0.998,0,0,1||-m 2 -i Source=default -i FgM=none -i Mask=none frameRange=-1,-1 frameInterval=2 --frames 2"
+    # LensDistortion 3DE Anamorphic 4 with zero coefficients: Squeeze 1 (the default) is an
+    # identity, another squeeze is not (issue #326; it tested Squeeze 0)
+    "LensDistortion 3DE Anamorphic 4 default|net.sf.openfx.LensDistortion|general|*|identity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 model=6"
+    "LensDistortion 3DE Anamorphic 4 squeeze 2|net.sf.openfx.LensDistortion|general|float|notidentity||-i Source=checker:16 model=6 tde4_Squeeze_X=2"
+    # Rectangle and Radial with Process A on an opaque Source make the Output UnPremultiplied, also
+    # with Mix 0 (issue #328)
+    "Rectangle opaque mix 0|net.sf.openfx.Rectangle|general|*|notidentity||-i Source=file:convsrc.pfm#opaque -i Mask=none mix=0"
+    "Radial opaque mix 0|net.sf.openfx.Radial|general|*|notidentity||-i Source=file:convsrc.pfm#opaque -i Mask=none mix=0"
     # the default: the B input (identity)
     "Shuffle default|net.sf.openfx.ShufflePlugin|general|*|mean=0.5,0.6,0.7,0.8||-i A=solid:0.1,0.2,0.3,0.4 -i B=solid:0.5,0.6,0.7,0.8"
     "Shuffle A and B|net.sf.openfx.ShufflePlugin|general|*|mean=0.3,0.6,0.1,0.8||-i A=solid:0.1,0.2,0.3,0.4 -i B=solid:0.5,0.6,0.7,0.8 outputR=2 outputG=7 outputB=0 outputA=9"
