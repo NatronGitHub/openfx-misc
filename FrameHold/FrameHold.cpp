@@ -54,7 +54,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.1: render copies the Source at the source time (it wrote nothing): the spec says that the
 //              host should not call render after isIdentity returns true, but some hosts (e.g. hostDemo) do;
 //              a NULL Source image (disconnected input) renders black instead of crashing (SupportExt copyPixels);
-//              the sublabel shows the frame as the host displays it (kOfxImageClipPropDisplayTimeOffset, display only)
+//              the sublabel shows the frame as the host displays it (kOfxImageClipPropDisplayTimeOffset, display only);
+//              First Frame is set to the current frame when the user connects the Source and First Frame is still
+//              its default (0, not animated), and a "Set to Current Frame" button sets it (#307)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -67,7 +69,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamFirstFrame "firstFrame"
 #define kParamFirstFrameLabel "First Frame"
-#define kParamFirstFrameHint "Reference input frame (the frame to hold if increment is 0)."
+#define kParamFirstFrameHint "Reference input frame (the frame to hold if increment is 0). When the Source is connected and First Frame is still 0 and not animated, it is set to the current frame."
+#define kParamFirstFrameDefault 0
+#define kParamSetToCurrentFrame "setToCurrentFrame"
+#define kParamSetToCurrentFrameLabel "Set to Current Frame"
+#define kParamSetToCurrentFrameHint "Set First Frame to the current frame (a key at the current frame if First Frame is animated)."
 #define kParamIncrement "increment"
 #define kParamIncrementLabel "Increment"
 #define kParamIncrementHint "If increment is 0, only the \"firstFrame\" will be held. If it is positive, every multiple of \"increment\" plus \"firstFrame\" will be held for \"increment\" frames afterwards (before if it is negative)."
@@ -130,6 +136,8 @@ private:
 
     void updateSublabel(double time);
 
+    void setFirstFrameToCurrentFrame(double time);
+
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;            /**< @brief Mandated output clips */
@@ -181,6 +189,22 @@ FrameHoldPlugin::updateSublabel(double time)
         snprintf(label, sizeof(label), "frame %.10g+n*%d", displayFirstFrame, increment);
     }
     _sublabel->setValue(label);
+}
+
+// Set First Frame to the frame at time (the current frame of the host, from an instance changed action),
+// rounded to the nearest frame: a key at that time if First Frame is animated.
+void
+FrameHoldPlugin::setFirstFrameToCurrentFrame(double time)
+{
+    const int frame = static_cast<int>( std::floor(time + 0.5) );
+
+    if (_firstFrame->getNumKeys() > 0) {
+        _firstFrame->setValueAtTime(time, frame);
+    } else {
+        _firstFrame->setValue(frame);
+    }
+    // the instance changed action of this plugin edit does not update the sublabel
+    updateSublabel(time);
 }
 
 void
@@ -246,6 +270,8 @@ FrameHoldPlugin::changedParam(const InstanceChangedArgs &args,
 {
     if ( ( (paramName == kParamFirstFrame) || (paramName == kParamIncrement) ) && (args.reason == eChangeUserEdit) ) {
         updateSublabel(args.time);
+    } else if ( (paramName == kParamSetToCurrentFrame) && (args.reason == eChangeUserEdit) ) {
+        setFirstFrameToCurrentFrame(args.time);
     }
 }
 
@@ -253,10 +279,20 @@ void
 FrameHoldPlugin::changedClip(const InstanceChangedArgs &args,
                              const std::string &clipName)
 {
-    // the display time offset is a clip property: refresh the sublabel when the Source changes
-    if ( (clipName == kOfxImageEffectSimpleSourceClipName) && (args.reason == eChangeUserEdit) ) {
-        updateSublabel(args.time);
+    if ( (clipName != kOfxImageEffectSimpleSourceClipName) || (args.reason != eChangeUserEdit) ) {
+        return;
     }
+    // As FrameRange does with its range: when the user connects the Source and First Frame is still its
+    // default, hold the current frame rather than frame 0, which is usually outside the input range (#307).
+    // Project loads are not user edits, so saved values are never changed.
+    if ( _srcClip && _srcClip->isConnected() && (_firstFrame->getNumKeys() == 0) &&
+         (_firstFrame->getValue() == kParamFirstFrameDefault) ) {
+        setFirstFrameToCurrentFrame(args.time);
+
+        return;
+    }
+    // the display time offset is a clip property: refresh the sublabel when the Source changes
+    updateSublabel(args.time);
 }
 
 mDeclarePluginFactory(FrameHoldPluginFactory,; , {});
@@ -336,10 +372,21 @@ FrameHoldPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         IntParamDescriptor *param = desc.defineIntParam(kParamFirstFrame);
         param->setLabel(kParamFirstFrameLabel);
         param->setHint(kParamFirstFrameHint);
-        param->setDefault(0);
+        param->setDefault(kParamFirstFrameDefault);
         param->setRange(INT_MIN, INT_MAX);
         param->setDisplayRange(INT_MIN, INT_MAX);
         param->setAnimates(true);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    // setToCurrentFrame
+    {
+        PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamSetToCurrentFrame);
+        param->setLabel(kParamSetToCurrentFrameLabel);
+        param->setHint(kParamSetToCurrentFrameHint);
         if (page) {
             page->addChild(*param);
         }
