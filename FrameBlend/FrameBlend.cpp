@@ -52,7 +52,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDescription \
     "Blend frames of the input clip.\n" \
     "If a foreground matte is connected, only pixels with a negative or zero foreground value are taken into account, so that the foreground is not mixed with the background.\n" \
-    "The number of values used to compute each pixel can be output to the alpha channel."
+    "The number of values used to compute each pixel can be output to the alpha channel.\n" \
+    "The default Frame Range, -5 to 0 (relative), blends 6 frames: the current frame and the 5 previous ones. Set it to -4 to 0 to blend the current frame and the 4 previous ones.\n" \
+    "The frames blended are one out of Frame Interval frames within the range (starting from its lower bound, or from its last frame in version 2), not a number of frames spread evenly across the range."
 
 #define kPluginIdentifier "net.sf.openfx.FrameBlend"
 // History:
