@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o Constant.o ofxsRectangleInteract.o ofxsGenerator.o
+PLUGINOBJECTS = ofxsThreadSuite.o Constant.o ofxsRectangleInteract.o ofxsGenerator.o
 PLUGINNAME = Constant
 RESOURCES = net.sf.openfx.ConstantPlugin.png net.sf.openfx.ConstantPlugin.svg net.sf.openfx.Solid.png
 

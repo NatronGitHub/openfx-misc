@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ofxsThreadSuite.o tinythread.o WhiteBalance.o
+PLUGINOBJECTS = ofxsThreadSuite.o WhiteBalance.o
 PLUGINNAME = WhiteBalance
 RESOURCES = net.sf.openfx.WhiteBalance.png net.sf.openfx.WhiteBalance.svg
 
