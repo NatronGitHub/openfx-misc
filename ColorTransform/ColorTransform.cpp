@@ -32,8 +32,8 @@ using namespace OFX;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
-// The hue of HSV, HSL and HSI is in [0, 1) (OFXS_HUE_CIRCLE in SupportExt's ofxsLut.h).
-#define kHueNote "H is in [0,1) (a fraction of the hue circle, not degrees): red is 0, yellow 1/6, green 1/3, cyan 1/2, blue 2/3 and magenta 5/6."
+// The hue of HSV, HSL and HSI is a fraction of the hue circle (OFXS_HUE_CIRCLE in SupportExt's ofxsLut.h).
+#define kHueNote "For RGB in [0,1], H is in [0,1] (a fraction of the hue circle, not degrees; it can round to 1): red is 0, yellow 1/6, green 1/3, cyan 1/2, blue 2/3 and magenta 5/6."
 #define kAsGivenRGBToNote \
     "The conversion uses the RGB values as they are given: no transfer function (gamma) is applied. " \
     "HSV and HSL are usually computed on display-referred values, e.g. sRGB-encoded ones: " \
@@ -50,7 +50,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginRGBToHSVIdentifier "net.sf.openfx.RGBToHSV"
 
 #define kPluginHSVToRGBName "HSVToRGB"
-#define kPluginHSVToRGBDescription "Convert from the HSV color model (hue, saturation, value, as defined by A. R. Smith in 1978) to RGB: the inverse of RGBToHSV. " \
+#define kPluginHSVToRGBDescription "Convert from the HSV color model (hue, saturation, value, as defined by A. R. Smith in 1978) to RGB: the inverse of RGBToHSV for RGB in [0,1]. " \
     "H is wrapped into the hue circle.\n" \
     kHueNote " V is in the units of RGB, S in [0,1].\n" \
     kAsGivenToRGBNote
@@ -63,7 +63,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginRGBToHSLIdentifier "net.sf.openfx.RGBToHSL"
 
 #define kPluginHSLToRGBName "HSLToRGB"
-#define kPluginHSLToRGBDescription "Convert from the HSL color model (hue, saturation, lightness, as defined by Joblove and Greenberg in 1978) to RGB: the inverse of RGBToHSL. " \
+#define kPluginHSLToRGBDescription "Convert from the HSL color model (hue, saturation, lightness, as defined by Joblove and Greenberg in 1978) to RGB: the inverse of RGBToHSL for RGB in [0,1]. " \
     "H is wrapped into the hue circle.\n" \
     kHueNote " L is in the units of RGB, S in [0,1].\n" \
     kAsGivenToRGBNote
@@ -81,7 +81,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginRGBToHSIIdentifier "net.sf.openfx.RGBToHSI"
 
 #define kPluginHSIToRGBName "HSIToRGB"
-#define kPluginHSIToRGBDescription "Convert from the HSI color model (hue, saturation, intensity, as defined by Gonzalez and Woods in 1992) to RGB: the inverse of RGBToHSI. " \
+#define kPluginHSIToRGBDescription "Convert from the HSI color model (hue, saturation, intensity, as defined by Gonzalez and Woods in 1992) to RGB: the inverse of RGBToHSI for RGB in [0,1]. " \
     "H is wrapped into the hue circle.\n" \
     kHueNote " I is in the units of RGB, S in [0,1].\n" \
     kAsGivenToRGBNote "\n" \
@@ -94,11 +94,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kDecodeSRGB "R'G'B' is then decoded to linear RGB with the sRGB transfer function; negative values become 0."
 #define kEncodeRec709 "Linear RGB is first encoded to R'G'B' with the Rec.709 transfer function (OETF, with the more precise constants of Rec.2020); negative values become 0."
 #define kDecodeRec709 "R'G'B' is then decoded to linear RGB with the inverse of the Rec.709 OETF; negative values become 0."
-#define kYCbCrRange "Y'CbCr is in the video (studio) range, as 8-bit code values divided by 255: Y' goes from 16/255 (black) to 235/255 (white), and Cb and Cr from 16/255 to 240/255, with 128/255 for neutral colours."
+#define kYCbCrRange "Y'CbCr is in the video (studio) range, as 8-bit code values divided by 255: Y' goes from 16/255 (black) to about 235/255 (white), and Cb and Cr from 16/255 to 240/255, with 128/255 for neutral colours."
 #define kYPbPrRange "Y' goes from 0 (black) to 1 (white), Pb and Pr from -0.5 to 0.5, with 0 for neutral colours."
 #define kYUVRange "Y' goes from 0 (black) to 1 (white), U from -0.436 to 0.436 and V from -0.615 to 0.615, with 0 for neutral colours."
 #define kMatrix601 "The matrix is the ITU-R BT.601 one (Kr = 0.299, Kb = 0.114)."
-#define kMatrix709 "The matrix is the ITU-R BT.709 one (Kr = 0.2126, Kb = 0.0722)."
+#define kMatrix709 "The matrix is the ITU-R BT.709 one (Kr ≈ 0.2126, Kb ≈ 0.0722)."
 
 #define kPluginRGBToYCbCr601Name "RGBToYCbCr601"
 #define kPluginRGBToYCbCr601Description "Convert from linear RGB to the Y'CbCr color model (ITU-R BT.601).\n" \
@@ -106,7 +106,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginRGBToYCbCr601Identifier "net.sf.openfx.RGBToYCbCr601"
 
 #define kPluginYCbCrToRGB601Name "YCbCrToRGB601"
-#define kPluginYCbCrToRGB601Description "Convert from the Y'CbCr color model (ITU-R BT.601) to linear RGB: the inverse of RGBToYCbCr601.\n" \
+#define kPluginYCbCrToRGB601Description "Convert from the Y'CbCr color model (ITU-R BT.601) to linear RGB: the inverse of RGBToYCbCr601 for RGB in [0,1].\n" \
     kYCbCrRange " " kMatrix601 " " kDecodeSRGB
 #define kPluginYCbCrToRGB601Identifier "net.sf.openfx.YCbCrToRGB601"
 
@@ -116,7 +116,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginRGBToYCbCr709Identifier "net.sf.openfx.RGBToYCbCr709"
 
 #define kPluginYCbCrToRGB709Name "YCbCrToRGB709"
-#define kPluginYCbCrToRGB709Description "Convert from the Y'CbCr color model (ITU-R BT.709) to linear RGB: the inverse of RGBToYCbCr709.\n" \
+#define kPluginYCbCrToRGB709Description "Convert from the Y'CbCr color model (ITU-R BT.709) to linear RGB: the inverse of RGBToYCbCr709 for RGB in [0,1].\n" \
     kYCbCrRange " " kMatrix709 " " kDecodeRec709
 #define kPluginYCbCrToRGB709Identifier "net.sf.openfx.YCbCrToRGB709"
 
@@ -126,7 +126,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginRGBToYPbPr601Identifier "net.sf.openfx.RGBToYPbPr601"
 
 #define kPluginYPbPrToRGB601Name "YPbPrToRGB601"
-#define kPluginYPbPrToRGB601Description "Convert from the Y'PbPr color model (ITU-R BT.601) to linear RGB: the inverse of RGBToYPbPr601.\n" \
+#define kPluginYPbPrToRGB601Description "Convert from the Y'PbPr color model (ITU-R BT.601) to linear RGB: the inverse of RGBToYPbPr601 for RGB in [0,1].\n" \
     kYPbPrRange " " kMatrix601 " " kDecodeSRGB
 #define kPluginYPbPrToRGB601Identifier "net.sf.openfx.YPbPrToRGB601"
 
@@ -136,7 +136,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginRGBToYPbPr709Identifier "net.sf.openfx.RGBToYPbPr709"
 
 #define kPluginYPbPrToRGB709Name "YPbPrToRGB709"
-#define kPluginYPbPrToRGB709Description "Convert from the Y'PbPr color model (ITU-R BT.709) to linear RGB: the inverse of RGBToYPbPr709.\n" \
+#define kPluginYPbPrToRGB709Description "Convert from the Y'PbPr color model (ITU-R BT.709) to linear RGB: the inverse of RGBToYPbPr709 for RGB in [0,1].\n" \
     kYPbPrRange " " kMatrix709 " " kDecodeRec709
 #define kPluginYPbPrToRGB709Identifier "net.sf.openfx.YPbPrToRGB709"
 
@@ -146,7 +146,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginRGBToYUV601Identifier "net.sf.openfx.RGBToYUV601"
 
 #define kPluginYUVToRGB601Name "YUVToRGB601"
-#define kPluginYUVToRGB601Description "Convert from the Y'UV color model (ITU-R BT.601) to linear RGB: the inverse of RGBToYUV601.\n" \
+#define kPluginYUVToRGB601Description "Convert from the Y'UV color model (ITU-R BT.601) to linear RGB: the inverse of RGBToYUV601 for RGB in [0,1].\n" \
     kYUVRange " " kMatrix601 " " kDecodeSRGB
 #define kPluginYUVToRGB601Identifier "net.sf.openfx.YUVToRGB601"
 
@@ -156,7 +156,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginRGBToYUV709Identifier "net.sf.openfx.RGBToYUV709"
 
 #define kPluginYUVToRGB709Name "YUVToRGB709"
-#define kPluginYUVToRGB709Description "Convert from the Y'UV color model (ITU-R BT.709) to linear RGB: the inverse of RGBToYUV709.\n" \
+#define kPluginYUVToRGB709Description "Convert from the Y'UV color model (ITU-R BT.709) to linear RGB: the inverse of RGBToYUV709 for RGB in [0,1].\n" \
     kYUVRange " " kMatrix709 " " kDecodeRec709
 #define kPluginYUVToRGB709Identifier "net.sf.openfx.YUVToRGB709"
 
