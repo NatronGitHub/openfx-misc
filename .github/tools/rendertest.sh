@@ -170,6 +170,8 @@ pfm("convsrc.pfm", 720, 576, lambda x, y, c: ((x * 7919 + y * 104729 + c * 4099)
 pfm("convk.pfm", 7, 5, lambda x, y, c: 1. + ((x * 3 + y * 5 + c * 7) % 11))
 # vramp.pfm: a 720x576 PF vertical ramp, (y + 0.5) / 576 at row y (for the Y axis of GodRays scale 0)
 pfm("vramp.pfm", 720, 576, lambda x, y, c: (y + 0.5) / 576.)
+# nanpix.pfm: a 64x48 PF of 0.5, with one NaN pixel at (10,10) (a NaN must not spread to other areas)
+pfm("nanpix.pfm", 64, 48, lambda x, y, c: float("nan") if (x, y) == (10, 10) else .5)
 # impulse.pfm: a 64x48 PF, black except a white pixel at (32,24) (for the "max" check of a blur);
 # delta.pfm: a 1x1 PF kernel (for the "conv" check of an output that must be its input)
 pfm("impulse.pfm", 64, 48, lambda x, y, c: 1. if (x, y) == (32, 24) else 0.)
@@ -793,10 +795,16 @@ tests=(
     # the full frame with that blur: the taps are bounded, so it takes seconds, not hours
     "IDistort blur huge full frame|net.sf.openfx.IDistort|general|float|maxsec=120+mean=0.5,0.5,0.5,1||-i Source=solid:0.5,0.5,0.5,1 -i UV=solid:0,0,1,1e-30 -i Mask=none channelBlur=2 unpremultUV=1 blurScale=1e30 --frames 0"
     "IDistort blur huge box full frame|net.sf.openfx.IDistort|general|float|maxsec=120+mean=0.5,0.5,0.5,1||-i Source=solid:0.5,0.5,0.5,1 -i UV=solid:0,0,1,1e-30 -i Mask=none channelBlur=2 unpremultUV=1 blurScale=1e30 filter=1 --frames 0"
-    # a blur of 128 square pixels (a Cubic kernel 1 + 128/PAR = 121 pixels wide along x, sampled every 4
-    # pixels), 40 pixels right of the edge of a 512-pixel checker at x=512: the white part of the kernel
-    # is 0.8126 (a kernel of another width gives another value)
-    "IDistort blur 128|net.sf.openfx.IDistort|general|float|mean=0.8126,0.8126,0.8126,0.8126||-i Source=checker:512 -i UV=solid:0,0,128,1 -i Mask=none channelBlur=2 --frames 0 --window 552,300,553,301"
+    # Box with a blur, Black Outside off (the default): the sampled area far outside the image (U = -1000)
+    # repeats the edge pixels (a solid 0.5), it is not black
+    "IDistort blur box outside|net.sf.openfx.IDistort|general|float|mean=0.5,0.5,0.5,1||-i Source=solid:0.5,0.5,0.5,1 -i UV=solid:-1000,0,4,1 -i Mask=none channelBlur=2 filter=1 black_outside=0 --frames 0 --window 300,300,302,302"
+    # a NaN source pixel at (10,10) does not spread to the areas that do not hold it (the summed-area table
+    # skips it): the Box mean around (42,32) is 0.5
+    "IDistort blur NaN elsewhere|net.sf.openfx.IDistort|general|float|mean=0.5,0.5,0.5,1||-i Source=file:nanpix.pfm -i UV=solid:0,0,4,1 -i Mask=none channelBlur=2 filter=1 --frames 0 --window 40,30,44,34"
+    # a blur of 128 square pixels (a Cubic kernel 1 + 128/PAR = 121 pixels wide along x, with a tap every
+    # 4 pixels, each the mean of its 4-pixel cell centred on the tap), 40 pixels right of the edge of a
+    # 512-pixel checker at x=512: the white part of the kernel is 0.8034 (another width gives another value)
+    "IDistort blur 128|net.sf.openfx.IDistort|general|float|tol=1e-3+mean=0.8034,0.8034,0.8034,0.8034||-i Source=checker:512 -i UV=solid:0,0,128,1 -i Mask=none channelBlur=2 --frames 0 --window 552,300,553,301"
     # a blur of 64 square pixels on a 1-pixel checker: the kernel (61 pixels wide along x, 65 along y) is
     # sampled every 2 x 3 pixels, each tap the mean of its 2x3 cell (a summed-area table), so the output is
     # 0.5 everywhere (point samples every 2 pixels would read only white or only black)
@@ -1037,7 +1045,7 @@ for t in "${tests[@]}"; do
         fi
     done
 done
-rm -f out.* full.* report.json ref.json autocrop.pfm convsrc.pfm convk.pfm diffa.pfm diffb.pfm
+rm -f out.* full.* report.json ref.json autocrop.pfm convsrc.pfm convk.pfm nanpix.pfm diffa.pfm diffb.pfm
 
 if [ $n = 0 ]; then
     echo "no render matches RENDERTEST_ONLY=$RENDERTEST_ONLY"
