@@ -90,6 +90,8 @@ SharpenInvDiff/net.sf.cimg.CImgSharpenInvDiff.svg \
 SharpenShock/net.sf.cimg.CImgSharpenShock.png \
 Smooth/net.sf.cimg.CImgSmooth.png \
 Smooth/net.sf.cimg.CImgSmooth.svg \
+ZDefocus/net.sf.cimg.CImgZDefocus.png \
+ZDefocus/net.sf.cimg.CImgZDefocus.svg \
 
 VPATH += \
 Bilateral \
