@@ -65,7 +65,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 // 2.1 and 1.2 (unreleased, fixed in place): the Lanczos4, Lanczos6 and Sinc4 filters (appended options) and
-//      the Prefilter Downscaling checkbox (appended, off) (issue #270); the default output is unchanged.
+//      the Prefilter Downscaling checkbox (after the filter parameters, off) (issue #270); the default output is unchanged.
 
 #define kParamUseRoD "useRoD"
 #define kParamUseRoDLabel "Use Source RoD"
@@ -1098,7 +1098,7 @@ ReformatPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &de
     // clamp, filter, black outside
     ofxsFilterDescribeParamsInterpolate2D(desc, page, /*blackOutsideDefault*/ false, eFilterSetSinc);
 
-    // appended (issue #270): off, the supersampling of the previous versions
+    // after the filter parameters (issue #270): off, the supersampling of the previous versions
     ofxsFilterDescribeParamPrefilter(desc, page);
 } // ReformatPluginFactory::describeInContext
 
