@@ -86,7 +86,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
 // version 2.1: antialiased render & remove blackOutside parameter (the outside color is always color0)
-// version 2.2: add angle parameter
+// version 2.2: add angle parameter;
+//              add the Premultiply, Replace and Invert parameters (default off: the output is unchanged) (#288)
 //              (no version change) removed the XY render branch: Output never declares XY, so a
 //              conforming host never gives it; other components give kOfxStatErrFormat (issue #226).
 //              Output is unchanged.
@@ -153,6 +154,19 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamColor1 "color1"
 #define kParamColor1Label "Color 1"
 
+#define kParamShapePremult "premultiply"
+#define kParamShapePremultLabel "Premultiply"
+#define kParamShapePremultHint "Multiply the red, green and blue channels of the Source by the rectangle (1 inside, 0 outside, " \
+    "and the Softness in between) before drawing: outside of the shape, they are set to black. The output is then premultiplied."
+
+#define kParamReplace "replace"
+#define kParamReplaceLabel "Replace"
+#define kParamReplaceHint "Clear the drawn channels (R, G, B and A, as checked) of the Source to black before drawing into them."
+
+#define kParamInvert "invert"
+#define kParamInvertLabel "Invert"
+#define kParamInvertHint "Invert the shape: Color 0 is drawn inside and Color 1 outside."
+
 #define kParamExpandRoD "expandRoD"
 #define kParamExpandRoDLabel "Expand RoD"
 #define kParamExpandRoDHint "Expand the source region of definition by the shape RoD (if Source is connected and color0=(0,0,0,0))."
@@ -203,6 +217,8 @@ protected:
     OfxPointD _cornerRadius;
     double _softness;
     RGBAValues _color0, _color1;
+    bool _premult; // multiply the Source RGB by the shape
+    bool _replace; // clear the drawn channels of the Source
 
 public:
     RectangleProcessorBase(ImageEffect &instance)
@@ -218,6 +234,8 @@ public:
         , _processA(false)
         , _angle(0.)
         , _softness(0.)
+        , _premult(false)
+        , _replace(false)
     {
         _btmLeft.x = _btmLeft.y = _size.x = _size.y = 0.;
         _cornerRadius.x = _cornerRadius.y = 0.;
@@ -254,7 +272,9 @@ public:
                    bool processR,
                    bool processG,
                    bool processB,
-                   bool processA)
+                   bool processA,
+                   bool premult,
+                   bool replace)
     {
         _btmLeft = btmLeft;
         _size = size;
@@ -268,6 +288,8 @@ public:
         _processG = processG;
         _processB = processB;
         _processA = processA;
+        _premult = premult;
+        _replace = replace;
     }
 };
 
@@ -360,7 +382,7 @@ private:
     // processed channels, then apply the mask and mix and write dstPix.
     // Shared by process() and processRotated(), which only differ in how they compute tmpPix.
     template<bool processR, bool processG, bool processB, bool processA>
-    void writePixel(float tmpPix[4],
+    void writePixel(float tmpPix[5],
                     const PIX* srcPix,
                     int x,
                     int y,
@@ -384,6 +406,27 @@ private:
                 srcPixRGBA[3] = srcPix[nComponents - 1];
             }
         }
+        if (_premult) {
+            // Premultiply: the source RGB times the shape weight tmpPix[4]
+            srcPixRGBA[0] *= tmpPix[4];
+            srcPixRGBA[1] *= tmpPix[4];
+            srcPixRGBA[2] *= tmpPix[4];
+        }
+        if (_replace) {
+            // Replace: draw on black in the processed channels
+            if (processR) {
+                srcPixRGBA[0] = 0.f;
+            }
+            if (processG) {
+                srcPixRGBA[1] = 0.f;
+            }
+            if (processB) {
+                srcPixRGBA[2] = 0.f;
+            }
+            if (processA) {
+                srcPixRGBA[3] = 0.f;
+            }
+        }
         tmpPix[0] = processR ? (tmpPix[0] + srcPixRGBA[0] * (1.f - a)) : srcPixRGBA[0];
         tmpPix[1] = processG ? (tmpPix[1] + srcPixRGBA[1] * (1.f - a)) : srcPixRGBA[1];
         tmpPix[2] = processB ? (tmpPix[2] + srcPixRGBA[2] * (1.f - a)) : srcPixRGBA[2];
@@ -405,7 +448,7 @@ private:
             return processRotated<processR, processG, processB, processA>(procWindow, rs);
         }
 
-        float tmpPix[4] = {0.f, 0.f, 0.f, 0.f};
+        float tmpPix[5] = {0.f, 0.f, 0.f, 0.f, 0.f}; // RGBA and the shape weight
         double par = _dstImg->getPixelAspectRatio();
         if (par <= 0.) {
             par = 1.;
@@ -441,6 +484,7 @@ private:
                     tmpPix[1] = (float)_color0.g;
                     tmpPix[2] = (float)_color0.b;
                     tmpPix[3] = (float)_color0.a;
+                    tmpPix[4] = 0.f; // the shape weight
                 } else {
                     float a = 1.; // mix factor with the outside
                     // test if the center of the pixel is within one of the rounded corners
@@ -489,6 +533,7 @@ private:
                             tmpPix[1] = (float)_color0.g;
                             tmpPix[2] = (float)_color0.b;
                             tmpPix[3] = (float)_color0.a;
+                            tmpPix[4] = 0.f; // the shape weight
                         } else {
                             // maybe inside
 
@@ -506,6 +551,7 @@ private:
                                 tmpPix[1] = (float)_color0.g;
                                 tmpPix[2] = (float)_color0.b;
                                 tmpPix[3] = (float)_color0.a;
+                                tmpPix[4] = 0.f; // the shape weight
                             } else {
                                 // always consider the value closest top the center to avoid discontinuities/artifacts
                                 if (_softness <= 0) {
@@ -514,6 +560,7 @@ private:
                                     tmpPix[1] = (float)_color1.g;
                                     tmpPix[2] = (float)_color1.b;
                                     tmpPix[3] = (float)_color1.a;
+                                    tmpPix[4] = 1.f;
                                 } else {
                                     // compute the non-round rect coeff (tx*ty) first.
                                     float tx, ty;
@@ -558,6 +605,7 @@ private:
                                         tmpPix[1] = (float)_color1.g;
                                         tmpPix[2] = (float)_color1.b;
                                         tmpPix[3] = (float)_color1.a;
+                                        tmpPix[4] = 1.f;
                                     } else {
                                         //if (_plinear) {
                                         //    // it seems to be the way Nuke does it... I could understand t*t, but why t*t*t?
@@ -567,6 +615,7 @@ private:
                                         tmpPix[1] = (float)_color0.g * (1.f - t) + (float)_color1.g * t;
                                         tmpPix[2] = (float)_color0.b * (1.f - t) + (float)_color1.b * t;
                                         tmpPix[3] = (float)_color0.a * (1.f - t) + (float)_color1.a * t;
+                                        tmpPix[4] = t;
                                     }
                                 }
 
@@ -602,6 +651,7 @@ private:
                             tmpPix[1] = (float)_color1.g;
                             tmpPix[2] = (float)_color1.b;
                             tmpPix[3] = (float)_color1.a;
+                            tmpPix[4] = 1.f;
                         } else {
                             float tx, ty;
                             if (dx >= softness.x) {
@@ -620,6 +670,7 @@ private:
                                 tmpPix[1] = (float)_color1.g;
                                 tmpPix[2] = (float)_color1.b;
                                 tmpPix[3] = (float)_color1.a;
+                                tmpPix[4] = 1.f;
                             } else {
                                 //if (_plinear) {
                                 //    // it seems to be the way Nuke does it... I could understand t*t, but why t*t*t?
@@ -629,6 +680,7 @@ private:
                                 tmpPix[1] = (float)_color0.g * (1.f - t) + (float)_color1.g * t;
                                 tmpPix[2] = (float)_color0.b * (1.f - t) + (float)_color1.b * t;
                                 tmpPix[3] = (float)_color0.a * (1.f - t) + (float)_color1.a * t;
+                                tmpPix[4] = t;
                             }
                         }
                     }
@@ -640,6 +692,7 @@ private:
                         tmpPix[1] = (float)_color0.g * (1.f - a) + tmpPix[1] * a;
                         tmpPix[2] = (float)_color0.b * (1.f - a) + tmpPix[2] * a;
                         tmpPix[3] = (float)_color0.a * (1.f - a) + tmpPix[3] * a;
+                        tmpPix[4] *= a;
                     }
                 }
                 writePixel<processR, processG, processB, processA>(tmpPix, srcPix, x, y, dstPix);
@@ -654,7 +707,7 @@ private:
     template<bool processR, bool processG, bool processB, bool processA>
     void processRotated(const OfxRectI& procWindow, const OfxPointD& rs)
     {
-        float tmpPix[4] = {0.f, 0.f, 0.f, 0.f};
+        float tmpPix[5] = {0.f, 0.f, 0.f, 0.f, 0.f}; // RGBA and the shape weight
         double par = _dstImg->getPixelAspectRatio();
         if (par <= 0.) {
             par = 1.;
@@ -699,6 +752,7 @@ private:
                     tmpPix[1] = (float)_color0.g;
                     tmpPix[2] = (float)_color0.b;
                     tmpPix[3] = (float)_color0.a;
+                    tmpPix[4] = 0.f; // the shape weight
                 } else {
                     double a = 1.; // mix factor with the outside
                     // test if the center of the pixel is within one of the rounded corners
@@ -729,6 +783,7 @@ private:
                             tmpPix[1] = (float)_color0.g;
                             tmpPix[2] = (float)_color0.b;
                             tmpPix[3] = (float)_color0.a;
+                            tmpPix[4] = 0.f; // the shape weight
                         } else {
                             if (_softness <= 0) {
                                 // solid color
@@ -736,6 +791,7 @@ private:
                                 tmpPix[1] = (float)_color1.g;
                                 tmpPix[2] = (float)_color1.b;
                                 tmpPix[3] = (float)_color1.a;
+                                tmpPix[4] = 1.f;
                             } else {
                                 // compute the non-round rect coeff (tx*ty) first.
                                 float tx = (dx >= _softness) ? 1.f : (float)rampSmooth( (std::max)(dx, 0.) / _softness );
@@ -763,11 +819,13 @@ private:
                                     tmpPix[1] = (float)_color1.g;
                                     tmpPix[2] = (float)_color1.b;
                                     tmpPix[3] = (float)_color1.a;
+                                    tmpPix[4] = 1.f;
                                 } else {
                                     tmpPix[0] = (float)_color0.r * (1.f - t) + (float)_color1.r * t;
                                     tmpPix[1] = (float)_color0.g * (1.f - t) + (float)_color1.g * t;
                                     tmpPix[2] = (float)_color0.b * (1.f - t) + (float)_color1.b * t;
                                     tmpPix[3] = (float)_color0.a * (1.f - t) + (float)_color1.a * t;
+                                    tmpPix[4] = t;
                                 }
                             }
 
@@ -797,6 +855,7 @@ private:
                             tmpPix[1] = (float)_color1.g;
                             tmpPix[2] = (float)_color1.b;
                             tmpPix[3] = (float)_color1.a;
+                            tmpPix[4] = 1.f;
                         } else {
                             float tx = (dx >= _softness) ? 1.f : (float)rampSmooth(dx / _softness);
                             float ty = (dy >= _softness) ? 1.f : (float)rampSmooth(dy / _softness);
@@ -806,11 +865,13 @@ private:
                                 tmpPix[1] = (float)_color1.g;
                                 tmpPix[2] = (float)_color1.b;
                                 tmpPix[3] = (float)_color1.a;
+                                tmpPix[4] = 1.f;
                             } else {
                                 tmpPix[0] = (float)_color0.r * (1.f - t) + (float)_color1.r * t;
                                 tmpPix[1] = (float)_color0.g * (1.f - t) + (float)_color1.g * t;
                                 tmpPix[2] = (float)_color0.b * (1.f - t) + (float)_color1.b * t;
                                 tmpPix[3] = (float)_color0.a * (1.f - t) + (float)_color1.a * t;
+                                tmpPix[4] = t;
                             }
                         }
                     }
@@ -822,6 +883,7 @@ private:
                         tmpPix[1] = (float)_color0.g * (1.f - af) + tmpPix[1] * af;
                         tmpPix[2] = (float)_color0.b * (1.f - af) + tmpPix[2] * af;
                         tmpPix[3] = (float)_color0.a * (1.f - af) + tmpPix[3] * af;
+                        tmpPix[4] *= af;
                     }
                 }
                 writePixel<processR, processG, processB, processA>(tmpPix, srcPix, x, y, dstPix);
@@ -852,6 +914,9 @@ public:
         , _color0(NULL)
         , _color1(NULL)
         , _expandRoD(NULL)
+        , _premult(NULL)
+        , _replace(NULL)
+        , _invert(NULL)
     {
 
         _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -877,6 +942,10 @@ public:
         _maskApply = ( ofxsMaskIsAlwaysConnected( OFX::getImageEffectHostDescription() ) && paramExists(kParamMaskApply) ) ? fetchBooleanParam(kParamMaskApply) : 0;
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
+        _premult = fetchBooleanParam(kParamShapePremult);
+        _replace = fetchBooleanParam(kParamReplace);
+        _invert = fetchBooleanParam(kParamInvert);
+        assert(_premult && _replace && _invert);
     }
 
 private:
@@ -920,6 +989,30 @@ private:
     DoubleParam* _mix;
     BooleanParam* _maskApply;
     BooleanParam* _maskInvert;
+    BooleanParam* _premult;
+    BooleanParam* _replace;
+    BooleanParam* _invert;
+
+    // the colors inside (color1) and outside (color0) the shape: swapped by Invert
+    void getColors(double time,
+                   RGBAValues* color0,
+                   RGBAValues* color1) const
+    {
+        _color0->getValueAtTime(time, color0->r, color0->g, color0->b, color0->a);
+        _color1->getValueAtTime(time, color1->r, color1->g, color1->b, color1->a);
+        if ( _invert->getValueAtTime(time) ) {
+            std::swap(*color0, *color1);
+        }
+    }
+
+    // Premultiply (RGB Source only) or Replace change the Source also where nothing is drawn
+    bool changesSource(double time) const
+    {
+        const bool rgbSource = _srcClip && _srcClip->isConnected() &&
+                               (_srcClip->getPixelComponents() == ePixelComponentRGB || _srcClip->getPixelComponents() == ePixelComponentRGBA);
+
+        return (rgbSource && _premult->getValueAtTime(time)) || _replace->getValueAtTime(time);
+    }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1017,8 +1110,7 @@ RectanglePlugin::setupAndProcess(RectangleProcessorBase &processor,
     double angle = _angle->getValueAtTime(time);
     double softness = _softness->getValueAtTime(time);
     RGBAValues color0, color1;
-    _color0->getValueAtTime(time, color0.r, color0.g, color0.b, color0.a);
-    _color1->getValueAtTime(time, color1.r, color1.g, color1.b, color1.a);
+    getColors(time, &color0, &color1);
 
     bool processR = _processR->getValueAtTime(time);
     bool processG = _processG->getValueAtTime(time);
@@ -1032,7 +1124,8 @@ RectanglePlugin::setupAndProcess(RectangleProcessorBase &processor,
                         softness,
                         color0, color1,
                         mix,
-                        processR, processG, processB, processA);
+                        processR, processG, processB, processA,
+                        _premult->getValueAtTime(time), _replace->getValueAtTime(time));
     // Call the base class process member, this will call the derived templated process code
     processor.process();
 } // RectanglePlugin::setupAndProcess
@@ -1108,7 +1201,7 @@ RectanglePlugin::isIdentity(const IsIdentityArguments &args,
         return true;
     }
 
-    {
+    if ( !changesSource(time) ) {
         bool processR = _processR->getValueAtTime(time);
         bool processG = _processG->getValueAtTime(time);
         bool processB = _processB->getValueAtTime(time);
@@ -1121,10 +1214,10 @@ RectanglePlugin::isIdentity(const IsIdentityArguments &args,
     }
 
     RGBAValues color0, color1;
-    _color0->getValueAtTime(time, color0.r, color0.g, color0.b, color0.a);
-    _color1->getValueAtTime(time, color1.r, color1.g, color1.b, color1.a);
+    getColors(time, &color0, &color1);
     if ( (color0.r == 0.) && (color0.g == 0.) && (color0.b == 0.) && (color0.a == 0.) &&
-         (color1.r == 0.) && (color1.g == 0.) && (color1.b == 0.) && (color1.a == 0.) ) {
+         (color1.r == 0.) && (color1.g == 0.) && (color1.b == 0.) && (color1.a == 0.) &&
+         !changesSource(time) ) {
         identityClip = _srcClip;
 
         return true;
@@ -1169,6 +1262,11 @@ RectanglePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
             clipPreferences.setClipComponents(*_srcClip, ePixelComponentRGBA);
             clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
         }
+        if ( _premult->getValue() && _srcClip && _srcClip->isConnected() &&
+             (_srcClip->getPixelComponents() == ePixelComponentRGBA) ) {
+            // the source RGB is multiplied by the shape
+            clipPreferences.setOutputPremultiplication(eImagePreMultiplied);
+        }
     }
 
     // if no input is connected, output is continuous
@@ -1198,8 +1296,8 @@ RectanglePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
             return true;
         }
     }
-    RGBAValues color0;
-    _color0->getValueAtTime(time, color0.r, color0.g, color0.b, color0.a);
+    RGBAValues color0, color1;
+    getColors(time, &color0, &color1);
     GeneratorExtentEnum extent = (GeneratorExtentEnum)_extent->getValue();
     if ( (extent != eGeneratorExtentFormat) &&
          ( (color0.r != 0.) || (color0.g != 0.) || (color0.b != 0.) || (color0.a != 0.) ) ) {
@@ -1212,8 +1310,6 @@ RectanglePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         //rod.x1 = rod.y1 = kOfxFlagInfiniteMin;
         //rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
     }
-    RGBAValues color1;
-    _color1->getValueAtTime(time, color1.r, color1.g, color1.b, color1.a);
     if ( (color1.r == 0.) && (color1.g == 0.) && (color1.b == 0.) && (color1.a == 0.) ) {
         if ( _srcClip && _srcClip->isConnected() ) {
             // nothing to draw: return default region of definition
@@ -1617,6 +1713,39 @@ RectanglePluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
 
     ofxsMaskMixDescribeParams(desc, page);
+
+    // new parameters go at the end, with defaults that keep the output of older versions
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamShapePremult);
+        param->setLabel(kParamShapePremultLabel);
+        param->setHint(kParamShapePremultHint);
+        param->setDefault(false);
+        param->setAnimates(false);
+        desc.addClipPreferencesSlaveParam(*param);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamReplace);
+        param->setLabel(kParamReplaceLabel);
+        param->setHint(kParamReplaceHint);
+        param->setDefault(false);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamInvert);
+        param->setLabel(kParamInvertLabel);
+        param->setHint(kParamInvertHint);
+        param->setDefault(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
 } // RectanglePluginFactory::describeInContext
 
 static RectanglePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
