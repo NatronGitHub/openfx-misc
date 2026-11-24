@@ -37,15 +37,25 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "DifferenceOFX"
 #define kPluginGrouping "Keyer"
 #define kPluginDescription "Produce a rough matte from the difference of two input images.\n" \
-    "A is the background without the subject (clean plate). B is the subject with the background. RGB is copied from B, the difference is output to alpha, after applying offset and gain.\n" \
+    "A is the background without the subject (clean plate). B is the subject with the background. The output is RGBA: RGB is copied from B, and the difference of the RGB channels of A and B is output to alpha, after applying offset and gain.\n" \
     "See also: https://web.archive.org/web/20220524000628/http://www.opticalenquiry.com/nuke/index.php?title=The_Keyer_Nodes#Difference and https://web.archive.org/web/20211023071843/http://opticalenquiry.com/nuke/index.php?title=Keying_Tips"
 
 #define kPluginIdentifier "net.sf.openfx.DifferencePlugin"
 // history:
 // 1.0 initial version
-// 1.1 non-finite input samples give a finite output and a matte in [0,1] (issue #213): a NaN
-//     sample is taken as 0, +-inf as +-FLT_MAX (inf - inf and 0 * inf gave NaN before the clamp
-//     to [0,1], and the RGB copied from B was not finite). The output for finite inputs is unchanged.
+// 1.1 bug fixes, which change the output:
+//     - non-finite input samples give a finite output and a matte in [0,1] (issue #213): a NaN
+//       sample is taken as 0, +-inf as +-FLT_MAX (inf - inf and 0 * inf gave NaN before the clamp
+//       to [0,1], and the RGB copied from B was not finite);
+//     - byte and short images: the difference is normalized to [0,1] before offset and gain, as for
+//       float (it was in raw pixel units, so the matte saturated almost immediately);
+//     - the output is RGBA and unpremultiplied whatever the inputs, with the matte in alpha (issue
+//       #275): with RGB inputs, the output was RGB and the matte, computed from R and G only,
+//       overwrote blue (Y for XY inputs); on Natron, whose channel selector only writes alpha, the
+//       matte was missing (opaque alpha);
+//     - Alpha inputs are mapped to RGBA by the host (Natron maps Alpha to (a,a,a,a)), so they give a
+//       matte from the alpha difference, where 1.0 gave the constant clamp(-offset);
+//     - XY inputs (Natron) are mapped to RGBA, and the matte comes from X and Y.
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -116,7 +126,8 @@ public:
 };
 
 
-template <class PIX, int nComponents, int maxValue>
+// The images are RGBA (see getClipPreferences): RGB is copied from B, the matte goes to alpha.
+template <class PIX, int maxValue>
 class Differencer
     : public DifferencerBase
 {
@@ -127,6 +138,8 @@ public:
     }
 
 private:
+    static constexpr int nComponents = 4;
+
     void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
         unused(rs);
@@ -146,16 +159,14 @@ private:
                 // _gain * diff - _offset is finite or +-inf (an overflow, never NaN)
                 if (srcPixA && srcPixB) {
                     double diff = 0.;
-                    if (nComponents > 1) {
-                        for (int c = 0; c < nComponents - 1; ++c) {
-                            const PIX b = finiteSample<PIX, maxValue>(srcPixB[c]);
-                            dstPix[c] = b;
-                            // normalize, so that offset and gain have the same meaning for all bit depths
-                            double d = ( (double)b - (double)finiteSample<PIX, maxValue>(srcPixA[c]) ) / maxValue;
-                            diff += d * d;
-                        }
+                    for (int c = 0; c < nComponents - 1; ++c) {
+                        const PIX b = finiteSample<PIX, maxValue>(srcPixB[c]);
+                        dstPix[c] = b;
+                        // normalize, so that offset and gain have the same meaning for all bit depths
+                        double d = ( (double)b - (double)finiteSample<PIX, maxValue>(srcPixA[c]) ) / maxValue;
+                        diff += d * d;
                     }
-                    diff = _gain * diff - _offset; // this seems to be the formula used in Nuke
+                    diff = _gain * diff - _offset;
                     dstPix[nComponents - 1] = (PIX)( (std::max)( 0., (std::min)(diff, 1.) ) * maxValue );
                 } else if (srcPixB && !srcPixA) {
                     for (int c = 0; c < nComponents; ++c) {
@@ -188,11 +199,12 @@ public:
     {
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA || _dstClip->getPixelComponents() == ePixelComponentAlpha) );
+        assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGBA) );
+        // the inputs accept any of their supported components, and are mapped to RGBA (getClipPreferences)
         _srcClipA = fetchClip(kClipA);
-        assert( _srcClipA && (!_srcClipA->isConnected() || _srcClipA->getPixelComponents() == ePixelComponentRGB || _srcClipA->getPixelComponents() == ePixelComponentRGBA || _srcClipA->getPixelComponents() == ePixelComponentAlpha) );
+        assert(_srcClipA);
         _srcClipB = fetchClip(kClipB);
-        assert( _srcClipB && (!_srcClipB->isConnected() || _srcClipB->getPixelComponents() == ePixelComponentRGB || _srcClipB->getPixelComponents() == ePixelComponentRGBA || _srcClipB->getPixelComponents() == ePixelComponentAlpha) );
+        assert(_srcClipB);
         _offset = fetchDoubleParam(kParamOffset);
         assert(_offset);
         _gain = fetchDoubleParam(kParamGain);
@@ -204,7 +216,6 @@ private:
     virtual void render(const RenderArguments &args) OVERRIDE FINAL;
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
-    template <int nComponents>
     void renderInternal(const RenderArguments &args, BitDepthEnum dstBitDepth);
 
     /* set up and run a processor */
@@ -253,6 +264,7 @@ DifferencePlugin::setupAndProcess(DifferencerBase &processor,
         BitDepthEnum srcBitDepth      = srcA->getPixelDepth();
         PixelComponentEnum srcComponents = srcA->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave an input image with wrong depth or components");
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
@@ -264,6 +276,7 @@ DifferencePlugin::setupAndProcess(DifferencerBase &processor,
         BitDepthEnum srcBitDepth      = srcB->getPixelDepth();
         PixelComponentEnum srcComponents = srcB->getPixelComponents();
         if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
+            setPersistentMessage(Message::eMessageError, "", "OFX Host gave an input image with wrong depth or components");
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
@@ -281,24 +294,23 @@ DifferencePlugin::setupAndProcess(DifferencerBase &processor,
 } // DifferencePlugin::setupAndProcess
 
 // the internal render function
-template <int nComponents>
 void
 DifferencePlugin::renderInternal(const RenderArguments &args,
                                  BitDepthEnum dstBitDepth)
 {
     switch (dstBitDepth) {
     case eBitDepthUByte: {
-        Differencer<unsigned char, nComponents, 255> fred(*this);
+        Differencer<unsigned char, 255> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
     case eBitDepthUShort: {
-        Differencer<unsigned short, nComponents, 65535> fred(*this);
+        Differencer<unsigned short, 65535> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
     case eBitDepthFloat: {
-        Differencer<float, nComponents, 1> fred(*this);
+        Differencer<float, 1> fred(*this);
         setupAndProcess(fred, args);
         break;
     }
@@ -319,28 +331,25 @@ DifferencePlugin::render(const RenderArguments &args)
     assert( kSupportsMultipleClipDepths || _srcClipA->getPixelDepth()       == _dstClip->getPixelDepth() );
     assert( kSupportsMultipleClipPARs   || _srcClipB->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || _srcClipB->getPixelDepth()       == _dstClip->getPixelDepth() );
-    // do the rendering
-    if (dstComponents == ePixelComponentRGBA) {
-        renderInternal<4>(args, dstBitDepth);
-    } else if (dstComponents == ePixelComponentRGB) {
-        renderInternal<3>(args, dstBitDepth);
-#ifdef OFX_EXTENSIONS_NATRON
-    } else if (dstComponents == ePixelComponentXY) {
-        renderInternal<2>(args, dstBitDepth);
-#endif
-    } else {
-        assert(dstComponents == ePixelComponentAlpha);
-        renderInternal<1>(args, dstBitDepth);
+    // do the rendering. The output is RGBA (see getClipPreferences).
+    if (dstComponents != ePixelComponentRGBA) {
+        setPersistentMessage(Message::eMessageError, "", "OFX Host gave an output that is not RGBA");
+        throwSuiteStatusException(kOfxStatErrImageFormat);
     }
+    renderInternal(args, dstBitDepth);
 }
 
 void
 DifferencePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
-    PixelComponentEnum outputComps = getDefaultOutputClipComponents();
-
-    clipPreferences.setClipComponents(*_srcClipA, outputComps);
-    clipPreferences.setClipComponents(*_srcClipB, outputComps);
+    // The matte goes to alpha, so the output is RGBA whatever the inputs, and the inputs are mapped to
+    // RGBA (an RGB input is opaque). Difference only has the general context, where "all input clips
+    // may be remapped, as can the output clip" (ofxClipPreferences.rst, Specifying Pixel Components).
+    clipPreferences.setClipComponents(*_dstClip, ePixelComponentRGBA);
+    clipPreferences.setClipComponents(*_srcClipA, ePixelComponentRGBA);
+    clipPreferences.setClipComponents(*_srcClipB, ePixelComponentRGBA);
+    // alpha is a matte, not the alpha of B: the output is unpremultiplied, even with opaque inputs
+    clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
 }
 
 mDeclarePluginFactory(DifferencePluginFactory, {ofxsThreadSuiteCheck();}, {});
@@ -382,7 +391,9 @@ DifferencePluginFactory::describeInContext(ImageEffectDescriptor &desc,
     srcClipB->setHint(kClipBHint);
     srcClipB->addSupportedComponent( ePixelComponentRGBA );
     srcClipB->addSupportedComponent( ePixelComponentRGB );
+#ifdef OFX_EXTENSIONS_NATRON
     srcClipB->addSupportedComponent( ePixelComponentXY );
+#endif
     srcClipB->addSupportedComponent( ePixelComponentAlpha );
     srcClipB->setTemporalClipAccess(false);
     srcClipB->setSupportsTiles(kSupportsTiles);
@@ -392,7 +403,9 @@ DifferencePluginFactory::describeInContext(ImageEffectDescriptor &desc,
     srcClipA->setHint(kClipAHint);
     srcClipA->addSupportedComponent( ePixelComponentRGBA );
     srcClipA->addSupportedComponent( ePixelComponentRGB );
+#ifdef OFX_EXTENSIONS_NATRON
     srcClipA->addSupportedComponent( ePixelComponentXY );
+#endif
     srcClipA->addSupportedComponent( ePixelComponentAlpha );
     srcClipA->setTemporalClipAccess(false);
     srcClipA->setSupportsTiles(kSupportsTiles);
@@ -401,11 +414,6 @@ DifferencePluginFactory::describeInContext(ImageEffectDescriptor &desc,
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
-    dstClip->addSupportedComponent(ePixelComponentRGB);
-#ifdef OFX_EXTENSIONS_NATRON
-    dstClip->addSupportedComponent(ePixelComponentXY);
-#endif
-    dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
 
     // make some pages and to things in

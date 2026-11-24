@@ -35,6 +35,7 @@
 #include "ofxsMultiThread.h"
 #include "ofxsNonFinite.h" // finiteSample
 #include "ofxsAnalysisScope.h" // InAnalysisScope, ProgressScope
+#include "ofxsNormalisedDefaults.h"
 #ifdef OFX_USE_MULTITHREAD_MUTEX
 namespace {
 typedef OFX::MultiThread::Mutex Mutex;
@@ -67,7 +68,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.1: works in the filter context (it fetched the Mask clip that is not defined there);
 //              a NaN Mask sample is 0 (it gave NaN scores, so the track failed) and +-inf is +-FLT_MAX, as in the
 //              mask mix; a position whose score overflowed (inf or NaN, never chosen) is not scored (kScoreNone),
-//              and an NCC/ZNCC score that overflowed to -inf is -DBL_MAX, so the correlation is finite (issue #220)
+//              and an NCC/ZNCC score that overflowed to -inf is -DBL_MAX, so the correlation is finite (issue #220);
+//              on hosts that ignore normalised defaults (e.g. DaVinci Resolve), the default center is the
+//              middle of the project, not the pixel (0.5, 0.5) (issue #263)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -106,8 +109,9 @@ enum TrackerScoreEnum
 
 class TrackerPMProcessorBase;
 ////////////////////////////////////////////////////////////////////////////////
-/** @brief The plugin that does our work */
-class TrackerPMPlugin
+/** @brief The plugin that does our work. FINAL: the constructor converts the normalised defaults last
+ *  (ofxsDenormaliseUntouchedDefault()), which a derived class's constructor would follow. */
+class TrackerPMPlugin FINAL
     : public GenericTrackerPlugin
 {
 public:
@@ -144,6 +148,11 @@ public:
         _outerBtmLeft = fetchDouble2DParam(kParamTrackingSearchBoxBtmLeft);
         _outerTopRight = fetchDouble2DParam(kParamTrackingSearchBoxTopRight);
         assert(_center && _offset && _innerTopRight && _innerBtmLeft && _outerTopRight && _outerBtmLeft);
+
+        // Hosts that ignore normalised defaults (e.g. Resolve) give the normalised value as is: convert
+        // it if it still equals its default (#263, see ofxsNormalisedDefaults.h). Last, since
+        // setValue() may call changedParam().
+        ofxsDenormaliseUntouchedDefault(*this, *_center, /*isPosition=*/true);
     }
 
 private:
@@ -1014,7 +1023,7 @@ TrackerPMPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setHint(kParamTrackingCenterPointHint);
         param->setInstanceSpecific(true);
         param->setDoubleType(eDoubleTypeXYAbsolute);
-        param->setDefaultCoordinateSystem(eCoordinatesNormalised);
+        ofxsSetDefaultCoordinateSystemNormalised(*param); // see ofxsNormalisedDefaults.h (#263)
         param->setDefault(0.5, 0.5);
         param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)

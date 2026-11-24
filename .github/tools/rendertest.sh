@@ -33,7 +33,9 @@
 #   the effect is not an identity at all times though it should be (identity:
 #   the isIdentity action), is an identity at some time though its render changes
 #   the input (notidentity: a host would pass the input through), does not have
-#   the expected components (comps=RGBA, RGB or Alpha), is constant though it should not be (nonconst), or
+#   the expected components (comps=RGBA, RGB or Alpha) or output premultiplication
+#   (premult=Opaque, PreMultiplied or UnPreMultiplied: the clip preferences), is
+#   constant though it should not be (nonconst), or
 #   is not the same region of the full render (tile: for a --window render),
 #   renders the same image at different times (framesdiffer: --frames), or
 #   does not have the expected maximum value (max=r,g,b,a, as mean=), e.g. the peak
@@ -168,6 +170,10 @@ pfm("vramp.pfm", 720, 576, lambda x, y, c: (y + 0.5) / 576.)
 # delta.pfm: a 1x1 PF kernel (for the "conv" check of an output that must be its input)
 pfm("impulse.pfm", 64, 48, lambda x, y, c: 1. if (x, y) == (32, 24) else 0.)
 pfm("delta.pfm", 1, 1, lambda x, y, c: 1.)
+# diffa.pfm, diffb.pfm: 64x48 PF solid colours (0.25,0.5,0.75) and (0.5,0.5,0.25), for Difference
+# with opaque inputs (#opaque)
+pfm("diffa.pfm", 64, 48, lambda x, y, c: (0.25, 0.5, 0.75)[c])
+pfm("diffb.pfm", 64, 48, lambda x, y, c: (0.5, 0.5, 0.25)[c])
 EOF2
 
 # check REPORT DEPTH EXPECT [CLIP=CRC32...]: check the --report JSON file of a
@@ -254,6 +260,13 @@ if out0:
         elif expect.startswith("comps="):
             if out0["comps"] != expect[6:]:
                 errors.append("t=0: components %s, expected %s" % (out0["comps"], expect[6:]))
+        elif expect.startswith("premult="):
+            # the kOfxImageEffectPropPreMultiplication values (ofxImageEffect.h)
+            want = {"Opaque": "OfxImageOpaque", "PreMultiplied": "OfxImageAlphaPremultiplied",
+                    "UnPreMultiplied": "OfxImageAlphaUnPremultiplied"}[expect[8:]]
+            got = (r.get("clipPreferences") or {}).get("outputPremultiplication")
+            if got != want:
+                errors.append("output premultiplication %s, expected %s" % (got, want))
         elif expect == "framesdiffer":
             crcs = [(k.get("output") or {}).get("crc32") for k in renders]
             if len(set(crcs)) != len(crcs):
@@ -441,6 +454,18 @@ tests=(
     "Grade ramp masked|net.sf.openfx.GradePlugin|filter|*|nonconst+changed:Source||-i Source=ramp -i Mask=checker:32 gamma=2,2,2,2"
     "Merge over solid|net.sf.openfx.MergePlugin|filter|*|mean=0.5,0,0.5,1||-i A=solid:0.5,0,0,0.5 -i Source=solid:0,0,1,1 -i Mask=none"
     "Merge over checker|net.sf.openfx.MergePlugin|filter|*|nonconst+changed:A+changed:Source||-i A=checker:16 -i Source=ramp -i Mask=none"
+    # Keyer, luminance key with the defaults (A = 0.5, B = C = 1): the foreground key 0.625 gives
+    # the background key 0.25, alpha 0.75 (Intermediate output: the color is the source; no byte depth).
+    # Invert (issue #280) inverts the key, before the Inside Mask (alpha >= 0.5 here) is applied,
+    # and is ignored in None mode (no keying: alpha 0)
+    "Keyer|net.sf.openfx.KeyerPlugin|general|short float|mean=0.625,0.625,0.625,0.75||-i Source=solid:0.625,0.625,0.625,1 -i Bg=none -i InM=none -i OutM=none"
+    "Keyer invert|net.sf.openfx.KeyerPlugin|general|short float|mean=0.625,0.625,0.625,0.25||-i Source=solid:0.625,0.625,0.625,1 -i Bg=none -i InM=none -i OutM=none invert=1"
+    "Keyer invert inside mask|net.sf.openfx.KeyerPlugin|general|short float|mean=0.625,0.625,0.625,0.5||-i Source=solid:0.625,0.625,0.625,1 -i Bg=none -i InM=solid:0.5,0.5,0.5,0.5 -i OutM=none invert=1"
+    "Keyer invert None mode|net.sf.openfx.KeyerPlugin|general|short float|mean=0.625,0.625,0.625,0||-i Source=solid:0.625,0.625,0.625,1 -i Bg=none -i InM=none -i OutM=none mode=3 invert=1"
+    # Screen mode, despill 1, Unpremultiplied output: Invert inverts alpha but not the despill
+    # amount, which uses the key without Invert (the colour is the same)
+    "Keyer screen despill|net.sf.openfx.KeyerPlugin|general|short float|mean=0.1,0.141,0.1,0.341||-i Source=solid:0.1,0.8,0.1,1 -i Bg=none -i InM=none -i OutM=none mode=2 keyColor=0,1,0 despill=1 show=2"
+    "Keyer screen despill invert|net.sf.openfx.KeyerPlugin|general|short float|mean=0.1,0.141,0.1,0.659||-i Source=solid:0.1,0.8,0.1,1 -i Bg=none -i InM=none -i OutM=none mode=2 keyColor=0,1,0 despill=1 show=2 invert=1"
     "CImgBlur|net.sf.cimg.CImgBlur|filter|float|nonconst+changed:Source||-i Source=checker:8 -i Mask=none size=5,5 expandRoD=0"
     "CImgBlur expandRoD|net.sf.cimg.CImgBlur|filter|float|nonconst+changed:Source||-i Source=checker:8 -i Mask=none size=5,5"
     "Transform|net.sf.openfx.TransformPlugin|filter|*|nonconst+changed:Source||-i Source=checker:32 rotate=30 scale=0.8,0.8"
@@ -531,6 +556,16 @@ tests=(
     # PIK: a soft screen replace color with zero Rec.709 luminance (was 0/0 = NaN where alpha
     # is raised to 1 by Clip White, or a huge color with FMA contraction, e.g. on arm64): white
     "PIK replace color lum 0|net.sf.openfx.PIK|general|float|comps=RGBA+mean=0.0045,0.0045,0.0045,1||-i Fg=solid:0,0,0.25,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0,0,1 screenClipMax=0.5 screenReplaceColor=0.072175,0,-0.2126729"
+    # Difference: RGB from B, alpha = gain * sum of the squared RGB differences - offset, in an RGBA
+    # unpremultiplied output (issue #275: RGB inputs gave an RGB output with the matte in blue;
+    # hostDemo's inputs are RGBA, so the RGB case is not tested: only the RGBA output, the alpha
+    # matte and the output premultiplication are checked here). Only the opaque-inputs case can
+    # detect a wrong premultiplication flag: with unpremultiplied inputs, the host default is
+    # already unpremultiplied
+    "Difference|net.sf.openfx.DifferencePlugin|general|*|comps=RGBA+premult=UnPreMultiplied+mean=0.5,0.5,0.25,0.3125||-i A=solid:0.25,0.5,0.75,1 -i B=solid:0.5,0.5,0.25,0.3"
+    # opaque inputs: the output is still unpremultiplied, since alpha is the matte
+    "Difference opaque inputs|net.sf.openfx.DifferencePlugin|general|*|comps=RGBA+premult=UnPreMultiplied+mean=0.5,0.5,0.25,0.3125||-i A=file:diffa.pfm#opaque -i B=file:diffb.pfm#opaque"
+    "Difference gain offset|net.sf.openfx.DifferencePlugin|general|*|comps=RGBA+mean=0.5,0.5,0.25,0.525||-i A=solid:0.25,0.5,0.75,1 -i B=solid:0.5,0.5,0.25,0.3 gain=2 offset=0.1"
     # PIK (version 2 unless -m): the Colorspace (1: Rec. 2020, 2: ACES AP0, 3: ACES AP1) also
     # gives the luminance of the Soft Color screen and inside replace colors, and the conversion of
     # Bg for Use Bg Luminance/Chroma; version 1 always used Rec. 709 there, and is kept so that old
@@ -860,7 +895,7 @@ for t in "${tests[@]}"; do
         fi
     done
 done
-rm -f out.* full.* report.json ref.json autocrop.pfm convsrc.pfm convk.pfm
+rm -f out.* full.* report.json ref.json autocrop.pfm convsrc.pfm convk.pfm diffa.pfm diffb.pfm
 
 if [ $n = 0 ]; then
     echo "no render matches RENDERTEST_ONLY=$RENDERTEST_ONLY"
