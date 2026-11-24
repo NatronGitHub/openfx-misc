@@ -525,7 +525,7 @@ copyPoint(Double2DParam* from,
 OfxRectD
 CornerPinPlugin::getSrcFormatCanonical() const
 {
-    OfxRectD rect;
+    OfxRectD rect = {0., 0., 0., 0.};
 #ifdef OFX_EXTENSIONS_NATRON
     OfxRectI format;
     _srcClip->getFormat(format); // in pixels at render scale 1 (kOfxImageClipPropFormat)
