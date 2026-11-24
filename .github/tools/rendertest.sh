@@ -35,6 +35,8 @@
 #   RGB or Alpha), is constant though it should not be (nonconst), or
 #   is not the same region of the full render (tile: for a --window render),
 #   renders the same image at different times (framesdiffer: --frames), or
+#   does not have the expected maximum value (max=r,g,b,a, as mean=), e.g. the peak
+#   of a blurred impulse, which gives the blur size,
 #   is the same image as an input (changed:Clip: the CRC32 of the output
 #   must differ from the one of the input Clip, copied at the same depth by
 #   Invert with no channel to process; NoOp would be simpler, but its debug
@@ -161,6 +163,10 @@ pfm("convsrc.pfm", 720, 576, lambda x, y, c: ((x * 7919 + y * 104729 + c * 4099)
 pfm("convk.pfm", 7, 5, lambda x, y, c: 1. + ((x * 3 + y * 5 + c * 7) % 11))
 # vramp.pfm: a 720x576 PF vertical ramp, (y + 0.5) / 576 at row y (for the Y axis of GodRays scale 0)
 pfm("vramp.pfm", 720, 576, lambda x, y, c: (y + 0.5) / 576.)
+# impulse.pfm: a 64x48 PF, black except a white pixel at (32,24) (for the "max" check of a blur);
+# delta.pfm: a 1x1 PF kernel (for the "conv" check of an output that must be its input)
+pfm("impulse.pfm", 64, 48, lambda x, y, c: 1. if (x, y) == (32, 24) else 0.)
+pfm("delta.pfm", 1, 1, lambda x, y, c: 1.)
 EOF2
 
 # check REPORT DEPTH EXPECT [CLIP=CRC32...]: check the --report JSON file of a
@@ -223,6 +229,12 @@ if out0:
                 errors.append("t=0: constant output, expected an image")
         elif expect.startswith("tol="):
             pass
+        elif expect.startswith("max="):
+            want = [float(v) for v in expect[4:].split(",")]
+            got = [None if v is None else v / scale for v in out0["max"]]
+            if None in got or len(want) != len(got) or any(abs(a - b) > tol for a, b in zip(got, want)):
+                errors.append("t=0: max %s, expected %s (tolerance %g)" % (",".join("%.7g" % v if v is not None else "null" for v in got), expect[4:], tol))
+            desc += " max=%s" % ",".join("null" if v is None else "%.3g" % v for v in got)
         elif expect.startswith("mean="):
             want = [float(v) for v in expect[5:].split(",")]
             if None in mean:
@@ -653,6 +665,29 @@ tests=(
     # not padded to 1024x1024) by a 7x5 kernel: the exact linear convolution, without a CImg
     # "non 2^N dimension" error, whatever the FFT library (CImgFFTConvolve.h)
     "CImgConvolve 720x576|net.sf.cimg.CImgConvolve|filter|float|conv=convsrc.pfm,convk.pfm||--frames 0 -i Source=file:convsrc.pfm -i Filter=file:convk.pfm -i Mask=none filterCenter=2"
+    # ZDefocus (NatronGitHub/openfx-misc#266). A sharp sky (disparity 0) with Disparity with
+    # Offset and a Focus Point (the image center) on the sky: the output is the input (without
+    # Blur Inside).
+    "CImgZDefocus sky focus|net.sf.cimg.CImgZDefocus|general|float|conv=convsrc.pfm,delta.pfm||--frames 0 -i Source=file:convsrc.pfm -i Depth=solid:0,0,0,1 -i Filter=none depthType=2 useFocusPoint=1 blurInside=0"
+    # A depth map with a focus of 0: the radius is Size*|1 - 0/z| = Size everywhere (Size 2, a disc
+    # whose center weight is 0.126)
+    "CImgZDefocus depth focus 0|net.sf.cimg.CImgZDefocus|general|float|max=0.126,0.126,0.126,1+tol=0.003||--frames 0 -i Source=file:impulse.pfm -i Depth=solid:3,3,3,1 -i Filter=none depthType=0 useFocusPoint=0 focus=0 size=2 maxSize=20 slices=10 aperture=1 blurInside=0"
+    # Disparity with Offset: blur radius = Size*|d - d_f| = 10*0.2 = 2 pixels, a disc whose center
+    # weight is 0.126 (Disparity would give a radius of 10*(0.3/0.1 - 1) = 20 pixels: 0.0008)
+    "CImgZDefocus disparity offset|net.sf.cimg.CImgZDefocus|general|float|max=0.126,0.126,0.126,1+tol=0.003||--frames 0 -i Source=file:impulse.pfm -i Depth=solid:0.3,0.3,0.3,1 -i Filter=none depthType=2 useFocusPoint=0 focus=0.1 size=10 maxSize=20 slices=10 aperture=1"
+    # Blur Inside (on by default): an in-focus impulse gets the 3x3 kernel [0.125, 0.75, 0.125]^2,
+    # whose center weight is 0.5625
+    "CImgZDefocus blur inside|net.sf.cimg.CImgZDefocus|general|float|max=0.5625,0.5625,0.5625,1+tol=0.0005||--frames 0 -i Source=file:impulse.pfm -i Depth=solid:2,2,2,1 -i Filter=none depthType=0 useFocusPoint=0 focus=2"
+    # Blur Inside only blurs the pixels with no blur: a pixel just out of focus (radius 0.05, so
+    # 2.5% in the 2-pixel slice) is not blurred by it: its peak is 0.978, not 0.5625
+    "CImgZDefocus blur inside, slightly out of focus|net.sf.cimg.CImgZDefocus|general|float|max=0.978,0.978,0.978,1+tol=0.003||--frames 0 -i Source=file:impulse.pfm -i Depth=solid:2.01,2.01,2.01,1 -i Filter=none depthType=0 useFocusPoint=0 focus=2 size=10 maxSize=20 slices=10 aperture=1"
+    # A disparity map with a focus of 0: the ratio disparity/focus is infinite, so every pixel with
+    # a disparity above 0 is blurred by Maximum Size (2 pixels: center weight 0.126)
+    "CImgZDefocus disparity focus 0|net.sf.cimg.CImgZDefocus|general|float|max=0.126,0.126,0.126,1+tol=0.003||--frames 0 -i Source=file:impulse.pfm -i Depth=solid:0.5,0.5,0.5,1 -i Filter=none depthType=1 useFocusPoint=0 focus=0 size=1 maxSize=2 slices=10 aperture=1 blurInside=0"
+    # The Depth of Focus is a dead zone, subtracted from the normalized defocus:
+    # radius = Size*(|1 - d/d_f| - dof/2) = 10*(1.667 - 0.305) = 13.6 pixels, center weight
+    # 0.0019 (in disparity units, 6.5 pixels: 0.0087)
+    "CImgZDefocus depth of focus|net.sf.cimg.CImgZDefocus|general|float|max=0.00186,0.00186,0.00186,1+tol=0.0003||--frames 0 -i Source=file:impulse.pfm -i Depth=solid:0.8,0.8,0.8,1 -i Filter=none depthType=1 useFocusPoint=0 focus=0.3 depthOfFocus=0.61 size=10 maxSize=20 slices=10 aperture=1"
 )
 
 n=0 failed=() xfailed=()
