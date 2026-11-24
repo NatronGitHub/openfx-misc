@@ -1829,11 +1829,11 @@ MergePluginFactory<majorVersion,plugin>::describeInContext(ImageEffectDescriptor
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamRangeFrom);
         param->setLabel(kParamRangeFromLabel);
         param->setHint(kParamRangeFromHint);
-        assert(param->getNOptions() == (int)eRangeFromB);
+        assert(param->getNOptions() == static_cast<int>(eRangeFromB));
         param->appendOption(kParamRangeFromOptionB);
-        assert(param->getNOptions() == (int)eRangeFromA);
+        assert(param->getNOptions() == static_cast<int>(eRangeFromA));
         param->appendOption(kParamRangeFromOptionA);
-        param->setDefault( (int)eRangeFromB );
+        param->setDefault( static_cast<int>(eRangeFromB) );
         param->setAnimates(false); // used in getTimeDomain()
         if (page) {
             page->addChild(*param);
