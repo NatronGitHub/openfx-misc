@@ -167,6 +167,9 @@ public:
             }
 
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+            if (!dstPix) {
+                continue; // outside the image bounds (the render window should be inside them)
+            }
 
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
                 // for a given x,y position, the output should always be the same.
