@@ -288,6 +288,7 @@ if out0:
             lo, hi = (float(v) for v in expect[6:].split(","))
             if min(out0["min"]) < lo or max(out0["max"]) > hi:
                 errors.append("t=0: values from %s to %s, expected all in [%g, %g]" % (out0["min"], out0["max"], lo, hi))
+            desc += " range=%.4g..%.4g" % (min(out0["min"]), max(out0["max"]))
         elif expect == "framesdiffer":
             crcs = [(k.get("output") or {}).get("crc32") for k in renders]
             if len(set(crcs)) != len(crcs):
@@ -649,12 +650,16 @@ tests=(
     # Prefilter Downscaling (#270): a 1-pixel checker scaled by 0.4 aliases with the default
     # supersampling (0.474 to 0.526); with the kernel widened by 2.5, it is uniform grey (0.4996 to 0.5004)
     "Transform prefilter scale 0.4 checker|net.sf.openfx.TransformPlugin|filter|float|range=0.499,0.501||-i Source=checker:1 scale=0.4,0.4 prefilter=1 --frames 0 --window 300,250,340,290"
-    "Transform no prefilter scale 0.4 checker|net.sf.openfx.TransformPlugin|filter|float|nonconst+range=0.47,0.53||-i Source=checker:1 scale=0.4,0.4 --frames 0 --window 300,250,340,290"
+    "Transform no prefilter scale 0.4 checker|net.sf.openfx.TransformPlugin|filter|float|tol=0.005+max=0.5263,0.5263,0.5263,0.5263||-i Source=checker:1 scale=0.4,0.4 --frames 0 --window 300,250,340,290"
     "Reformat prefilter scale 0.4 checker|net.sf.openfx.Reformat|filter|float|range=0.499,0.501||-i Source=checker:1 reformatType=Scale reformatScale=0.4,0.4 prefilter=1 --frames 0 --window 100,100,140,140"
     "Transform prefilter tile|net.sf.openfx.TransformPlugin|filter|float|nonconst+tile||-i Source=checker:4 scale=0.3,0.4 rotate=20 filter=Lanczos4 prefilter=1 --frames 0 --window 250,200,450,330"
     # tiled renders are the same as the full render with the prefilter (the RoI covers the widened
     # kernel): anisotropic scale and rotation with the PAR of the PAL input, a perspective CornerPin,
-    # DirBlur (always the blurred path), motion blur, and Lanczos6 near the image edge
+    # DirBlur (always the blurred path), motion blur, Lanczos6 near the image edge, render scale 0.5
+    # (the RoI divides by it), Reformat and Card3D (projective: the RoI takes the 16x cap)
+    "Transform prefilter scale 0.5 tile|net.sf.openfx.TransformPlugin|filter|float|nonconst+tile||-i Source=checker:3 scale=0.3,0.4 rotate=30 filter=Lanczos4 prefilter=1 --scale 0.5 --frames 0 --window 140,110,210,165"
+    "Reformat prefilter tile|net.sf.openfx.Reformat|filter|float|nonconst+tile||-i Source=checker:3 reformatType=Scale reformatScale=0.3,0.45 filter=Lanczos6 prefilter=1 --frames 0 --window 40,40,160,140"
+    "Card3D prefilter tile|net.sf.openfx.Card3D|filter|float|nonconst+tile||-i Source=checker:3 cardUniformScale=0.4 cardRotate=0,25,10 prefilter=1 --frames 0 --window 300,220,420,330"
     "Transform prefilter rotate scale tile|net.sf.openfx.TransformPlugin|filter|float|nonconst+tile||-i Source=checker:3 scale=0.25,0.6 rotate=45 filter=Cubic prefilter=1 --frames 0 --window 280,220,420,330"
     "CornerPin prefilter perspective tile|net.sf.openfx.CornerPinPlugin|filter|float|nonconst+tile||-i Source=checker:3 to1=300,200 to2=420,180 to3=460,330 to4=330,300 filter=Lanczos4 prefilter=1 --frames 0 --window 320,210,440,300"
     "DirBlur prefilter tile|net.sf.openfx.DirBlur|filter|float|nonconst+tile||-i Source=checker:3 scale=0.3,0.3 rotate=20 prefilter=1 --frames 0 --window 280,220,420,330"

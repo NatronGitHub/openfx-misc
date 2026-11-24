@@ -57,7 +57,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              edge colour, not about 4x the edge value (garbage).
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
-// 1.1 (Transform, TransformMasked, DirBlur) (unreleased, fixed in place) the Lanczos4, Lanczos6 and Sinc4 filters (appended options) and the
+// 1.1 (Transform, TransformMasked, DirBlur) (unreleased, fixed in place): the Lanczos4, Lanczos6 and Sinc4 filters (appended options) and the
 //      Prefilter Downscaling checkbox (appended, off) (issue #270); the default output is unchanged.
 
 #define kParamSrcClipChanged "srcClipChanged"

@@ -81,7 +81,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 // 1.1: importing a chan or Boujou file no longer sets NaN or infinite rotation and focal length keys (NaN audit);
 //      the inverse of a transform matrix with huge entries (e.g. a concatenated source transform) no longer overflows to NaN or 0 (SupportExt #81)
-// 1.1 (unreleased, fixed in place) the Lanczos4, Lanczos6 and Sinc4 filters (appended options) and the
+// 1.1 (unreleased, fixed in place): the Lanczos4, Lanczos6 and Sinc4 filters (appended options) and the
 //      Prefilter Downscaling checkbox (appended, off) (issue #270); the default output is unchanged.
 
 #define kParamSrcClipChanged "srcClipChanged"
