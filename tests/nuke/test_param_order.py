@@ -7,27 +7,25 @@ Nuke. (No host should address parameters by index: the OFX API has none.)
 For each plug-in that has compatibility cases (cases.py), the test lists
 the Nuke node's knobs in panel order (without the Node tab, the hidden
 knobs and the labels and separators) and the plug-in's params in
-definition order (hostDemo --describe, without pages, groups and secret
-params). Names are compared after the mapping below (NAMES, then
-COMMON_NAMES), ignoring case, "_" and "."; params that map to the same
+definition order (hostDemo --describe lists them in that order; pages,
+groups and secret params are left out). Names are compared after the
+mapping below (NAMES, then COMMON_NAMES), ignoring case, "_" and "."
+(two knobs whose names differ only so are an error); params that map to the same
 knob (e.g. the four NatronOfxParamProcess* and "channels") count once, at
 the first one. The params common to both sides must be in the same
 relative order.
 
 A known difference is a strict expected failure whose reason is the
 GitHub issue that records it (see KNOWN and ISSUES), as in
-test_compatibility.py.
+test_compatibility.py; the first out-of-order pair must be the one in
+KNOWN. Any other failure (a different pair, a stale mapping, a name
+collision, fewer than two params in common) is a plain failure.
 """
 
 import pytest
 
 import cases
 import harness
-
-# The plug-ins and their Nuke node: the node class of the first case.
-PLUGINS = {}
-for _case in cases.CASES:
-    PLUGINS.setdefault(_case["ofx"][0], _case["nuke"][0])
 
 # The plug-ins that are not compared, with the reason.
 EXCLUDED = {
@@ -92,11 +90,11 @@ NAMES = {
         "outputAlpha": "output"},
     "net.sf.openfx.Premult": {"premultChannel": "alpha"},
     "net.sf.openfx.Unpremult": {"premultChannel": "alpha"},
-    "net.sf.openfx.MergePlugin": dict(
-        [("AChannels" + _c, "Achannels") for _c in "RGBA"]
-        + [("BChannels" + _c, "Bchannels") for _c in "RGBA"]
-        + [("OutputChannels" + _c, "output") for _c in ("", "R", "G", "B",
-                                                         "A")]),
+    "net.sf.openfx.MergePlugin": {
+        _side + "Channels" + _c: _knob
+        for _side, _knob in (("A", "Achannels"), ("B", "Bchannels"),
+                             ("Output", "output"))
+        for _c in ("", "R", "G", "B", "A")},
     "net.sf.openfx.KeyMix": {"maskInvert": "invertMask"},
     "net.sf.openfx.CopyRectanglePlugin": _AREA,
     "net.sf.openfx.KeyerPlugin": dict(
@@ -159,42 +157,43 @@ NAMES = {
         "frameRange": "startframe"},
 }
 
-# The known differences: plug-in -> the GitHub issue that records it.
+# The known differences: plug-in -> (the GitHub issue that records it, the
+# first out-of-order pair of Nuke knob names: ours has the first before the
+# second).
+_PREMULT_MASK = (377, ("unpremult", "invert_mask"))
 KNOWN = {
-    "net.sf.openfx.AddPlugin": 377,
-    "net.sf.openfx.MultiplyPlugin": 377,
-    "net.sf.openfx.GammaPlugin": 377,
-    "net.sf.openfx.Clamp": 377,
-    "net.sf.openfx.GradePlugin": 377,
-    "net.sf.openfx.ColorCorrectPlugin": 377,
-    "net.sf.openfx.ColorMatrixPlugin": 377,
-    "net.sf.openfx.SaturationPlugin": 377,
-    "net.sf.openfx.Invert": 377,
-    "net.sf.openfx.Log2Lin": 377,
-    "net.sf.openfx.PLogLin": 377,
-    "net.sf.openfx.Quantize": 377,
-    "net.sf.cimg.CImgExpression": 377,
-    "net.sf.openfx.MergePlugin": 378,
-    "net.sf.openfx.CopyRectanglePlugin": 379,
-    "net.sf.openfx.KeyerPlugin": 380,
-    "net.sf.openfx.ConstantPlugin": 381,
-    "net.sf.openfx.ColorWheel": 382,
-    "net.sf.openfx.Ramp": 383,
-    "net.sf.openfx.Radial": 384,
-    "net.sf.openfx.Rectangle": 384,
-    "net.sf.openfx.CornerPinPlugin": 385,
-    "net.sf.openfx.IDistort": 386,
-    "net.sf.openfx.STMap": 386,
-    "net.sf.openfx.LensDistortion": 387,
-    "eu.cimg.EdgeDetect": 388,
-    "net.sf.cimg.CImgZDefocus": 389,
-    "net.sf.openfx.Retime": 390,
-    "net.sf.openfx.Reformat": 376,  # its PR fixes the order
+    "net.sf.openfx.AddPlugin": _PREMULT_MASK,
+    "net.sf.openfx.MultiplyPlugin": _PREMULT_MASK,
+    "net.sf.openfx.GammaPlugin": _PREMULT_MASK,
+    "net.sf.openfx.Clamp": _PREMULT_MASK,
+    "net.sf.openfx.GradePlugin": _PREMULT_MASK,
+    "net.sf.openfx.ColorCorrectPlugin": _PREMULT_MASK,
+    "net.sf.openfx.ColorMatrixPlugin": _PREMULT_MASK,
+    "net.sf.openfx.SaturationPlugin": _PREMULT_MASK,
+    "net.sf.openfx.Invert": _PREMULT_MASK,
+    "net.sf.openfx.Log2Lin": _PREMULT_MASK,
+    "net.sf.openfx.PLogLin": _PREMULT_MASK,
+    "net.sf.openfx.Quantize": _PREMULT_MASK,
+    "net.sf.cimg.CImgExpression": _PREMULT_MASK,
+    "net.sf.openfx.MergePlugin": (378, ("bbox", "screen_alpha")),
+    "net.sf.openfx.CopyRectanglePlugin": (379, ("area", "channels")),
+    "net.sf.openfx.KeyerPlugin": (380, ("operation", "invert")),
+    "net.sf.openfx.ConstantPlugin": (381, ("format", "channels")),
+    "net.sf.openfx.ColorWheel": (382, ("area", "channels")),
+    "net.sf.openfx.Ramp": (383, ("type", "p0")),
+    "net.sf.openfx.Radial": (384, ("area", "invert_mask")),
+    "net.sf.openfx.Rectangle": (384, ("area", "invert_mask")),
+    "net.sf.openfx.CornerPinPlugin": (385, ("from1", "transform_matrix")),
+    "net.sf.openfx.IDistort": (386, ("filter", "invert_mask")),
+    "net.sf.openfx.STMap": (386, ("filter", "invert_mask")),
+    "net.sf.openfx.LensDistortion": (387, ("format", "anamorphicSqueeze")),
+    "eu.cimg.EdgeDetect": (388, ("channels", "edgedetector")),
+    "net.sf.cimg.CImgZDefocus": (389, ("focal_point", "center")),
+    "net.sf.openfx.Retime": (390, ("filter", "before")),
 }
 
 # The short titles of the issues (xfail reasons).
 ISSUES = {
-    376: "Reformat: Preserve BBox after the filter parameters",
     377: "Colour filters: (Un)premult comes before the mask controls",
     378: "Merge: Bounding Box comes before Screen Alpha",
     379: "CopyRectangle: the rectangle comes before the channels",
@@ -211,26 +210,60 @@ ISSUES = {
     390: "Retime: Filter comes before Before and After",
 }
 
-for _table in (EXCLUDED, NAMES, KNOWN):
-    for _plugin in _table:
-        if _plugin not in PLUGINS:
-            raise ValueError("%s has no compatibility case" % _plugin)
-for _plugin in KNOWN:
-    if _plugin in EXCLUDED or KNOWN[_plugin] not in ISSUES:
-        raise ValueError("KNOWN: %s is excluded, or its issue has no "
-                         "title" % _plugin)
 
-# The Nuke classes, in batches of one Nuke process each (a Nuke
+def _plugins():
+    """The plug-ins with cases: plug-in -> (Nuke node class, OFX context).
+
+    Both come from the plug-in's first case.
+    """
+    plugins = {}
+    for case in cases.CASES:
+        plugins.setdefault(case["ofx"][0],
+                           (case["nuke"][0], case.get("context")))
+    return plugins
+
+
+PLUGINS = _plugins()
+COMPARED = [p for p in PLUGINS if p not in EXCLUDED]
+
+# The Nuke classes are listed in batches of one Nuke process each (a Nuke
 # Non-Commercial session allows only 10 node objects).
 NUKE_BATCH_SIZE = 8
-_CLASSES = sorted(set(c for p, c in PLUGINS.items() if p not in EXCLUDED))
-NUKE_BATCHES = [_CLASSES[i:i + NUKE_BATCH_SIZE]
-                for i in range(0, len(_CLASSES), NUKE_BATCH_SIZE)]
+
+
+def _nuke_batches():
+    """The Nuke node classes of COMPARED, in batches of NUKE_BATCH_SIZE."""
+    classes = sorted(set(PLUGINS[p][0] for p in COMPARED))
+    return [classes[i:i + NUKE_BATCH_SIZE]
+            for i in range(0, len(classes), NUKE_BATCH_SIZE)]
+
+
+NUKE_BATCHES = _nuke_batches()
 
 
 def _key(name):
     """The name used to compare a param and a knob."""
     return name.lower().replace("_", "").replace(".", "")
+
+
+def knobs_by_key(knobs):
+    """The knobs by their _key.
+
+    Raises:
+        ValueError: two knobs have the same key.
+    """
+    by_key = {}
+    for knob in knobs:
+        other = by_key.setdefault(_key(knob), knob)
+        if other != knob:
+            raise ValueError("the knobs %s and %s have the same name key %s"
+                             % (other, knob, _key(knob)))
+    return by_key
+
+
+def _mapped(plugin, param):
+    """The Nuke knob name that a param maps to (NAMES, then COMMON_NAMES)."""
+    return NAMES.get(plugin, {}).get(param, COMMON_NAMES.get(param, param))
 
 
 def common_orders(plugin, params, knobs):
@@ -244,15 +277,14 @@ def common_orders(plugin, params, knobs):
     Returns:
         (ours, nuke): two lists of the same Nuke knob names, in our order
         and in Nuke's.
+
+    Raises:
+        ValueError: two knobs have the same key.
     """
-    names = NAMES.get(plugin, {})
-    by_key = {}
-    for knob in knobs:
-        by_key.setdefault(_key(knob), knob)
+    by_key = knobs_by_key(knobs)
     ours = []
     for param in params:
-        knob = by_key.get(_key(names.get(param,
-                                         COMMON_NAMES.get(param, param))))
+        knob = by_key.get(_key(_mapped(plugin, param)))
         if knob and knob not in ours:
             ours.append(knob)
     nuke = [k for k in knobs if k in ours]
@@ -260,7 +292,16 @@ def common_orders(plugin, params, knobs):
 
 
 def first_inversion(ours, nuke):
-    """The first pair (a, b) with a before b in ours but after it in nuke."""
+    """The first pair that is not in the same order on both sides.
+
+    Args:
+        ours: knob names, in our order.
+        nuke: the same knob names, in Nuke's order.
+
+    Returns:
+        The first pair (a, b) of ours with a before b in ours but after it
+        in nuke, or None if both orders are the same.
+    """
     position = {k: i for i, k in enumerate(nuke)}
     for i, a in enumerate(ours):
         for b in ours[i + 1:]:
@@ -269,33 +310,85 @@ def first_inversion(ours, nuke):
     return None
 
 
+def test_tables():
+    """EXCLUDED, NAMES and KNOWN name plug-ins with cases, consistently."""
+    for table in (EXCLUDED, NAMES, KNOWN):
+        missing = sorted(set(table) - set(PLUGINS))
+        assert not missing, "no compatibility case: %s" % missing
+    excluded_known = sorted(set(KNOWN) & set(EXCLUDED))
+    assert not excluded_known, "excluded but KNOWN: %s" % excluded_known
+    untitled = sorted(set(i for i, _ in KNOWN.values()) - set(ISSUES))
+    assert not untitled, "KNOWN issues without a title: %s" % untitled
+
+
 def _param(plugin):
     """The pytest parameter of a plug-in, with its marks."""
     marks = [pytest.mark.nuke]
     if plugin in KNOWN:
+        issue = KNOWN[plugin][0]
         marks.append(pytest.mark.xfail(
             strict=True, raises=AssertionError,
-            reason="#%d: %s" % (KNOWN[plugin], ISSUES[KNOWN[plugin]])))
+            reason="#%d: %s" % (issue, ISSUES[issue])))
     return pytest.param(plugin, id=harness.plugin_name(plugin), marks=marks)
 
 
-@pytest.mark.parametrize(
-    "plugin", [_param(p) for p in PLUGINS if p not in EXCLUDED])
-def test_param_order(plugin, renderer):
-    """The params common with the Nuke node are in the same order."""
-    node_class = PLUGINS[plugin]
+def _orders(renderer, plugin):
+    """The plug-in's params and its Nuke node's knobs."""
+    node_class, context = PLUGINS[plugin]
     batch = next(b for b in NUKE_BATCHES if node_class in b)
-    knobs = renderer.knob_order(node_class, batch)
-    params = renderer.param_order(plugin)
+    return (renderer.param_order(plugin, context),
+            renderer.knob_order(node_class, batch))
+
+
+@pytest.mark.parametrize("plugin", [_param(p) for p in COMPARED])
+def test_param_order(plugin, renderer):
+    """The params common with the Nuke node are in the same order.
+
+    Only the order check raises AssertionError (the xfail of a KNOWN
+    difference); the other checks fail with pytest.fail.
+    """
+    node_class = PLUGINS[plugin][0]
+    params, knobs = _orders(renderer, plugin)
+    try:
+        by_key = knobs_by_key(knobs)
+    except ValueError as ex:
+        pytest.fail("%s: %s" % (node_class, ex))
+    stale = sorted(p for p, k in NAMES.get(plugin, {}).items()
+                   if p not in params or _key(k) not in by_key)
+    if stale:
+        pytest.fail("NAMES entries of %s without that param or knob: %s"
+                    % (plugin, " ".join(stale)))
     ours, nuke = common_orders(plugin, params, knobs)
-    assert len(ours) >= 2, (
-        "fewer than two params in common with %s: map their names (NAMES) "
-        "or exclude the plug-in (EXCLUDED)\n  ours: %s\n  Nuke: %s"
-        % (node_class, " ".join(params), " ".join(knobs)))
+    if len(ours) < 2:
+        pytest.fail("fewer than two params in common with %s: map their "
+                    "names (NAMES) or exclude the plug-in (EXCLUDED)\n"
+                    "  ours: %s\n  Nuke: %s"
+                    % (node_class, " ".join(params), " ".join(knobs)))
     inversion = first_inversion(ours, nuke)
+    expected = KNOWN.get(plugin, (None, None))[1]
+    if inversion and expected and inversion != expected:
+        pytest.fail("the first out-of-order pair is %s, %s, not %s, %s "
+                    "(KNOWN)" % (inversion + expected))
     assert inversion is None, (
         "%s comes before %s, but after it in %s\n"
         "  common, our order:  %s\n  common, Nuke order: %s\n"
         "  our params: %s\n  Nuke knobs: %s"
         % (inversion[0], inversion[1], node_class, " ".join(ours),
            " ".join(nuke), " ".join(params), " ".join(knobs)))
+
+
+@pytest.mark.nuke
+def test_common_names_used(renderer):
+    """Every COMMON_NAMES entry maps a param of a plug-in to a knob."""
+    unused = set(COMMON_NAMES)
+    for plugin in COMPARED:
+        try:
+            params, knobs = _orders(renderer, plugin)
+        except pytest.skip.Exception:  # the plug-in is not installed
+            continue
+        keys = set(_key(k) for k in knobs)
+        unused -= set(p for p in params if p in COMMON_NAMES
+                      and p not in NAMES.get(plugin, {})
+                      and _key(COMMON_NAMES[p]) in keys)
+    assert not unused, ("COMMON_NAMES entries that match no param and "
+                        "knob: %s" % " ".join(sorted(unused)))

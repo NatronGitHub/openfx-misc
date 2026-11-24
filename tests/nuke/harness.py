@@ -378,19 +378,43 @@ def describe(prefix, plugin, work):
                 prefix, plugin, work).items()}
 
 
-def describe_params(prefix, plugin, work):
+def pick_context(plugin, contexts, wanted=None):
+    """The OFX context of a case.
+
+    Args:
+        plugin: the OFX plug-in identifier (for the error message).
+        contexts: the plug-in's contexts ("filter", "general", ...).
+        wanted: the case's "context", or None for the default: filter,
+            else general, else generator, else the first one.
+
+    Raises:
+        CaseError: the plug-in has no such context.
+    """
+    if wanted:
+        if wanted not in contexts:
+            raise CaseError("%s has no %s context" % (plugin, wanted))
+        return wanted
+    return next((c for c in ("filter", "general", "generator")
+                 if c in contexts), next(iter(contexts)))
+
+
+def describe_params(prefix, plugin, work, context=None):
     """The visible params of a plug-in, in definition order.
 
-    Pages, groups and secret params are left out. The params are those of
-    the context that the cases use by default (filter, else general, else
-    generator, else the first one).
+    hostDemo --describe lists the params in definition order. Pages,
+    groups and secret params are left out.
+
+    Args:
+        prefix: the openfx-misc install prefix.
+        plugin: the OFX plug-in identifier.
+        work: the work directory.
+        context: the OFX context, or None for the default (pick_context).
 
     Returns:
         A list of param names.
     """
     contexts = _describe_contexts(prefix, plugin, work)
-    context = next((c for c in ("filter", "general", "generator")
-                    if c in contexts), next(iter(contexts)))
+    context = pick_context(plugin, contexts, context)
     return [p["name"] for p in contexts[context]["params"]
             if p["type"] not in ("OfxParamTypePage", "OfxParamTypeGroup")
             and not p["secret"]]
@@ -420,10 +444,7 @@ def ofx_command(prefix, case, work, case_dir):
     _, clips = case_images(case)
     plugin, params = case["ofx"]
     contexts = describe(prefix, plugin, work)
-    context = case.get("context") or next(
-        c for c in ("filter", "general", "generator") if c in contexts)
-    if context not in contexts:
-        raise CaseError("%s has no %s context" % (plugin, context))
+    context = pick_context(plugin, contexts, case.get("context"))
     for clip in clips:
         if clip not in contexts[context]:
             raise CaseError("%s has no clip %s in the %s context"
@@ -597,36 +618,37 @@ NOT_PARAM_KNOBS = ("Tab_Knob", "Text_Knob", "Obsolete_Knob", "PythonKnob")
 # Nuke's tab of the knobs that every node has (name, label, lifetime...).
 COMMON_TAB = "Node"
 
+# A Python script for `nuke -t SCRIPT ARGS`, where ARGS is a JSON file with
+# "node_classes", "result_path", "common_tab" and "not_param_knobs". It
+# creates one node of each class and writes to result_path a JSON dict from
+# node class to the names of its knobs in panel order, without the knobs of
+# the common tab, the hidden ones (nuke.INVISIBLE), and those that are not
+# parameters.
+KNOB_ORDER_SCRIPT = """\
+import json
+import sys
 
-def knob_order_script(node_classes, result_path):
-    """A Python script for `nuke -t` that lists the knobs of nodes.
+import nuke
 
-    The script creates one node of each class and writes to result_path a
-    JSON dict from node class to the names of its knobs in panel order,
-    without the knobs of the Node tab, the hidden ones, and those that are
-    not parameters (NOT_PARAM_KNOBS).
-    """
-    return "\n".join([
-        "import json",
-        "import nuke",
-        "results = {}",
-        "for node_class in %r:" % (list(node_classes),),
-        "    node = getattr(nuke.nodes, node_class)()",
-        "    tab = ''",
-        "    names = []",
-        "    for knob in node.allKnobs():",
-        "        if knob.Class() == 'Tab_Knob' and knob.label():",
-        "            tab = knob.label()",
-        "        if (tab == %r or knob.Class() in %r or not knob.name()"
-        % (COMMON_TAB, NOT_PARAM_KNOBS),
-        "                or knob.getFlag(nuke.INVISIBLE)"
-        " or not knob.visible()):",
-        "            continue",
-        "        names.append(knob.name())",
-        "    results[node_class] = names",
-        "with open(%r, 'w') as f:" % result_path,
-        "    json.dump(results, f)",
-    ]) + "\n"
+with open(sys.argv[1]) as f:
+    args = json.load(f)
+results = {}
+for node_class in args["node_classes"]:
+    node = getattr(nuke.nodes, node_class)()
+    heading = ""  # the label of the last tab or group knob
+    names = []
+    for knob in node.allKnobs():
+        if knob.Class() == "Tab_Knob" and knob.label():
+            heading = knob.label()
+        if (heading == args["common_tab"]
+                or knob.Class() in args["not_param_knobs"]
+                or not knob.name() or knob.getFlag(nuke.INVISIBLE)):
+            continue
+        names.append(knob.name())
+    results[node_class] = names
+with open(args["result_path"], "w") as f:
+    json.dump(results, f)
+"""
 
 
 def nuke_knob_orders(nuke, node_classes, work):
@@ -635,20 +657,33 @@ def nuke_knob_orders(nuke, node_classes, work):
     A Nuke Non-Commercial session allows only 10 node objects: pass at
     most about 8 classes.
 
+    Args:
+        nuke: the Nuke executable.
+        node_classes: the Nuke node classes.
+        work: the directory of the script, its arguments and its log.
+
     Returns:
         A dict from node class to a list of knob names (see
-        knob_order_script).
+        KNOB_ORDER_SCRIPT).
+
+    Raises:
+        CaseError: Nuke failed.
     """
     name = "knobs_" + "_".join(node_classes)
-    script = os.path.join(work, name + ".nuke.py")
+    script = os.path.join(work, "knob_order.nuke.py")
+    args_path = os.path.join(work, name + ".args.json")
     result_path = os.path.join(work, name + ".nuke.json")
     if os.path.exists(result_path):
         os.remove(result_path)
     with open(script, "w") as f:
-        f.write(knob_order_script(node_classes, result_path))
+        f.write(KNOB_ORDER_SCRIPT)
+    with open(args_path, "w") as f:
+        json.dump({"node_classes": list(node_classes),
+                   "result_path": result_path, "common_tab": COMMON_TAB,
+                   "not_param_knobs": list(NOT_PARAM_KNOBS)}, f)
     log = os.path.join(work, name + ".nuke.log")
-    status = run_command([nuke, "--nc", "-t", script], log, NUKE_TIMEOUT,
-                         cwd=work)
+    status = run_command([nuke, "--nc", "-t", script, args_path], log,
+                         NUKE_TIMEOUT, cwd=work)
     if status != 0 or not os.path.exists(result_path):
         raise CaseError("Nuke failed (exit status %d), see %s"
                         % (status, log))
