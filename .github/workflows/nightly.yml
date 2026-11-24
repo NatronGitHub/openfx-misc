@@ -102,8 +102,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # release: the macOS build of ci.yml (deployed, no OpenMP: MacPorts' libomp has
-          # minos 15, so deployed bundles with it would not load on macOS 14).
+          # release: the macOS build of ci.yml (deployed, no OpenMP, as the macOS release build
+          # of release.yml: MacPorts' libomp has minos 15, so release bundles with it would not
+          # load on macOS 14). All these builds target the runner's macOS, not 14.0.
           - name: release # the macOS build of ci.yml
             config: release
             options: -DOFX_CXX_STANDARD=17 -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DOFX_DEPLOY_BUNDLES=ON -DOFX_USE_OPENMP=OFF -DOFX_BUILD_HOSTDEMO=ON
@@ -133,6 +134,16 @@ jobs:
         run: |
           PATH=$(printf '%s' "$PATH" | tr ':' '\n' | grep -v -e '^/opt/homebrew' -e '^/usr/local/' | paste -sd: -)
           echo "PATH=/opt/local/bin:/opt/local/sbin:$PATH" >> "$GITHUB_ENV"
+      - name: Target the runner's macOS
+        # These builds are not uploaded, so they target the runner's macOS major version (e.g.
+        # 15.0 on macos-15), not CMakeLists.txt's default 14.0. CMake reads
+        # MACOSX_DEPLOYMENT_TARGET at the first configure. The uploaded builds of ci.yml and the
+        # binary releases (release.yml) keep 14.0.
+        run: |
+          v=$(sw_vers -productVersion)
+          m=${v%%.*}
+          case $m in ''|*[!0-9]*) echo "bad macOS version $v"; exit 1;; esac
+          echo "MACOSX_DEPLOYMENT_TARGET=$m.0" >> "$GITHUB_ENV"
       - name: Build
         # The bundles are installed in install-<config>/OFX/Plugins.
         run: |

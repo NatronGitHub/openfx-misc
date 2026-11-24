@@ -284,7 +284,7 @@ grouping).
 
 ### Transform
 
-* AdjustRoD: Enlarges the input image by a given amount of black and transparent pixels.
+* AdjustRoD: Enlarges the input image by a given amount, with copies of the closest edge pixel (default) or black and transparent pixels.
 * Card3DOFX: Transform and image as if it were projected on a 3D card.
 * CornerPinOFX and CornerPinMaskedOFX: Fit an image to another in translation, rotation, scale, and shear
 * CropOFX: Remove everything outside from the image of a rectangle.
@@ -544,7 +544,9 @@ to the prefix (or absolute). The main options are:
 - `-DOFX_BUILD_HOSTDEMO=ON`: also build openfx's test host `hostDemo` and install it into
   `<prefix>/bin`, for the render tests: `.github/tools/rendertest.sh <prefix>` (checks
   the outputs of a few plugins) and `.github/tools/smoketest.sh <prefix>` (renders every
-  plugin with its default parameters). hostDemo uses openfx's HostSupport library, which
+  plugin with its default parameters); `tests/nuke` compares the plugins with the nodes
+  of the same name in Nuke (local only, see `tests/nuke/README.md`). hostDemo uses
+  openfx's HostSupport library, which
   needs the system expat: `libexpat1-dev` (Debian, Ubuntu), `expat-devel` (Rocky, Fedora),
   MSYS2 `mingw-w64-ucrt-x86_64-expat`, vcpkg `expat`; on macOS, MacPorts' `expat`
   (`sudo port install expat`) or else the SDK's. The bundles, including DebugProxy, do not
