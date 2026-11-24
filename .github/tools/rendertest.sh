@@ -475,6 +475,15 @@ tests=(
     # filters. Invert also inverts alpha by default.
     "Invert solid|net.sf.openfx.Invert|filter|*|mean=0.75,0.5,0,0||-i Source=solid:0.25,0.5,1,1 -i Mask=none"
     "Invert checker|net.sf.openfx.Invert|filter|*|nonconst+changed:Source||-i Source=checker:16 -i Mask=none"
+    # Clamp (issue #294, off by default) clamps the inverted channels to [0,1]: superwhite and
+    # superblack give 0 and 1 (also on byte and short inputs, where the solid is clamped)
+    "Invert out of range|net.sf.openfx.Invert|filter|float|mean=-0.5,1.5,0.75,0||-i Source=solid:1.5,-0.5,0.25,1 -i Mask=none"
+    "Invert clamp|net.sf.openfx.Invert|filter|*|mean=0,1,0.75,0||-i Source=solid:1.5,-0.5,0.25,1 -i Mask=none clamp=1"
+    # (that case also passes without Clamp on byte and short, where the solid is clamped.) With
+    # Premultiplied, a colour above alpha unpremultiplies above 1, also on byte and short: R 0.75
+    # at alpha 0.5 is 1.5, inverted -0.5, clamped 0, premultiplied 0, mixed 0.5 with the source:
+    # 0.375 (0.25 without Clamp). G (1, inverted 0) and B (0.5, inverted 0.5): 0.25
+    "Invert clamp premult|net.sf.openfx.Invert|filter|*|mean=0.375,0.25,0.25,0.5||-i Source=solid:0.75,0.5,0.25,0.5 -i Mask=none premult=1 NatronOfxParamProcessA=0 mix=0.5 clamp=1"
     "Grade solid|net.sf.openfx.GradePlugin|filter|*|mean=0.5,1,0.25,1||-i Source=solid:0.25,0.5,0.125,1 -i Mask=none multiply=2,2,2,2"
     "Grade ramp masked|net.sf.openfx.GradePlugin|filter|*|nonconst+changed:Source||-i Source=ramp -i Mask=checker:32 gamma=2,2,2,2"
     "Merge over solid|net.sf.openfx.MergePlugin|filter|*|mean=0.5,0,0.5,1||-i A=solid:0.5,0,0,0.5 -i Source=solid:0,0,1,1 -i Mask=none"
