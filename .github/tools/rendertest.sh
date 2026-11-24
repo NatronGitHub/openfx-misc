@@ -35,7 +35,9 @@
 #   the input (notidentity: a host would pass the input through), does not have
 #   the expected components (comps=RGBA, RGB or Alpha), is constant though it should not be (nonconst), or
 #   is not the same region of the full render (tile: for a --window render),
-#   renders the same image at different times (framesdiffer: --frames), or
+#   renders the same image at different times (framesdiffer: --frames), has
+#   values outside [lo, hi] at the first time (range=lo,hi, normalized like mean=),
+#   takes more than N seconds (maxsec=N: the whole hostDemo run), or
 #   does not have the expected maximum value (max=r,g,b,a, as mean=), e.g. the peak
 #   of a blurred impulse, which gives the blur size,
 #   is the same image as an input (changed:Clip: the CRC32 of the output
@@ -225,7 +227,22 @@ if out0:
         if expect.startswith("tol="):
             tol = float(expect[4:])
     for expect in expects.split("+"):
-        if expect == "nonconst":
+        if expect.startswith("range="):
+            lo, hi = (float(v) for v in expect[6:].split(","))
+            mins = [None if v is None else v / scale for v in out0["min"]]
+            maxs = [None if v is None else v / scale for v in out0["max"]]
+            if None in mins or None in maxs or min(mins) < lo - 1e-6 or max(maxs) > hi + 1e-6:
+                errors.append("t=0: values in [%s, %s], expected within [%g, %g]" % (
+                    ",".join(fmt("%.4g", v) for v in mins), ",".join(fmt("%.4g", v) for v in maxs), lo, hi))
+            desc += " range=%s..%s" % (fmt("%.3g", min(mins) if None not in mins else None),
+                                       fmt("%.3g", max(maxs) if None not in maxs else None))
+        elif expect.startswith("maxsec="):
+            if "elapsed" not in refs:
+                errors.append("no elapsed time")
+            elif int(refs["elapsed"]) > float(expect[7:]):
+                errors.append("took %ss, more than %s s" % (refs["elapsed"], expect[7:]))
+            desc += " %ss" % refs.get("elapsed")
+        elif expect == "nonconst":
             if out0["min"] == out0["max"]:
                 errors.append("t=0: constant output, expected an image")
         elif expect.startswith("tol="):
@@ -683,11 +700,12 @@ tests=(
     # and 65 are white without blur (Blur Scale 0). The blur along x is 4 / PAR = 3.75 pixels (hostDemo's
     # PAR is 768/720), so with the Box filter (filter=1) the sampled area is 4.75 pixels wide: 2.875/4.75
     # and 3.875/4.75 white (mean 0.7105; version 2, in x pixels: 5 pixels wide, 3/5 and 4/5, mean 0.7).
-    # The default Cubic filter is a separable kernel 4.75 pixels wide along x, evaluated every
-    # round(64/4.75) = 13/64 of its support: (k(0)+2k(13/64)+...)/... gives a mean of 0.6922.
-    "IDistort blur box|net.sf.openfx.IDistort|general|float|mean=0.7105,0.7105,0.7105,0.7105||-i Source=checker:64 -i UV=solid:0,0,4,1 -i Mask=none channelBlur=2 filter=1 --frames 0 --window 64,10,66,20"
+    # The default Cubic filter is a separable kernel 4.75 pixels wide along x: the white part of the
+    # normalized kernel weights, at (i + 0.5 - c) / 4.75, gives a mean of 0.6983. tile: the render
+    # window matches the full render (the UV RoI includes the pixels around the window).
+    "IDistort blur box|net.sf.openfx.IDistort|general|float|tile+mean=0.7105,0.7105,0.7105,0.7105||-i Source=checker:64 -i UV=solid:0,0,4,1 -i Mask=none channelBlur=2 filter=1 --frames 0 --window 64,10,66,20"
     "IDistort v2 blur box|net.sf.openfx.IDistort|general|float|mean=0.7,0.7,0.7,0.7||-m 2 -i Source=checker:64 -i UV=solid:0,0,4,1 -i Mask=none channelBlur=2 filter=1 --frames 0 --window 64,10,66,20"
-    "IDistort blur cubic|net.sf.openfx.IDistort|general|float|tol=2e-3+mean=0.6922,0.6922,0.6922,0.6922||-i Source=checker:64 -i UV=solid:0,0,4,1 -i Mask=none channelBlur=2 --frames 0 --window 64,10,66,20"
+    "IDistort blur cubic|net.sf.openfx.IDistort|general|float|tile+tol=2e-3+mean=0.6983,0.6983,0.6983,0.6983||-i Source=checker:64 -i UV=solid:0,0,4,1 -i Mask=none channelBlur=2 --frames 0 --window 64,10,66,20"
     "IDistort blur scale 0|net.sf.openfx.IDistort|general|float|mean=1,1,1,1||-i Source=checker:64 -i UV=solid:0,0,4,1 -i Mask=none channelBlur=2 blurScale=0 filter=1 --frames 0 --window 64,10,66,20"
     # the same at render scale 0.5: the blur is in full-scale pixels, so the Box area is 1 + 1.875 pixels
     # wide at x=32 and 33 (the edge is at x=32): 1.9375/2.875 and 1 white (mean 0.837; 0.7 if the blur
@@ -697,6 +715,24 @@ tests=(
     # finite: the average of the solid source, with the Box and the Cubic filters
     "IDistort blur huge|net.sf.openfx.IDistort|general|float|mean=0.5,0.5,0.5,1||-i Source=solid:0.5,0.5,0.5,1 -i UV=solid:0,0,1,1e-30 -i Mask=none channelBlur=2 unpremultUV=1 blurScale=1e30 filter=1 --frames 0 --window 300,300,302,302"
     "IDistort blur huge cubic|net.sf.openfx.IDistort|general|float|mean=0.5,0.5,0.5,1||-i Source=solid:0.5,0.5,0.5,1 -i UV=solid:0,0,1,1e-30 -i Mask=none channelBlur=2 unpremultUV=1 blurScale=1e30 --frames 0 --window 300,300,302,302"
+    # the full frame with that blur: the taps are bounded, so it takes seconds, not hours
+    "IDistort blur huge full frame|net.sf.openfx.IDistort|general|float|maxsec=120+mean=0.5,0.5,0.5,1||-i Source=solid:0.5,0.5,0.5,1 -i UV=solid:0,0,1,1e-30 -i Mask=none channelBlur=2 unpremultUV=1 blurScale=1e30 --frames 0"
+    # a blur of 128 square pixels (a Cubic kernel 1 + 128/PAR = 121 pixels wide along x, sampled every 4
+    # pixels), 40 pixels right of the edge of a 512-pixel checker at x=512: the white part of the kernel
+    # is 0.8126 (a kernel of another width gives another value)
+    "IDistort blur 128|net.sf.openfx.IDistort|general|float|mean=0.8126,0.8126,0.8126,0.8126||-i Source=checker:512 -i UV=solid:0,0,128,1 -i Mask=none channelBlur=2 --frames 0 --window 552,300,553,301"
+    # Clamp with the separable blur: Rifman's negative lobes would ring around the edges; clamped, the
+    # values are within the source's [0, 1]
+    "IDistort blur clamp|net.sf.openfx.IDistort|general|float|range=0,1||-i Source=checker:16 -i UV=solid:0,0,6,1 -i Mask=none channelBlur=2 filter=6 clamp=1 --frames 0 --window 40,40,120,120"
+    # a blur that varies (blur = 8 x the ramp), rendered in a window: the tile matches the full render
+    "IDistort blur ramp tile|net.sf.openfx.IDistort|general|float|nonconst+tile||-i Source=checker:8 -i UV=ramp -i Mask=none channelBlur=2 blurScale=8 --frames 0 --window 100,100,300,250"
+    # IDistort 3.0 takes U in square pixels: U = 4 moves by 4/PAR = 3.75 pixels along x, so with the
+    # Bilinear filter (filter=2) pixel 60 samples x = 64.25, 0.75 white; version 2 samples 64.5, white
+    # Unpremult UV with a UV alpha of 0: no UV, transparent black (version 3; version 2 multiplies by 0)
+    "IDistort unpremult alpha 0|net.sf.openfx.IDistort|general|float|mean=0,0,0,0||-i Source=solid:0.5,0.5,0.5,1 -i UV=solid:0,0,0,0 -i Mask=none unpremultUV=1 --frames 0"
+    "STMap unpremult alpha 0|net.sf.openfx.STMap|general|float|mean=0,0,0,0||-i Source=solid:0.5,0.5,0.5,1 -i UV=solid:0,0,0,0 -i Mask=none unpremultUV=1 --frames 0"
+    "IDistort U square pixels|net.sf.openfx.IDistort|general|float|mean=0.75,0.75,0.75,0.75||-i Source=checker:64 -i UV=solid:4,0,0,1 -i Mask=none filter=2 --frames 0 --window 60,10,61,11"
+    "IDistort v2 U pixels|net.sf.openfx.IDistort|general|float|mean=1,1,1,1||-m 2 -i Source=checker:64 -i UV=solid:4,0,0,1 -i Mask=none filter=2 --frames 0 --window 60,10,61,11"
     # FrameBlend Min/Max where no frame is used (FgM > 0 everywhere): 0 (it was +-infinity)
     "FrameBlend Min no frame|net.sf.openfx.FrameBlend|filter|*|mean=0,0,0,0||-i Source=solid:0.5,0.5,0.5,1 -i FgM=solid:1,1,1,1 -i Mask=none operation=Min"
     "FrameBlend Max no frame|net.sf.openfx.FrameBlend|filter|*|mean=0,0,0,0||-i Source=solid:0.5,0.5,0.5,1 -i FgM=solid:1,1,1,1 -i Mask=none operation=Max"
@@ -837,7 +873,9 @@ for t in "${tests[@]}"; do
         rm -f out.* report.json
         # $args is split into words on purpose
         # shellcheck disable=SC2086
+        t0=$(date +%s)
         if hostdemo run.log -p "$id" -c "$ctx" -d "$depth" --format pfm -o out --report report.json $args; then
+            refs+=("elapsed=$(( $(date +%s) - t0 ))")
             result=$(check report.json "$depth" "$expect" "${refs[@]}") && ok=1 || ok=0
         else
             status=$?

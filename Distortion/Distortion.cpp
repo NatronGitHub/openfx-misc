@@ -145,17 +145,22 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              edge colour, not about 4x the edge value (garbage).
 // (#236, in the current minor version, not released yet) on hosts that ignore normalised defaults
 //              (e.g. DaVinci Resolve), the default rectangle is the project's, not (1,1) pixels
-// (#303, in the current minor version, not released yet) the Blur Channel and Blur Scale parameters (no
-//              blur by default); with a transform concatenated from upstream (e.g. Transform, CornerPin),
-//              the filter footprint is the one of the UV map composed with the inverse transform (it was
-//              the transform's alone, so the UV map's own minification was ignored)
+// (#303, in version 2.1, not released yet) the Blur Channel and Blur Scale parameters (no blur by default:
+//              the blur, in pixels along x, is added to the sampled footprint); with a transform concatenated
+//              from upstream (e.g. Transform, CornerPin), the filter footprint is the one of the UV map composed
+//              with the inverse transform (it was the transform's alone, so the UV map's own minification was
+//              ignored); the UV RoI is one pixel larger than the render window (the UV derivatives read the
+//              neighbouring pixels), so that tiles match the full render
 // version 3.0 (#303): the output is no longer multiplied by the Alpha Channel from UV (it is only used by
 //              Unpremult UV); IDistort's U displacement is in square pixels, divided by the pixel aspect
-//              ratio to give x pixels (it was in x pixels). Version 2 (obsolete) keeps the old behaviour,
-//              so old projects render as before.
+//              ratio to give x pixels (it was in x pixels); the blur is in square pixels, and a separable
+//              kernel (the filter's kernel, stretched to the footprint plus the blur) instead of an addition
+//              to the footprint. Version 2.1 (obsolete) keeps the version-2 behaviour, so old projects render
+//              as before without an upstream transform.
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 #define kPluginVersionMinorV2 1 // the minor version of the obsolete version 2 (IDistort and STMap)
+#define kPluginVersionUVSquarePixels 3 // the first IDistort and STMap version with the version-3 behaviour (UVBehaviourEnum)
 
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
@@ -227,7 +232,7 @@ enum DistortionPluginEnum
 #define kParamChannelVChoice kParamChannelV "Choice"
 
 #define kParamChannelA "channelA"
-#define kParamChannelALabel "Alpha Channel", "Input Alpha channel from UV. If \"Unpremult UV\" is checked, the UV (and blur) values are divided by alpha. Version 2 (obsolete) also multiplies the output by this value."
+#define kParamChannelALabel "Alpha Channel", "Input Alpha channel from UV. If \"Unpremult UV\" is checked, the UV (and blur) values are divided by alpha, and the output is transparent black where alpha is 0. Version 2 (obsolete) also multiplies the output by this value."
 
 #define kParamChannelAChoice kParamChannelA "Choice"
 
@@ -235,7 +240,7 @@ enum DistortionPluginEnum
 #define kParamChannelUnpremultUVLabel "Unpremult UV", "Unpremult UV by Alpha from UV. Check if UV values look small for small values of Alpha (3D software sometimes write premultiplied UV values)."
 
 #define kParamChannelBlur "channelBlur"
-#define kParamChannelBlurLabel "Blur Channel", "Input blur channel from UV. Its values, in pixels and multiplied by Blur Scale, are added to the size of the area of the source image that is sampled for each output pixel, to add extra blur or diffusion to the distortion. If \"Unpremult UV\" is checked, they are divided by alpha, like UV. Negative values are taken as 0, and values larger than the source image as its size. A channel that the UV input does not have (e.g. A of an RGB input) is 0. The Box filter gives the smoothest blur; the other filters supersample the source by steps (3x3, 9x9... samples), and the Impulse filter does not blur. 0 (the default): no blur."
+#define kParamChannelBlurLabel "Blur Channel", "Input blur channel from UV. Its values, multiplied by Blur Scale, are added to the size of the area of the source image that is sampled for each output pixel, to add extra blur or diffusion to the distortion. They are in square pixels (as tall as a pixel). The filter's kernel is stretched to that size (the Box filter averages that area, and the Impulse filter does not blur). If \"Unpremult UV\" is checked, they are divided by alpha, like UV. Negative values are taken as 0, and values larger than the source image as its size. A channel that the UV input does not have (e.g. A of an RGB input) is 0. 0 (the default): no blur. Version 2 (obsolete) takes them in pixels along x and adds them to the sampled area, which the filters other than Box supersample by steps (3x3, 9x9... samples)."
 
 #define kParamBlurScale "blurScale"
 #define kParamBlurScaleLabel "Blur Scale", "The values of the Blur Channel are multiplied by this."
@@ -794,6 +799,17 @@ enum UVChannelEnum
     eUVChannelCount
 };
 
+// What IDistort and STMap do with the UV input, selected by the instance's major version.
+enum UVBehaviourEnum
+{
+    // version 2 (obsolete): the output is multiplied by the UV alpha, IDistort's U is in pixels along x, and
+    // the blur is added to the sampled footprint
+    eUVBehaviourV2,
+    // version 3: the UV alpha is only used by Unpremult UV, U and the blur are in square pixels, and the
+    // blur is a separable kernel
+    eUVBehaviourV3,
+};
+
 struct InputPlaneChannel
 {
     Image* img;
@@ -818,10 +834,12 @@ protected:
     OfxRectD _format;
     std::vector<InputPlaneChannel> _planeChannels; // U, V, Alpha and Blur (IDistort and STMap)
     bool _unpremultUV;
-    bool _multiplyByUVAlpha;
-    double _blurScale; // multiplies the Blur channel, to give source pixels at the render scale
-    bool _separableBlur; // version 3: the separable blur, else the blur is added to the footprint
-    double _blurParX; // version 3: the blur along x is divided by this (the pixel aspect ratio)
+    UVBehaviourEnum _uvBehaviour;
+    // multiply the Blur channel, to give pixels at the render scale along x and y (version 3: square
+    // pixels, so the x scale is divided by the pixel aspect ratio; version 2: both are the x scale)
+    double _blurScaleX;
+    double _blurScaleY;
+    double _maxBlur; // the largest blur, in source pixels: the size of the source RoD
     double _uOffset;
     double _vOffset;
     double _uScale;
@@ -851,10 +869,10 @@ public:
         , _srcTransformInverse()
         , _planeChannels()
         , _unpremultUV(true)
-        , _multiplyByUVAlpha(true)
-        , _blurScale(1.)
-        , _separableBlur(false)
-        , _blurParX(1.)
+        , _uvBehaviour(eUVBehaviourV3)
+        , _blurScaleX(1.)
+        , _blurScaleY(1.)
+        , _maxBlur(1.)
         , _uOffset(0.)
         , _vOffset(0.)
         , _uScale(1.)
@@ -890,10 +908,10 @@ public:
                    const OfxRectD& format,
                    const std::vector<InputPlaneChannel>& planeChannels,
                    bool unpremultUV,
-                   bool multiplyByUVAlpha,
-                   double blurScale,
-                   bool separableBlur,
-                   double blurParX,
+                   UVBehaviourEnum uvBehaviour,
+                   double blurScaleX,
+                   double blurScaleY,
+                   double maxBlur,
                    double uOffset,
                    double vOffset,
                    double uScale,
@@ -916,10 +934,10 @@ public:
         _format = format;
         _planeChannels = planeChannels;
         _unpremultUV = unpremultUV;
-        _multiplyByUVAlpha = multiplyByUVAlpha;
-        _blurScale = blurScale;
-        _separableBlur = separableBlur;
-        _blurParX = blurParX;
+        _uvBehaviour = uvBehaviour;
+        _blurScaleX = blurScaleX;
+        _blurScaleY = blurScaleY;
+        _maxBlur = maxBlur;
         _uOffset = uOffset;
         _vOffset = vOffset;
         _uScale = uScale;
@@ -1029,30 +1047,28 @@ composeJacobians(const Jacobian &a,
     return j;
 }
 
-// Add blur (in square source pixels) to the size of the source area sampled for an output pixel: blur
-// is added to the length of each side of the footprint j, divided by parX for the side along x (parX is
-// 1 in version 2). A side of zero length becomes that long, along the source x or y axis. The blur is clamped to [0, maxBlur] (a NaN blur is 0): a huge or
+// Version 2: add blur (in source pixels) to the size of the source area sampled for an output pixel: blur
+// is added to the length of each side of the footprint j. A side of zero length becomes blur pixels long,
+// along the source x or y axis. The blur is clamped to [0, maxBlur] (a NaN blur is 0): a huge or
 // infinite blur (e.g. unpremultiplied by a tiny alpha) would give an infinite or NaN footprint, and a
 // footprint far larger than the source only costs time.
 static Jacobian
 addBlurToFootprint(const Jacobian &j,
                    double blur,
-                   double maxBlur,
-                   double parX)
+                   double maxBlur)
 {
     if ( !(blur > 0.) ) {
         return j; // also for a NaN blur
     }
     blur = (std::min)(blur, maxBlur);
     Jacobian r = j;
-    const double blurX = blur / parX; // the blur is in square pixels (parX: the pixel aspect ratio, or 1)
     const double nx = std::sqrt(j.xx * j.xx + j.yx * j.yx);
     if (nx > 0.) {
-        const double k = (nx + blurX) / nx;
+        const double k = (nx + blur) / nx;
         r.xx *= k;
         r.yx *= k;
     } else {
-        r.xx = blurX;
+        r.xx = blur;
         r.yx = 0.;
     }
     const double ny = std::sqrt(j.xy * j.xy + j.yy * j.yy);
@@ -1069,10 +1085,10 @@ addBlurToFootprint(const Jacobian &j,
 }
 
 // The separable blur of IDistort and STMap version 3 (the Blur Channel). The output pixel is the
-// source filtered by a separable kernel, the filter's continuous kernel stretched to wx source pixels along x
-// and wy along y (the extent of the footprint plus the blur). As in a tabulated filter, the kernel is evaluated at multiples
-// of 1/64 of its unit support: the offset of the pixel that contains the sample is rounded to 1/64, and the
-// step between pixels is round(64 / w). The weights are normalized.
+// source filtered by a separable kernel: the filter's continuous kernel, stretched to wx source pixels
+// along x and wy along y (the extent of the footprint, at least 1 pixel, plus the blur), and normalized.
+// With a width of 1 pixel it is the filter's ordinary interpolation, so the output is continuous as the
+// blur goes to 0.
 static double
 filterKernelRadius(FilterEnum filter)
 {
@@ -1084,6 +1100,9 @@ filterKernelRadius(FilterEnum filter)
         return 2.;
     }
 }
+
+// the largest blur, in pixels (for an infinite source RoD)
+constexpr double kMaxBlurPixels = 1e5;
 
 // the BC-spline family (Mitchell and Netravali, 1988), for |t| < 2
 static double
@@ -1144,49 +1163,62 @@ filterKernel(FilterEnum filter,
     }
 }
 
-// the weights of the separable blur along one axis, for a sample at c (pixel i covers [i, i+1)) and a
-// kernel width w > 0 (in pixels): weights[n] is the weight of pixel *first + n, normalized
+// the most taps along each axis of the separable blur: beyond that, the kernel is sampled every
+// stride pixels (a coarser, much cheaper, approximation for blurs of more than about 30 pixels)
+constexpr int kSeparableBlurMaxTaps = 64;
+// sample positions beyond this many pixels from the origin are outside any image (and the int conversions
+// below must not overflow)
+constexpr double kSeparableBlurMaxPosition = 1e9;
+
+// The weights of the separable blur along one axis: pixel first + n * stride has weight weights[n].
+struct SeparableWeights
+{
+    int first = 0;
+    int stride = 1;
+    std::vector<double> weights;
+};
+
+// the weights for a sample at c (pixel i covers [i, i+1), its center is i + 0.5) and a kernel width
+// w >= 1 (in pixels), normalized; the kernel is evaluated at (i + 0.5 - c) / w
 static void
 separableWeights(FilterEnum filter,
                  double c,
                  double w,
-                 int *first,
-                 std::vector<double> *weights)
+                 SeparableWeights *sw)
 {
-    if ( !(w >= 1e-6) ) { // also NaN
-        w = 1e-6;
-    }
+    // the kernel's support, in pixels: the pixel centers strictly inside it have a non-zero weight
     const double radius = filterKernelRadius(filter) * w;
-    // the pixel that contains c, its offset rounded to 1/64 of the support, then whole steps
-    const int ic = (int)std::floor(c);
-    const int i0 = (std::min)( ic, (int)std::ceil(c - 0.5 - radius) );
-    const int i1 = (std::max)( ic, (int)std::floor(c - 0.5 + radius) );
-    const double step = (std::max)( 1., std::nearbyint(64. / w) ); // in 1/64 of the kernel's unit support
-    const double phase = std::nearbyint( (ic + 0.5 - c) * 64. / w );
-    weights->clear();
+    const int i0 = static_cast<int>( std::floor(c - 0.5 - radius) ) + 1;
+    const int i1 = static_cast<int>( std::ceil(c - 0.5 + radius) ) - 1;
+    const int n = (std::max)(1, i1 - i0 + 1);
+    sw->stride = (n + kSeparableBlurMaxTaps - 1) / kSeparableBlurMaxTaps;
+    // with a stride, center the taps in the support
+    sw->first = i0 + ( (n - 1) % sw->stride ) / 2;
+    sw->weights.clear();
     double sum = 0.;
-    for (int i = i0; i <= i1; ++i) {
-        const double k = filterKernel(filter, (phase + (i - ic) * step) / 64.);
-        weights->push_back(k);
+    for (int i = sw->first; i <= i1; i += sw->stride) {
+        const double k = filterKernel(filter, (i + 0.5 - c) / w);
+        sw->weights.push_back(k);
         sum += k;
     }
-    if (sum != 0.) {
-        for (std::size_t n = 0; n < weights->size(); ++n) {
-            (*weights)[n] /= sum;
-        }
-    } else {
-        // a kernel much narrower than a pixel that misses every pixel center: the pixel that contains c
-        std::fill(weights->begin(), weights->end(), 0.);
-        if ( (ic >= i0) && (ic <= i1) ) {
-            (*weights)[ic - i0] = 1.;
-        }
+    if ( sw->weights.empty() || (sum == 0.) ) {
+        // cannot happen for w >= 1 (the nearest pixel center is within 0.5 pixel), but be safe: the
+        // pixel that contains c
+        sw->first = static_cast<int>( std::floor(c) );
+        sw->stride = 1;
+        sw->weights.assign(1, 1.);
+
+        return;
     }
-    *first = i0;
+    for (double &k : sw->weights) {
+        k /= sum;
+    }
 }
 
-// the separable blur of the source at (sx, sy), with kernel widths (wx, wy): transparent black outside
-// the source (blackOutside), or the nearest edge pixel
-template <class PIX, int nComponents>
+// the separable blur of the source at (sx, sy), with kernel widths (wx, wy) >= 1: transparent black
+// outside the source (blackOutside), or the nearest edge pixel. With clamp, the result is clamped to the
+// range of the pixels read, as the other filters clamp to their neighbours.
+template <class PIX, int nComponents, bool clamp>
 static void
 separableBlurSample(const Image *srcImg,
                     bool blackOutside,
@@ -1195,51 +1227,63 @@ separableBlurSample(const Image *srcImg,
                     double sy,
                     double wx,
                     double wy,
-                    std::vector<double> &wxs,
-                    std::vector<double> &wys,
+                    SeparableWeights &wxs,
+                    SeparableWeights &wys,
                     float *tmpPix)
 {
     std::fill(tmpPix, tmpPix + nComponents, 0.f);
     // far outside (or NaN): transparent black, and no int overflow below
-    if ( !srcImg || !srcImg->getPixelData() || !(std::abs(sx) < 1e9) || !(std::abs(sy) < 1e9) ) {
+    if ( !srcImg || !srcImg->getPixelData() ||
+         !(std::abs(sx) < kSeparableBlurMaxPosition) || !(std::abs(sy) < kSeparableBlurMaxPosition) ) {
         return;
     }
-    int x0, y0;
-    separableWeights(filter, sx, wx, &x0, &wxs);
-    separableWeights(filter, sy, wy, &y0, &wys);
     const OfxRectI &b = srcImg->getBounds();
     if ( (b.x2 <= b.x1) || (b.y2 <= b.y1) ) {
         return;
     }
+    separableWeights(filter, sx, wx, &wxs);
+    separableWeights(filter, sy, wy, &wys);
     double acc[4] = {0., 0., 0., 0.};
-    for (std::size_t j = 0; j < wys.size(); ++j) {
-        int y = y0 + (int)j;
+    double lo[4] = {0., 0., 0., 0.};
+    double hi[4] = {0., 0., 0., 0.};
+    bool any = false;
+    for (std::size_t j = 0; j < wys.weights.size(); ++j) {
+        int y = wys.first + static_cast<int>(j) * wys.stride;
         if ( (y < b.y1) || (y >= b.y2) ) {
             if (blackOutside) {
                 continue;
             }
             y = (y < b.y1) ? b.y1 : (b.y2 - 1);
         }
-        for (std::size_t i = 0; i < wxs.size(); ++i) {
-            int x = x0 + (int)i;
+        for (std::size_t i = 0; i < wxs.weights.size(); ++i) {
+            int x = wxs.first + static_cast<int>(i) * wxs.stride;
             if ( (x < b.x1) || (x >= b.x2) ) {
                 if (blackOutside) {
                     continue;
                 }
                 x = (x < b.x1) ? b.x1 : (b.x2 - 1);
             }
-            const PIX *p = (const PIX *)srcImg->getPixelAddress(x, y);
+            const PIX *p = static_cast<const PIX *>( srcImg->getPixelAddress(x, y) );
             if (!p) {
                 continue;
             }
-            const double wgt = wxs[i] * wys[j];
+            const double wgt = wxs.weights[i] * wys.weights[j];
             for (int c = 0; c < nComponents; ++c) {
                 acc[c] += wgt * p[c];
+                if (clamp) {
+                    lo[c] = any ? (std::min)(lo[c], static_cast<double>(p[c])) : p[c];
+                    hi[c] = any ? (std::max)(hi[c], static_cast<double>(p[c])) : p[c];
+                }
             }
+            any = true;
         }
     }
     for (int c = 0; c < nComponents; ++c) {
-        tmpPix[c] = (float)acc[c];
+        double v = acc[c];
+        if (clamp && any) {
+            v = (std::max)( lo[c], (std::min)(v, hi[c]) );
+        }
+        tmpPix[c] = static_cast<float>(v);
     }
 }
 
@@ -1259,14 +1303,9 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
     int srcy1 = int(std::ceil(_format.y1));
     int srcy2 = int(std::floor(_format.y2));
     //}
-    // the largest blur, in source pixels: the larger dimension of the source image (at least 1)
-    double maxBlur = 1.;
-    if (_srcImg) {
-        const OfxRectI& srcBounds = _srcImg->getBounds();
-        maxBlur = (std::max)( maxBlur, (double)(std::max)(srcBounds.x2 - srcBounds.x1, srcBounds.y2 - srcBounds.y1) );
-    }
+    const double maxBlur = _maxBlur;
     float tmpPix[4] = {0.f, 0.f, 0.f, 0.f};
-    std::vector<double> blurWeightsX, blurWeightsY; // reused by the separable blur
+    SeparableWeights blurWeightsX, blurWeightsY; // reused by the separable blur
     for (int y = procWindow.y1; y < procWindow.y2; y++) {
         if ( _effect.abort() ) {
             break;
@@ -1327,11 +1366,11 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
                 a = getVal(eUVChannelAlpha, aPix, NULL);
                 unpremult(a, &u, &v);
                 if (filter != eFilterImpulse) {
+                    // in full-scale (square, in version 3) pixels: scaled below
                     blur = getVal(eUVChannelBlur, getPix(eUVChannelBlur, x, y), NULL);
                     if ( _unpremultUV && (a != 0.) ) {
                         blur /= a;
                     }
-                    blur *= _blurScale;
                 }
 
                 double ux, uy, vx, vy;
@@ -1414,14 +1453,16 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
             }
             } // switch
             // the footprint of the output pixel in the source, before the upstream (concatenated) transform,
-            // with the blur, in the pixels of the image that this effect sees (the transformed source)
+            // in the pixels of the image that this effect sees (the transformed source). Version 2 adds the
+            // blur to it; version 3 blurs with the separable kernel (not with Box, which integrates the
+            // footprint, there the blur is also added to it).
             Jacobian J = {1., 0., 0., 1.};
-            // version 3, without an upstream transform: the separable blur (the footprint is not blurred)
-            const bool separableBlur = _separableBlur && (filter != eFilterImpulse) && (filter != eFilterBox) &&
-                                       _transformIsIdentity && (blur > 0.);
+            Jacobian JH = {1., 0., 0., 1.}; // the Jacobian of the inverse upstream transform
+            const bool separableBlur = (_uvBehaviour == eUVBehaviourV3) && (filter != eFilterImpulse) &&
+                                       (filter != eFilterBox) && (blur > 0.);
             if (filter != eFilterImpulse) {
                 const Jacobian S = {sxx, sxy, syx, syy};
-                J = separableBlur ? S : addBlurToFootprint(S, blur, maxBlur, _separableBlur ? _blurParX : 1.);
+                J = separableBlur ? S : addBlurToFootprint(S, blur * _blurScaleX, maxBlur);
             }
             bool atInfinity = false; // the source position is at infinity: nothing to sample
             if (!_transformIsIdentity) {
@@ -1441,18 +1482,21 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
                         // the footprint in the original source: the Jacobian of the inverse upstream
                         // transform, times the footprint in the transformed source
                         const double z2 = transformedz * transformedz;
-                        const Jacobian JH = {
-                            (H(0,0) * transformedz - transformedx * H(2,0)) / z2,
-                            (H(0,1) * transformedz - transformedx * H(2,1)) / z2,
-                            (H(1,0) * transformedz - transformedy * H(2,0)) / z2,
-                            (H(1,1) * transformedz - transformedy * H(2,1)) / z2
-                        };
+                        JH.xx = (H(0,0) * transformedz - transformedx * H(2,0)) / z2;
+                        JH.xy = (H(0,1) * transformedz - transformedx * H(2,1)) / z2;
+                        JH.yx = (H(1,0) * transformedz - transformedy * H(2,0)) / z2;
+                        JH.yy = (H(1,1) * transformedz - transformedy * H(2,1)) / z2;
                         J = composeJacobians(JH, J);
                     }
                 }
             }
 
-            if (atInfinity) {
+            if ( (_uvBehaviour == eUVBehaviourV3) && _unpremultUV && (a == 0.) &&
+                 (plugin == eDistortionPluginSTMap || plugin == eDistortionPluginIDistort) ) {
+                // premultiplied UV with a zero alpha: no UV (version 2 multiplies by the alpha, which also
+                // gives transparent black)
+                std::fill(tmpPix, tmpPix + 4, 0.f);
+            } else if (atInfinity) {
                 // transparent black, as Transform3x3 gives for z == 0 (Transform3x3 also gives black for z < 0,
                 // behind the camera, which this code does not test). Also u = v = 0, with a transparent STMap alpha.
                 std::fill(tmpPix, tmpPix + 4, 0.f);
@@ -1467,19 +1511,23 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
                 if (filter == eFilterImpulse) {
                     ofxsFilterInterpolate2D<PIX, nComponents, filter, clamp>(sx, sy, _srcImg, _blackOutside, tmpPix);
                 } else if (separableBlur) {
-                    // the kernel widths: the extent of the footprint along x and y (the bounding box of the
-                    // output pixel in the source), plus the blur, in square pixels: divided by the pixel
-                    // aspect ratio along x
-                    const double b = (std::min)(blur, maxBlur);
-                    // (bounded, like the blur, by the source size: a wild UV gradient must not cost hours)
-                    const double wx = (std::min)(std::abs(J.xx) + std::abs(J.xy) + b / _blurParX, 2 * maxBlur);
-                    const double wy = (std::min)(std::abs(J.yx) + std::abs(J.yy) + b, 2 * maxBlur);
-                    separableBlurSample<PIX, nComponents>(_srcImg, _blackOutside, filter, sx, sy,
-                                                          wx, wy, blurWeightsX, blurWeightsY, tmpPix);
+                    // the kernel widths, in source pixels: the extent of the footprint along x and y (the
+                    // bounding box of the output pixel in the source, at least 1 pixel), plus the extent of
+                    // the blur (bx, by in the pixels of the transformed source) through the upstream transform
+                    const double bx = (std::min)(blur * _blurScaleX, maxBlur);
+                    const double by = (std::min)(blur * _blurScaleY, maxBlur);
+                    const double maxWidth = 2 * maxBlur + 1; // a wild UV gradient must not cost hours either
+                    const double wx = (std::min)( (std::max)(1., std::abs(J.xx) + std::abs(J.xy)) +
+                                                  std::abs(JH.xx) * bx + std::abs(JH.xy) * by, maxWidth );
+                    const double wy = (std::min)( (std::max)(1., std::abs(J.yx) + std::abs(J.yy)) +
+                                                  std::abs(JH.yx) * bx + std::abs(JH.yy) * by, maxWidth );
+                    separableBlurSample<PIX, nComponents, clamp>(_srcImg, _blackOutside, filter, sx, sy,
+                                                                 wx, wy, blurWeightsX, blurWeightsY, tmpPix);
                 } else {
                     ofxsFilterInterpolate2DSuper<PIX, nComponents, filter, clamp>(sx, sy, J.xx, J.xy, J.yx, J.yy, _srcImg, _blackOutside, tmpPix);
                 }
-                if (_multiplyByUVAlpha) {
+                if (_uvBehaviour == eUVBehaviourV2) {
+                    // version 2 multiplies the output by the UV alpha
                     for (unsigned c = 0; c < nComponents; ++c) {
                         tmpPix[c] *= a;
                     }
@@ -2842,26 +2890,35 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
     bool processB = _processB->getValueAtTime(time);
     bool processA = _processA->getValueAtTime(time);
     bool unpremultUV = false;
-    bool multiplyByUVAlpha = false;
-    double blurScale = 0.;
-    bool separableBlur = false;
-    double blurParX = 1.;
+    const UVBehaviourEnum uvBehaviour = (_majorVersion >= kPluginVersionUVSquarePixels) ? eUVBehaviourV3 : eUVBehaviourV2;
+    double blurScaleX = 0., blurScaleY = 0.;
+    double maxBlur = 1.;
+    const double dstPar = _dstClip->getPixelAspectRatio();
+    const double par = (dstPar > 0.) ? dstPar : 1.;
     double uScale = 1., vScale = 1.;
     double uOffset = 0., vOffset = 0.;
     WrapEnum uWrap = eWrapClamp;
     WrapEnum vWrap = eWrapClamp;
     if ( (_plugin == eDistortionPluginIDistort) || (_plugin == eDistortionPluginSTMap) ) {
         unpremultUV = _unpremultUV->getValueAtTime(time);
-        // version 2 multiplies the output by the Alpha Channel from UV
-        multiplyByUVAlpha = (_majorVersion < 3);
-        // version 3: the blur is a separable kernel, in square pixels (version 2 adds it to the footprint)
-        separableBlur = (_majorVersion >= 3);
-        const double par = _dstClip->getPixelAspectRatio();
-        blurParX = (par > 0.) ? par : 1.;
-        // the blur is in full-scale pixels, like the IDistort displacement. It is a length in any
-        // direction, so it needs an isotropic render scale: kSupportsMultipleClipPARs is false and hosts
-        // render at the same scale in x and y (only renderScale.x is used).
-        blurScale = _blurScale->getValueAtTime(time) * args.renderScale.x;
+        // the blur is in full-scale pixels, like the IDistort displacement: in square pixels in version 3
+        // (divided by the pixel aspect ratio along x), in pixels along x in version 2 (which uses the x
+        // render scale along both axes)
+        const double blurScale = _blurScale->getValueAtTime(time);
+        if (uvBehaviour == eUVBehaviourV3) {
+            blurScaleX = blurScale * args.renderScale.x / par;
+            blurScaleY = blurScale * args.renderScale.y;
+        } else {
+            blurScaleX = blurScaleY = blurScale * args.renderScale.x;
+        }
+        // the largest blur: the size of the source RoD, in pixels at the render scale (at least 1, and
+        // finite for an infinite RoD)
+        if ( _srcClip && _srcClip->isConnected() ) {
+            const OfxRectD srcRod = _srcClip->getRegionOfDefinition(time);
+            const double w = (srcRod.x2 - srcRod.x1) * args.renderScale.x / par;
+            const double h = (srcRod.y2 - srcRod.y1) * args.renderScale.y;
+            maxBlur = (std::min)( (std::max)( 1., (std::max)(w, h) ), kMaxBlurPixels );
+        }
         _uvOffset->getValueAtTime(time, uOffset, vOffset);
         _uvScale->getValueAtTime(time, uScale, vScale);
         if (_plugin == eDistortionPluginSTMap) {
@@ -2901,13 +2958,10 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
         // in IDistort, displacement is given in full-scale pixels
         uScale *= args.renderScale.x;
         vScale *= args.renderScale.y;
-        if (_majorVersion >= 3) {
+        if (uvBehaviour == eUVBehaviourV3) {
             // U is in square pixels (as tall as a pixel): divide by the pixel aspect ratio to get pixels
             // along x (version 2 takes U in pixels along x)
-            const double par = _dstClip->getPixelAspectRatio();
-            if (par > 0.) {
-                uScale /= par;
-            }
+            uScale /= par;
         }
     }
     OfxRectD format = {0, 0, 1, 1};
@@ -2943,10 +2997,10 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
                         format,
                         planeChannels,
                         unpremultUV,
-                        multiplyByUVAlpha,
-                        blurScale,
-                        separableBlur,
-                        blurParX,
+                        uvBehaviour,
+                        blurScaleX,
+                        blurScaleY,
+                        maxBlur,
                         uOffset, vOffset,
                         uScale, vScale,
                         uWrap, vWrap,
@@ -3429,10 +3483,21 @@ DistortionPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
     // ask for full RoD of srcClip
     const OfxRectD& srcRod = _srcClip->getRegionOfDefinition(time);
     rois.setRegionOfInterest(*_srcClip, srcRod);
-    // only ask for the renderWindow (intersected with the RoD) from uvClip
+    // from uvClip, only the render window, one pixel larger (the UV derivatives read the pixels at x+-1 and
+    // y+-1), intersected with the RoD
     if (_uvClip) {
+        const double uvPar = _uvClip->getPixelAspectRatio();
+        OfxRectD window = args.regionOfInterest;
+        if ( (args.renderScale.x > 0.) && (args.renderScale.y > 0.) ) {
+            const double dx = ( (uvPar > 0.) ? uvPar : 1. ) / args.renderScale.x; // one pixel, in canonical coordinates
+            const double dy = 1. / args.renderScale.y;
+            window.x1 -= dx;
+            window.x2 += dx;
+            window.y1 -= dy;
+            window.y2 += dy;
+        }
         OfxRectD uvRoI = _uvClip->getRegionOfDefinition(time);
-        Coords::rectIntersection(uvRoI, args.regionOfInterest, &uvRoI);
+        Coords::rectIntersection(uvRoI, window, &uvRoI);
         rois.setRegionOfInterest(*_uvClip, uvRoI);
     }
 }
