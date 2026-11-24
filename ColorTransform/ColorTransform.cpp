@@ -32,80 +32,132 @@ using namespace OFX;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
+// The hue of HSV, HSL and HSI is in [0, 1) (OFXS_HUE_CIRCLE in SupportExt's ofxsLut.h).
+#define kHueNote "H is in [0,1) (a fraction of the hue circle, not degrees): red is 0, yellow 1/6, green 1/3, cyan 1/2, blue 2/3 and magenta 5/6."
+#define kAsGivenRGBToNote \
+    "The conversion uses the RGB values as they are given: no transfer function (gamma) is applied. " \
+    "HSV and HSL are usually computed on display-referred values, e.g. sRGB-encoded ones: " \
+    "on linear (scene-referred) values, the result has other hues and saturations. " \
+    "To get the display-referred values, convert the input to the display colour space first (and back after the inverse conversion)."
+#define kAsGivenToRGBNote \
+    "The output RGB values are given as computed: no transfer function (gamma) is applied, " \
+    "so they are in the colour encoding of the input of the forward conversion."
+
 #define kPluginRGBToHSVName "RGBToHSV"
-#define kPluginRGBToHSVDescription "Convert from linear RGB to HSV color model (hue, saturation, value, as defined by A. R. Smith in 1978). H is in degrees, S and V are in the same units as RGB. No gamma correction is applied to RGB before conversion."
+#define kPluginRGBToHSVDescription "Convert from RGB to the HSV color model (hue, saturation, value, as defined by A. R. Smith in 1978).\n" \
+    kHueNote " V = max(R,G,B), in the units of RGB. S = (max(R,G,B) - min(R,G,B)) / max(R,G,B), in [0,1] for non-negative RGB (0 if V is 0).\n" \
+    kAsGivenRGBToNote
 #define kPluginRGBToHSVIdentifier "net.sf.openfx.RGBToHSV"
 
 #define kPluginHSVToRGBName "HSVToRGB"
-#define kPluginHSVToRGBDescription "Convert from HSV color model (hue, saturation, value, as defined by A. R. Smith in 1978) to linear RGB. H is in degrees, S and V are in the same units as RGB. No gamma correction is applied to RGB after conversion."
+#define kPluginHSVToRGBDescription "Convert from the HSV color model (hue, saturation, value, as defined by A. R. Smith in 1978) to RGB: the inverse of RGBToHSV. " \
+    "H is wrapped into the hue circle.\n" \
+    kHueNote " V is in the units of RGB, S in [0,1].\n" \
+    kAsGivenToRGBNote
 #define kPluginHSVToRGBIdentifier "net.sf.openfx.HSVToRGB"
 
 #define kPluginRGBToHSLName "RGBToHSL"
-#define kPluginRGBToHSLDescription "Convert from RGB to HSL color model (hue, saturation, lightness, as defined by Joblove and Greenberg in 1978). H is in degrees, S and L are in the same units as RGB. No gamma correction is applied to RGB before conversion."
+#define kPluginRGBToHSLDescription "Convert from RGB to the HSL color model (hue, saturation, lightness, as defined by Joblove and Greenberg in 1978).\n" \
+    kHueNote " L = (max(R,G,B) + min(R,G,B)) / 2, in the units of RGB. S is in [0,1]: it is computed from the largest and smallest components clamped to [0,1].\n" \
+    kAsGivenRGBToNote
 #define kPluginRGBToHSLIdentifier "net.sf.openfx.RGBToHSL"
 
 #define kPluginHSLToRGBName "HSLToRGB"
-#define kPluginHSLToRGBDescription "Convert from HSL color model (hue, saturation, lightness, as defined by Joblove and Greenberg in 1978) to linear RGB. H is in degrees, S and L are in the same units as RGB. No gamma correction is applied to RGB after conversion."
+#define kPluginHSLToRGBDescription "Convert from the HSL color model (hue, saturation, lightness, as defined by Joblove and Greenberg in 1978) to RGB: the inverse of RGBToHSL. " \
+    "H is wrapped into the hue circle.\n" \
+    kHueNote " L is in the units of RGB, S in [0,1].\n" \
+    kAsGivenToRGBNote
 #define kPluginHSLToRGBIdentifier "net.sf.openfx.HSLToRGB"
 
-#define kPluginRGBToHSIName "RGBToHSI"
-#define kPluginRGBToHSIDescription "Convert from linear RGB to HSI color model (hue, saturation, intensity, as defined by Gonzalez and Woods in 1992). H is in degrees, S and I are in the same units as RGB. No gamma correction is applied to RGB before conversion.\n" \
-    "The HSI colour space (hue, saturation and intensity) attempts to produce a more intuitive representation of colour. The I axis represents the luminance information. The H and S axes are polar coordinates on the plane orthogonal to I. H is the angle, specified such that red is at zero, green at 120 degrees, and blue at 240 degrees. Hue thus represents what humans implicitly understand as colour. S is the magnitude of the colour vector projected in the plane orthogonal to I, and so represents the difference between pastel colours (low saturation) and vibrant colours (high saturation). The main drawback of this colour space is that hue is undefined if saturation is zero, making error propagation in transformations from the RGB colour space more complicated.\n" \
+#define kHSIAbout \
+    "The HSI colour space (hue, saturation and intensity) attempts to produce a more intuitive representation of colour. The I axis represents the luminance information. The H and S axes are polar coordinates on the plane orthogonal to I. H is the angle, specified such that red is at zero, green at one third of the hue circle, and blue at two thirds. Hue thus represents what humans implicitly understand as colour. S is the magnitude of the colour vector projected in the plane orthogonal to I, and so represents the difference between pastel colours (low saturation) and vibrant colours (high saturation). The main drawback of this colour space is that hue is undefined if saturation is zero, making error propagation in transformations from the RGB colour space more complicated.\n" \
     "It should also be noted that, although the HSI colour space may be more intuitive, is not \"perceptual\", in the sense that small displacements of equal size in different parts of the colour space will be perceived by human observers as changes of different magnitude. Attempts have been made to define such colour spaces: CIE-LAB and CIE-LUV are two examples."
+
+#define kPluginRGBToHSIName "RGBToHSI"
+#define kPluginRGBToHSIDescription "Convert from RGB to the HSI color model (hue, saturation, intensity, as defined by Gonzalez and Woods in 1992).\n" \
+    kHueNote " I = (R+G+B)/3, in the units of RGB. S = 1 - min(R,G,B)/I, in [0,1] for non-negative RGB (0 if I is 0).\n" \
+    "The conversion uses the RGB values as they are given: no transfer function (gamma) is applied.\n" \
+    kHSIAbout
 #define kPluginRGBToHSIIdentifier "net.sf.openfx.RGBToHSI"
 
 #define kPluginHSIToRGBName "HSIToRGB"
-#define kPluginHSIToRGBDescription "Convert from HSI color model (hue, saturation, intensity, as defined by Gonzalez and Woods in 1992) to linear RGB. H is in degrees, S and I are in the same units as RGB. No gamma correction is applied to RGB after conversion.\n" \
-    "The HSI colour space (hue, saturation and intensity) attempts to produce a more intuitive representation of colour. The I axis represents the luminance information. The H and S axes are polar coordinates on the plane orthogonal to I. H is the angle, specified such that red is at zero, green at 120 degrees, and blue at 240 degrees. Hue thus represents what humans implicitly understand as colour. S is the magnitude of the colour vector projected in the plane orthogonal to I, and so represents the difference between pastel colours (low saturation) and vibrant colours (high saturation). The main drawback of this colour space is that hue is undefined if saturation is zero, making error propagation in transformations from the RGB colour space more complicated.\n" \
-    "It should also be noted that, although the HSI colour space may be more intuitive, is not \"perceptual\", in the sense that small displacements of equal size in different parts of the colour space will be perceived by human observers as changes of different magnitude. Attempts have been made to define such colour spaces: CIE-LAB and CIE-LUV are two examples."
+#define kPluginHSIToRGBDescription "Convert from the HSI color model (hue, saturation, intensity, as defined by Gonzalez and Woods in 1992) to RGB: the inverse of RGBToHSI. " \
+    "H is wrapped into the hue circle.\n" \
+    kHueNote " I is in the units of RGB, S in [0,1].\n" \
+    kAsGivenToRGBNote "\n" \
+    kHSIAbout
 #define kPluginHSIToRGBIdentifier "net.sf.openfx.HSIToRGB"
 
+// The transfer functions of the Y'CbCr, Y'PbPr and Y'UV conversions (SupportExt's ofxsLut.h):
+// the 601 ones use sRGB, not the BT.601 OETF (which is the BT.709 one).
+#define kEncodeSRGB "Linear RGB is first encoded to R'G'B' with the sRGB transfer function (not the BT.601 one, which is the Rec.709 one); negative values become 0."
+#define kDecodeSRGB "R'G'B' is then decoded to linear RGB with the sRGB transfer function; negative values become 0."
+#define kEncodeRec709 "Linear RGB is first encoded to R'G'B' with the Rec.709 transfer function (OETF, with the more precise constants of Rec.2020); negative values become 0."
+#define kDecodeRec709 "R'G'B' is then decoded to linear RGB with the inverse of the Rec.709 OETF; negative values become 0."
+#define kYCbCrRange "Y'CbCr is in the video (studio) range, as 8-bit code values divided by 255: Y' goes from 16/255 (black) to 235/255 (white), and Cb and Cr from 16/255 to 240/255, with 128/255 for neutral colours."
+#define kYPbPrRange "Y' goes from 0 (black) to 1 (white), Pb and Pr from -0.5 to 0.5, with 0 for neutral colours."
+#define kYUVRange "Y' goes from 0 (black) to 1 (white), U from -0.436 to 0.436 and V from -0.615 to 0.615, with 0 for neutral colours."
+#define kMatrix601 "The matrix is the ITU-R BT.601 one (Kr = 0.299, Kb = 0.114)."
+#define kMatrix709 "The matrix is the ITU-R BT.709 one (Kr = 0.2126, Kb = 0.0722)."
+
 #define kPluginRGBToYCbCr601Name "RGBToYCbCr601"
-#define kPluginRGBToYCbCr601Description "Convert from linear RGB to YCbCr color model (ITU.BT-601). RGB is gamma-compressed using the sRGB Opto-Electronic Transfer Function (OETF) before conversion."
+#define kPluginRGBToYCbCr601Description "Convert from linear RGB to the Y'CbCr color model (ITU-R BT.601).\n" \
+    kEncodeSRGB " " kMatrix601 " " kYCbCrRange
 #define kPluginRGBToYCbCr601Identifier "net.sf.openfx.RGBToYCbCr601"
 
 #define kPluginYCbCrToRGB601Name "YCbCrToRGB601"
-#define kPluginYCbCrToRGB601Description "Convert from YCbCr color model (ITU.BT-601) to linear RGB. RGB is gamma-decompressed using the sRGB Electro-Optical Transfer Function (EOTF) after conversion."
+#define kPluginYCbCrToRGB601Description "Convert from the Y'CbCr color model (ITU-R BT.601) to linear RGB: the inverse of RGBToYCbCr601.\n" \
+    kYCbCrRange " " kMatrix601 " " kDecodeSRGB
 #define kPluginYCbCrToRGB601Identifier "net.sf.openfx.YCbCrToRGB601"
 
 #define kPluginRGBToYCbCr709Name "RGBToYCbCr709"
-#define kPluginRGBToYCbCr709Description "Convert from linear RGB to YCbCr color model (ITU.BT-709). RGB is gamma-compressed using the Rec.709 Opto-Electronic Transfer Function (OETF) before conversion."
+#define kPluginRGBToYCbCr709Description "Convert from linear RGB to the Y'CbCr color model (ITU-R BT.709).\n" \
+    kEncodeRec709 " " kMatrix709 " " kYCbCrRange
 #define kPluginRGBToYCbCr709Identifier "net.sf.openfx.RGBToYCbCr709"
 
 #define kPluginYCbCrToRGB709Name "YCbCrToRGB709"
-#define kPluginYCbCrToRGB709Description "Convert from YCbCr color model (ITU.BT-709) to linear RGB. RGB is gamma-decompressed using the Rec.709 Electro-Optical Transfer Function (EOTF) after conversion."
+#define kPluginYCbCrToRGB709Description "Convert from the Y'CbCr color model (ITU-R BT.709) to linear RGB: the inverse of RGBToYCbCr709.\n" \
+    kYCbCrRange " " kMatrix709 " " kDecodeRec709
 #define kPluginYCbCrToRGB709Identifier "net.sf.openfx.YCbCrToRGB709"
 
 #define kPluginRGBToYPbPr601Name "RGBToYPbPr601"
-#define kPluginRGBToYPbPr601Description "Convert from RGB to YPbPr color model (ITU.BT-601). RGB is gamma-compressed using the sRGB Opto-Electronic Transfer Function (OETF) before conversion."
+#define kPluginRGBToYPbPr601Description "Convert from linear RGB to the Y'PbPr color model (ITU-R BT.601).\n" \
+    kEncodeSRGB " " kMatrix601 " " kYPbPrRange
 #define kPluginRGBToYPbPr601Identifier "net.sf.openfx.RGBToYPbPr601"
 
 #define kPluginYPbPrToRGB601Name "YPbPrToRGB601"
-#define kPluginYPbPrToRGB601Description "Convert from YPbPr color model (ITU.BT-601) to RGB. RGB is gamma-decompressed using the sRGB Electro-Optical Transfer Function (EOTF) after conversion."
+#define kPluginYPbPrToRGB601Description "Convert from the Y'PbPr color model (ITU-R BT.601) to linear RGB: the inverse of RGBToYPbPr601.\n" \
+    kYPbPrRange " " kMatrix601 " " kDecodeSRGB
 #define kPluginYPbPrToRGB601Identifier "net.sf.openfx.YPbPrToRGB601"
 
 #define kPluginRGBToYPbPr709Name "RGBToYPbPr709"
-#define kPluginRGBToYPbPr709Description "Convert from RGB to YPbPr color model (ITU.BT-709). RGB is gamma-compressed using the Rec.709 Opto-Electronic Transfer Function (OETF) before conversion."
+#define kPluginRGBToYPbPr709Description "Convert from linear RGB to the Y'PbPr color model (ITU-R BT.709).\n" \
+    kEncodeRec709 " " kMatrix709 " " kYPbPrRange
 #define kPluginRGBToYPbPr709Identifier "net.sf.openfx.RGBToYPbPr709"
 
 #define kPluginYPbPrToRGB709Name "YPbPrToRGB709"
-#define kPluginYPbPrToRGB709Description "Convert from YPbPr color model (ITU.BT-709) to RGB. RGB is gamma-decompressed using the Rec.709 Electro-Optical Transfer Function (EOTF) after conversion."
+#define kPluginYPbPrToRGB709Description "Convert from the Y'PbPr color model (ITU-R BT.709) to linear RGB: the inverse of RGBToYPbPr709.\n" \
+    kYPbPrRange " " kMatrix709 " " kDecodeRec709
 #define kPluginYPbPrToRGB709Identifier "net.sf.openfx.YPbPrToRGB709"
 
 #define kPluginRGBToYUV601Name "RGBToYUV601"
-#define kPluginRGBToYUV601Description "Convert from RGB to YUV color model (ITU.BT-601). RGB is gamma-compressed using the sRGB Opto-Electronic Transfer Function (OETF) before conversion."
+#define kPluginRGBToYUV601Description "Convert from linear RGB to the Y'UV color model (ITU-R BT.601).\n" \
+    kEncodeSRGB " " kMatrix601 " " kYUVRange
 #define kPluginRGBToYUV601Identifier "net.sf.openfx.RGBToYUV601"
 
 #define kPluginYUVToRGB601Name "YUVToRGB601"
-#define kPluginYUVToRGB601Description "Convert from YUV color model (ITU.BT-601) to RGB. RGB is gamma-decompressed using the sRGB Electro-Optical Transfer Function (EOTF) after conversion."
+#define kPluginYUVToRGB601Description "Convert from the Y'UV color model (ITU-R BT.601) to linear RGB: the inverse of RGBToYUV601.\n" \
+    kYUVRange " " kMatrix601 " " kDecodeSRGB
 #define kPluginYUVToRGB601Identifier "net.sf.openfx.YUVToRGB601"
 
 #define kPluginRGBToYUV709Name "RGBToYUV709"
-#define kPluginRGBToYUV709Description "Convert from RGB to YUV color model (ITU.BT-709). RGB is gamma-compressed using the Rec.709 Opto-Electronic Transfer Function (OETF) before conversion."
+#define kPluginRGBToYUV709Description "Convert from linear RGB to the Y'UV color model (ITU-R BT.709).\n" \
+    kEncodeRec709 " " kMatrix709 " " kYUVRange
 #define kPluginRGBToYUV709Identifier "net.sf.openfx.RGBToYUV709"
 
 #define kPluginYUVToRGB709Name "YUVToRGB709"
-#define kPluginYUVToRGB709Description "Convert from YUV color model (ITU.BT-709) to RGB. RGB is gamma-decompressed using the Rec.709 Electro-Optical Transfer Function (EOTF) after conversion."
+#define kPluginYUVToRGB709Description "Convert from the Y'UV color model (ITU-R BT.709) to linear RGB: the inverse of RGBToYUV709.\n" \
+    kYUVRange " " kMatrix709 " " kDecodeRec709
 #define kPluginYUVToRGB709Identifier "net.sf.openfx.YUVToRGB709"
 
 #define kPluginRGBToYIQName "RGBToYIQ"
@@ -134,19 +186,19 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginXYZToRGB709Identifier "net.sf.openfx.XYZToRGB709"
 
 #define kPluginRGB709ToLabName "RGB709ToLab"
-#define kPluginRGB709ToLabDescription "Convert from RGB (Rec.709 with D65 illuminant) to L*a*b color model. L*a*b coordinates are divided by 100 for better visualization."
+#define kPluginRGB709ToLabDescription "Convert from RGB (Rec.709 with D65 illuminant) to the CIE L*a*b* color model. The L*a*b* coordinates are divided by 100 for better visualization."
 #define kPluginRGB709ToLabIdentifier "net.sf.openfx.RGB709ToLab"
 
 #define kPluginLabToRGB709Name "LabToRGB709"
-#define kPluginLabToRGB709Description "Convert from L*a*b color model to RGB (Rec.709 with D65 illuminant). L*a*b coordinates are divided by 100 for better visualization."
+#define kPluginLabToRGB709Description "Convert from the CIE L*a*b* color model to RGB (Rec.709 with D65 illuminant). The L*a*b* coordinates are divided by 100 for better visualization."
 #define kPluginLabToRGB709Identifier "net.sf.openfx.LabToRGB709"
 
 #define kPluginXYZToLabName "XYZToLab"
-#define kPluginXYZToLabDescription "Convert from CIE XYZ color space to CIE L*a*b color space. L*a*b coordinates are divided by 100 for better visualization."
+#define kPluginXYZToLabDescription "Convert from CIE XYZ color space to CIE L*a*b* color space. The L*a*b* coordinates are divided by 100 for better visualization."
 #define kPluginXYZToLabIdentifier "net.sf.openfx.XYZToLab"
 
 #define kPluginLabToXYZName "LabToXYZ"
-#define kPluginLabToXYZDescription "Convert from CIE L*a*b color space to CIE XYZ color space. L*a*b coordinates are divided by 100 for better visualization."
+#define kPluginLabToXYZDescription "Convert from CIE L*a*b* color space to CIE XYZ color space. The L*a*b* coordinates are divided by 100 for better visualization."
 #define kPluginLabToXYZIdentifier "net.sf.openfx.LabToXYZ"
 
 #define kPluginXYZToxyYName "XYZToxyY"
@@ -369,11 +421,11 @@ public:
                 ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, dounpremult, _premultChannel);
                 switch (transform) {
                 case eColorTransformRGBToHSV:
-                    // Nuke 5-8 version used sRGB colors to compute HSV
-                    // However, as Alvin Ray Smith said in his paper,
+                    // HSV, HSL and HSI are computed on the values as given, with no transfer
+                    // function: as Alvy Ray Smith said in his paper,
                     // "We shall assume that an RGB monitor is a linear device"
-                    // We thus use linear values (same as Nuke 9 and later).
-                    // Fixes https://github.com/NatronGitHub/Natron/issues/286
+                    // (see https://github.com/NatronGitHub/Natron/issues/286).
+                    // The descriptions tell users to convert to display-referred values first.
                     // Reference:
                     // "Color gamut transform pairs", Alvy Ray Smith, Proceeding SIGGRAPH '78
                     // https://doi.org/10.1145/800248.807361
@@ -383,27 +435,27 @@ public:
 
                 case eColorTransformHSVToRGB:
                     Color::hsv_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2], true);
-                    // Use linear color values, see comment above
+                    // values as given, see the comment above
                     break;
 
                 case eColorTransformRGBToHSL:
-                    // Use linear color values, see comment above
+                    // values as given, see the comment above
                     Color::rgb_to_hsl(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     break;
 
                 case eColorTransformHSLToRGB:
                     Color::hsl_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2], true);
-                    // Use linear color values, see comment above
+                    // values as given, see the comment above
                     break;
 
                 case eColorTransformRGBToHSI:
-                    // Use linear color values, see comment above
+                    // values as given, see the comment above
                     Color::rgb_to_hsi(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     break;
 
                 case eColorTransformHSIToRGB:
                     Color::hsi_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2], true);
-                    // Use linear color values, see comment above
+                    // values as given, see the comment above
                     break;
 
 
