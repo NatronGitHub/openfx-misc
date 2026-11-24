@@ -42,7 +42,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 1.1: the over of the shape on the source beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #80),
-//              and infinite inputs of the over are made finite (+-FLT_MAX) instead of giving NaN (SupportExt #82)
+//              and infinite inputs of the over are made finite (+-FLT_MAX) instead of giving NaN (SupportExt #82);
+//              Process A is checked by default (it had no default, so nothing was drawn by default since
+//              the R/G/B/A checkboxes are honored), and add the Premultiply and Replace parameters
+//              (default off: the output is unchanged) (#283)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -83,7 +86,14 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamPremult "premultiply"
 #define kParamPremultLabel "Premultiply"
-#define kParamPremultHint "Premultiply the red, green and blue channels with the alpha channel produced by the mask."
+#define kParamPremultHint "Multiply the red, green and blue channels of the Source by the alpha of the shapes before drawing: " \
+    "where there are no shapes, they are set to black. " \
+    "Use this when only the alpha channel is drawn, on an opaque or unpremultiplied Source. " \
+    "The output is then premultiplied."
+
+#define kParamReplace "replace"
+#define kParamReplaceLabel "Replace"
+#define kParamReplaceHint "Clear the drawn channels (R, G, B and A, as checked) of the Source to black before drawing into them."
 
 #ifdef OFX_EXTENSIONS_NATRON
 #define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentXY || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
@@ -102,6 +112,8 @@ protected:
     bool _processG;
     bool _processB;
     bool _processA;
+    bool _premult; // multiply the Source RGB by the shape alpha
+    bool _replace; // clear the drawn channels of the Source
 
 public:
     RotoProcessorBase(ImageEffect &instance)
@@ -112,6 +124,8 @@ public:
         , _processG(false)
         , _processB(false)
         , _processA(false)
+        , _premult(false)
+        , _replace(false)
     {
     }
 
@@ -127,12 +141,16 @@ public:
     void setValues(bool processR,
                    bool processG,
                    bool processB,
-                   bool processA)
+                   bool processA,
+                   bool premult,
+                   bool replace)
     {
         _processR = processR;
         _processG = processG;
         _processB = processB;
         _processA = processA;
+        _premult = premult;
+        _replace = replace;
     }
 };
 
@@ -281,6 +299,13 @@ private:
                     }
                 }
 
+                // Premultiply: the source RGB times the shape alpha (only RGBA has both)
+                if (_premult && nComponents == 4) {
+                    for (int c = 0; c < 3; ++c) {
+                        srcVal[c] = MergeImages2D::mergeDoubleToPIX<PIX>(srcVal[c] * (maskAlpha / (double)maxValue));
+                    }
+                }
+
                 // merge/over
                 for (int c = 0; c < nComponents; ++c) {
                     // channels that are not processed are copied from the source
@@ -292,6 +317,10 @@ private:
                     if (!processChannel) {
                         dstPix[c] = srcVal[c];
                         continue;
+                    }
+                    if (_replace) {
+                        // Replace: draw on black
+                        srcVal[c] = PIX();
                     }
                     dstPix[c] = MergeImages2D::overFunc<PIX, maxValue>(maskPix ? maskPix[c] : PIX(), srcVal[c], maskAlpha, srcAlpha);
                 }
@@ -314,6 +343,12 @@ public:
         , _dstClip(NULL)
         , _srcClip(NULL)
         , _rotoClip(NULL)
+        , _processR(NULL)
+        , _processG(NULL)
+        , _processB(NULL)
+        , _processA(NULL)
+        , _premult(NULL)
+        , _replace(NULL)
     {
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -333,6 +368,9 @@ public:
         _processB = fetchBooleanParam(kParamProcessB);
         _processA = fetchBooleanParam(kParamProcessA);
         assert(_processR && _processG && _processB && _processA);
+        _premult = fetchBooleanParam(kParamPremult);
+        _replace = fetchBooleanParam(kParamReplace);
+        assert(_premult && _replace);
     }
 
 private:
@@ -360,6 +398,8 @@ private:
     BooleanParam* _processG;
     BooleanParam* _processB;
     BooleanParam* _processA;
+    BooleanParam* _premult;
+    BooleanParam* _replace;
 };
 
 
@@ -429,7 +469,9 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor,
     _processG->getValueAtTime(time, processG);
     _processB->getValueAtTime(time, processB);
     _processA->getValueAtTime(time, processA);
-    processor.setValues(processR, processG, processB, processA);
+    const bool premult = _premult->getValueAtTime(time);
+    const bool replace = _replace->getValueAtTime(time);
+    processor.setValues(processR, processG, processB, processA, premult, replace);
 
     // set the images
     processor.setDstImg( dst.get() );
@@ -554,6 +596,11 @@ RotoPlugin::isIdentity(const IsIdentityArguments &args,
 
     bool processA;
     _processA->getValueAtTime(time, processA);
+    // Premultiply changes the source RGB, also where there are no shapes
+    const bool premult = (srcComponents == ePixelComponentRGBA) && _premult->getValueAtTime(time);
+    if (premult) {
+        return false;
+    }
 
     if ( (srcComponents == ePixelComponentAlpha) && !processA ) {
         identityClip = _srcClip;
@@ -570,7 +617,8 @@ RotoPlugin::isIdentity(const IsIdentityArguments &args,
         return true;
     }
 
-    if ( _rotoClip && _rotoClip->isConnected() ) {
+    // Replace clears the drawn channels, also where there are no shapes
+    if ( _rotoClip && _rotoClip->isConnected() && !_replace->getValueAtTime(time) ) {
         OfxRectI rotoRoD;
         Coords::toPixelEnclosing(_rotoClip->getRegionOfDefinition(args.time), args.renderScale, _rotoClip->getPixelAspectRatio(), &rotoRoD);
         // effect is identity if the renderWindow doesn't intersect the roto RoD
@@ -593,7 +641,10 @@ RotoPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     PreMultiplicationEnum srcPremult = _srcClip->getPreMultiplication();
     bool processA;
     _processA->getValue(processA);
-    if ( (srcPremult == eImageOpaque) && processA ) {
+    if ( _premult->getValue() && (_srcClip->getPixelComponents() == ePixelComponentRGBA) ) {
+        // the source RGB is multiplied by the shape alpha
+        clipPreferences.setOutputPremultiplication(eImagePreMultiplied);
+    } else if ( (srcPremult == eImageOpaque) && processA ) {
         // we're changing alpha, the image becomes UnPremultiplied
         clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
     }
@@ -730,8 +781,30 @@ RotoPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
         param->setLabel(kParamProcessALabel);
         param->setHint(kParamProcessAHint);
+        param->setDefault(true); // the shapes are drawn into alpha by default
         param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    // new parameters go at the end, with defaults that keep the output of older versions
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremult);
+        param->setLabel(kParamPremultLabel);
+        param->setHint(kParamPremultHint);
+        param->setDefault(false);
+        param->setAnimates(false);
+        desc.addClipPreferencesSlaveParam(*param);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamReplace);
+        param->setLabel(kParamReplaceLabel);
+        param->setHint(kParamReplaceHint);
+        param->setDefault(false);
         if (page) {
             page->addChild(*param);
         }
