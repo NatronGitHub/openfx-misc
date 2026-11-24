@@ -78,7 +78,15 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              in the filter and paint contexts, Source is RGBA and the Output components are those of Source,
 //              as the OpenFX spec mandates (issue #190; Output Alpha remapped Source and Output to RGBA);
 //              with an Output Alpha other than Source, a NaN Mask sample is 0 (it was ignored) and +-inf is
-//              +-FLT_MAX (-inf gave a -inf alpha), as in the mask mix (issue #220)
+//              +-FLT_MAX (-inf gave a -inf alpha), as in the mask mix (issue #220);
+//              (1.1 is unreleased, fixed in place, issue #322) with Output Alpha = Source, the output alpha
+//              of RGBA images is the source alpha (it was 0, or mixed with 0), and Premultiply no longer
+//              multiplies the colours by 0 (RGBA and RGB images were black); without adjustments, the
+//              colours are copied (the HSV round trip changed them by rounding, and a negative saturation
+//              in a range that includes it was set to 0); isIdentity no longer passes the source through
+//              when the render sets the alpha (Output Alpha other than Source, even with Mix 0 or outside the
+//              mask), clamps float images (Clamp Black, on by default, or Clamp White), or applies a gain
+//              other than 1
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -252,6 +260,15 @@ struct HSVToolValues
         valAdjust = 0.;
         valAdjustGain = 1.;
         valRolloff = 0.;
+    }
+
+    // true if hsvtool() changes the hue, saturation or brightness of the pixels whose range
+    // coefficient is not 0; false if it copies every pixel (before the clamps)
+    bool adjustsColor() const
+    {
+        return (hueRotation != 0.) || (hueRotationGain != 1.) ||
+               (satAdjust != 0.) || (satAdjustGain != 1.) ||
+               (valAdjust != 0.) || (valAdjustGain != 1.);
     }
 };
 
@@ -438,6 +455,7 @@ public:
         , _doMasking(false)
         , _mix(1.)
         , _maskInvert(false)
+        , _adjustsColor(false)
         , _clampBlack(true)
         , _clampWhite(true)
     {
@@ -518,6 +536,7 @@ public:
         if (_values.valRolloff < 0.) {
             _values.valRolloff = 0.;
         }
+        _adjustsColor = _values.adjustsColor();
         _clampBlack = clampBlack;
         _clampWhite = clampWhite;
         _outputAlpha = outputAlpha;
@@ -589,7 +608,8 @@ public:
         // a NaN h, s or v (from a NaN pixel) fails every range test above and gives a coefficient
         // of 0, so coeff is 0 and the pixel is left unchanged (NaN)
         float coeff = (std::min)((std::min)(*hcoeff, *scoeff), *vcoeff);
-        if (coeff <= 0.) {
+        // without adjustments, copy the pixel: the HSV round trip is not exact (isIdentity relies on this)
+        if ( (coeff <= 0.) || !_adjustsColor ) {
             *rout = r;
             *gout = g;
             *bout = b;
@@ -618,6 +638,7 @@ public:
 
 private:
     HSVToolValues _values;
+    bool _adjustsColor; // _values.adjustsColor()
     bool _clampBlack;
     bool _clampWhite;
 };
@@ -654,6 +675,9 @@ public:
                 ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, _premult, _premultChannel);
                 float hcoeff, scoeff, vcoeff;
                 hsvtool(unpPix[0], unpPix[1], unpPix[2], &hcoeff, &scoeff, &vcoeff, &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                // keep the source alpha (replaced below if Output Alpha is not Source): ofxsPremultMaskMixPix
+                // premultiplies by tmpPix[3] and mixes it into the output alpha
+                tmpPix[3] = unpPix[3];
                 ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, premultOut, _premultChannel, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
                 // if output alpha is not source alpha, set it to the right value
                 if ( (nComponents == 4) && (_outputAlpha != eOutputAlphaSource) ) {
@@ -1117,6 +1141,9 @@ private:
     /* set up and run a processor */
     void setupAndProcess(HSVToolProcessorBase &, const RenderArguments &args);
 
+    /* the hue, saturation and brightness parameters at time, as render() uses them */
+    HSVToolValues getValuesAtTime(double time) const;
+
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
     virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
@@ -1233,6 +1260,28 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 // basic plugin render function, just a skelington to instantiate templates from
 
+HSVToolValues
+HSVToolPlugin::getValuesAtTime(double time) const
+{
+    HSVToolValues values;
+    _hueRange->getValueAtTime(time, values.hueRange[0], values.hueRange[1]);
+    values.hueRangeWithRolloff[0] = values.hueRangeWithRolloff[1] = 0; // set in setValues()
+    values.hueRotation = _hueRotation->getValueAtTime(time);
+    values.hueRotationGain = _hueRotationGain->getValueAtTime(time);
+    values.hueMean = 0; // set in setValues()
+    values.hueRolloff = _hueRangeRolloff->getValueAtTime(time);
+    _saturationRange->getValueAtTime(time, values.satRange[0], values.satRange[1]);
+    values.satAdjust = _saturationAdjustment->getValueAtTime(time);
+    values.satAdjustGain = _saturationAdjustmentGain->getValueAtTime(time);
+    values.satRolloff = _saturationRangeRolloff->getValueAtTime(time);
+    _brightnessRange->getValueAtTime(time, values.valRange[0], values.valRange[1]);
+    values.valAdjust = _brightnessAdjustment->getValueAtTime(time);
+    values.valAdjustGain = _brightnessAdjustmentGain->getValueAtTime(time);
+    values.valRolloff = _brightnessRangeRolloff->getValueAtTime(time);
+
+    return values;
+}
+
 /* set up and run a processor */
 void
 HSVToolPlugin::setupAndProcess(HSVToolProcessorBase &processor,
@@ -1295,21 +1344,7 @@ HSVToolPlugin::setupAndProcess(HSVToolProcessorBase &processor,
     processor.setSrcImg( src.get() );
     processor.setRenderWindow(args.renderWindow, args.renderScale);
 
-    HSVToolValues values;
-    _hueRange->getValueAtTime(time, values.hueRange[0], values.hueRange[1]);
-    values.hueRangeWithRolloff[0] = values.hueRangeWithRolloff[1] = 0; // set in setValues()
-    values.hueRotation = _hueRotation->getValueAtTime(time);
-    values.hueRotationGain = _hueRotationGain->getValueAtTime(time);
-    values.hueMean = 0; // set in setValues()
-    values.hueRolloff = _hueRangeRolloff->getValueAtTime(time);
-    _saturationRange->getValueAtTime(time, values.satRange[0], values.satRange[1]);
-    values.satAdjust = _saturationAdjustment->getValueAtTime(time);
-    values.satAdjustGain = _saturationAdjustmentGain->getValueAtTime(time);
-    values.satRolloff = _saturationRangeRolloff->getValueAtTime(time);
-    _brightnessRange->getValueAtTime(time, values.valRange[0], values.valRange[1]);
-    values.valAdjust = _brightnessAdjustment->getValueAtTime(time);
-    values.valAdjustGain = _brightnessAdjustmentGain->getValueAtTime(time);
-    values.valRolloff = _brightnessRangeRolloff->getValueAtTime(time);
+    const HSVToolValues values = getValuesAtTime(time);
 
     bool clampBlack, clampWhite;
     _clampBlack->getValueAtTime(time, clampBlack);
@@ -1391,98 +1426,53 @@ HSVToolPlugin::isIdentity(const IsIdentityArguments &args,
         return false;
     }
     const double time = args.time;
-    double mix = _mix->getValueAtTime(time);
 
+    // With an Output Alpha other than Source, render() sets the alpha of RGBA images to the range
+    // coefficient (also where mix or the mask is 0), and the output is unpremultiplied: this is not
+    // the source alpha, whatever the ranges.
+    const OutputAlphaEnum outputAlpha = (OutputAlphaEnum)_outputAlpha->getValueAtTime(time);
+    if ( (outputAlpha != eOutputAlphaSource) && (_dstClip->getPixelComponents() == ePixelComponentRGBA) ) {
+        return false;
+    }
+
+    // From here on, render() keeps the source alpha, and the output is the source where mix or the
+    // mask is 0.
+    const double mix = _mix->getValueAtTime(time);
     if (mix == 0.) {
         identityClip = _srcClip;
 
         return true;
     }
 
-
-    if (_srcClip->getPixelComponents() == ePixelComponentRGBA) {
-        // check cases where alpha is affected, even if colors don't change
-        OutputAlphaEnum outputAlpha = (OutputAlphaEnum)_outputAlpha->getValueAtTime(time);
-        if (outputAlpha != eOutputAlphaSource) {
-            double hueMin, hueMax;
-            _hueRange->getValueAtTime(time, hueMin, hueMax);
-            bool alphaHue = (hueMin != 0. || hueMax != 360.);
-            double satMin, satMax;
-            _saturationRange->getValueAtTime(time, satMin, satMax);
-            bool alphaSat = (satMin != 0. || satMax != 1.);
-            double valMin, valMax;
-            _brightnessRange->getValueAtTime(time, valMin, valMax);
-            bool alphaVal = (valMin != 0. || valMax != 1.);
-            switch (outputAlpha) {
-            // coverity[dead_error_begin]
-            case eOutputAlphaSource:
-                break;
-            case eOutputAlphaHue:
-                if (alphaHue) {
-                    return false;
-                }
-                break;
-            case eOutputAlphaSaturation:
-                if (alphaSat) {
-                    return false;
-                }
-                break;
-            case eOutputAlphaBrightness:
-                if (alphaVal) {
-                    return false;
-                }
-                break;
-            case eOutputAlphaHueSaturation:
-                if (alphaHue || alphaSat) {
-                    return false;
-                }
-                break;
-            case eOutputAlphaHueBrightness:
-                if (alphaHue || alphaVal) {
-                    return false;
-                }
-                break;
-            case eOutputAlphaSaturationBrightness:
-                if (alphaSat || alphaVal) {
-                    return false;
-                }
-                break;
-            case eOutputAlphaAll:
-                if (alphaHue || alphaSat || alphaVal) {
-                    return false;
-                }
-                break;
-            }
-        }
-    }
-
-    // isIdentity=true if hueRotation, satAdjust and valAdjust = 0.
-    double hueRotation;
-    _hueRotation->getValueAtTime(time, hueRotation);
-    double saturationAdjustment;
-    _saturationAdjustment->getValueAtTime(time, saturationAdjustment);
-    double brightnessAdjustment;
-    _brightnessAdjustment->getValueAtTime(time, brightnessAdjustment);
-    if ( (hueRotation == 0.) && (saturationAdjustment == 0.) && (brightnessAdjustment == 0.) ) {
+    OfxRectI maskRoD;
+    if ( ofxsMaskGetRoDPixel(_maskClip, _maskApply, _maskInvert, time, args.renderScale, &maskRoD) &&
+         !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
+        // the mask is 0 in the render window
         identityClip = _srcClip;
 
         return true;
     }
 
-    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
-    if (doMasking) {
-        bool maskInvert;
-        _maskInvert->getValueAtTime(time, maskInvert);
-        if (!maskInvert) {
-            OfxRectI maskRoD;
-            Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
-            // effect is identity if the renderWindow doesn't intersect the mask RoD
-            if ( !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
-                identityClip = _srcClip;
+    // render() clamps the (unpremultiplied) colours. Byte and short samples are in [0,1], and so are
+    // their unpremultiplied values, except above 1 where a colour exceeds its alpha: only clamping
+    // float images, or Clamp White with Premultiply on, may change them.
+    const bool floatImage = (_srcClip->getPixelDepth() == eBitDepthFloat);
+    const bool clampBlack = _clampBlack->getValueAtTime(time);
+    const bool clampWhite = _clampWhite->getValueAtTime(time);
+    const bool premult = _premult->getValueAtTime(time);
+    if ( (clampBlack && floatImage) || ( clampWhite && (floatImage || premult) ) ) {
+        return false;
+    }
 
-                return true;
-            }
-        }
+    // Without adjustments, hsvtool() copies every pixel (the range coefficients do not matter). With
+    // Premultiply, the unpremultiply/premultiply round trip is taken as a copy, as in the other masked
+    // plug-ins: it differs only by rounding, where alpha is 0 but the colour is not (which is not a
+    // premultiplied colour), and where 0 < alpha <= FLT_EPSILON (ofxsUnPremult does not unpremultiply
+    // there, but the colour is premultiplied again).
+    if ( !getValuesAtTime(time).adjustsColor() ) {
+        identityClip = _srcClip;
+
+        return true;
     }
 
     return false;
