@@ -182,7 +182,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              the closed-form map, up to the source RoD or a fold of the model (#189). Rendered pixels are
 //              unchanged; the RoD samples each source edge about every 32 pixels (10 to 60 intervals, it was
 //              10, and the old samples are kept), so that the RoD may be slightly larger where every sample
-//              converges
+//              converges;
+//              2.1, 3.1 and 4.1: 3DE Anamorphic 4 with zero coefficients is a pass-through for Squeeze 1 (it was for Squeeze 0) (issue #326)
 #define kPluginVersionLensDistortionMajor 4 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionLensDistortionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -3285,7 +3286,9 @@ DistortionPlugin::isIdentity(const IsIdentityArguments &args,
             double sqy = _a4sqy->getValueAtTime(time);
             identity = ( (cx02 == 0.) && (cy02 == 0.) && (cx22 == 0.) && (cy22 == 0.) &&
                          (cx04 == 0.) && (cy04 == 0.) && (cx24 == 0.) && (cy24 == 0.) && (cx44 == 0.) && (cy44 == 0.) &&
-                         (phi == 0.) && (sqx == 0.) && (sqy == 0.) );
+                         // the model multiplies by the squeeze (DistortionModel3DEAnamorphic4::undistort),
+                         // so 1 (the default) is no squeeze; 0 collapses the image (issue #326)
+                         (phi == 0.) && (sqx == 1.) && (sqy == 1.) );
             break;
         }
         case eDistortionModelPanoTools: {
