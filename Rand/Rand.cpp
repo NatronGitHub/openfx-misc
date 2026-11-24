@@ -167,6 +167,7 @@ public:
             }
 
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+            assert(dstPix);
             if (!dstPix) {
                 continue; // outside the image bounds (the render window should be inside them)
             }
