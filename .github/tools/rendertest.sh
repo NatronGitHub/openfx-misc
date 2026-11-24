@@ -633,7 +633,7 @@ tests=(
     "Merge range from B, no B|net.sf.openfx.MergePlugin|general|float|timedomain=default||-i A=checker:16 -i B=none -i Mask=none --frames 0"
     "Merge range from A|net.sf.openfx.MergePlugin|general|float|timedomain=0,25||-i A=checker:16 -i B=none -i Mask=none rangeFrom=A --frames 0"
     "Merge range from A, no A|net.sf.openfx.MergePlugin|general|float|timedomain=default||-i A=none -i B=ramp -i Mask=none rangeFrom=A --frames 0"
-    "Merge range, filter context|net.sf.openfx.MergePlugin|filter|float|timedomain=default||-i A=checker:16 -i Source=ramp -i Mask=none --frames 0"
+    "Merge range, filter context (host default: getTimeDomain is general context only)|net.sf.openfx.MergePlugin|filter|float|timedomain=default||-i A=checker:16 -i Source=ramp -i Mask=none --frames 0"
     "Merge 2 range, host default|net.sf.openfx.MergePlugin|general|float|timedomain=default||-m 2 -i A=checker:16 -i B=ramp -i Mask=none --frames 0"
     # ReConverge (checked on view 0, the left view): Shift Both, disparity 11 and offset 3: each
     # half is truncated separately (trunc(5.5) + trunc(1.5) = 6, where
