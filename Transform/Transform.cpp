@@ -56,7 +56,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              filter, the thin band just outside the source image is black (Black Outside) or the
 //              edge colour, not about 4x the edge value (garbage).
 // SupportExt#183-#185, #205 and #207, also in the current minor versions:
-//              - TransformMasked, DirBlur: with Mix < 1 and no mask, the region of definition
+//              - TransformMasked, and DirBlur at Motion Blur 0: with Mix < 1 and no mask, the region of definition
 //                includes the source, which the output blends with (it was clipped to the
 //                transformed region), and the source under the output is fetched (SupportExt#185);
 //              - all three: directional blur with Motion Blur 0 renders the full transform, not

@@ -77,9 +77,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              edge colour, not about 4x the edge value (garbage).
 // (#236, in the current minor version, not released yet) on hosts that ignore normalised defaults
 //              (e.g. DaVinci Resolve), the default rectangle is the project's, not (1,1) pixels
-// SupportExt#184 and #205, also in the current minor version: directional blur with Motion Blur 0 renders
-//              the full transform, not 0.999 of it; the Shutter can be up to 1000 frames and the custom
-//              shutter offset +-1000 (they were limited to 2 and +-1; part of openfx-misc#273).
+// SupportExt#205 and #207, also in the current minor version: the Shutter can be up to 1000 frames and the
+//              custom shutter offset +-1000 (they were limited to 2 and +-1; part of openfx-misc#273), and a
+//              longer, infinite or NaN shutter gives an infinite region of definition.
+//              (Known, not changed here: Directional Blur does nothing, since getInverseTransformCanonical()
+//              ignores the amount.)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 // 1.1: importing a chan or Boujou file no longer sets NaN or infinite rotation and focal length keys (NaN audit);

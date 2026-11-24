@@ -305,8 +305,8 @@ jobs:
           SMOKETEST_BUNDLES="net.sf.openfx.DenoiseSharpen:1" HOSTDEMO="$PWD/install/bin/hostDemo" .github/tools/smoketest.sh install-denoisesharpen
           SMOKETEST_BUNDLES="net.sf.openfx.NoOpPlugin:1" HOSTDEMO="$PWD/install/bin/hostDemo" .github/tools/smoketest.sh install-noop
       - name: Render test of the shipped Shadertoy (OSMesa)
-        # smoketest.sh skips Shadertoy (the OpenGL-only one doesn't describe in hostDemo); the
-        # OSMesa one of the full set renders on the CPU
+        # the smoke test above also renders this Shadertoy (it renders on the CPU; an OpenGL-only
+        # one is described only, smoketest.sh's OPENGL list); this checks its output
         timeout-minutes: 5
         run: |
           "$TOOLS"/render-shadertoy-osmesa.sh install/OFX/Plugins install/bin/hostDemo
@@ -437,8 +437,8 @@ jobs:
           SMOKETEST_BUNDLES="net.sf.openfx.DenoiseSharpen:1" HOSTDEMO="$PWD/install/bin/hostDemo" .github/tools/smoketest.sh install-denoisesharpen
           SMOKETEST_BUNDLES="net.sf.openfx.NoOpPlugin:1" HOSTDEMO="$PWD/install/bin/hostDemo" .github/tools/smoketest.sh install-noop
       - name: Render test of the shipped Shadertoy (OSMesa)
-        # smoketest.sh skips Shadertoy (the OpenGL-only one doesn't describe in hostDemo); the
-        # lipo-merged OSMesa one (also in the full set) renders on the CPU: each architecture
+        # smoketest.sh only describes the full set's Shadertoy here (OpenGL only: its OPENGL
+        # list); the lipo-merged OSMesa one renders on the CPU: each architecture
         # that the runner can run (x86_64 through Rosetta, if installed), with the universal
         # hostDemo
         if: env.SHADERTOY_OSMESA != ''

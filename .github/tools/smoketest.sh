@@ -216,7 +216,8 @@ if [ "$1" = --describe-job ]; then
     exec 2>> describe.log
     gl=()
     # the OpenGL-only plug-ins (OPENGL): describe them as a host with OpenGL render
-    ! grep -qxF "$id" "$SMOKETEST_WORK/opengl-ids.txt" || gl=(--opengl-describe)
+    # (if grep fails, e.g. no file: no flag)
+    if grep -qxF "$id" "$SMOKETEST_WORK/opengl-ids.txt"; then gl=(--opengl-describe); fi
     watchdog describe.log "$bundle" -p "$id" -m "$major" "${gl[@]}" --describe describe.json
     echo "$status" > status
     exit 0
@@ -380,11 +381,34 @@ pfm("square32.pfm", "Pf", 32, 32, 1.)
 pfm("box5.pfm", "PF", 5, 5, 1.)
 EOF
 
-# The identifiers of the plug-ins of OPENGL, for the describe workers
-python3 -I -c 'import re, sys
-rxs = [l.split("|", 1)[0] for l in open(sys.argv[2]) if l.strip()]
-ids = sorted(set(l.split()[1] for l in open(sys.argv[1]) if any(re.fullmatch(rx, l.split()[1]) for rx in rxs)))
-print("".join(i + "\n" for i in ids), end="")' "$work/plugins.txt" "$work/opengl.txt" > "$work/opengl-ids.txt"
+# Does hostDemo have --opengl-describe (openfx#312), and an OpenGL render suite
+# (OFX_SUPPORTS_OPENGLRENDER)? An older hostDemo rejects the option, one without the suite
+# says so: both name the option in an "Error:" line, a capable one only says that the dummy
+# plug-in is not found. Without it, the plug-ins of OPENGL are skipped.
+gl_ok=1
+if ( cd "$work" && OFX_PLUGIN_PATH=$work/path/none "$HOSTDEMO" --no-std-paths --no-cache --quiet \
+         --opengl-describe -p smoketest.probe --describe probe.json 2>&1 ) | grep -q '^Error: .*opengl-describe'; then
+    gl_ok=0
+    echo "note: $HOSTDEMO has no --opengl-describe (or no OpenGL render suite): the OPENGL plug-ins are skipped"
+fi
+# The plug-ins of OPENGL: opengl-map.txt ("identifier|reason", for the render list) and
+# opengl-ids.txt (the identifiers to describe with --opengl-describe, for the describe workers)
+python3 -I - "$work" "$gl_ok" << 'EOF'
+import os
+import re
+import sys
+work, gl_ok = sys.argv[1], sys.argv[2] == "1"
+with open(os.path.join(work, "opengl.txt")) as f:
+    rules = [line.rstrip("\n").split("|", 1) for line in f if line.strip()]
+with open(os.path.join(work, "plugins.txt")) as f:
+    pids = sorted(set(line.split()[1] for line in f))
+found = [(pid, next(r for rx, r in rules if re.fullmatch(rx, pid)))
+         for pid in pids if any(re.fullmatch(rx, pid) for rx, _ in rules)]
+with open(os.path.join(work, "opengl-map.txt"), "w") as f:
+    f.writelines("%s|%s\n" % p for p in found)
+with open(os.path.join(work, "opengl-ids.txt"), "w") as f:
+    f.writelines(pid + "\n" for pid, _ in found if gl_ok)
+EOF
 
 # Describe each plug-in (in parallel). A worker that fails (xargs exit status 123)
 # leaves no status file: its plug-ins fail below.
@@ -397,9 +421,10 @@ tr '\n' '\0' < "$work/plugins.txt" | xargs -r -0 -n 1 -P "$jobs" "$0" --describe
 # The render jobs, one per line: "name|bundle|id|major|context|depth|Clip=spec;...|
 # PARAMS entry number|hostDemo argument;...|differs:N entry number" (the last three are
 # empty for a default render)
-python3 -I - "$work" "$quick" "${SMOKETEST_DEBUG:-0}" "$ofx14" > "$work/jobs.txt" 2> "$work/describe-results.txt" << 'EOF' ||
+python3 -I - "$work" "$quick" "${SMOKETEST_DEBUG:-0}" "$ofx14" "$gl_ok" > "$work/jobs.txt" 2> "$work/describe-results.txt" << 'EOF' ||
 import json, os, re, sys
 work, quick, debug, ofx14 = sys.argv[1], sys.argv[2] == "1", sys.argv[3] == "1", sys.argv[4] == "1"
+gl_ok = sys.argv[5] == "1"
 def entries(name):
     return [l.rstrip("\n") for l in open(os.path.join(work, name)) if l.strip()]
 def only_in(desc):
@@ -415,7 +440,8 @@ for s in entries("skip.txt"):
     keep, reason = only_in(reason)
     if keep:
         skip.append((rx, reason))
-opengl = [s.split("|", 1) for s in entries("opengl.txt")]
+# OPENGL: identifier -> reason (opengl-map.txt)
+opengl = dict(s.split("|", 1) for s in entries("opengl-map.txt"))
 overrides = []
 for s in entries("inputs.txt"):
     m = re.fullmatch(r"([^@|]*)(?:@(filter|general))?\|(.*)", s)
@@ -444,6 +470,8 @@ def text(path):
 for line in open(os.path.join(work, "plugins.txt")):
     bundle, pid, major = line.split()
     reason = next((r for rx, r in skip if re.fullmatch(rx, pid)), None)
+    if reason is None and pid in opengl and not gl_ok:
+        reason = "OpenGL only, and this hostDemo has no --opengl-describe: " + opengl[pid]
     tag = "%s v%s" % (pid, major)
     if reason:
         print("SKIP|%s|%s||%s" % (tag, pid, reason), file=sys.stderr)
@@ -464,7 +492,7 @@ for line in open(os.path.join(work, "plugins.txt")):
     contexts = desc["contexts"]
     generator = "OfxImageEffectContextGenerator" in contexts
     # OPENGL: described with --opengl-describe; not rendered where it needs OpenGL
-    gl_reason = next((r for rx, r in opengl if re.fullmatch(rx, pid)), None)
+    gl_reason = opengl.get(pid)
     gl_only = False
     n = 0
     info = {}  # context -> (inputs, depths), for PARAMS
@@ -520,7 +548,6 @@ for line in open(os.path.join(work, "plugins.txt")):
         if gl_reason is not None and c["flags"].get("openGLRenderSupported") == "needed":
             # hostDemo cannot render with OpenGL (--opengl-describe is refused without --describe)
             gl_only = True
-            n += 1  # not "no render"
             continue
         for depth in ds:
             print("%s-v%s-%s-%s|%s|%s|%s|%s|%s|%s|||" % (pid, major, ctx, depth, bundle, pid, major, ctx,
@@ -543,7 +570,7 @@ for line in open(os.path.join(work, "plugins.txt")):
     if gl_only:
         print("DESC|%s|%s||described only (needs OpenGL render, which hostDemo lacks): %s"
               % (tag, pid, gl_reason), file=sys.stderr)
-    if n == 0:
+    if n == 0 and not gl_only:
         print("FAIL|%s|%s||no render: no filter or general context, or no supported depth (contexts: %s)"
               % (tag, pid, " ".join(contexts)), file=sys.stderr)
 EOF
@@ -599,7 +626,8 @@ for x in entries("skip.txt"):
     if keep:
         skip.append((rx, x))
 # OPENGL: an entry that matches no plug-in is stale, as in SKIP
-skip += [(x.split("|", 1)[0], x) for x in entries("opengl.txt")]
+opengl_entries = entries("opengl.txt")
+skip += [(x.split("|", 1)[0], x) for x in opengl_entries]
 used = set()  # the entries of XFAIL, IDENTITY and SKIP that were used (PARAMS: params_used)
 params_used = set()  # the numbers of the PARAMS entries that were rendered
 order = ["ok", "SKIP", "XFAIL", "XPASS", "FAIL"]
@@ -833,7 +861,7 @@ print("slowest renders: " + ", ".join("%s %ds" % (n, s) for s, n in times[:5]))
 # partial build) or SMOKETEST_XPASS_OK (then they are warnings).
 stale = []
 if not mode.startswith("only"):
-    stale += [("OPENGL   " if x in entries("opengl.txt") else "SKIP     ") + x for rx, x in skip if x not in used]
+    stale += [("OPENGL   " if x in opengl_entries else "SKIP     ") + x for rx, x in skip if x not in used]
     stale += ["PARAMS   " + x for i, x in enumerate(entries("params.txt")) if i + 1 not in params_used]
 if mode.startswith("full"):
     stale += ["XFAIL    " + x[6] for x in xfail if x[6] not in used]
