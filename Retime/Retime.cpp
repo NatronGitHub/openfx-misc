@@ -58,7 +58,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "RetimeOFX"
 #define kPluginGrouping "Time"
 #define kPluginDescription "Change the timing of the input clip.\n" \
-    "In the general context (e.g. in Natron), the output frame range starts with the input frame range, and lasts as long as it takes to play the input frame range at the given Speed (e.g. twice as long at speed 0.5), forwards, or backwards with Reverse input. It is the input frame range if the speed is 0 or negative, or so small that the output would last more than 1000 times the input or 100000 frames. A speed without keys (e.g. an expression) is taken as constant, with its value at the first input frame. On hosts without parametric parameters, the Duration parameter sets it instead.\n" \
+    "In the general context (e.g. in Natron), the output frame range starts with the input frame range, and lasts as long as it takes to play the input frame range at the given Speed (e.g. twice as long at speed 0.5), forwards, or backwards with Reverse input. It is the input frame range if the speed is 0 or negative, or so small that the output would last more than 1000 times the input or 100000 frames. An animated speed, or one driven by an expression, is integrated numerically over at most that many frames, which may take a moment with slow expressions. On hosts without parametric parameters, the Duration parameter sets it instead.\n" \
     "The Before and After parameters set what is read when the source frame falls outside the frame range of the input clip: the input frame itself (Original), the first or last frame (Hold), transparent black (Black), or frames repeated from the input range (Loop, Bounce).\n" \
     "Before and After refer to the source frame range, not to the output: when the input is played backwards (Reverse input, or a negative speed or warp slope), Before sets what is shown at the end of the output.\n" \
     "See also: https://web.archive.org/web/20220627032808/http://www.opticalenquiry.com/nuke/index.php?title=Retime"
@@ -877,8 +877,9 @@ maxSpeedDuration(double length)
 // default) if the input range is empty, if the integral is negative (the speed plays the frames before
 // the input, or after it with Reverse input), or if the input length is not reached within
 // maxSpeedDuration() frames (a speed that is 0, too small or not finite).
-// - A speed without keys (a constant, or an expression) is taken as constant, with its value at the
-//   first input frame: d = length / speed.
+// - A constant speed (no keys, and the same value at the start, middle and end of the input range):
+//   d = length / speed. Natron reports keys for a parameter with an expression, so an expression is
+//   searched as below; the probes guard against hosts that report no keys for a varying speed.
 // - An animated speed: d is searched by doubling, then by bisection on whole frames. This is exact
 //   if the integral is monotonic (the speed does not change sign). If the speed changes sign, d is the
 //   first probed duration where the integral reaches the length: frames where the integral is negative
@@ -894,8 +895,10 @@ RetimePlugin::getSpeedDuration(const OfxRangeD &srcRange)
     // a small tolerance, so that rounding errors do not drop the last frame
     const double target = length * (1. - 1e-9);
     const double limit = length * (1. + 1e-9);
-    if (_speed->getNumKeys() == 0) {
-        const double speed = _speed->getValueAtTime(srcRange.min);
+    const double speed = _speed->getValueAtTime(srcRange.min);
+    if ( (_speed->getNumKeys() == 0) &&
+         (_speed->getValueAtTime(srcRange.min + length / 2) == speed) &&
+         (_speed->getValueAtTime(srcRange.max) == speed) ) {
         if ( !(speed > 0.) ) { // also NaN
             return std::nullopt;
         }
