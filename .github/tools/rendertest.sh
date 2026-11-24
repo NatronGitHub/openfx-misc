@@ -788,6 +788,20 @@ tests=(
     # radius = Size*(|1 - d/d_f| - dof/2) = 10*(1.667 - 0.305) = 13.6 pixels, center weight
     # 0.0019 (in disparity units, 6.5 pixels: 0.0087)
     "CImgZDefocus depth of focus|net.sf.cimg.CImgZDefocus|general|float|max=0.00186,0.00186,0.00186,1+tol=0.0003||--frames 0 -i Source=file:impulse.pfm -i Depth=solid:0.8,0.8,0.8,1 -i Filter=none depthType=1 useFocusPoint=0 focus=0.3 depthOfFocus=0.61 size=10 maxSize=20 slices=10 aperture=1"
+    # TimeDissolve, In 1 and Out 10 (the defaults): the In and Out frames are part of the dissolve
+    # (issue #320). The curve abscissa is 0 at the frame before In and 1 at the frame after Out:
+    # frame 0 is A, frame 11 is B, and with the smoothstep curve (hostDemo has no parametric
+    # parameters) frame 1 has 3x^2-2x^3 = 0.0233 of B (x = 1/11), frame 10 has 0.9767 of B. Byte
+    # images truncate (0.0233 gives 5/255): tolerance 0.005 in byte, 0.0005 in short and float.
+    "TimeDissolve before In|net.sf.openfx.TimeDissolvePlugin|filter|*|identity+mean=0,0,0,1||-i A=solid:0,0,0,1 -i Source=solid:1,1,1,1 --frames 0"
+    "TimeDissolve at In|net.sf.openfx.TimeDissolvePlugin|filter|byte|mean=0.0233,0.0233,0.0233,1+tol=0.005||-i A=solid:0,0,0,1 -i Source=solid:1,1,1,1 --frames 1"
+    "TimeDissolve at In|net.sf.openfx.TimeDissolvePlugin|filter|short float|mean=0.02329,0.02329,0.02329,1+tol=0.0005||-i A=solid:0,0,0,1 -i Source=solid:1,1,1,1 --frames 1"
+    "TimeDissolve at Out|net.sf.openfx.TimeDissolvePlugin|filter|byte|mean=0.9767,0.9767,0.9767,1+tol=0.005||-i A=solid:0,0,0,1 -i Source=solid:1,1,1,1 --frames 10"
+    "TimeDissolve at Out|net.sf.openfx.TimeDissolvePlugin|filter|short float|mean=0.97671,0.97671,0.97671,1+tol=0.0005||-i A=solid:0,0,0,1 -i Source=solid:1,1,1,1 --frames 10"
+    "TimeDissolve after Out|net.sf.openfx.TimeDissolvePlugin|filter|*|identity+mean=1,1,1,1||-i A=solid:0,0,0,1 -i Source=solid:1,1,1,1 --frames 11"
+    # the A input at the same time (hostDemo's default pattern: red = t at t > 1, except the text),
+    # at frame 5 weighted by 1 - 0.432 (x = 5/11)
+    "TimeDissolve default input|net.sf.openfx.TimeDissolvePlugin|filter|float|mean=2.834,0,0,1+framesdiffer||-i A=default -i Source=solid:0,0,0,1 --frames 5,1,10"
 )
 
 n=0 failed=() xfailed=()
