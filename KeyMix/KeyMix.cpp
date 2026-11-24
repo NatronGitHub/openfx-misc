@@ -47,7 +47,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDescription \
     "KeyMix combines two images, A and B, using a third input, the Mask, to choose between them. A typical use is to put a keyed foreground over a background, with the keyer's output as the Mask. Note that the output alpha is a mix of the A and B alphas, not the Mask itself.\n" \
     "\n" \
-    "It copies the pixel from A to B only where the Mask is non-zero. It is the same as the Matte operation, but alpha for input A is taken from an external mask, and the output alpha is mixed between A and B. The output bounding box is the union of A and B.\n" \
+    "It copies the pixel from A to B only where the Mask is non-zero. It is the same as the Matte operation, but alpha for input A is taken from an external mask, and the output alpha is mixed between A and B. The output bounding box is the union of A and B, or the bounding box of B or A (Bounding Box parameter). Where the Mask is not used (Mix 0, or no Mask), the output is B, with the bounding box of B.\n" \
     "\n" \
     "KeyMix can also apply two successive color corrections through a single mask: correct the image twice, then use KeyMix with the uncorrected image as B and the corrected one as A. Masking each color correction separately with the same mask would apply the mask twice at soft edges, which gives artifacts.\n" \
     "\n" \
@@ -65,6 +65,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // 1.1 and 2.0 (unreleased, fixed in place): isIdentity no longer returns B where the render window misses
 //      the A RoD: there, the output is B * (1 - mask * mix), not B; it returns B without a mask (Mask
 //      disconnected or Apply Mask off), where the render gives B (issue #321)
+// 1.1 and 2.0 (unreleased, added in place): Bounding Box parameter (Union, B, A), Union by default, which
+//      is the previous output bounding box (issue #278)
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -100,6 +102,20 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamProcessALabel "A"
 #define kParamProcessAHint  "Process alpha channel."
 #endif
+
+#define kParamBBox "bbox"
+#define kParamBBoxLabel "Bounding Box"
+#define kParamBBoxHint "What to use as the output image's bounding box, where the Mask is used (where it is not, e.g. with Mix 0 or without a Mask, the output is B, with the bounding box of B)."
+#define kParamBBoxOptionUnion "Union", "Union of the bounding boxes of A and B.", "union"
+#define kParamBBoxOptionB "B", "Bounding box of input B.", "b"
+#define kParamBBoxOptionA "A", "Bounding box of input A.", "a"
+
+enum class BBoxEnum
+{
+    eUnion = 0,
+    eB,
+    eA,
+};
 
 #define kClipA "A"
 #define kClipAHint "The image sequence to mix with input B."
@@ -255,6 +271,8 @@ public:
         _aChannels[2] = fetchBooleanParam(kParamProcessB);
         _aChannels[3] = fetchBooleanParam(kParamProcessA);
         assert(_aChannels[0] && _aChannels[1] && _aChannels[2] && _aChannels[3]);
+        _bbox = fetchChoiceParam(kParamBBox);
+        assert(_bbox);
     }
 
 private:
@@ -293,6 +311,7 @@ private:
     BooleanParam* _maskApply;
     BooleanParam* _maskInvert;
     BooleanParam* _aChannels[4];
+    ChoiceParam* _bbox;
 };
 
 
@@ -314,6 +333,24 @@ KeyMixPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         }
 
         return false;
+    }
+
+    const auto bbox = static_cast<BBoxEnum>( _bbox->getValueAtTime(time) );
+    switch (bbox) {
+    case BBoxEnum::eB:
+    case BBoxEnum::eA: {
+        // as in Merge: the host's default RoD if that input is not connected
+        Clip* const clip = (bbox == BBoxEnum::eB) ? _srcClipB : _srcClipA;
+        if ( clip->isConnected() ) {
+            rod = clip->getRegionOfDefinition(time);
+
+            return true;
+        }
+
+        return false;
+    }
+    case BBoxEnum::eUnion:
+        break;
     }
 
     if ( _srcClipB->isConnected() ) {
@@ -678,6 +715,22 @@ KeyMixPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc
         param->setLabel(kParamProcessALabel);
         param->setHint(kParamProcessAHint);
         param->setDefault(true);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamBBox);
+        param->setLabel(kParamBBoxLabel);
+        param->setHint(kParamBBoxHint);
+        assert( param->getNOptions() == static_cast<int>(BBoxEnum::eUnion) );
+        param->appendOption(kParamBBoxOptionUnion);
+        assert( param->getNOptions() == static_cast<int>(BBoxEnum::eB) );
+        param->appendOption(kParamBBoxOptionB);
+        assert( param->getNOptions() == static_cast<int>(BBoxEnum::eA) );
+        param->appendOption(kParamBBoxOptionA);
+        param->setAnimates(true);
+        param->setDefault( static_cast<int>(BBoxEnum::eUnion) );
         if (page) {
             page->addChild(*param);
         }

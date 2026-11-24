@@ -701,6 +701,13 @@ tests=(
     "KeyMix no A inverted|net.sf.openfx.KeyMix|filter|*|notidentity+mean=0.125,0.25,0.375,0.5||-i A=none -i Source=solid:0.25,0.5,0.75,1 -i Mask=solid:0.5,0.5,0.5,0.5 maskInvert=1"
     "KeyMix inverted out of mask|net.sf.openfx.KeyMix|filter|*|notidentity+mean=1,1,1,1||-i A=solid:1,1,1,1 -i Source=solid:0.25,0.5,0.75,1 -i Mask=file:autocrop.pfm maskInvert=1 --frames 0 --window 100,100,200,200"
     "KeyMix out of mask|net.sf.openfx.KeyMix|filter|*|identity+mean=0.25,0.5,0.75,1||-i A=solid:1,1,1,1 -i Source=solid:0.25,0.5,0.75,1 -i Mask=file:autocrop.pfm --frames 0 --window 100,100,200,200"
+    # KeyMix Bounding Box (issue #278), with autocrop.pfm (64x48, 1/6 white) as one input and a
+    # mask: only the chosen bounding box is rendered. B (RGB): 0.5 * A + 0.5 * B = 0.5 + 0.5/6 in
+    # the B box; Union (the default): the project frame, where B is 0 out of its 64x48 box.
+    # A, with alpha from B: A in the A box
+    "KeyMix bbox union|net.sf.openfx.KeyMix|filter|*|comps=RGB+mean=0.5006,0.5006,0.5006||-i A=solid:1,1,1,1 -i Source=file:autocrop.pfm -i Mask=solid:0.5,0.5,0.5,0.5"
+    "KeyMix bbox B|net.sf.openfx.KeyMix|filter|*|comps=RGB+mean=0.5833,0.5833,0.5833||-i A=solid:1,1,1,1 -i Source=file:autocrop.pfm -i Mask=solid:0.5,0.5,0.5,0.5 bbox=1"
+    "KeyMix bbox A|net.sf.openfx.KeyMix|filter|*|mean=0.1667,0.1667,0.1667,1||-i A=file:autocrop.pfm -i Source=solid:0,0,0,1 -i Mask=solid:1,1,1,1 bbox=2 NatronOfxParamProcessA=0"
     # HSVTool (issue #322): the default Output Alpha (Hue, full range) sets alpha to 1, even with Mix
     # 0; Clamp Black (on by default) clamps float images; a gain other than 1 adjusts (saturation
     # 2/3 -> 0.5 here); outside the mask, a non-Source Output Alpha is 0. With Output Alpha = Source,
