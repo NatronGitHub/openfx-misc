@@ -905,6 +905,8 @@ tests=(
     # Snake, bottom to top: inputs 0 and 1 in the bottom row from left to right, input 2 at the
     # right of the second row
     "ContactSheet Snake|net.sf.openfx.ContactSheetOFX|filter|float|mean=0.25,0.25,0.25,1||-i Source=solid:1,1,1,1 -i 1=solid:0.5,0.5,0.5,1 -i 2=solid:0.25,0.25,0.25,1${cs_none3} resolution=64,64 rowsColumns=2,2 colOrder=2 --frames 0 --window 36,36,44,44"
+    # the first row goes from left to right (RightLeft would put input 1, 0.5, at the bottom left)
+    "ContactSheet Snake first row|net.sf.openfx.ContactSheetOFX|filter|float|mean=1,1,1,1||-i Source=solid:1,1,1,1 -i 1=solid:0.5,0.5,0.5,1 -i 2=solid:0.25,0.25,0.25,1${cs_none3} resolution=64,64 rowsColumns=2,2 colOrder=2 --frames 0 --window 4,4,12,12"
     "ContactSheet Snake empty|net.sf.openfx.ContactSheetOFX|filter|float|mean=0,0,0,0||-i Source=solid:1,1,1,1 -i 1=solid:0.5,0.5,0.5,1 -i 2=solid:0.25,0.25,0.25,1${cs_none3} resolution=64,64 rowsColumns=2,2 colOrder=2 --frames 0 --window 4,36,12,44"
     "AppendClip dissolve 4 after|net.sf.openfx.AppendClip|general|*|identity+mean=0.5,0.5,0.5,1||-i 1=default -i 2=solid:0.5,0.5,0.5,1 crossDissolve=4 --frames 27"
 )

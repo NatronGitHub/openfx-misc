@@ -67,7 +67,7 @@ rowShiftToCenter(const Grid& grid,
     if ( (grid.rows <= 0) || (grid.columns <= 0) || (filledCells <= 0) ) {
         return 0.;
     }
-    const long long filledRows = (std::min)( (long long)grid.rows, (filledCells + grid.columns - 1) / grid.columns );
+    const long long filledRows = (std::min)( static_cast<long long>(grid.rows), (filledCells + grid.columns - 1) / grid.columns );
     const double shift = (grid.rows - filledRows) / 2.;
 
     // the rows populated first are at the top with topBottom: move them down
@@ -160,7 +160,7 @@ cellAt(const Grid& grid,
     }
     const int r = displayRow(grid, y); // displayRow() is its own inverse
     const int c = displayColumn(grid, r, x); // so is displayColumn(), for a given row
-    *cell = (long long)r * grid.columns + c;
+    *cell = static_cast<long long>(r) * grid.columns + c;
 
     return true;
 }

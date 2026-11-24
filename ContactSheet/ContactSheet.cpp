@@ -79,6 +79,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 // 1.1: (unreleased) the Snake column order, the Center Rows option, and the hints that say how the cells are placed;
+//      a click with Enable Selection sets Selection Frame to first + the frame index, as the overlay reads it
+//      (it was the frame index alone, so the highlighted cell was not the clicked one unless Frame Range starts at 0);
 //      an empty source format (e.g. a disconnected input) no longer gives a NaN image area (NaN audit);
 //      in the filter context, Source is RGBA, so that the RGBA Output has the components of Source, as the
 //      OpenFX spec mandates (issue #190); images with padded rows or negative row bytes
@@ -322,7 +324,7 @@ ContactSheetPlugin::getGrid(double time,
                 lastConnected = i;
             }
         }
-        grid.rowShift = ContactSheet::rowShiftToCenter(grid, (long long)(lastConnected + 1) * count);
+        grid.rowShift = ContactSheet::rowShiftToCenter(grid, static_cast<long long>(lastConnected + 1) * count);
     }
 
     return grid;
@@ -723,7 +725,7 @@ ContactSheetInteract::draw(const OFX::DrawArgs &args)
     int selectionInput = _selectionInput->getValueAtTime(time);
     int selectionFrame = _selectionFrame->getValueAtTime(time);
 
-    const long long cell = (long long)selectionInput * count + (selectionFrame - first);
+    const long long cell = static_cast<long long>(selectionInput) * count + (selectionFrame - first);
     OfxRectD cellRect;
     if ( (cell < 0) || !ContactSheet::cellRoD(cell, grid, rod, &cellRect) ) {
         return false;
@@ -828,7 +830,7 @@ ContactSheetInteract::cellAt(const OFX::PenArgs &args, int* selectionInput, int*
         return false;
     }
 
-    *selectionFrame = static_cast<int>(c % count);
+    *selectionFrame = first + static_cast<int>(c % count); // the frame that draw() reads
     *selectionInput = static_cast<int>(c / count);
 
     return true;
