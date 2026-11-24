@@ -30,12 +30,15 @@
 #include <cfloat>
 
 #include "ofxsImageEffect.h"
+#include "ofxsMaskMix.h" // kParamMix, kParamMaskApply
+#include "ofxsMerging.h" // MergeImages2D::mergeFiniteInput
 
 #define kParamShapePremult "premultiply"
 #define kParamShapePremultLabel "Premultiply"
 #define kParamShapePremultHint "Multiply the red, green and blue channels of the Source by the shape (1 inside, 0 outside, " \
     "and the Softness in between; inverted by Invert) before drawing: outside of the shape, they are set to black. " \
-    "With Replace and A checked, Color 0 alpha 0 and Color 1 alpha 1, the output alpha is the shape and the output is premultiplied."
+    "With Replace and A checked, Color 0 alpha 0 and Color 1 alpha 1, the output alpha is the shape and the output is premultiplied " \
+    "(also with Mix below 1 or a Mask, if the Source is premultiplied or opaque). Does nothing on an Alpha Source."
 
 #define kParamShapeReplace "replace"
 #define kParamShapeReplaceLabel "Replace"
@@ -58,8 +61,9 @@ struct Options
 
 /// The Source pixel srcPixRGBA (RGBA, not normalized), before the shape is drawn over it: Premultiply
 /// multiplies its RGB by the shape weight w (1 inside the shape, 0 outside; 1 - w with Invert), and
-/// Replace clears the processed channels. A zero weight gives 0, also for an infinite Source
-/// (inf * 0 would be NaN), and an infinite Source is made finite (+-FLT_MAX) first.
+/// Replace clears the processed channels. A zero weight gives 0, also for an infinite or NaN Source
+/// (inf * 0 would be NaN), and an infinite Source is made finite (+-FLT_MAX) first, as in the Merge
+/// operators (MergeImages2D::mergeFiniteInput; a NaN stays NaN where the weight is not 0).
 template<bool processR, bool processG, bool processB, bool processA>
 inline void
 prepareSource(const Options& options,
@@ -69,7 +73,7 @@ prepareSource(const Options& options,
     if (options.premult) {
         const float m = options.invert ? 1.f - w : w;
         for (int c = 0; c < 3; ++c) {
-            srcPixRGBA[c] = (m == 0.f) ? 0.f : (std::max)( -FLT_MAX, (std::min)(srcPixRGBA[c], FLT_MAX) ) * m;
+            srcPixRGBA[c] = (m == 0.f) ? 0.f : MergeImages2D::mergeFiniteInput<float>(srcPixRGBA[c]) * m;
         }
     }
     if (options.replace) {
@@ -154,12 +158,22 @@ public:
 
     /// true if the Output alpha is the shape and the RGB are premultiplied by it: Premultiply, Replace
     /// and Process A on an RGBA Source, with Color 0 alpha 0 and Color 1 alpha 1 (the alpha is then
-    /// the shape weight w, or 1 - w with Invert, which is the Premultiply weight). For the clip preferences.
+    /// the shape weight w, or 1 - w with Invert, which is the Premultiply weight). Mix and the Mask
+    /// mix that with the Source, which keeps it premultiplied only if the Source is premultiplied or
+    /// opaque: fullMix is true when Mix is 1 and no Mask applies.
+    /// For the clip preferences, which do not depend on time: the colors and Mix are read at the
+    /// current time (they trigger the clip preferences), so with animated values the declared state
+    /// follows the current time.
     bool outputIsPremultipliedByShape(bool processA,
-                                      const Clip* srcClip) const
+                                      const Clip* srcClip,
+                                      bool fullMix) const
     {
         if ( !processA || !_premult->getValue() || !_replace->getValue() ||
              !srcClip || !srcClip->isConnected() || (srcClip->getPixelComponents() != ePixelComponentRGBA) ) {
+            return false;
+        }
+        const PreMultiplicationEnum srcPremult = srcClip->getPreMultiplication();
+        if ( !fullMix && (srcPremult != eImagePreMultiplied) && (srcPremult != eImageOpaque) ) {
             return false;
         }
         double r, g, b, a0, a1;
@@ -178,10 +192,17 @@ private:
 };
 
 /// Describe the parameters, at the end of the page: new parameters keep the output of older versions.
+/// Call it after ofxsMaskMixDescribeParams(): Mix and Apply Mask trigger the clip preferences
+/// (see Params::outputIsPremultipliedByShape()).
 inline void
 describeParams(ImageEffectDescriptor& desc,
                PageParamDescriptor* page)
 {
+    for (const char* name : {kParamMix, kParamMaskApply}) {
+        if ( ParamDescriptor* param = desc.getParamDescriptor(name) ) {
+            desc.addClipPreferencesSlaveParam(*param);
+        }
+    }
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamShapePremult);
         param->setLabel(kParamShapePremultLabel);

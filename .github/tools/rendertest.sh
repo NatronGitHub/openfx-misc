@@ -646,6 +646,8 @@ tests=(
     "Rectangle premultiply softness|net.sf.openfx.Rectangle|general|*|mean=0.1995,0.1995,0.1995,1||-i Source=solid:0.5,0.5,0.5,1 -i Mask=none bottomLeft=100,100 size=200,200 softness=40 color1=0,0,0,0 premultiply=1 --frames 0 --window 110,199,111,201"
     # Extent = Format with no Source: the RoD is the format, also when only Color 0 is not black (here with Invert)
     "Radial format invert|net.sf.openfx.Radial|general|*|nonconst+mean=0.769,0.769,0.769,0.769||-i Source=none -i Mask=none extent=0 invert=1"
+    # Rectangle: the shape is the format, so with Invert all of it is Color 0 (it was an empty RoD, with no mean)
+    "Rectangle format invert|net.sf.openfx.Rectangle|general|*|mean=0,0,0,0||-i Source=none -i Mask=none extent=0 invert=1"
     "Transform scale 0.5|net.sf.openfx.TransformPlugin|filter|float|mean=0.31,0.31,0.31,0.31||-i Source=checker:32 rotate=30 scale=0.8,0.8 --scale 0.5"
     "CImgBlur scale 0.5|net.sf.cimg.CImgBlur|filter|float|mean=0.497,0.497,0.497,0.497||-i Source=checker:8 -i Mask=none size=5,5 expandRoD=0 --scale 0.5"
     # filter=2: Box (FIR). The default IIR filters have an infinite support, so
