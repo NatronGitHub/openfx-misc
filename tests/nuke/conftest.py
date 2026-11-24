@@ -35,6 +35,20 @@ class Renderer:
         self.work = work
         self._knob_orders = {}  # Nuke node class -> knob names
 
+    def check(self, case):
+        """Renders a case and asserts that both sides match.
+
+        A plug-in that is not installed skips the test.
+        """
+        try:
+            worst, where = harness.run_case(self.nuke, self.prefix, case,
+                                            self.work)
+        except harness.PluginMissing as ex:
+            pytest.skip(str(ex))
+        assert worst <= case["tolerance"], (
+            "max diff %.3g > tolerance %.3g at %s"
+            % (worst, case["tolerance"], where))
+
     def knob_order(self, node_class, batch):
         """The knobs of a Nuke node in panel order.
 
