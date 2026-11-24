@@ -21,9 +21,10 @@
 # hostDemo renders the frames t=0 and t=1 (or --frames), both views of a stereo
 # frame (hostDemo is built with the OFX_EXTENSIONS_* of the plugins), of a PAL SD project
 # (720x576), at render scale 1 (or --scale), in the whole RoD (or --window), on
-# synthetic inputs (-i Clip=solid:r,g,b,a|ramp|checker:N|none), with the
-# depth and components that the clip preferences of the plugin map each
-# clip to. A render fails if:
+# synthetic inputs (-i Clip=solid:r,g,b,a|ramp|checker:N|none, RGBA unless #rgb or #alpha
+# follows), with the depth and components that the clip preferences of the plugin map each
+# clip to. With --multiplane (in the arguments of a render), hostDemo is a multiplane host, and
+# -i Clip@Plane=spec gives an input an extra plane (openfx#331). A render fails if:
 # - hostDemo fails (exit status not 0): an action failed, an image fetch
 #   failed, a float output pixel was not written (hostDemo fills the float
 #   output images with NaN), or the plugin crashed;
@@ -600,6 +601,11 @@ tests=(
     "HSLToRGB l=0|net.sf.openfx.HSLToRGB|filter|*|mean=0,0,0,1||-i Source=solid:0.3,0.5,0,1"
     "RGBToHSI subnormal|net.sf.openfx.RGBToHSI|filter|float|mean=0,1,0,1||-i Source=solid:1e-40,0,0,1"
     "RGBToHSL near white|net.sf.openfx.RGBToHSL|filter|float|mean=0.1667,1,1,1||-i Source=solid:1,1,0.99999994,1"
+    # RGBToHSL outside [0,1] (#399, openfx-supportext#215): the hue comes from the unclamped channels,
+    # the saturation from the colour clamped to [0,1]. (2, 0.5, 0): H = (0.5 / 2) / 6 (it was 0.917),
+    # S 1, L 1; the grey (2, 2, 2): H 0, S 0 (it was 1), L 2
+    "RGBToHSL out of range|net.sf.openfx.RGBToHSL|filter|float|tol=1e-5+mean=0.0416667,1,1,1||-i Source=solid:2,0.5,0,1"
+    "RGBToHSL grey above 1|net.sf.openfx.RGBToHSL|filter|float|tol=1e-5+mean=0,0,2,1||-i Source=solid:2,2,2,1"
     # the conventions in the ColorTransform descriptions (#296): HSV of the values as given (no
     # transfer function), hue in [0,1): (0.25,0.5,0.125) -> H = (2 - 1/3)/6, S = 0.375/0.5, V = 0.5;
     # Y'CbCr in the video range: white -> Y' = 235/255 (with the rounded coefficients: 0.921745),
@@ -877,6 +883,15 @@ tests=(
     "Shuffle 3 filter|net.sf.openfx.ShufflePlugin|filter|float|mean=0.75,0.5,0.25,1||-m 3 -i Source=solid:0.25,0.5,0.75,1 outputR=8 outputB=6"
     "Shuffle 2 filter|net.sf.openfx.ShufflePlugin|filter|float|mean=0.75,0.5,0.25,1||-m 2 -i Source=solid:0.25,0.5,0.75,1 outputR=2 outputB=0"
     "Shuffle filter comps|net.sf.openfx.ShufflePlugin|filter|*|comps=RGBA+mean=0.75,0.5,0.25,1||-i Source=solid:0.25,0.5,0.75,1 outputComponents=1 outputR=8 outputB=6"
+    # a multiplane host (hostDemo --multiplane, openfx#331; the menus list the channels by label).
+    # R, G, B from B's color plane and A from another plane (B's backward motion vectors, whose U
+    # is the first value of the solid) is not an identity of B: the alpha is that channel (#268)
+    "Shuffle multiplane A from another plane|net.sf.openfx.ShufflePlugin|general|float|notidentity+mean=0.1,0.2,0.3,0.25||--multiplane -i A=solid:0.5,0.6,0.7,0.8 -i B=solid:0.1,0.2,0.3,0.4 -i B@BackMotionVector=solid:0.25,0.75,0,0 -s outputA=B.Backward.U"
+    # R, G, B from an RGB input (B, #rgb: openfx#330) and A from an Alpha-only input (A, #alpha:
+    # its alpha in all four channels): the output alpha is that of A, not 1 (#375; multiplane:
+    # the identity test; without the multiplane suites, outputA=3 is A.a)
+    "Shuffle multiplane alpha-only A|net.sf.openfx.ShufflePlugin|general|float|notidentity+comps=RGBA+mean=0.1,0.2,0.3,0.4||--multiplane -i A=solid:0.4,0.4,0.4,0.4#alpha -i B=solid:0.1,0.2,0.3,1#rgb -s outputA=A.Color.A"
+    "Shuffle alpha-only A|net.sf.openfx.ShufflePlugin|general|*|notidentity+comps=RGBA+mean=0.1,0.2,0.3,0.4||-i A=solid:0.4,0.4,0.4,0.4#alpha -i B=solid:0.1,0.2,0.3,1#rgb outputA=3"
     # isIdentity is false where the render does not copy the input (a host would pass the input
     # through instead of rendering). KeyMix: out of A, but in the mask, the output is
     # B * (1 - mask * mix), here 0, not B (issue #321).
