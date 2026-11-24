@@ -65,9 +65,15 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              (NaN audit); a merge result (Product, Over...) beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #80),
 //              and infinite inputs of the merge operators are made finite (+-FLT_MAX) instead of giving NaN (SupportExt #82);
 //              a NaN Foreground Matte sample is 0, as in the mask mix (the frame was skipped, as under a matte) (issue #220)
+//              Not an identity (pass-through of the only frame blended) where Mix, the mask, unprocessed channels or
+//              the operator change it, and the unprocessed channels are the source ones with Mix 1 and no mask (they were 0);
+//              the current frame is in the frames needed when the render reads it (issue #325)
 // version 2.1 (kept for backward compatibility, frames aligned on the last frame of the range): the fixes of 3.1
 //              (the NaN audit ones also applied to version 2, which was still registered as 2.0, SupportExt #80 and #82,
-//              and issue #220)
+//              and issue #220), and the issue #325 fixes (identity, frames needed, and render: Natron 2.5.0 projects
+//              with an unchecked channel, Mix 1 and no mask now get the source channel instead of 0, to be noted in the
+//              Natron changelog); a one-frame range with a Frame Interval larger than 1 blends that frame (it was
+//              passed through by isIdentity, and the render was black)
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -616,6 +622,32 @@ private:
     /** @brief compute the frames blended at time: first + i * interval, for 0 <= i < n */
     void getFrames(double time, int *first, int *interval, int *n);
 
+    /** @brief the Process R, G, B and A checkboxes */
+    struct ProcessChannels
+    {
+        bool r, g, b, a;
+        bool all() const { return r && g && b && a; }
+        bool none() const { return !r && !g && !b && !a; }
+    };
+
+    ProcessChannels getProcessChannels(double time) const;
+
+    /** @brief true if render() applies the mask */
+    bool getDoMasking(double time) const;
+
+    /** @brief true if render() mixes the result with Source at the current time (mask or Mix) */
+    static bool mixesWithSource(bool doMasking, double mix)
+    {
+        return doMasking || (mix != 1.);
+    }
+
+    /** @brief true if render() fetches Source at the current time: to mix the result with it, or to
+        copy the unprocessed channels from it. Used by render(), isIdentity() and getFramesNeeded(). */
+    static bool fetchesSourceAtTime(bool doMasking, double mix, const ProcessChannels& channels)
+    {
+        return mixesWithSource(doMasking, mix) || !channels.all();
+    }
+
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
     Clip *_srcClip;
@@ -724,7 +756,7 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor,
 
     // fetch the mask
     // auto ptr for the mask.
-    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
+    bool doMasking = getDoMasking(time);
     auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
     // do we do masking
     if (doMasking) {
@@ -746,14 +778,11 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor,
     if ( (dstComponents == ePixelComponentRGBA) || (dstComponents == ePixelComponentAlpha) ) {
         _outputCount->getValueAtTime(time, outputCount);
     }
-    bool processR, processG, processB, processA;
-    _processR->getValueAtTime(time, processR);
-    _processG->getValueAtTime(time, processG);
-    _processB->getValueAtTime(time, processB);
-    _processA->getValueAtTime(time, processA);
+    const ProcessChannels channels = getProcessChannels(time);
 
-    // If masking or mixing, fetch the original image
-    auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() && (doMasking || mix != 1.) ) ?
+    // If masking, mixing, or copying unprocessed channels, fetch the original image
+    // (the unprocessed channels were 0 with Mix 1 and no mask, issue #325)
+    auto_ptr<const Image> src( ( _srcClip && _srcClip->isConnected() && fetchesSourceAtTime(doMasking, mix, channels) ) ?
                                     _srcClip->fetchImage(args.time) :
                                     0 );
     if ( src.get() ) {
@@ -883,7 +912,7 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor,
         processor.setRenderWindow(renderWindow, args.renderScale);
         processor.setAccumulators(accumulatorData, countData, sumWeightsData, touchedData);
 
-        processor.setValues(processR, processG, processB, processA,
+        processor.setValues(channels.r, channels.g, channels.b, channels.a,
                             lastPass, decay, outputCount, mix);
 
         // Call the base class process member, this will call the derived templated process code
@@ -910,6 +939,11 @@ FrameBlendPlugin::getFrames(double time,
         // version 2 (kept so that old projects render the same): the last frame is always in the image set, so first frame must be adjusted if abs(interval) > 1,
         // and the lower bound of the range is dropped when the range length is not a multiple of the interval
         n = (std::abs(last - first) + 1) / interval;
+        if ( (n == 0) && (first == last) ) {
+            // a one-frame range with an interval larger than 1: blend that frame (versions 2.0 and
+            // older passed it through with isIdentity; the range gave no frame, and the render black)
+            n = 1;
+        }
         if (first > last) {
             interval = -interval;
         }
@@ -930,6 +964,24 @@ FrameBlendPlugin::getFrames(double time,
     *firstp = first;
     *intervalp = interval;
     *np = n;
+}
+
+FrameBlendPlugin::ProcessChannels
+FrameBlendPlugin::getProcessChannels(double time) const
+{
+    ProcessChannels channels;
+    _processR->getValueAtTime(time, channels.r);
+    _processG->getValueAtTime(time, channels.g);
+    _processB->getValueAtTime(time, channels.b);
+    _processA->getValueAtTime(time, channels.a);
+
+    return channels;
+}
+
+bool
+FrameBlendPlugin::getDoMasking(double time) const
+{
+    return ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected();
 }
 
 // the overridden render function
@@ -1036,17 +1088,11 @@ FrameBlendPlugin::isIdentity(const IsIdentityArguments &args,
         return true;
     }
 
-    {
-        bool processR, processG, processB, processA;
-        _processR->getValueAtTime(time, processR);
-        _processG->getValueAtTime(time, processG);
-        _processB->getValueAtTime(time, processB);
-        _processA->getValueAtTime(time, processA);
-        if (!processR && !processG && !processB && !processA) {
-            identityClip = _srcClip;
+    const ProcessChannels channels = getProcessChannels(time);
+    if ( channels.none() ) {
+        identityClip = _srcClip;
 
-            return true;
-        }
+        return true;
     }
 
     if ( _fgMClip && _fgMClip->isConnected() ) {
@@ -1060,26 +1106,45 @@ FrameBlendPlugin::isIdentity(const IsIdentityArguments &args,
         return false;
     }
 
-    bool absolute;
-    _absolute->getValueAtTime(time, absolute);
-    OfxRangeD range;
-    int min, max;
-    _frameRange->getValueAtTime(time, min, max);
-    if (!absolute) {
-        min += time;
-        max += time;
+    const bool doMasking = getDoMasking(time);
+
+    // one frame is blended (the same frames as in render()): the render copies it only if nothing
+    // else changes it (issue #325)
+    int first, interval, n;
+    getFrames(time, &first, &interval, &n);
+    // the mask and Mix mix with the source at the current time, which is not an exact copy (even
+    // at the same frame); the unprocessed channels are copied from it
+    if ( (n == 1) && !mixesWithSource(doMasking, mix) && ( channels.all() || (first == time) ) ) {
+        bool copiesFrame;
+        switch ( static_cast<OperationEnum>( _operation->getValueAtTime(time) ) ) {
+        case eOperationMin:
+        case eOperationMax:
+            // the first source pixel is taken as is
+            copiesFrame = true;
+            break;
+        case eOperationAverage:
+        case eOperationSum:
+        case eOperationOver:
+            // on float images, the merge operators make the infinite values finite (+-FLT_MAX,
+            // SupportExt #82), and -0 gives +0 (0 + -0 = +0); on byte and short images, they copy
+            // the pixel (0 + A, A / 1, A over 0)
+            copiesFrame = ( _srcClip->getPixelDepth() != eBitDepthFloat );
+            break;
+        case eOperationProduct:
+        default:
+            // the initial value 1 is multiplied by 1 - Decay, then by the pixel divided by maxValue
+            // (the pixel itself only on float images): not a copy
+            copiesFrame = false;
+            break;
+        }
+        if (copiesFrame) {
+            identityClip = _srcClip;
+            identityTime = first;
+
+            return true;
+        }
     }
-    range.min = min;
-    range.max = max;
 
-    if (range.min == range.max) {
-        identityClip = _srcClip;
-        identityTime = range.min;
-
-        return true;
-    }
-
-    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
     if (doMasking) {
         bool maskInvert;
         _maskInvert->getValueAtTime(args.time, maskInvert);
@@ -1114,17 +1179,27 @@ FrameBlendPlugin::getFramesNeeded(const FramesNeededArguments &args,
         // so set nothing and let the host use its default (the current frame)
         return;
     }
+    const double time = args.time;
+    const int last = first + (n - 1) * interval;
     OfxRangeD range;
+    bool hasTime; // the blended frames include the current time
     if (std::abs(interval) == 1) {
-        int last = first + (n - 1) * interval;
         range.min = (std::min)(first, last);
         range.max = (std::max)(first, last);
         frames.setFramesNeeded(*_srcClip, range);
+        hasTime = (range.min <= time) && (time <= range.max);
     } else {
+        hasTime = false;
         for (int i = 0; i < n; ++i) {
             range.min = range.max = first + i * interval;
             frames.setFramesNeeded(*_srcClip, range);
+            hasTime = hasTime || (range.min == time);
         }
+    }
+    // render() also fetches Source at the current time to mask, mix or copy unprocessed channels
+    if ( !hasTime && fetchesSourceAtTime( getDoMasking(time), _mix->getValueAtTime(time), getProcessChannels(time) ) ) {
+        range.min = range.max = time;
+        frames.setFramesNeeded(*_srcClip, range);
     }
 }
 

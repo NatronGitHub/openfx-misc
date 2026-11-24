@@ -92,6 +92,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              Output is unchanged.
 //              With Process A and an opaque Source, Source is mapped to RGBA like the output, so that an
 //              RGB Source is not read as RGBA (out of bounds) (#254).
+// version 2.2 (unreleased, fixed in place): not a pass-through when Process A is checked and Source is Opaque,
+//              since the Output is then UnPremultiplied (issue #328)
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 2 // Increment this when you have fixed a bug or made it faster.
 
@@ -883,6 +885,9 @@ private:
     /* override is identity */
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
 
+    /** @brief true if Process A is checked and the Source is Opaque (the Output is then UnPremultiplied) */
+    bool outputIsUnpremultipliedFromOpaque() const;
+
     /* Override the clip preferences */
     void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
@@ -1099,6 +1104,11 @@ RectanglePlugin::isIdentity(const IsIdentityArguments &args,
     if (!_srcClip || !_srcClip->isConnected()) {
         return false;
     }
+    if ( outputIsUnpremultipliedFromOpaque() ) {
+        // the Source is Opaque but the Output is UnPremultiplied (see getClipPreferences()): a
+        // pass-through would keep the Source premultiplication (issue #328)
+        return false;
+    }
     const double time = args.time;
     double mix = _mix->getValueAtTime(time);
 
@@ -1152,18 +1162,26 @@ RectanglePlugin::isIdentity(const IsIdentityArguments &args,
     return false;
 } // RectanglePlugin::isIdentity
 
+// true if Process A is checked and the Source is Opaque: the output alpha is changed, and the Output
+// is UnPremultiplied. Used by getClipPreferences() and isIdentity().
+bool
+RectanglePlugin::outputIsUnpremultipliedFromOpaque() const
+{
+    return _processA->getValue() && _srcClip && _srcClip->isConnected() &&
+           (_srcClip->getPreMultiplication() == eImageOpaque);
+}
+
 /* Override the clip preferences */
 void
 RectanglePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     if (_srcClip) {
         // set the premultiplication of _dstClip if alpha is affected and source is Opaque
-        bool processA = _processA->getValue();
         // Unfortunately, we cannot check the output components as was done in
         // https://github.com/NatronGitHub/openfx-misc/commit/844a442b5baeef4b1e1a0fd4d5e957707f4465ca
         // since it would call getClipPrefs recursively.
         // We just set the output components.
-        if ( processA && _srcClip && _srcClip->isConnected() && _srcClip->getPreMultiplication() == eImageOpaque) {
+        if ( outputIsUnpremultipliedFromOpaque() ) {
             clipPreferences.setClipComponents(*_dstClip, ePixelComponentRGBA);
             // the processor reads Source with the output's components (as Radial does)
             clipPreferences.setClipComponents(*_srcClip, ePixelComponentRGBA);

@@ -44,6 +44,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "TimeDissolveOFX"
 #define kPluginGrouping "Merge"
 #define kPluginDescription "Dissolves between two inputs, starting the dissolve at the in frame and ending at the out frame.\n" \
+    "The In and Out frames are part of the dissolve: the frame before In shows only A, and the frame after Out shows only B. " \
+    "For example, with In 1 and Out 10, frame 0 is A, frames 1 to 10 mix A and B, and frame 11 is B.\n" \
     "You can specify the dissolve curve over time, if the OFX host supports it (else it is a traditional smoothstep).\n" \
     "See also https://web.archive.org/web/20220627033151/http://www.opticalenquiry.com/nuke/index.php?title=TimeDissolve"
 
@@ -64,11 +66,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamIn "dissolveIn"
 #define kParamInLabel "In"
-#define kParamInHint "Start dissolve at this frame number."
+#define kParamInHint "First frame of the dissolve: the frame before it shows only A, and with the default curve this frame already shows some of B."
 
 #define kParamOut "dissolveOut"
 #define kParamOutLabel "Out"
-#define kParamOutHint "End dissolve at this frame number."
+#define kParamOutHint "Last frame of the dissolve: with the default curve this frame still shows some of A, and the frame after it shows only B."
 
 #define kParamCurve "dissolveCurve"
 #define kParamCurveLabel "Curve"
@@ -185,6 +187,10 @@ TimeDissolvePlugin::getTransition(double time)
 {
     int dissolveIn, dissolveOut;
 
+    // The In and Out frames are part of the dissolve: the curve abscissa is 0 at the frame
+    // before In and 1 at the frame after Out (kParamCurveHint, kParamInHint, kParamOutHint),
+    // so that, with the default curve, the In frame already shows some of B, and the Out frame
+    // still shows some of A.
     _dissolveIn->getValueAtTime(time, dissolveIn);
     --dissolveIn;
     _dissolveOut->getValueAtTime(time, dissolveOut);
