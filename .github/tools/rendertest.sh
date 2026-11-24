@@ -576,6 +576,18 @@ tests=(
     # ColorCorrect: gamma 0 in the shadows (was pow(2, 1/0) = inf), whose weight is 0 at luminance 2 (was 0 * inf = NaN)
     "ColorCorrect gamma 0|net.sf.openfx.ColorCorrectPlugin|filter|float|mean=2,2,2,1||-i Source=solid:2,2,2,1 -i Mask=none ShadowsGamma=0,0,0,0"
     "ColorCorrect gamma 0.001|net.sf.openfx.ColorCorrectPlugin|filter|float|mean=10,10,10,1||-i Source=solid:10,10,10,1 -i Mask=none ShadowsGamma=0.001,0.001,0.001,0.001"
+    # Roto: by default the shape (the Roto input) is drawn over the Source alpha only (Process A, the
+    # R, G and B of the Source are kept); Premultiply multiplies the Source RGB by the shape alpha; Replace
+    # draws on black in the drawn channels
+    "Roto default alpha|net.sf.openfx.RotoPlugin|general|*|mean=0.25,0.5,0.75,0.5||-i Source=solid:0.25,0.5,0.75,0 -i Roto=solid:1,1,1,0.5"
+    "Roto premultiply|net.sf.openfx.RotoPlugin|general|*|mean=0.25,0.25,0.25,1||-i Source=solid:0.5,0.5,0.5,1 -i Roto=solid:1,1,1,0.5 premultiply=1"
+    "Roto replace|net.sf.openfx.RotoPlugin|general|*|mean=0.5,0.5,0.5,0.5||-i Source=solid:0.5,0.5,0.5,1 -i Roto=solid:0.2,0.2,0.2,0.5 replace=1"
+    # Premultiply with Replace and A: the output alpha is the shape alpha, the output is premultiplied
+    "Roto premultiply replace|net.sf.openfx.RotoPlugin|general|*|premult=PreMultiplied+mean=0.25,0.25,0.25,0.5||-i Source=solid:0.5,0.5,0.5,1 -i Roto=solid:1,1,1,0.5 premultiply=1 replace=1"
+    # outside the Roto RoD (no Roto image: transparent black), Replace clears the alpha and
+    # Premultiply the RGB: not a pass-through
+    "Roto replace outside RoD|net.sf.openfx.RotoPlugin|general|*|notidentity+mean=0.5,0.5,0.5,0||-i Source=solid:0.5,0.5,0.5,1 -i Roto=rod:100,100,200,200 replace=1 --frames 0 --window 0,0,4,4"
+    "Roto premultiply outside RoD|net.sf.openfx.RotoPlugin|general|*|notidentity+mean=0,0,0,1||-i Source=solid:0.5,0.5,0.5,1 -i Roto=rod:100,100,200,200 premultiply=1 --frames 0 --window 0,0,4,4"
     # PLogLin: the undefined conversions pass the channels through (were 1/0 and log of inf)
     "PLogLin nGamma 0|net.sf.openfx.PLogLin|filter|*|mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none nGamma=0,0,0"
     "PLogLin linRef 0|net.sf.openfx.PLogLin|filter|*|mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none operation=1 linRef=0,0,0"
