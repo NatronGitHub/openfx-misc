@@ -85,7 +85,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamGamma "gamma"
 #define kParamGammaLabel "Gamma"
-#define kParamGammaHint "Sets the overall gamma level of the color wheel: each R, G and B value is raised to the power 1/Gamma. The default (0.45) makes the wheel darker; 1 gives a linear wheel (the HSV to RGB conversion only). A value of 0 or less sets each channel to 1 where it is at least 1, and to 0 elsewhere."
+#define kParamGammaHint "Sets the overall gamma level of the color wheel: each R, G and B value is raised to the power 1/Gamma. The default (0.45) makes the wheel darker; 1 gives a linear wheel (the HSV to RGB conversion only). A value of 0 sets each channel to 1 where it is at least 1, and to 0 elsewhere."
 #define kParamGammaDefault 0.45
 
 #define kParamRotate "rotate"
