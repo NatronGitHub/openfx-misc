@@ -883,6 +883,27 @@ tests=(
     # the A input at the same time (hostDemo's default pattern: red = t at t > 1, except the text),
     # at frame 5 weighted by 1 - 0.432 (x = 5/11)
     "TimeDissolve default input|net.sf.openfx.TimeDissolvePlugin|filter|float|mean=2.834,0,0,1+framesdiffer||-i A=default -i Source=solid:0,0,0,1 --frames 5,1,10"
+    # AppendClip (issue #319), on hostDemo's default pattern (clip 1, frames 0 to 25: red = t except
+    # the text, 0.002 at t=0, 1 - 0.002 at t=1, float only above 1) then a solid (clip 2): the first
+    # frame of the first clip is at First Frame (frame 1 shows its frame 0), clip 2 follows its last
+    # frame (frame 26 shows frame 25 of clip 1, frame 27 frame 0 of clip 2).
+    "AppendClip first frame|net.sf.openfx.AppendClip|general|float|identity+mean=0.002,0,0,1+framesdiffer||-i 1=default -i 2=solid:0.5,0.5,0.5,1 --frames 1,2,26"
+    "AppendClip first frame 5|net.sf.openfx.AppendClip|general|float|identity+mean=0.002,0,0,1+framesdiffer||-i 1=default -i 2=solid:0.5,0.5,0.5,1 firstFrame=5 --frames 5,6,30"
+    "AppendClip end of clip 1|net.sf.openfx.AppendClip|general|float|identity+mean=24.949,0,0,1||-i 1=default -i 2=solid:0.5,0.5,0.5,1 --frames 26"
+    "AppendClip start of clip 2|net.sf.openfx.AppendClip|general|*|identity+mean=0.5,0.5,0.5,1||-i 1=default -i 2=solid:0.5,0.5,0.5,1 --frames 27"
+    # linear fades over N frames: 1/(N+1)... N/(N+1); Fade In 3 at frames 1 and 3, then not faded
+    "AppendClip fade in 3 first|net.sf.openfx.AppendClip|general|*|mean=0.25,0.25,0.25,0.25||-i 1=solid:1,1,1,1 -i 2=solid:0.5,0.5,0.5,1 fadeIn=3 --frames 1"
+    "AppendClip fade in 3 last|net.sf.openfx.AppendClip|general|*|mean=0.75,0.75,0.75,0.75||-i 1=solid:1,1,1,1 -i 2=solid:0.5,0.5,0.5,1 fadeIn=3 --frames 3"
+    "AppendClip fade in 3 after|net.sf.openfx.AppendClip|general|*|identity+mean=1,1,1,1||-i 1=solid:1,1,1,1 -i 2=solid:0.5,0.5,0.5,1 fadeIn=3 --frames 4"
+    # Fade Out 2: frame 50 is not faded, frame 51 is at 2/3, the last frame (52) at 1/3
+    "AppendClip fade out 2 before|net.sf.openfx.AppendClip|general|*|identity+mean=0.5,0.5,0.5,1||-i 1=solid:1,1,1,1 -i 2=solid:0.5,0.5,0.5,1 fadeOut=2 --frames 50"
+    "AppendClip fade out 2 first|net.sf.openfx.AppendClip|general|*|mean=0.3333,0.3333,0.3333,0.6667||-i 1=solid:1,1,1,1 -i 2=solid:0.5,0.5,0.5,1 fadeOut=2 --frames 51"
+    "AppendClip fade out 2 last|net.sf.openfx.AppendClip|general|*|mean=0.1667,0.1667,0.1667,0.3333||-i 1=solid:1,1,1,1 -i 2=solid:0.5,0.5,0.5,1 fadeOut=2 --frames 52"
+    # Cross Dissolve 4: the last 4 frames of clip 1 (frames 23 to 26) overlap the first 4 of clip 2;
+    # clip 1 (its frame 22, then 25) is weighted by 0.8 at frame 23 and 0.2 at frame 26
+    "AppendClip dissolve 4 first|net.sf.openfx.AppendClip|general|float|mean=17.665,0.1,0.1,1||-i 1=default -i 2=solid:0.5,0.5,0.5,1 crossDissolve=4 --frames 23"
+    "AppendClip dissolve 4 last|net.sf.openfx.AppendClip|general|float|mean=5.390,0.4,0.4,1||-i 1=default -i 2=solid:0.5,0.5,0.5,1 crossDissolve=4 --frames 26"
+    "AppendClip dissolve 4 after|net.sf.openfx.AppendClip|general|*|identity+mean=0.5,0.5,0.5,1||-i 1=default -i 2=solid:0.5,0.5,0.5,1 crossDissolve=4 --frames 27"
 )
 
 n=0 failed=() xfailed=()
