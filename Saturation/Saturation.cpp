@@ -54,6 +54,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              (versions 2.1 and 3.0, no output change on hosts with multi-resolution) the mask-RoD
 //              identity test is skipped on hosts without multi-resolution, and premult defaults to false
 //              for a non-RGBA source, as in the other plug-ins (#240)
+//              (versions 2.1 and 3.0) the saturation can be negative (complementary colours): its minimum
+//              was 0, although the render handles a negative value (issue #292)
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -94,7 +96,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamSaturation "saturation"
 #define kParamSaturationLabel "Saturation"
-#define kParamSaturationHint "Color saturation factor to apply. 0 produces grayscale."
+#define kParamSaturationHint "Color saturation factor to apply. 0 produces grayscale, and a negative value gives the complementary colors."
 
 #define kParamLuminanceMathHint "Formula used to compute luminance from RGB values."
 
@@ -732,7 +734,7 @@ SaturationPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamSaturation);
         param->setLabel(kParamSaturationLabel);
         param->setHint(kParamSaturationHint);
-        param->setRange(0., DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+        param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(0., 4.);
         param->setDefault(1.);
         if (page) {
