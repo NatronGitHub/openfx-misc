@@ -176,6 +176,17 @@ def _stmap(x, y):
     return .25 + .5 * _u(x) + .1 * _v(y), .2 + .6 * _v(y), 1., 1.
 
 
+def _stmap_a(x, y):
+    u, v, _, _ = _stmap(x, y)
+    return .5 * u, .5 * v, .5, .5
+
+
+def _stmap_a0(x, y):
+    if x < 8:
+        return 0., 0., 0., 0.
+    return _stmap(x, y)
+
+
 def _kernel(x, y):
     return (float((x - 14) + 3 * (y - 14) + 1),) * 4
 
@@ -304,6 +315,19 @@ IMAGES = {
         "nuke": ("0.25 + 0.5 * %s + 0.1 * %s" % (U, V), "0.2 + 0.6 * " + V,
                  "1", "1"),
         "py": _stmap,
+    },
+    # the same, premultiplied by alpha 0.5
+    "stmap_a": {
+        "nuke": ("0.5 * (0.25 + 0.5 * %s + 0.1 * %s)" % (U, V),
+                 "0.5 * (0.2 + 0.6 * %s)" % V, "0.5", "0.5"),
+        "py": _stmap_a,
+    },
+    # the same, with alpha 0 (and UV 0) on the 8 left columns
+    "stmap_a0": {
+        "nuke": ("x < 8 ? 0 : 0.25 + 0.5 * %s + 0.1 * %s" % (U, V),
+                 "x < 8 ? 0 : 0.2 + 0.6 * %s" % V, "x < 8 ? 0 : 1",
+                 "x < 8 ? 0 : 1"),
+        "py": _stmap_a0,
     },
     # A 3x3 asymmetric kernel (Convolve's filter input), in a box.
     "kernel": {
@@ -1091,13 +1115,48 @@ CASES += [
          (ofx_id("IDistort"), {"uvScale": [2, 2], "filter": "Impulse"}),
          clips={"Source": "uvwarp", "UV": "uvwarp"},
          nuke_inputs=["uvwarp"], channels="rgba", tolerance=1e-3),
-    case("IDistort, alpha 0.5 (alpha times UV alpha)",
+    case("IDistort, alpha 0.5",
          ("IDistort", {"uv": "rgb"}),
          (ofx_id("IDistort"), {}), clips={"Source": "uvwarp_a",
                                           "UV": "uvwarp_a"},
          nuke_inputs=["uvwarp_a"], channels="rgba", tolerance=1e-3),
     case("STMap uv = rgb", ("STMap", {"uv": "rgb"}),
          (ofx_id("STMap"), {}), nuke_inputs=["ramp", "stmap"],
+         clips={"Source": "ramp", "UV": "stmap"}, channels="rgba",
+         tolerance=2e-3),
+    # UV premultiplied by alpha 0.5 (Unpremult UV): the offsets are doubled
+    case("IDistort, alpha 0.5, premultiplied",
+         ("IDistort", {"uv": "rgb", "premultiplied": True}),
+         (ofx_id("IDistort"), {"unpremultUV": 1}),
+         clips={"Source": "uvwarp_a", "UV": "uvwarp_a"},
+         nuke_inputs=["uvwarp_a"], channels="rgba", tolerance=1e-3),
+    case("STMap uv = rgb, premultiplied, alpha 0.5",
+         ("STMap", {"uv": "rgb", "premultiplied": True}),
+         (ofx_id("STMap"), {"unpremultUV": 1}),
+         nuke_inputs=["ramp", "stmap_a"],
+         clips={"Source": "ramp", "UV": "stmap_a"}, channels="rgba",
+         tolerance=2e-3),
+    case("STMap uv = rgb, premultiplied, alpha 0 on the left",
+         ("STMap", {"uv": "rgb", "premultiplied": True}),
+         (ofx_id("STMap"), {"unpremultUV": 1}),
+         nuke_inputs=["ramp", "stmap_a0"],
+         clips={"Source": "ramp", "UV": "stmap_a0"}, channels="rgba",
+         tolerance=2e-3),
+    # Blur channel: B of uvwarp goes from 1.47 (left) to -0.47 (right)
+    case("IDistort uv = rgb, blur = blue",
+         ("IDistort", {"uv": "rgb", "blur": "rgba.blue"}),
+         (ofx_id("IDistort"), {"channelBlur": 2}),
+         clips={"Source": "uvwarp", "UV": "uvwarp"},
+         nuke_inputs=["uvwarp"], channels="rgba", tolerance=1e-3),
+    case("IDistort uv = rgb, blur = blue, blur scale 4",
+         ("IDistort", {"uv": "rgb", "blur": "rgba.blue", "blur_scale": 4}),
+         (ofx_id("IDistort"), {"channelBlur": 2, "blurScale": 4}),
+         clips={"Source": "uvwarp", "UV": "uvwarp"},
+         nuke_inputs=["uvwarp"], channels="rgba", tolerance=1e-3),
+    case("STMap uv = rgb, blur = blue (1), blur scale 3",
+         ("STMap", {"uv": "rgb", "blur": "rgba.blue", "blur_scale": 3}),
+         (ofx_id("STMap"), {"channelBlur": 2, "blurScale": 3}),
+         nuke_inputs=["ramp", "stmap"],
          clips={"Source": "ramp", "UV": "stmap"}, channels="rgba",
          tolerance=2e-3),
     case("LensDistortion k 0.1, undistort",
@@ -1541,9 +1600,13 @@ KNOWN = {
         "LensDistortion k 0.1, undistort",
         "LensDistortion k 0.1, undistort (k1 -0.1)",
         "LensDistortion k 0.1, redistort (distort)"],
-    303: [
-        "IDistort uv = rgb", "IDistort uv = rgb, uv scale 2, impulse",
-        "IDistort, alpha 0.5 (alpha times UV alpha)"],
+    352: [
+        "IDistort, alpha 0.5, premultiplied",
+        "STMap uv = rgb, premultiplied, alpha 0.5",
+        "STMap uv = rgb, premultiplied, alpha 0 on the left",
+        "IDistort uv = rgb, blur = blue",
+        "IDistort uv = rgb, blur = blue, blur scale 4",
+        "STMap uv = rgb, blur = blue (1), blur scale 3"],
     305: [
         "ContactSheet 2 inputs, 2x2 cells of 32x32, center off"],
     309: ["Retime speed 0.5, filter none",
@@ -1618,7 +1681,6 @@ ISSUES = {
     300: 'Position: no edge-pixel fill',
     301: 'Mirror: flips around the input RoD instead of the format',
     302: 'LensDistortion: the model does not follow its documented...',
-    303: 'IDistort: the output is multiplied by the UV alpha; no bl...',
     304: 'GodRays: translate and skew combine with the other controls',
     305: 'ContactSheet: placement in partially filled sheets; no Sn...',
     306: 'TimeOffset: no rounding mode',
@@ -1636,4 +1698,5 @@ ISSUES = {
     318: 'Document the behaviours that come from OFX: black outside...',
     319: 'AppendClip: first output frame, fade curve, cross-dissolve',
     320: 'TimeDissolve: the dissolve starts before the In frame',
+    352: 'IDistort, STMap: Unpremult UV, and the blur near edges and...',
 }

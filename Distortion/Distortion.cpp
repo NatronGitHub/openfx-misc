@@ -46,6 +46,9 @@
 #include <sstream>
 #include <set>
 #include <map>
+#include <array>
+#include <cstdint>
+#include <mutex>
 #include <vector>
 #include <algorithm>
 #include <limits>
@@ -92,8 +95,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "Distort an image, based on a displacement map.\n" \
     "The U and V channels give the offset in pixels in the destination image to the pixel where the color is taken. " \
     "For example, if at pixel (45,12) the UV value is (-1.5,3.2), then the color at this pixel is taken from (43.5,15.2) in the source image. " \
+    "The U offset is in square pixels: it is divided by the pixel aspect ratio to give a number of pixels along x. " \
+    "An optional Blur Channel adds blur. The Alpha Channel from UV is only used to unpremultiply UV (Unpremult UV). " \
     "This plugin concatenates transforms upstream, so that if the nodes upstream output a 3x3 transform " \
     "(e.g. Transform, CornerPin, Dot, NoOp, Switch), the original image is sampled only once.\n" \
+    "Version 2 (obsolete, kept for old projects) multiplies the output by the Alpha Channel from UV, and takes U in pixels along x.\n" \
     "This plugin concatenates transforms upstream." \
 
 #define kPluginIDistortIdentifier "net.sf.openfx.IDistort"
@@ -104,8 +110,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "Move pixels around an image, based on a UVmap.\n" \
     "The U and V channels give, for each pixel in the destination image, the normalized position of the pixel where the color is taken. " \
     "(0,0) is the bottom left corner of the input image, while (1,1) is the top right corner. " \
+    "An optional Blur Channel adds blur. The Alpha Channel from UV is only used to unpremultiply UV (Unpremult UV). " \
     "This plugin concatenates transforms upstream, so that if the nodes upstream output a 3x3 transform " \
     "(e.g. Transform, CornerPin, Dot, NoOp, Switch), the original image is sampled only once.\n" \
+    "Version 2 (obsolete, kept for old projects) multiplies the output by the Alpha Channel from UV.\n" \
     "This plugin concatenates transforms upstream." \
 
 #define kPluginSTMapIdentifier "net.sf.openfx.STMap"
@@ -140,8 +148,25 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              edge colour, not about 4x the edge value (garbage).
 // (#236, in the current minor version, not released yet) on hosts that ignore normalised defaults
 //              (e.g. DaVinci Resolve), the default rectangle is the project's, not (1,1) pixels
-#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+// (#303, in version 2.1, not released yet) the Blur Channel and Blur Scale parameters (no blur by default:
+//              the blur, in pixels along x, is added to the sampled footprint); with a transform concatenated
+//              from upstream (e.g. Transform, CornerPin), the filter footprint is the one of the UV map composed
+//              with the inverse transform (it was the transform's alone, so the UV map's own minification was
+//              ignored); the UV RoI is one pixel larger than the render window (the UV derivatives read the
+//              neighbouring pixels), so that tiles match the full render
+// version 3.0 (#303): the output is no longer multiplied by the Alpha Channel from UV (it is only used by
+//              Unpremult UV); IDistort's U displacement is in square pixels, divided by the pixel aspect
+//              ratio to give x pixels (it was in x pixels); the blur is in square pixels, and a separable
+//              kernel (the filter's kernel, stretched to the footprint plus the blur) instead of an addition
+//              to the footprint, except with the Box filter, which still adds the blur to its footprint, and
+//              takes the area mean (a summed-area table), with edge repeat when Black Outside is off. Version
+//              2.1 (obsolete) keeps the version-2 behaviour, so old projects render as before without an
+//              upstream transform.
+#define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinorV2 1 // the minor version of the obsolete version 2 (IDistort and STMap)
+// the first IDistort and STMap version with the version-3 behaviour (UVBehaviourEnum)
+constexpr int kPluginVersionUVSquarePixels = 3;
 
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
@@ -217,12 +242,18 @@ enum DistortionPluginEnum
 #define kParamChannelVChoice kParamChannelV "Choice"
 
 #define kParamChannelA "channelA"
-#define kParamChannelALabel "Alpha Channel", "Input Alpha channel from UV. The Output alpha is multiplied by this value. If \"Unpremult UV\" is checked, the UV values are divided by alpha."
+#define kParamChannelALabel "Alpha Channel", "Input Alpha channel from UV. If \"Unpremult UV\" is checked, the UV (and blur) values are divided by alpha, and the output is transparent black where alpha is 0. Version 2 (obsolete) also multiplies the output by this value."
 
 #define kParamChannelAChoice kParamChannelA "Choice"
 
 #define kParamChannelUnpremultUV "unpremultUV"
 #define kParamChannelUnpremultUVLabel "Unpremult UV", "Unpremult UV by Alpha from UV. Check if UV values look small for small values of Alpha (3D software sometimes write premultiplied UV values)."
+
+#define kParamChannelBlur "channelBlur"
+#define kParamChannelBlurLabel "Blur Channel", "Input blur channel from UV. Its values, multiplied by Blur Scale, are added to the size of the area of the source image that is sampled for each output pixel, to add extra blur or diffusion to the distortion. They are in square pixels (as tall as a pixel). The filter's kernel is stretched to that size (the Box filter averages that area, and the Impulse filter does not blur). If \"Unpremult UV\" is checked, they are divided by alpha, like UV. Negative values are taken as 0, and values larger than the source image as its size. A channel that the UV input does not have (e.g. A of an RGB input) is 0. 0 (the default): no blur. Version 2 (obsolete) takes them in pixels along x and adds them to the sampled area, which the filters other than Box supersample by steps (3x3, 9x9... samples)."
+
+#define kParamBlurScale "blurScale"
+#define kParamBlurScaleLabel "Blur Scale", "The values of the Blur Channel are multiplied by this."
 
 #define kParamPremultChanged "premultChanged"
 
@@ -768,6 +799,27 @@ void PFBarrelCommon::FileReader::dump(void)
 static bool gIsMultiPlaneV1;
 static bool gIsMultiPlaneV2;
 
+// the channels read from the UV clip by IDistort and STMap: indices of _uvChannels and _planeChannels
+enum UVChannelEnum
+{
+    eUVChannelU = 0,
+    eUVChannelV,
+    eUVChannelAlpha,
+    eUVChannelBlur,
+    eUVChannelCount
+};
+
+// What IDistort and STMap do with the UV input, selected by the instance's major version.
+enum UVBehaviourEnum
+{
+    // version 2 (obsolete): the output is multiplied by the UV alpha, IDistort's U is in pixels along x, and
+    // the blur is added to the sampled footprint
+    eUVBehaviourV2,
+    // version 3: the UV alpha is only used by Unpremult UV, U and the blur are in square pixels, and the
+    // blur is a separable kernel
+    eUVBehaviourV3,
+};
+
 struct InputPlaneChannel
 {
     Image* img;
@@ -790,8 +842,14 @@ protected:
     bool _transformIsIdentity;
     Matrix3x3 _srcTransformInverse;
     OfxRectD _format;
-    std::vector<InputPlaneChannel> _planeChannels;
+    std::vector<InputPlaneChannel> _planeChannels; // U, V, Alpha and Blur (IDistort and STMap)
     bool _unpremultUV;
+    UVBehaviourEnum _uvBehaviour;
+    // multiply the Blur channel, to give pixels at the render scale along x and y (version 3: square
+    // pixels, so the x scale is divided by the pixel aspect ratio; version 2: both are the x scale)
+    double _blurScaleX;
+    double _blurScaleY;
+    double _maxBlur; // the largest blur, in source pixels: the size of the source RoD
     double _uOffset;
     double _vOffset;
     double _uScale;
@@ -821,6 +879,10 @@ public:
         , _srcTransformInverse()
         , _planeChannels()
         , _unpremultUV(true)
+        , _uvBehaviour(eUVBehaviourV3)
+        , _blurScaleX(1.)
+        , _blurScaleY(1.)
+        , _maxBlur(1.)
         , _uOffset(0.)
         , _vOffset(0.)
         , _uScale(1.)
@@ -856,6 +918,10 @@ public:
                    const OfxRectD& format,
                    const std::vector<InputPlaneChannel>& planeChannels,
                    bool unpremultUV,
+                   UVBehaviourEnum uvBehaviour,
+                   double blurScaleX,
+                   double blurScaleY,
+                   double maxBlur,
                    double uOffset,
                    double vOffset,
                    double uScale,
@@ -878,6 +944,10 @@ public:
         _format = format;
         _planeChannels = planeChannels;
         _unpremultUV = unpremultUV;
+        _uvBehaviour = uvBehaviour;
+        _blurScaleX = blurScaleX;
+        _blurScaleY = blurScaleY;
+        _maxBlur = maxBlur;
         _uOffset = uOffset;
         _vOffset = vOffset;
         _uScale = uScale;
@@ -897,6 +967,309 @@ private:
 
 
 
+
+// the most taps along each axis of the separable blur: beyond that, the kernel is sampled every
+// stride pixels (a coarser, much cheaper, approximation for blurs of more than about 30 pixels)
+constexpr int kSeparableBlurMaxTaps = 64;
+// sample positions beyond this many pixels from the origin are outside any image (and the int conversions
+// below must not overflow)
+constexpr double kSeparableBlurMaxPosition = 1e9;
+
+// the radius of a filter's kernel, at scale 1
+static double
+filterKernelRadius(FilterEnum filter)
+{
+    switch (filter) {
+    case eFilterBilinear:
+    case eFilterCubic:
+        return 1.;
+    default:
+        return 2.;
+    }
+}
+
+// A summed-area table of the source image, for version 3 with a blur: the exact integral of the image
+// (piecewise constant over each pixel) over any rectangle, in O(1). It gives the mean of each cell of the
+// strided separable blur (so that a wide blur does not alias) and the Box filter's area mean for any blur
+// size. It covers the whole source image, and is built (single-threaded, one pass over the source) the
+// first time a render call needs it: see LazySummedAreaTable. Memory: 8 bytes per component per pixel,
+// plus, only if the image has non-finite pixels, 3 counts per component per pixel (NaN, +inf, -inf).
+// Non-finite pixels are 0 in the sums and counted per component, so that an area that holds one gives NaN
+// or an infinity for that component, in O(1), and does not spoil the other areas or components.
+class SummedAreaTable
+{
+public:
+    using Sums = std::array<double, 4>;
+
+    // S(i, j): the sum of the pixels of bounds.x1 + [0, i) x bounds.y1 + [0, j), for each component
+    template <class PIX, int nComponents>
+    void build(const Image &img)
+    {
+        _bounds = img.getBounds();
+        _n = nComponents;
+        _w = (std::max)(0, _bounds.x2 - _bounds.x1);
+        _h = (std::max)(0, _bounds.y2 - _bounds.y1);
+        const std::size_t corners = static_cast<std::size_t>(_w + 1) * static_cast<std::size_t>(_h + 1);
+        _s.assign(corners * _n, 0.);
+        _counts.clear();
+        bool anyNonFinite = false;
+        Sums row;
+        for (int j = 0; j < _h; ++j) {
+            row.fill(0.);
+            for (int i = 0; i < _w; ++i) {
+                const PIX *p = static_cast<const PIX *>( img.getPixelAddress(_bounds.x1 + i, _bounds.y1 + j) );
+                for (int c = 0; c < _n; ++c) {
+                    const double v = p ? static_cast<double>(p[c]) : 0.;
+                    if ( OFX::IsNaN(v) || OFX::IsInfinite(v) ) {
+                        anyNonFinite = true; // counted below
+                    } else {
+                        row[c] += v;
+                    }
+                    corner(i + 1, j + 1)[c] = corner(i + 1, j)[c] + row[c];
+                }
+            }
+        }
+        if (anyNonFinite) {
+            buildCounts<PIX>(img);
+        }
+    }
+
+    bool empty() const { return _s.empty() || (_w == 0) || (_h == 0); }
+
+    // the integral over [x1, x2] x [y1, y2] (pixel coordinates) for each component: the parts outside the
+    // image count as 0 (blackOutside) or as the nearest edge pixel (edge repeat). A component whose area
+    // holds a NaN, or both infinities, is NaN; one that holds an infinity is that infinity.
+    Sums integrate(double x1,
+                   double y1,
+                   double x2,
+                   double y2,
+                   bool blackOutside) const
+    {
+        Sums r = {0., 0., 0., 0.};
+        std::array<Counts, 4> counts = {};
+        const Segments sx = segments(x1, x2, _bounds.x1, _bounds.x2, blackOutside);
+        const Segments sy = segments(y1, y2, _bounds.y1, _bounds.y2, blackOutside);
+        for (int a = 0; a < sx.n; ++a) {
+            for (int b = 0; b < sy.n; ++b) {
+                const Segment &u = sx.s[a];
+                const Segment &v = sy.s[b];
+                const double scale = u.scale * v.scale;
+                const Sums box = boxSums(u.lo, v.lo, u.hi, v.hi);
+                for (int c = 0; c < _n; ++c) {
+                    r[c] += scale * box[c];
+                }
+                if ( !_counts.empty() ) {
+                    addCounts(u.lo, v.lo, u.hi, v.hi, &counts);
+                }
+            }
+        }
+        if ( !_counts.empty() ) {
+            const double inf = std::numeric_limits<double>::infinity();
+            for (int c = 0; c < _n; ++c) {
+                const Counts &k = counts[c];
+                if ( (k[0] > 0) || ( (k[1] > 0) && (k[2] > 0) ) ) {
+                    r[c] = std::numeric_limits<double>::quiet_NaN();
+                } else if (k[1] > 0) {
+                    r[c] = inf;
+                } else if (k[2] > 0) {
+                    r[c] = -inf;
+                }
+            }
+        }
+
+        return r;
+    }
+
+private:
+    using Counts = std::array<std::int64_t, 3>; // NaN, +inf, -inf
+
+    // a part of an interval, in the image: [lo, hi], weighted by scale (an edge pixel stands for the part
+    // of the interval outside the image)
+    struct Segment
+    {
+        double lo;
+        double hi;
+        double scale;
+    };
+    struct Segments
+    {
+        Segment s[3];
+        int n = 0;
+    };
+
+    static Segments segments(double a,
+                             double b,
+                             int lo,
+                             int hi,
+                             bool blackOutside)
+    {
+        Segments r;
+        const double ca = (std::max)(a, static_cast<double>(lo));
+        const double cb = (std::min)(b, static_cast<double>(hi));
+        if (cb > ca) {
+            r.s[r.n++] = Segment{ca, cb, 1.};
+        }
+        if (!blackOutside) {
+            // edge repeat: the part below lo is the first pixel, the part above hi the last one
+            const double below = (std::min)(b, static_cast<double>(lo)) - a;
+            if (below > 0.) {
+                r.s[r.n++] = Segment{static_cast<double>(lo), static_cast<double>(lo) + 1., below};
+            }
+            const double above = b - (std::max)(a, static_cast<double>(hi));
+            if (above > 0.) {
+                r.s[r.n++] = Segment{static_cast<double>(hi) - 1., static_cast<double>(hi), above};
+            }
+        }
+
+        return r;
+    }
+
+    template <class PIX>
+    void buildCounts(const Image &img)
+    {
+        const std::size_t corners = static_cast<std::size_t>(_w + 1) * static_cast<std::size_t>(_h + 1);
+        _counts.assign(corners * _n * 3, 0);
+        std::vector<std::int32_t> row(_n * 3);
+        for (int j = 0; j < _h; ++j) {
+            std::fill(row.begin(), row.end(), 0);
+            for (int i = 0; i < _w; ++i) {
+                const PIX *p = static_cast<const PIX *>( img.getPixelAddress(_bounds.x1 + i, _bounds.y1 + j) );
+                for (int c = 0; c < _n; ++c) {
+                    const double v = p ? static_cast<double>(p[c]) : 0.;
+                    if ( OFX::IsNaN(v) ) {
+                        ++row[c * 3];
+                    } else if ( OFX::IsInfinite(v) ) {
+                        ++row[c * 3 + ( (v > 0.) ? 1 : 2 )];
+                    }
+                    for (int k = 0; k < 3; ++k) {
+                        count(i + 1, j + 1)[c * 3 + k] = count(i + 1, j)[c * 3 + k] + row[c * 3 + k];
+                    }
+                }
+            }
+        }
+    }
+
+    double *corner(int i, int j) { return &_s[ ( static_cast<std::size_t>(j) * (_w + 1) + i ) * _n ]; }
+    const double *corner(int i, int j) const { return &_s[ ( static_cast<std::size_t>(j) * (_w + 1) + i ) * _n ]; }
+    std::int32_t *count(int i, int j) { return &_counts[ ( static_cast<std::size_t>(j) * (_w + 1) + i ) * _n * 3 ]; }
+    const std::int32_t *count(int i, int j) const { return &_counts[ ( static_cast<std::size_t>(j) * (_w + 1) + i ) * _n * 3 ]; }
+
+    // the integral over [x1, X] x [y1, Y], for all components: S interpolated bilinearly, exact for a
+    // piecewise constant image
+    Sums at(double X,
+            double Y) const
+    {
+        const double fx = (std::max)( 0., (std::min)(X - _bounds.x1, static_cast<double>(_w) ) );
+        const double fy = (std::max)( 0., (std::min)(Y - _bounds.y1, static_cast<double>(_h) ) );
+        const int i = (std::min)(static_cast<int>(fx), _w - 1);
+        const int j = (std::min)(static_cast<int>(fy), _h - 1);
+        const double ax = fx - i;
+        const double ay = fy - j;
+        const double *s00 = corner(i, j);
+        const double *s10 = corner(i + 1, j);
+        const double *s01 = corner(i, j + 1);
+        const double *s11 = corner(i + 1, j + 1);
+        Sums r = {0., 0., 0., 0.};
+        for (int c = 0; c < _n; ++c) {
+            r[c] = s00[c] + ax * (s10[c] - s00[c]) + ay * (s01[c] - s00[c]) + ax * ay * (s11[c] - s10[c] - s01[c] + s00[c]);
+        }
+
+        return r;
+    }
+
+    Sums boxSums(double x1,
+                 double y1,
+                 double x2,
+                 double y2) const
+    {
+        const Sums a = at(x2, y2);
+        const Sums b = at(x1, y2);
+        const Sums c = at(x2, y1);
+        const Sums d = at(x1, y1);
+        Sums r = {0., 0., 0., 0.};
+        for (int k = 0; k < _n; ++k) {
+            r[k] = a[k] - b[k] - c[k] + d[k];
+        }
+
+        return r;
+    }
+
+    // adds the non-finite pixels that [x1, x2] x [y1, y2] overlaps, per component
+    void addCounts(double x1,
+                   double y1,
+                   double x2,
+                   double y2,
+                   std::array<Counts, 4> *counts) const
+    {
+        const int i1 = (std::max)(0, (std::min)(_w, static_cast<int>( std::floor(x1 - _bounds.x1) ) ) );
+        const int i2 = (std::max)(0, (std::min)(_w, static_cast<int>( std::ceil(x2 - _bounds.x1) ) ) );
+        const int j1 = (std::max)(0, (std::min)(_h, static_cast<int>( std::floor(y1 - _bounds.y1) ) ) );
+        const int j2 = (std::max)(0, (std::min)(_h, static_cast<int>( std::ceil(y2 - _bounds.y1) ) ) );
+        const std::int32_t *a = count(i2, j2);
+        const std::int32_t *b = count(i1, j2);
+        const std::int32_t *c = count(i2, j1);
+        const std::int32_t *d = count(i1, j1);
+        for (int k = 0; k < _n; ++k) {
+            for (int t = 0; t < 3; ++t) {
+                const int q = k * 3 + t;
+                (*counts)[k][t] += static_cast<std::int64_t>(a[q]) - b[q] - c[q] + d[q];
+            }
+        }
+    }
+
+    OfxRectI _bounds = {0, 0, 0, 0};
+    int _n = 0;
+    int _w = 0;
+    int _h = 0;
+    std::vector<double> _s;
+    std::vector<std::int32_t> _counts; // empty if the image has no non-finite pixel
+};
+
+// The summed-area table of a render call's source image, built the first time that a pixel needs it
+// (a strided separable blur, or the Box filter with a blur), from any of the rendering threads (CP.110).
+template <class PIX, int nComponents>
+class LazySummedAreaTable
+{
+public:
+    // the image of the table: set once, before rendering (DistortionProcessor::preProcess)
+    void bind(const Image *img) { _img = img; }
+
+    // the table of the bound image (built on the first call; empty if there is no image)
+    const SummedAreaTable& get()
+    {
+        std::call_once(_once, [this]() {
+            if (_img) {
+                _sat.build<PIX, nComponents>(*_img);
+            }
+        });
+
+        return _sat;
+    }
+
+private:
+    const Image *_img = nullptr;
+    std::once_flag _once;
+    SummedAreaTable _sat;
+};
+
+// the mean of the source over [x1, x2] x [y1, y2] (see SummedAreaTable::integrate)
+static SummedAreaTable::Sums
+areaMean(const SummedAreaTable &sat,
+         int nComponents,
+         double x1,
+         double y1,
+         double x2,
+         double y2,
+         bool blackOutside)
+{
+    SummedAreaTable::Sums r = sat.integrate(x1, y1, x2, y2, blackOutside);
+    const double area = (x2 - x1) * (y2 - y1);
+    for (int c = 0; c < nComponents; ++c) {
+        r[c] /= area;
+    }
+
+    return r;
+}
 
 // The "filter" and "clamp" template parameters allow filter-specific optimization
 // by the compiler, using the same generic code for all filters.
@@ -934,14 +1307,14 @@ private:
 
     const PIX * getPix(unsigned channel,
                        int x,
-                       int y)
+                       int y) const
     {
         return (const PIX *)  (_planeChannels[channel].img ? _planeChannels[channel].img->getPixelAddress(x, y) : 0);
     }
 
     double getVal(unsigned channel,
                   const PIX* p,
-                  const PIX* pp)
+                  const PIX* pp) const
     {
         if (!_planeChannels[channel].img) {
             return _planeChannels[channel].fillZero ? 0. : 1.;
@@ -963,8 +1336,414 @@ private:
         }
     }
 
+    void preProcess() OVERRIDE FINAL
+    {
+        _sat.bind(_srcImg); // before the rendering threads
+    }
+
     void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL;
+
+    // version 3: the summed-area table of the source, built by the first pixel that needs it
+    LazySummedAreaTable<PIX, nComponents> _sat;
 };
+
+// The derivatives of the source position (x, y) over the output position (X, Y): its columns (xx, yx)
+// and (xy, yy) are the source footprints of the output pixel's sides along X and Y.
+struct Jacobian
+{
+    double xx, xy; // dx/dX, dx/dY
+    double yx, yy; // dy/dX, dy/dY
+};
+
+// the Jacobian of a composition: a(b(X)), where a is the Jacobian of a and b the one of b
+static Jacobian
+composeJacobians(const Jacobian &a,
+                 const Jacobian &b)
+{
+    const Jacobian j = {
+        a.xx * b.xx + a.xy * b.yx, a.xx * b.xy + a.xy * b.yy,
+        a.yx * b.xx + a.yy * b.yx, a.yx * b.xy + a.yy * b.yy
+    };
+
+    return j;
+}
+
+// Add blur (in source pixels) to the size of the source area sampled for an output pixel: blurX is added to
+// the length of the footprint's side along x, blurY to the one along y (version 2: the same blur, in
+// pixels along x; version 3 with the Box filter: the blur in square pixels). A side of zero length becomes
+// that long, along the source x or y axis. The blurs are clamped to [0, maxBlur] (a NaN blur is 0): a huge
+// or infinite blur (e.g. unpremultiplied by a tiny alpha) would give an infinite or NaN footprint, and a
+// footprint far larger than the source only costs time.
+static Jacobian
+addBlurToFootprint(const Jacobian &j,
+                   double blurX,
+                   double blurY,
+                   double maxBlur)
+{
+    blurX = (blurX > 0.) ? (std::min)(blurX, maxBlur) : 0.; // also for a NaN blur
+    blurY = (blurY > 0.) ? (std::min)(blurY, maxBlur) : 0.;
+    if ( (blurX == 0.) && (blurY == 0.) ) {
+        return j;
+    }
+    Jacobian r = j;
+    const double nx = std::sqrt(j.xx * j.xx + j.yx * j.yx);
+    if (nx > 0.) {
+        const double k = (nx + blurX) / nx;
+        r.xx *= k;
+        r.yx *= k;
+    } else {
+        r.xx = blurX;
+        r.yx = 0.;
+    }
+    const double ny = std::sqrt(j.xy * j.xy + j.yy * j.yy);
+    if (ny > 0.) {
+        const double k = (ny + blurY) / ny;
+        r.xy *= k;
+        r.yy *= k;
+    } else {
+        r.xy = 0.;
+        r.yy = blurY;
+    }
+
+    return r;
+}
+
+// The separable blur of IDistort and STMap version 3 (the Blur Channel). The output pixel is the
+// source filtered by a separable kernel: the filter's continuous kernel, stretched to wx source pixels
+// along x and wy along y (the extent of the footprint, at least 1 pixel, plus the blur), and normalized.
+// With a width of 1 pixel it is the filter's ordinary interpolation, so the output is continuous as the
+// blur goes to 0.
+
+// the largest blur, in pixels (for an infinite source RoD)
+constexpr double kMaxBlurPixels = 1e5;
+
+// the BC-spline family (Mitchell and Netravali, 1988), for |t| < 2
+static double
+bcSpline(double B,
+         double C,
+         double t)
+{
+    if (t < 1.) {
+        return ( (12. - 9. * B - 6. * C) * t * t * t + (-18. + 12. * B + 6. * C) * t * t + (6. - 2. * B) ) / 6.;
+    }
+    if (t < 2.) {
+        return ( (-B - 6. * C) * t * t * t + (6. * B + 30. * C) * t * t + (-12. * B - 48. * C) * t + (8. * B + 24. * C) ) / 6.;
+    }
+
+    return 0.;
+}
+
+// cubic convolution with parameter a (Keys, 1981), for |t| < 2
+static double
+cubicConvolution(double a,
+                 double t)
+{
+    if (t < 1.) {
+        return ( (a + 2.) * t - (a + 3.) ) * t * t + 1.;
+    }
+    if (t < 2.) {
+        return ( ( (t - 5.) * t + 8. ) * t - 4. ) * a;
+    }
+
+    return 0.;
+}
+
+// the continuous kernel of a filter at |t| (in pixels at scale 1)
+static double
+filterKernel(FilterEnum filter,
+             double t)
+{
+    t = std::abs(t);
+    switch (filter) {
+    case eFilterBilinear:
+        return (t < 1.) ? (1. - t) : 0.;
+    case eFilterCubic:
+        return (t < 1.) ? ( (2. * t - 3.) * t * t + 1. ) : 0.;
+    case eFilterKeys:
+        return cubicConvolution(-0.5, t);
+    case eFilterSimon:
+        return cubicConvolution(-0.75, t);
+    case eFilterRifman:
+        return cubicConvolution(-1., t);
+    case eFilterMitchell:
+        return bcSpline(1. / 3., 1. / 3., t);
+    case eFilterParzen:
+        return bcSpline(1., 0., t);
+    case eFilterNotch:
+        return bcSpline(1.5, -0.25, t);
+    default:
+        return (t < 0.5) ? 1. : 0.;
+    }
+}
+
+
+// a cell of the strided separable blur along one axis: [lo, hi) in pixels, and its weight
+struct CellSpan
+{
+    double lo;
+    double hi;
+    double weight;
+};
+
+// The weights of the separable blur along one axis: pixel first + n * stride has weight weights[n]
+// (cells: the cells read with a stride, reused from pixel to pixel).
+struct SeparableWeights
+{
+    int first = 0;
+    int stride = 1;
+    std::vector<double> weights;
+    std::vector<CellSpan> cells;
+};
+
+// the weights for a sample at c (pixel i covers [i, i+1), its center is i + 0.5) and a kernel width
+// w >= 1 (in pixels), normalized; the kernel is evaluated at (i + 0.5 - c) / w
+static void
+separableWeights(FilterEnum filter,
+                 double c,
+                 double w,
+                 SeparableWeights *sw)
+{
+    // the kernel's support, in pixels: the pixel centers strictly inside it have a non-zero weight
+    const double radius = filterKernelRadius(filter) * w;
+    const int i0 = static_cast<int>( std::floor(c - 0.5 - radius) ) + 1;
+    const int i1 = static_cast<int>( std::ceil(c - 0.5 + radius) ) - 1;
+    const int n = (std::max)(1, i1 - i0 + 1);
+    sw->stride = (n + kSeparableBlurMaxTaps - 1) / kSeparableBlurMaxTaps;
+    // with a stride, center the taps in the support
+    sw->first = i0 + ( (n - 1) % sw->stride ) / 2;
+    sw->weights.clear();
+    double sum = 0.;
+    for (int i = sw->first; i <= i1; i += sw->stride) {
+        const double k = filterKernel(filter, (i + 0.5 - c) / w);
+        sw->weights.push_back(k);
+        sum += k;
+    }
+    if ( sw->weights.empty() || (sum == 0.) ) {
+        // cannot happen for w >= 1 (the nearest pixel center is within 0.5 pixel), but be safe: the
+        // pixel that contains c
+        sw->first = static_cast<int>( std::floor(c) );
+        sw->stride = 1;
+        sw->weights.assign(1, 1.);
+
+        return;
+    }
+    for (double &k : sw->weights) {
+        k /= sum;
+    }
+}
+
+// the separable blur of the source at (sx, sy), with kernel widths (wx, wy) >= 1: transparent black
+// outside the source (blackOutside), or the nearest edge pixel. With a stride (a wide kernel), each tap is
+// the mean of its stride x stride cell, centred on the tap's pixel center (where its weight is taken), from
+// the summed-area table (built, the first time, if a stride is needed), so that a wide blur does not
+// alias. With clamp, a finite result is clamped to the range of the finite values read (taps or cell
+// means, and 0 for the black outside): this differs from the other filters, which clamp to their central
+// neighbours. A non-finite value read gives a non-finite result (NaN, or an infinity), as without clamp,
+// whatever the order of the reads.
+template <class PIX, int nComponents, bool clamp>
+static void
+separableBlurSample(const Image *srcImg,
+                    LazySummedAreaTable<PIX, nComponents> &lazySat,
+                    bool blackOutside,
+                    FilterEnum filter,
+                    double sx,
+                    double sy,
+                    double wx,
+                    double wy,
+                    SeparableWeights &wxs,
+                    SeparableWeights &wys,
+                    float *tmpPix)
+{
+    std::fill(tmpPix, tmpPix + nComponents, 0.f);
+    // far outside (or NaN): transparent black, and no int overflow below
+    if ( !srcImg || !srcImg->getPixelData() ||
+         !(std::abs(sx) < kSeparableBlurMaxPosition) || !(std::abs(sy) < kSeparableBlurMaxPosition) ) {
+        return;
+    }
+    const OfxRectI &b = srcImg->getBounds();
+    if ( (b.x2 <= b.x1) || (b.y2 <= b.y1) ) {
+        return;
+    }
+    separableWeights(filter, sx, wx, &wxs);
+    separableWeights(filter, sy, wy, &wys);
+    // a stride (a kernel wider than kSeparableBlurMaxTaps pixels) always reads cells, from the table
+    const bool cells = (wxs.stride > 1) || (wys.stride > 1);
+    const SummedAreaTable *sat = cells ? &lazySat.get() : nullptr;
+    assert( !cells || !sat->empty() );
+    double acc[4] = {0., 0., 0., 0.};
+    double lo[4] = {0., 0., 0., 0.};
+    double hi[4] = {0., 0., 0., 0.};
+    bool any[4] = {false, false, false, false};
+    // the range of the finite values read, for clamp
+    auto extend = [&](const double *v) {
+        for (int c = 0; c < nComponents; ++c) {
+            if ( OFX::IsNaN(v[c]) || OFX::IsInfinite(v[c]) ) {
+                continue;
+            }
+            lo[c] = any[c] ? (std::min)(lo[c], v[c]) : v[c];
+            hi[c] = any[c] ? (std::max)(hi[c], v[c]) : v[c];
+            any[c] = true;
+        }
+    };
+    const double zero[4] = {0., 0., 0., 0.};
+    if (cells) {
+        // the cells along each axis. The cells entirely outside the image all read the same thing: black
+        // (blackOutside: dropped, they add 0), or the edge (merged into cells just outside, with their
+        // summed weights), so that a kernel much wider than the image reads few cells. The positive, the
+        // negative and the zero weights of a side are merged apart, so that the result is the per-cell sum,
+        // also for a non-finite edge (+inf times weights of both signs, or 0, is NaN).
+        bool blackRead = false;
+        struct Side
+        {
+            double positive = 0.;
+            double negative = 0.;
+            bool anyPositive = false;
+            bool anyNegative = false;
+            bool anyZero = false;
+
+            void add(double w)
+            {
+                if (w > 0.) {
+                    positive += w;
+                    anyPositive = true;
+                } else if (w < 0.) {
+                    negative += w;
+                    anyNegative = true;
+                } else {
+                    anyZero = true;
+                }
+            }
+
+            void push(double lo, double hi, std::vector<CellSpan> *spans) const
+            {
+                if (anyPositive) {
+                    spans->push_back( CellSpan{lo, hi, positive} );
+                }
+                if (anyNegative) {
+                    spans->push_back( CellSpan{lo, hi, negative} );
+                }
+                if (anyZero) {
+                    spans->push_back( CellSpan{lo, hi, 0.} );
+                }
+            }
+        };
+        auto axisCells = [&](SeparableWeights &sw, int lo, int hi) {
+            std::vector<CellSpan> *spans = &sw.cells;
+            spans->clear();
+            Side below;
+            Side above;
+            for (std::size_t n = 0; n < sw.weights.size(); ++n) {
+                const int t = sw.first + static_cast<int>(n) * sw.stride;
+                // the cell of the tap: stride pixels wide, centred on the tap's pixel center
+                const double ca = t + 0.5 - 0.5 * sw.stride;
+                const double cb = ca + sw.stride;
+                if ( (cb <= lo) || (ca >= hi) ) {
+                    if (blackOutside) {
+                        blackRead = true;
+                    } else if (cb <= lo) {
+                        below.add(sw.weights[n]);
+                    } else {
+                        above.add(sw.weights[n]);
+                    }
+                    continue;
+                }
+                spans->push_back( CellSpan{ca, cb, sw.weights[n]} );
+                blackRead = blackRead || ( blackOutside && ( (ca < lo) || (cb > hi) ) );
+            }
+            below.push(lo - 1., static_cast<double>(lo), spans); // the edge, repeated
+            above.push(static_cast<double>(hi), hi + 1., spans);
+        };
+        axisCells(wxs, b.x1, b.x2);
+        axisCells(wys, b.y1, b.y2);
+        const std::vector<CellSpan> &xs = wxs.cells;
+        const std::vector<CellSpan> &ys = wys.cells;
+        if (clamp && blackRead) {
+            extend(zero);
+        }
+        for (const CellSpan &cy : ys) {
+            for (const CellSpan &cx : xs) {
+                const SummedAreaTable::Sums m = areaMean(*sat, nComponents, cx.lo, cy.lo, cx.hi, cy.hi, blackOutside);
+                if (clamp) {
+                    extend( m.data() );
+                }
+                const double wgt = cx.weight * cy.weight;
+                for (int c = 0; c < nComponents; ++c) {
+                    acc[c] += wgt * m[c];
+                }
+            }
+        }
+    } else {
+        for (std::size_t j = 0; j < wys.weights.size(); ++j) {
+            const int ty = wys.first + static_cast<int>(j) * wys.stride;
+            for (std::size_t i = 0; i < wxs.weights.size(); ++i) {
+                const int tx = wxs.first + static_cast<int>(i) * wxs.stride;
+                const double wgt = wxs.weights[i] * wys.weights[j];
+                double v[4] = {0., 0., 0., 0.};
+                int x = tx;
+                int y = ty;
+                const bool outside = (x < b.x1) || (x >= b.x2) || (y < b.y1) || (y >= b.y2);
+                if (outside && blackOutside) {
+                    if (clamp) {
+                        extend(zero); // the black outside is read too
+                    }
+                    continue;
+                }
+                x = (std::max)( b.x1, (std::min)(x, b.x2 - 1) );
+                y = (std::max)( b.y1, (std::min)(y, b.y2 - 1) );
+                const PIX *p = static_cast<const PIX *>( srcImg->getPixelAddress(x, y) );
+                if (!p) {
+                    continue;
+                }
+                for (int c = 0; c < nComponents; ++c) {
+                    v[c] = p[c];
+                }
+                if (clamp) {
+                    extend(v);
+                }
+                for (int c = 0; c < nComponents; ++c) {
+                    acc[c] += wgt * v[c];
+                }
+            }
+        }
+    }
+    for (int c = 0; c < nComponents; ++c) {
+        double v = acc[c];
+        // a non-finite sum stays non-finite (a NaN is not hidden by the comparisons of the clamp)
+        if ( clamp && any[c] && !OFX::IsNaN(v) && !OFX::IsInfinite(v) ) {
+            v = (std::max)( lo[c], (std::min)(v, hi[c]) );
+        }
+        tmpPix[c] = static_cast<float>(v);
+    }
+}
+
+// the version-3 Box filter with a blur: the mean of the source over the bounding box of the footprint J
+// (as ofxsFilterInterpolate2DSuper's Box), from the summed-area table, in O(1) for any blur. Outside the
+// image: black (blackOutside), else the nearest edge pixel (edge repeat, as ofxsFilterIntegrate2d).
+template <class PIX, int nComponents>
+static void
+boxBlurSample(LazySummedAreaTable<PIX, nComponents> &lazySat,
+              bool blackOutside,
+              double sx,
+              double sy,
+              const Jacobian &J,
+              float *tmpPix)
+{
+    std::fill(tmpPix, tmpPix + nComponents, 0.f);
+    const double hx = 0.5 * ( std::abs(J.xx) + std::abs(J.xy) );
+    const double hy = 0.5 * ( std::abs(J.yx) + std::abs(J.yy) );
+    if ( !(hx > 0.) || !(hy > 0.) ||
+         !(std::abs(sx) < kSeparableBlurMaxPosition) || !(std::abs(sy) < kSeparableBlurMaxPosition) ) {
+        return;
+    }
+    const SummedAreaTable &sat = lazySat.get();
+    if ( sat.empty() ) {
+        return;
+    }
+    const SummedAreaTable::Sums m = areaMean(sat, nComponents, sx - hx, sy - hy, sx + hx, sy + hy, blackOutside);
+    for (int c = 0; c < nComponents; ++c) {
+        tmpPix[c] = static_cast<float>(m[c]);
+    }
+}
 
 template <class PIX, int nComponents, int maxValue, DistortionPluginEnum plugin, FilterEnum filter, bool clamp>
 void
@@ -973,7 +1752,7 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
     unused(rs);
     assert(nComponents == 1 || nComponents == 3 || nComponents == 4);
     assert(_dstImg);
-    assert(!(plugin == eDistortionPluginSTMap || plugin == eDistortionPluginIDistort) || _planeChannels.size() == 3);
+    assert(!(plugin == eDistortionPluginSTMap || plugin == eDistortionPluginIDistort) || _planeChannels.size() == eUVChannelCount);
 
     // required for STMap and LensDistortion
     //if (plugin == eDistortionPluginSTMap || _outputMode == eOutputModeSTMap) {
@@ -982,7 +1761,9 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
     int srcy1 = int(std::ceil(_format.y1));
     int srcy2 = int(std::floor(_format.y2));
     //}
+    const double maxBlur = _maxBlur;
     float tmpPix[4] = {0.f, 0.f, 0.f, 0.f};
+    SeparableWeights blurWeightsX, blurWeightsY; // reused by the separable blur
     for (int y = procWindow.y1; y < procWindow.y2; y++) {
         if ( _effect.abort() ) {
             break;
@@ -993,70 +1774,78 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
         for (int x = procWindow.x1; x < procWindow.x2; x++) {
             double sx, sy, sxx, sxy, syx, syy; // the source pixel coordinates and their derivatives
             double a = 1.;
+            double blur = 0.; // added to the size of the sampled source area, in source pixels
 
             switch (plugin) {
             case eDistortionPluginSTMap:
             case eDistortionPluginIDistort: {
-                const PIX *uPix    = getPix(0, x, y  );
-                const PIX *uPix_xn = getPix(0, x + 1, y  );
-                const PIX *uPix_xp = getPix(0, x - 1, y  );
-                const PIX *uPix_yn = getPix(0, x, y + 1);
-                const PIX *uPix_yp = getPix(0, x, y - 1);
+                const PIX *uPix    = getPix(eUVChannelU, x, y  );
+                const PIX *uPix_xn = getPix(eUVChannelU, x + 1, y  );
+                const PIX *uPix_xp = getPix(eUVChannelU, x - 1, y  );
+                const PIX *uPix_yn = getPix(eUVChannelU, x, y + 1);
+                const PIX *uPix_yp = getPix(eUVChannelU, x, y - 1);
                 const PIX *vPix, *vPix_xn, *vPix_xp, *vPix_yn, *vPix_yp;
-                if (_planeChannels[1].img == _planeChannels[0].img) {
+                if (_planeChannels[eUVChannelV].img == _planeChannels[eUVChannelU].img) {
                     vPix    = uPix;
                     vPix_xn = uPix_xn;
                     vPix_xp = uPix_xp;
                     vPix_yn = uPix_yn;
                     vPix_yp = uPix_yp;
                 } else {
-                    vPix =    getPix(1, x, y  );
-                    vPix_xn = getPix(1, x + 1, y  );
-                    vPix_xp = getPix(1, x - 1, y  );
-                    vPix_yn = getPix(1, x, y + 1);
-                    vPix_yp = getPix(1, x, y - 1);
+                    vPix =    getPix(eUVChannelV, x, y  );
+                    vPix_xn = getPix(eUVChannelV, x + 1, y  );
+                    vPix_xp = getPix(eUVChannelV, x - 1, y  );
+                    vPix_yn = getPix(eUVChannelV, x, y + 1);
+                    vPix_yp = getPix(eUVChannelV, x, y - 1);
                 }
                 const PIX *aPix, *aPix_xn, *aPix_xp, *aPix_yn, *aPix_yp;
-                if (_planeChannels[2].img == _planeChannels[0].img) {
+                if (_planeChannels[eUVChannelAlpha].img == _planeChannels[eUVChannelU].img) {
                     aPix = uPix;
                     aPix_xn = uPix_xn;
                     aPix_xp = uPix_xp;
                     aPix_yn = uPix_yn;
                     aPix_yp = uPix_yp;
-                } else if (_planeChannels[2].img == _planeChannels[1].img) {
+                } else if (_planeChannels[eUVChannelAlpha].img == _planeChannels[eUVChannelV].img) {
                     aPix = vPix;
                     aPix_xn = vPix_xn;
                     aPix_xp = vPix_xp;
                     aPix_yn = vPix_yn;
                     aPix_yp = vPix_yp;
                 } else {
-                    aPix =    getPix(2, x, y  );
-                    aPix_xn = getPix(2, x + 1, y  );
-                    aPix_xp = getPix(2, x - 1, y  );
-                    aPix_yn = getPix(2, x, y + 1);
-                    aPix_yp = getPix(2, x, y - 1);
+                    aPix =    getPix(eUVChannelAlpha, x, y  );
+                    aPix_xn = getPix(eUVChannelAlpha, x + 1, y  );
+                    aPix_xp = getPix(eUVChannelAlpha, x - 1, y  );
+                    aPix_yn = getPix(eUVChannelAlpha, x, y + 1);
+                    aPix_yp = getPix(eUVChannelAlpha, x, y - 1);
                 }
                 // compute gradients before wrapping
-                double u = getVal(0, uPix, NULL);
-                double v = getVal(1, vPix, NULL);
-                a = getVal(2, aPix, NULL);
+                double u = getVal(eUVChannelU, uPix, nullptr);
+                double v = getVal(eUVChannelV, vPix, nullptr);
+                a = getVal(eUVChannelAlpha, aPix, nullptr);
                 unpremult(a, &u, &v);
+                if (filter != eFilterImpulse) {
+                    // in full-scale (square, in version 3) pixels: scaled below
+                    blur = getVal(eUVChannelBlur, getPix(eUVChannelBlur, x, y), nullptr);
+                    if ( _unpremultUV && (a != 0.) ) {
+                        blur /= a;
+                    }
+                }
 
                 double ux, uy, vx, vy;
                 {
-                    double u_xn = getVal(0, uPix_xn, uPix);
-                    double u_xp = getVal(0, uPix_xp, uPix);
-                    double u_yn = getVal(0, uPix_yn, uPix);
-                    double u_yp = getVal(0, uPix_yp, uPix);
-                    double v_xn = getVal(1, vPix_xn, vPix);
-                    double v_xp = getVal(1, vPix_xp, vPix);
-                    double v_yn = getVal(1, vPix_yn, vPix);
-                    double v_yp = getVal(1, vPix_yp, vPix);
+                    double u_xn = getVal(eUVChannelU, uPix_xn, uPix);
+                    double u_xp = getVal(eUVChannelU, uPix_xp, uPix);
+                    double u_yn = getVal(eUVChannelU, uPix_yn, uPix);
+                    double u_yp = getVal(eUVChannelU, uPix_yp, uPix);
+                    double v_xn = getVal(eUVChannelV, vPix_xn, vPix);
+                    double v_xp = getVal(eUVChannelV, vPix_xp, vPix);
+                    double v_yn = getVal(eUVChannelV, vPix_yn, vPix);
+                    double v_yp = getVal(eUVChannelV, vPix_yp, vPix);
                     if (_unpremultUV) {
-                        unpremult(getVal(2, aPix_xn, aPix), &u_xn, &v_xn);
-                        unpremult(getVal(2, aPix_xp, aPix), &u_xp, &v_xp);
-                        unpremult(getVal(2, aPix_yn, aPix), &u_yn, &v_yn);
-                        unpremult(getVal(2, aPix_yp, aPix), &u_yp, &v_yp);
+                        unpremult(getVal(eUVChannelAlpha, aPix_xn, aPix), &u_xn, &v_xn);
+                        unpremult(getVal(eUVChannelAlpha, aPix_xp, aPix), &u_xp, &v_xp);
+                        unpremult(getVal(eUVChannelAlpha, aPix_yn, aPix), &u_yn, &v_yn);
+                        unpremult(getVal(eUVChannelAlpha, aPix_yp, aPix), &u_yp, &v_yp);
                     }
                     ux = (u_xn - u_xp) / 2.;
                     vx = (v_xn - v_xp) / 2.;
@@ -1121,16 +1910,26 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
                 break;
             }
             } // switch
-            double Jxx = 1., Jxy = 0., Jyx = 0., Jyy = 1.;
+            // the footprint of the output pixel in the source, before the upstream (concatenated) transform,
+            // in the pixels of the image that this effect sees (the transformed source). Version 2 adds the
+            // blur to it; version 3 blurs with the separable kernel (not with Box, which integrates the
+            // footprint, there the blur is also added to it).
+            Jacobian J = {1., 0., 0., 1.};
+            Jacobian JH = {1., 0., 0., 1.}; // the Jacobian of the inverse upstream transform
+            // the blur along x and y, in pixels at the render scale, in [0, maxBlur] (a negative Blur Scale
+            // or blur value is no blur; NaN too)
+            const double bx = ( (blur > 0.) && (_blurScaleX > 0.) ) ? (std::min)(blur * _blurScaleX, maxBlur) : 0.;
+            const double by = ( (blur > 0.) && (_blurScaleY > 0.) ) ? (std::min)(blur * _blurScaleY, maxBlur) : 0.;
+            const bool blurred = (bx > 0.) || (by > 0.);
+            const bool v3 = (_uvBehaviour == eUVBehaviourV3);
+            const bool separableBlur = v3 && blurred && (filter != eFilterImpulse) && (filter != eFilterBox);
+            const bool boxBlur = v3 && blurred && (filter == eFilterBox) && _srcImg;
+            if (filter != eFilterImpulse) {
+                const Jacobian S = {sxx, sxy, syx, syy};
+                J = separableBlur ? S : addBlurToFootprint(S, bx, by, maxBlur);
+            }
             bool atInfinity = false; // the source position is at infinity: nothing to sample
-            if (_transformIsIdentity) {
-                if (filter != eFilterImpulse) {
-                    Jxx = sxx;
-                    Jxy = sxy;
-                    Jyx = syx;
-                    Jyy = syy;
-                }
-            } else {
+            if (!_transformIsIdentity) {
                 const Matrix3x3 & H = _srcTransformInverse;
                 double transformedx = H(0,0) * sx + H(0,1) * sy + H(0,2);
                 double transformedy = H(1,0) * sx + H(1,1) * sy + H(1,2);
@@ -1144,15 +1943,24 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
                     sx = transformedx / transformedz;
                     sy = transformedy / transformedz;
                     if (filter != eFilterImpulse) {
-                        Jxx = (H(0,0) * transformedz - transformedx * H(2,0)) / (transformedz * transformedz);
-                        Jxy = (H(0,1) * transformedz - transformedx * H(2,1)) / (transformedz * transformedz);
-                        Jyx = (H(1,0) * transformedz - transformedy * H(2,0)) / (transformedz * transformedz);
-                        Jyy = (H(1,1) * transformedz - transformedy * H(2,1)) / (transformedz * transformedz);
+                        // the footprint in the original source: the Jacobian of the inverse upstream
+                        // transform, times the footprint in the transformed source
+                        const double z2 = transformedz * transformedz;
+                        JH.xx = (H(0,0) * transformedz - transformedx * H(2,0)) / z2;
+                        JH.xy = (H(0,1) * transformedz - transformedx * H(2,1)) / z2;
+                        JH.yx = (H(1,0) * transformedz - transformedy * H(2,0)) / z2;
+                        JH.yy = (H(1,1) * transformedz - transformedy * H(2,1)) / z2;
+                        J = composeJacobians(JH, J);
                     }
                 }
             }
-            
-            if (atInfinity) {
+
+            if ( (_uvBehaviour == eUVBehaviourV3) && _unpremultUV && (a == 0.) &&
+                 (plugin == eDistortionPluginSTMap || plugin == eDistortionPluginIDistort) ) {
+                // premultiplied UV with a zero alpha: no UV (version 2 multiplies by the alpha, which also
+                // gives transparent black)
+                std::fill(tmpPix, tmpPix + 4, 0.f);
+            } else if (atInfinity) {
                 // transparent black, as Transform3x3 gives for z == 0 (Transform3x3 also gives black for z < 0,
                 // behind the camera, which this code does not test). Also u = v = 0, with a transparent STMap alpha.
                 std::fill(tmpPix, tmpPix + 4, 0.f);
@@ -1166,11 +1974,27 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
             } else {
                 if (filter == eFilterImpulse) {
                     ofxsFilterInterpolate2D<PIX, nComponents, filter, clamp>(sx, sy, _srcImg, _blackOutside, tmpPix);
+                } else if (boxBlur) {
+                    boxBlurSample<PIX, nComponents>(_sat, _blackOutside, sx, sy, J, tmpPix);
+                } else if (separableBlur) {
+                    // the kernel widths, in source pixels: the extent of the footprint along x and y (the
+                    // bounding box of the output pixel in the source, at least 1 pixel), plus the extent of
+                    // the blur (bx, by in the pixels of the transformed source) through the upstream transform
+                    const double maxWidth = 2 * maxBlur + 1; // a wild UV gradient must not cost hours either
+                    const double wx = (std::min)( (std::max)(1., std::abs(J.xx) + std::abs(J.xy)) +
+                                                  std::abs(JH.xx) * bx + std::abs(JH.xy) * by, maxWidth );
+                    const double wy = (std::min)( (std::max)(1., std::abs(J.yx) + std::abs(J.yy)) +
+                                                  std::abs(JH.yx) * bx + std::abs(JH.yy) * by, maxWidth );
+                    separableBlurSample<PIX, nComponents, clamp>(_srcImg, _sat, _blackOutside, filter, sx, sy,
+                                                                 wx, wy, blurWeightsX, blurWeightsY, tmpPix);
                 } else {
-                    ofxsFilterInterpolate2DSuper<PIX, nComponents, filter, clamp>(sx, sy, Jxx, Jxy, Jyx, Jyy, _srcImg, _blackOutside, tmpPix);
+                    ofxsFilterInterpolate2DSuper<PIX, nComponents, filter, clamp>(sx, sy, J.xx, J.xy, J.yx, J.yy, _srcImg, _blackOutside, tmpPix);
                 }
-                for (unsigned c = 0; c < nComponents; ++c) {
-                    tmpPix[c] *= a;
+                if (_uvBehaviour == eUVBehaviourV2) {
+                    // version 2 multiplies the output by the UV alpha
+                    for (unsigned c = 0; c < nComponents; ++c) {
+                        tmpPix[c] *= a;
+                    }
                 }
             }
             ofxsMaskMix<PIX, nComponents, maxValue, true>(tmpPix, x, y, _srcImg, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
@@ -1227,6 +2051,7 @@ public:
         , _processA(NULL)
         , _uvChannels()
         , _unpremultUV(NULL)
+        , _blurScale(nullptr)
         , _uvOffset(NULL)
         , _uvScale(NULL)
         , _uWrap(NULL)
@@ -1338,9 +2163,10 @@ public:
         _processA = fetchBooleanParam(kParamProcessA);
         assert(_processR && _processG && _processB && _processA);
         if ( (plugin == eDistortionPluginIDistort) || (plugin == eDistortionPluginSTMap) ) {
-            _uvChannels[0] = fetchChoiceParam(kParamChannelU);
-            _uvChannels[1] = fetchChoiceParam(kParamChannelV);
-            _uvChannels[2] = fetchChoiceParam(kParamChannelA);
+            _uvChannels[eUVChannelU] = fetchChoiceParam(kParamChannelU);
+            _uvChannels[eUVChannelV] = fetchChoiceParam(kParamChannelV);
+            _uvChannels[eUVChannelAlpha] = fetchChoiceParam(kParamChannelA);
+            _uvChannels[eUVChannelBlur] = fetchChoiceParam(kParamChannelBlur);
             if (gIsMultiPlaneV1 || gIsMultiPlaneV2) {
 
                 {
@@ -1358,20 +2184,27 @@ public:
                     args.dependsClips.push_back(_uvClip);
                     fetchDynamicMultiplaneChoiceParameter(kParamChannelA, args);
                 }
+                {
+                    FetchChoiceParamOptions args = FetchChoiceParamOptions::createFetchChoiceParamOptionsForInputChannel();
+                    args.dependsClips.push_back(_uvClip);
+                    fetchDynamicMultiplaneChoiceParameter(kParamChannelBlur, args);
+                }
         
                 onAllParametersFetched();
             }
             _unpremultUV = fetchBooleanParam(kParamChannelUnpremultUV);
+            _blurScale = fetchDoubleParam(kParamBlurScale);
             _uvOffset = fetchDouble2DParam(kParamUVOffset);
             _uvScale = fetchDouble2DParam(kParamUVScale);
-            assert(_uvChannels[0] && _uvChannels[1] && _uvChannels[2] && _uvOffset && _uvScale);
+            assert(_uvChannels[eUVChannelU] && _uvChannels[eUVChannelV] && _uvChannels[eUVChannelAlpha] && _uvChannels[eUVChannelBlur] && _unpremultUV &&
+                   _blurScale && _uvOffset && _uvScale);
             if (plugin == eDistortionPluginSTMap) {
                 _uWrap = fetchChoiceParam(kParamWrapU);
                 _vWrap = fetchChoiceParam(kParamWrapV);
                 assert(_uWrap && _vWrap);
             }
         } else {
-            _uvChannels[0] = _uvChannels[1] = _uvChannels[2] = NULL;
+            std::fill(_uvChannels, _uvChannels + eUVChannelCount, nullptr);
         }
 
         /* if (gIsMultiPlane) {
@@ -1576,8 +2409,9 @@ private:
     BooleanParam* _processG;
     BooleanParam* _processB;
     BooleanParam* _processA;
-    ChoiceParam* _uvChannels[3];
+    ChoiceParam* _uvChannels[eUVChannelCount]; // indexed by UVChannelEnum
     BooleanParam* _unpremultUV;
+    DoubleParam* _blurScale;
     Double2DParam *_uvOffset;
     Double2DParam *_uvScale;
     ChoiceParam* _uWrap;
@@ -2361,10 +3195,11 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
         if (gIsMultiPlaneV1 || gIsMultiPlaneV2) {
             BitDepthEnum srcBitDepth = eBitDepthNone;
             std::map<Clip*, std::map<std::string, Image*> > fetchedPlanes;
-            for (int i = 0; i < 3; ++i) {
+            for (int i = 0; i < eUVChannelCount; ++i) {
                 InputPlaneChannel p;
                 p.channelIndex = i;
-                p.fillZero = false;
+                // a missing channel is 1 (opaque) for U, V and Alpha, as before, but 0 (no blur) for Blur
+                p.fillZero = (i == eUVChannelBlur);
                 //if (_uvClip) {
                 Clip* clip = 0;
                 MultiPlane::ImagePlaneDesc plane;
@@ -2412,7 +3247,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
                     // This may happen if the user selected  the hard-coded Alpha channel and the input is RGB
                     if (p.channelIndex >= p.img->getPixelComponentCount()) {
                         p.img = 0;
-                        p.fillZero = p.channelIndex != 3;
+                        p.fillZero = (p.channelIndex != 3) || (i == eUVChannelBlur);
                     }
                 }
 
@@ -2424,20 +3259,25 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
             InputChannelEnum uChannel = eInputChannelR;
             InputChannelEnum vChannel = eInputChannelG;
             InputChannelEnum aChannel = eInputChannelA;
-            if (_uvChannels[0]) {
-                uChannel = (InputChannelEnum)_uvChannels[0]->getValueAtTime(time);
+            InputChannelEnum blurChannel = eInputChannel0;
+            if (_uvChannels[eUVChannelU]) {
+                uChannel = static_cast<InputChannelEnum>( _uvChannels[eUVChannelU]->getValueAtTime(time) );
             }
-            if (_uvChannels[1]) {
-                vChannel = (InputChannelEnum)_uvChannels[1]->getValueAtTime(time);
+            if (_uvChannels[eUVChannelV]) {
+                vChannel = static_cast<InputChannelEnum>( _uvChannels[eUVChannelV]->getValueAtTime(time) );
             }
-            if (_uvChannels[2]) {
-                aChannel = (InputChannelEnum)_uvChannels[2]->getValueAtTime(time);
+            if (_uvChannels[eUVChannelAlpha]) {
+                aChannel = static_cast<InputChannelEnum>( _uvChannels[eUVChannelAlpha]->getValueAtTime(time) );
+            }
+            if (_uvChannels[eUVChannelBlur]) {
+                blurChannel = static_cast<InputChannelEnum>( _uvChannels[eUVChannelBlur]->getValueAtTime(time) );
             }
 
             Image* uv = NULL;
             if ( ( ( (uChannel != eInputChannel0) && (uChannel != eInputChannel1) ) ||
                   ( (vChannel != eInputChannel0) && (vChannel != eInputChannel1) ) ||
-                  ( (aChannel != eInputChannel0) && (aChannel != eInputChannel1) ) ) &&
+                  ( (aChannel != eInputChannel0) && (aChannel != eInputChannel1) ) ||
+                  ( (blurChannel != eInputChannel0) && (blurChannel != eInputChannel1) ) ) &&
                 ( _uvClip && _uvClip->isConnected() ) ) {
                 uv =  _uvClip->fetchImage(time);
             }
@@ -2478,6 +3318,14 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
                 a.fillZero = (a.channelIndex >= 0) ? false : !(aChannel == eInputChannel1 || aChannel == eInputChannelA);
                 planeChannels.push_back(a);
             }
+            {
+                InputPlaneChannel b;
+                b.channelIndex = getChannelIndex(blurChannel, uvComponents);
+                b.img = (b.channelIndex >= 0) ? uv : nullptr;
+                // a missing channel (e.g. A of an RGB or disconnected UV input) is no blur; 1 only for the constant 1
+                b.fillZero = (b.channelIndex >= 0) ? false : (blurChannel != eInputChannel1);
+                planeChannels.push_back(b);
+            }
         }
     } // if (_uvClip)"
 
@@ -2506,12 +3354,35 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
     bool processB = _processB->getValueAtTime(time);
     bool processA = _processA->getValueAtTime(time);
     bool unpremultUV = false;
+    const UVBehaviourEnum uvBehaviour = (_majorVersion >= kPluginVersionUVSquarePixels) ? eUVBehaviourV3 : eUVBehaviourV2;
+    double blurScaleX = 0., blurScaleY = 0.;
+    double maxBlur = 1.;
+    const double dstPar = _dstClip->getPixelAspectRatio();
+    const double par = (dstPar > 0.) ? dstPar : 1.;
     double uScale = 1., vScale = 1.;
     double uOffset = 0., vOffset = 0.;
     WrapEnum uWrap = eWrapClamp;
     WrapEnum vWrap = eWrapClamp;
     if ( (_plugin == eDistortionPluginIDistort) || (_plugin == eDistortionPluginSTMap) ) {
         unpremultUV = _unpremultUV->getValueAtTime(time);
+        // the blur is in full-scale pixels, like the IDistort displacement: in square pixels in version 3
+        // (divided by the pixel aspect ratio along x), in pixels along x in version 2 (which uses the x
+        // render scale along both axes)
+        const double blurScale = _blurScale->getValueAtTime(time);
+        if (uvBehaviour == eUVBehaviourV3) {
+            blurScaleX = blurScale * args.renderScale.x / par;
+            blurScaleY = blurScale * args.renderScale.y;
+        } else {
+            blurScaleX = blurScaleY = blurScale * args.renderScale.x;
+        }
+        // the largest blur: the size of the source RoD, in pixels at the render scale (at least 1, and
+        // finite for an infinite RoD)
+        if ( _srcClip && _srcClip->isConnected() ) {
+            const OfxRectD srcRod = _srcClip->getRegionOfDefinition(time);
+            const double w = (srcRod.x2 - srcRod.x1) * args.renderScale.x / par;
+            const double h = (srcRod.y2 - srcRod.y1) * args.renderScale.y;
+            maxBlur = (std::min)( (std::max)( 1., (std::max)(w, h) ), kMaxBlurPixels );
+        }
         _uvOffset->getValueAtTime(time, uOffset, vOffset);
         _uvScale->getValueAtTime(time, uScale, vScale);
         if (_plugin == eDistortionPluginSTMap) {
@@ -2551,6 +3422,11 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
         // in IDistort, displacement is given in full-scale pixels
         uScale *= args.renderScale.x;
         vScale *= args.renderScale.y;
+        if (uvBehaviour == eUVBehaviourV3) {
+            // U is in square pixels (as tall as a pixel): divide by the pixel aspect ratio to get pixels
+            // along x (version 2 takes U in pixels along x)
+            uScale /= par;
+        }
     }
     OfxRectD format = {0, 0, 1, 1};
     if (_plugin == eDistortionPluginLensDistortion) {
@@ -2585,6 +3461,10 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
                         format,
                         planeChannels,
                         unpremultUV,
+                        uvBehaviour,
+                        blurScaleX,
+                        blurScaleY,
+                        maxBlur,
                         uOffset, vOffset,
                         uScale, vScale,
                         uWrap, vWrap,
@@ -3072,10 +3952,21 @@ DistortionPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
     // ask for full RoD of srcClip
     const OfxRectD& srcRod = _srcClip->getRegionOfDefinition(time);
     rois.setRegionOfInterest(*_srcClip, srcRod);
-    // only ask for the renderWindow (intersected with the RoD) from uvClip
+    // from uvClip, only the render window, one pixel larger (the UV derivatives read the pixels at x+-1 and
+    // y+-1), intersected with the RoD
     if (_uvClip) {
+        const double uvPar = _uvClip->getPixelAspectRatio();
+        OfxRectD window = args.regionOfInterest;
+        if ( (args.renderScale.x > 0.) && (args.renderScale.y > 0.) ) {
+            const double dx = ( (uvPar > 0.) ? uvPar : 1. ) / args.renderScale.x; // one pixel, in canonical coordinates
+            const double dy = 1. / args.renderScale.y;
+            window.x1 -= dx;
+            window.x2 += dx;
+            window.y1 -= dy;
+            window.y2 += dy;
+        }
         OfxRectD uvRoI = _uvClip->getRegionOfDefinition(time);
-        Coords::rectIntersection(uvRoI, args.regionOfInterest, &uvRoI);
+        Coords::rectIntersection(uvRoI, window, &uvRoI);
         rois.setRegionOfInterest(*_uvClip, uvRoI);
     }
 }
@@ -4006,6 +4897,29 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
             BooleanParamDescriptor* param = desc.defineBooleanParam(kParamChannelUnpremultUV);
             param->setLabelAndHint(kParamChannelUnpremultUVLabel);
             param->setDefault(false);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        // added in version 2.1 (#303): no blur by default
+        if (gIsMultiPlaneV2) {
+            ChoiceParamDescriptor* param = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clipsForChannels, kParamChannelBlur, kParamChannelBlurLabel);
+            param->setDefault(eInputChannel0);
+        } else {
+            ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamChannelBlur);
+            param->setLabelAndHint(kParamChannelBlurLabel);
+            MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true /*addConstants*/, !gIsMultiPlaneV1 /*addOnlyColorPlane*/);
+            param->setDefault(eInputChannel0);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamBlurScale);
+            param->setLabelAndHint(kParamBlurScaleLabel);
+            param->setDefault(1.);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(0., 10.);
             if (page) {
                 page->addChild(*param);
             }
@@ -4958,12 +5872,18 @@ DistortionPluginFactory<plugin, majorVersion>::createInstance(OfxImageEffectHand
     return new DistortionPlugin(handle, this->getMajorVersion(), plugin);
 }
 
+// version 2 of IDistort and STMap is obsolete (describe() marks it), and keeps its behaviour for old
+// projects: the instance's major version selects it. Each version is a distinct factory class.
+static DistortionPluginFactory<eDistortionPluginIDistort,2> pIDistort2(kPluginIDistortIdentifier, 2, kPluginVersionMinorV2);
 static DistortionPluginFactory<eDistortionPluginIDistort,kPluginVersionMajor> pIDistort(kPluginIDistortIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static DistortionPluginFactory<eDistortionPluginSTMap,2> pSTMap2(kPluginSTMapIdentifier, 2, kPluginVersionMinorV2);
 static DistortionPluginFactory<eDistortionPluginSTMap,kPluginVersionMajor> pSTMap(kPluginSTMapIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-static DistortionPluginFactory<eDistortionPluginLensDistortion,2> pLensDistortion2(kPluginLensDistortionIdentifier, 2, kPluginVersionMinor);
-static DistortionPluginFactory<eDistortionPluginLensDistortion,3> pLensDistortion3(kPluginLensDistortionIdentifier, 3, kPluginVersionMinor);
+static DistortionPluginFactory<eDistortionPluginLensDistortion,2> pLensDistortion2(kPluginLensDistortionIdentifier, 2, kPluginVersionLensDistortionMinor);
+static DistortionPluginFactory<eDistortionPluginLensDistortion,3> pLensDistortion3(kPluginLensDistortionIdentifier, 3, kPluginVersionLensDistortionMinor);
 static DistortionPluginFactory<eDistortionPluginLensDistortion,kPluginVersionLensDistortionMajor> pLensDistortion4(kPluginLensDistortionIdentifier, kPluginVersionLensDistortionMajor, kPluginVersionLensDistortionMinor);
+mRegisterPluginFactoryInstance(pIDistort2)
 mRegisterPluginFactoryInstance(pIDistort)
+mRegisterPluginFactoryInstance(pSTMap2)
 mRegisterPluginFactoryInstance(pSTMap)
 mRegisterPluginFactoryInstance(pLensDistortion2)
 mRegisterPluginFactoryInstance(pLensDistortion3)
