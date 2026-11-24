@@ -48,6 +48,7 @@
 #include <map>
 #include <array>
 #include <cstdint>
+#include <mutex>
 #include <vector>
 #include <algorithm>
 #include <limits>
@@ -157,8 +158,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              Unpremult UV); IDistort's U displacement is in square pixels, divided by the pixel aspect
 //              ratio to give x pixels (it was in x pixels); the blur is in square pixels, and a separable
 //              kernel (the filter's kernel, stretched to the footprint plus the blur) instead of an addition
-//              to the footprint. Version 2.1 (obsolete) keeps the version-2 behaviour, so old projects render
-//              as before without an upstream transform.
+//              to the footprint, except with the Box filter, which still adds the blur to its footprint, and
+//              takes the area mean (a summed-area table), with edge repeat when Black Outside is off. Version
+//              2.1 (obsolete) keeps the version-2 behaviour, so old projects render as before without an
+//              upstream transform.
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 #define kPluginVersionMinorV2 1 // the minor version of the obsolete version 2 (IDistort and STMap)
@@ -982,13 +985,14 @@ filterKernelRadius(FilterEnum filter)
     }
 }
 
-// A summed-area table of the source image, built once per render when it is needed (version 3, with a
-// blur wide enough for strided taps, or with the Box filter): the exact integral of the image (piecewise
-// constant over each pixel) over any rectangle, in O(1). It gives the mean of each cell of the strided
-// separable blur (so that a wide blur does not alias) and the Box filter's area mean for any blur size.
-// Non-finite pixels (NaN, infinite) are 0 in the sums, and counted in a second table: an area that holds
-// one is read pixel by pixel instead (see integrateDirect), so that it gives the same NaN or infinity as
-// the other filters, and does not spoil the other areas. Its memory: (8 x components + 4) bytes per pixel.
+// A summed-area table of the source image, for version 3 with a blur: the exact integral of the image
+// (piecewise constant over each pixel) over any rectangle, in O(1). It gives the mean of each cell of the
+// strided separable blur (so that a wide blur does not alias) and the Box filter's area mean for any blur
+// size. It covers the whole source image, and is built (single-threaded, one pass over the source) the
+// first time a render call needs it: see LazySummedAreaTable. Memory: 8 bytes per component per pixel,
+// plus, only if the image has non-finite pixels, 3 counts per component per pixel (NaN, +inf, -inf).
+// Non-finite pixels are 0 in the sums and counted per component, so that an area that holds one gives NaN
+// or an infinity for that component, in O(1), and does not spoil the other areas or components.
 class SummedAreaTable
 {
 public:
@@ -1004,47 +1008,42 @@ public:
         _h = (std::max)(0, _bounds.y2 - _bounds.y1);
         const std::size_t corners = static_cast<std::size_t>(_w + 1) * static_cast<std::size_t>(_h + 1);
         _s.assign(corners * _n, 0.);
-        _nonFinite.assign(corners, 0);
-        std::vector<double> row(_n);
+        _counts.clear();
+        bool anyNonFinite = false;
+        Sums row;
         for (int j = 0; j < _h; ++j) {
-            std::fill(row.begin(), row.end(), 0.);
-            std::int32_t rowCount = 0;
+            row.fill(0.);
             for (int i = 0; i < _w; ++i) {
                 const PIX *p = static_cast<const PIX *>( img.getPixelAddress(_bounds.x1 + i, _bounds.y1 + j) );
-                bool finite = true;
                 for (int c = 0; c < _n; ++c) {
                     const double v = p ? static_cast<double>(p[c]) : 0.;
-                    if ( (v - v) == 0. ) { // finite (an explicit test: no std::isfinite under -ffast-math)
-                        row[c] += v;
+                    if ( OFX::IsNaN(v) || OFX::IsInfinite(v) ) {
+                        anyNonFinite = true; // counted below
                     } else {
-                        finite = false;
+                        row[c] += v;
                     }
                     corner(i + 1, j + 1)[c] = corner(i + 1, j)[c] + row[c];
                 }
-                rowCount += finite ? 0 : 1;
-                count(i + 1, j + 1) = count(i + 1, j) + rowCount;
             }
+        }
+        if (anyNonFinite) {
+            buildCounts<PIX>(img);
         }
     }
 
     bool empty() const { return _s.empty() || (_w == 0) || (_h == 0); }
 
-    // the integral over [x1, x2] x [y1, y2] (pixel coordinates), the parts outside the image counting as 0
-    // (blackOutside) or as the nearest edge pixel (edge repeat), and whether the area holds a non-finite
-    // pixel (then the sums are not valid: read it with integrateDirect)
-    struct Area
-    {
-        Sums sums;
-        bool nonFinite;
-    };
-
-    Area integrate(double x1,
+    // the integral over [x1, x2] x [y1, y2] (pixel coordinates) for each component: the parts outside the
+    // image count as 0 (blackOutside) or as the nearest edge pixel (edge repeat). A component whose area
+    // holds a NaN, or both infinities, is NaN; one that holds an infinity is that infinity.
+    Sums integrate(double x1,
                    double y1,
                    double x2,
                    double y2,
                    bool blackOutside) const
     {
-        Area r = { {0., 0., 0., 0.}, false };
+        Sums r = {0., 0., 0., 0.};
+        std::array<Counts, 4> counts = {};
         const Segments sx = segments(x1, x2, _bounds.x1, _bounds.x2, blackOutside);
         const Segments sy = segments(y1, y2, _bounds.y1, _bounds.y2, blackOutside);
         for (int a = 0; a < sx.n; ++a) {
@@ -1052,10 +1051,26 @@ public:
                 const Segment &u = sx.s[a];
                 const Segment &v = sy.s[b];
                 const double scale = u.scale * v.scale;
+                const Sums box = boxSums(u.lo, v.lo, u.hi, v.hi);
                 for (int c = 0; c < _n; ++c) {
-                    r.sums[c] += scale * box(u.lo, v.lo, u.hi, v.hi, c);
+                    r[c] += scale * box[c];
                 }
-                r.nonFinite = r.nonFinite || (countBox(u.lo, v.lo, u.hi, v.hi) > 0);
+                if ( !_counts.empty() ) {
+                    addCounts(u.lo, v.lo, u.hi, v.hi, &counts);
+                }
+            }
+        }
+        if ( !_counts.empty() ) {
+            const double inf = std::numeric_limits<double>::infinity();
+            for (int c = 0; c < _n; ++c) {
+                const Counts &k = counts[c];
+                if ( (k[0] > 0) || ( (k[1] > 0) && (k[2] > 0) ) ) {
+                    r[c] = std::numeric_limits<double>::quiet_NaN();
+                } else if (k[1] > 0) {
+                    r[c] = inf;
+                } else if (k[2] > 0) {
+                    r[c] = -inf;
+                }
             }
         }
 
@@ -1063,11 +1078,15 @@ public:
     }
 
 private:
+    using Counts = std::array<std::int64_t, 3>; // NaN, +inf, -inf
+
     // a part of an interval, in the image: [lo, hi], weighted by scale (an edge pixel stands for the part
     // of the interval outside the image)
     struct Segment
     {
-        double lo, hi, scale;
+        double lo;
+        double hi;
+        double scale;
     };
     struct Segments
     {
@@ -1102,15 +1121,40 @@ private:
         return r;
     }
 
+    template <class PIX>
+    void buildCounts(const Image &img)
+    {
+        const std::size_t corners = static_cast<std::size_t>(_w + 1) * static_cast<std::size_t>(_h + 1);
+        _counts.assign(corners * _n * 3, 0);
+        std::vector<std::int32_t> row(_n * 3);
+        for (int j = 0; j < _h; ++j) {
+            std::fill(row.begin(), row.end(), 0);
+            for (int i = 0; i < _w; ++i) {
+                const PIX *p = static_cast<const PIX *>( img.getPixelAddress(_bounds.x1 + i, _bounds.y1 + j) );
+                for (int c = 0; c < _n; ++c) {
+                    const double v = p ? static_cast<double>(p[c]) : 0.;
+                    if ( OFX::IsNaN(v) ) {
+                        ++row[c * 3];
+                    } else if ( OFX::IsInfinite(v) ) {
+                        ++row[c * 3 + ( (v > 0.) ? 1 : 2 )];
+                    }
+                    for (int k = 0; k < 3; ++k) {
+                        count(i + 1, j + 1)[c * 3 + k] = count(i + 1, j)[c * 3 + k] + row[c * 3 + k];
+                    }
+                }
+            }
+        }
+    }
+
     double *corner(int i, int j) { return &_s[ ( static_cast<std::size_t>(j) * (_w + 1) + i ) * _n ]; }
     const double *corner(int i, int j) const { return &_s[ ( static_cast<std::size_t>(j) * (_w + 1) + i ) * _n ]; }
-    std::int32_t &count(int i, int j) { return _nonFinite[ static_cast<std::size_t>(j) * (_w + 1) + i ]; }
-    std::int32_t count(int i, int j) const { return _nonFinite[ static_cast<std::size_t>(j) * (_w + 1) + i ]; }
+    std::int32_t *count(int i, int j) { return &_counts[ ( static_cast<std::size_t>(j) * (_w + 1) + i ) * _n * 3 ]; }
+    const std::int32_t *count(int i, int j) const { return &_counts[ ( static_cast<std::size_t>(j) * (_w + 1) + i ) * _n * 3 ]; }
 
-    // the integral over [x1, X] x [y1, Y]: S interpolated bilinearly, exact for a piecewise constant image
-    double at(double X,
-              double Y,
-              int c) const
+    // the integral over [x1, X] x [y1, Y], for all components: S interpolated bilinearly, exact for a
+    // piecewise constant image
+    Sums at(double X,
+            double Y) const
     {
         const double fx = (std::max)( 0., (std::min)(X - _bounds.x1, static_cast<double>(_w) ) );
         const double fy = (std::max)( 0., (std::min)(Y - _bounds.y1, static_cast<double>(_h) ) );
@@ -1118,35 +1162,56 @@ private:
         const int j = (std::min)(static_cast<int>(fy), _h - 1);
         const double ax = fx - i;
         const double ay = fy - j;
-        const double s00 = corner(i, j)[c];
-        const double s10 = corner(i + 1, j)[c];
-        const double s01 = corner(i, j + 1)[c];
-        const double s11 = corner(i + 1, j + 1)[c];
+        const double *s00 = corner(i, j);
+        const double *s10 = corner(i + 1, j);
+        const double *s01 = corner(i, j + 1);
+        const double *s11 = corner(i + 1, j + 1);
+        Sums r = {0., 0., 0., 0.};
+        for (int c = 0; c < _n; ++c) {
+            r[c] = s00[c] + ax * (s10[c] - s00[c]) + ay * (s01[c] - s00[c]) + ax * ay * (s11[c] - s10[c] - s01[c] + s00[c]);
+        }
 
-        return s00 + ax * (s10 - s00) + ay * (s01 - s00) + ax * ay * (s11 - s10 - s01 + s00);
+        return r;
     }
 
-    double box(double x1,
-               double y1,
-               double x2,
-               double y2,
-               int c) const
+    Sums boxSums(double x1,
+                 double y1,
+                 double x2,
+                 double y2) const
     {
-        return at(x2, y2, c) - at(x1, y2, c) - at(x2, y1, c) + at(x1, y1, c);
+        const Sums a = at(x2, y2);
+        const Sums b = at(x1, y2);
+        const Sums c = at(x2, y1);
+        const Sums d = at(x1, y1);
+        Sums r = {0., 0., 0., 0.};
+        for (int k = 0; k < _n; ++k) {
+            r[k] = a[k] - b[k] - c[k] + d[k];
+        }
+
+        return r;
     }
 
-    // the number of non-finite pixels that [x1, x2] x [y1, y2] overlaps
-    std::int64_t countBox(double x1,
-                          double y1,
-                          double x2,
-                          double y2) const
+    // adds the non-finite pixels that [x1, x2] x [y1, y2] overlaps, per component
+    void addCounts(double x1,
+                   double y1,
+                   double x2,
+                   double y2,
+                   std::array<Counts, 4> *counts) const
     {
         const int i1 = (std::max)(0, (std::min)(_w, static_cast<int>( std::floor(x1 - _bounds.x1) ) ) );
         const int i2 = (std::max)(0, (std::min)(_w, static_cast<int>( std::ceil(x2 - _bounds.x1) ) ) );
         const int j1 = (std::max)(0, (std::min)(_h, static_cast<int>( std::floor(y1 - _bounds.y1) ) ) );
         const int j2 = (std::max)(0, (std::min)(_h, static_cast<int>( std::ceil(y2 - _bounds.y1) ) ) );
-
-        return static_cast<std::int64_t>( count(i2, j2) ) - count(i1, j2) - count(i2, j1) + count(i1, j1);
+        const std::int32_t *a = count(i2, j2);
+        const std::int32_t *b = count(i1, j2);
+        const std::int32_t *c = count(i2, j1);
+        const std::int32_t *d = count(i1, j1);
+        for (int k = 0; k < _n; ++k) {
+            for (int t = 0; t < 3; ++t) {
+                const int q = k * 3 + t;
+                (*counts)[k][t] += static_cast<std::int64_t>(a[q]) - b[q] - c[q] + d[q];
+            }
+        }
     }
 
     OfxRectI _bounds = {0, 0, 0, 0};
@@ -1154,66 +1219,38 @@ private:
     int _w = 0;
     int _h = 0;
     std::vector<double> _s;
-    std::vector<std::int32_t> _nonFinite;
+    std::vector<std::int32_t> _counts; // empty if the image has no non-finite pixel
 };
 
-// the integral over [x1, x2] x [y1, y2] read pixel by pixel (each pixel weighted by its overlap), with the
-// same outside rule as SummedAreaTable::integrate: for the (rare) areas that hold a non-finite pixel, so
-// that a NaN or an infinity gives the same result as the other filters. Bounded to the image (and its
-// edges): the areas here are at most a few cells.
+// The summed-area table of a render call's source image, built the first time that a pixel needs it
+// (a strided separable blur, or the Box filter with a blur), from any of the rendering threads (CP.110).
 template <class PIX, int nComponents>
-static SummedAreaTable::Sums
-integrateDirect(const Image &img,
-                double x1,
-                double y1,
-                double x2,
-                double y2,
-                bool blackOutside)
+class LazySummedAreaTable
 {
-    SummedAreaTable::Sums r = {0., 0., 0., 0.};
-    const OfxRectI &b = img.getBounds();
-    const int i1 = static_cast<int>( std::floor(x1) );
-    const int i2 = static_cast<int>( std::ceil(x2) );
-    const int j1 = static_cast<int>( std::floor(y1) );
-    const int j2 = static_cast<int>( std::ceil(y2) );
-    for (int j = j1; j < j2; ++j) {
-        const double wy = (std::min)(y2, j + 1.) - (std::max)(y1, static_cast<double>(j));
-        if ( !(wy > 0.) || ( blackOutside && ( (j < b.y1) || (j >= b.y2) ) ) ) {
-            continue;
-        }
-        const int y = (std::max)( b.y1, (std::min)(j, b.y2 - 1) );
-        for (int i = i1; i < i2; ++i) {
-            const double wx = (std::min)(x2, i + 1.) - (std::max)(x1, static_cast<double>(i));
-            if ( !(wx > 0.) || ( blackOutside && ( (i < b.x1) || (i >= b.x2) ) ) ) {
-                continue;
-            }
-            const int x = (std::max)( b.x1, (std::min)(i, b.x2 - 1) );
-            const PIX *p = static_cast<const PIX *>( img.getPixelAddress(x, y) );
-            if (p) {
-                for (int c = 0; c < nComponents; ++c) {
-                    r[c] += wx * wy * p[c];
-                }
-            }
-        }
+public:
+    const SummedAreaTable& get(const Image &img)
+    {
+        std::call_once(_once, [this, &img]() { _sat.build<PIX, nComponents>(img); });
+
+        return _sat;
     }
 
-    return r;
-}
+private:
+    std::once_flag _once;
+    SummedAreaTable _sat;
+};
 
-// the mean of the source over [x1, x2] x [y1, y2]: from the table, or pixel by pixel where it holds a
-// non-finite pixel
-template <class PIX, int nComponents>
+// the mean of the source over [x1, x2] x [y1, y2] (see SummedAreaTable::integrate)
 static SummedAreaTable::Sums
 areaMean(const SummedAreaTable &sat,
-         const Image &img,
+         int nComponents,
          double x1,
          double y1,
          double x2,
          double y2,
          bool blackOutside)
 {
-    const SummedAreaTable::Area a = sat.integrate(x1, y1, x2, y2, blackOutside);
-    SummedAreaTable::Sums r = a.nonFinite ? integrateDirect<PIX, nComponents>(img, x1, y1, x2, y2, blackOutside) : a.sums;
+    SummedAreaTable::Sums r = sat.integrate(x1, y1, x2, y2, blackOutside);
     const double area = (x2 - x1) * (y2 - y1);
     for (int c = 0; c < nComponents; ++c) {
         r[c] /= area;
@@ -1287,56 +1324,10 @@ private:
         }
     }
 
-    void preProcess() OVERRIDE FINAL
-    {
-        // version 3: the summed-area table of the source (read-only while rendering), only if it is
-        // needed: with the Box filter and a blur, or with a blur wide enough for strided taps somewhere
-        // in the render window
-        _sat = SummedAreaTable();
-        if ( (_uvBehaviour != eUVBehaviourV3) || (filter == eFilterImpulse) || !_srcImg ||
-             (_planeChannels.size() != eUVChannelCount) || !( (_blurScaleX > 0.) || (_blurScaleY > 0.) ) ) {
-            return;
-        }
-        const double blurMax = (std::min)( maxBlurInWindow() * (std::max)(_blurScaleX, _blurScaleY), _maxBlur );
-        if ( !(blurMax > 0.) ) {
-            return;
-        }
-        // the taps of the widest kernel: 2 x radius x width, the width being at least 1 + the blur
-        const bool strided = 2. * filterKernelRadius(filter) * (1. + blurMax) > kSeparableBlurMaxTaps;
-        if ( (filter == eFilterBox) || strided ) {
-            _sat.build<PIX, nComponents>(*_srcImg);
-        }
-    }
-
-    // the largest blur value read in the render window (divided by the UV alpha with Unpremult UV), or 0
-    double maxBlurInWindow() const
-    {
-        const InputPlaneChannel &bc = _planeChannels[eUVChannelBlur];
-        if (!bc.img) {
-            return bc.fillZero ? 0. : 1.; // the constant 0 or 1
-        }
-        double m = 0.;
-        for (int y = _renderWindow.y1; y < _renderWindow.y2; ++y) {
-            for (int x = _renderWindow.x1; x < _renderWindow.x2; ++x) {
-                double b = getVal(eUVChannelBlur, getPix(eUVChannelBlur, x, y), nullptr);
-                if (_unpremultUV) {
-                    const double a = getVal(eUVChannelAlpha, getPix(eUVChannelAlpha, x, y), nullptr);
-                    if (a != 0.) {
-                        b /= a;
-                    }
-                }
-                if (b > m) {
-                    m = b; // (a NaN is not a blur)
-                }
-            }
-        }
-
-        return m;
-    }
-
     void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL;
 
-    SummedAreaTable _sat;
+    // version 3: the summed-area table of the source, built by the first pixel that needs it
+    LazySummedAreaTable<PIX, nComponents> _sat;
 };
 
 // The derivatives of the source position (x, y) over the output position (X, Y): its columns (xx, yx)
@@ -1517,13 +1508,15 @@ separableWeights(FilterEnum filter,
 // the separable blur of the source at (sx, sy), with kernel widths (wx, wy) >= 1: transparent black
 // outside the source (blackOutside), or the nearest edge pixel. With a stride (a wide kernel), each tap is
 // the mean of its stride x stride cell, centred on the tap's pixel center (where its weight is taken), from
-// the summed-area table sat (if not empty), so that a wide blur does not alias. With clamp, the result is clamped to the range of the values read (taps or cell means,
-// and 0 for the black outside): this differs from the other filters, which clamp to their central
-// neighbours.
+// the summed-area table (built, the first time, if a stride is needed), so that a wide blur does not
+// alias. With clamp, a finite result is clamped to the range of the finite values read (taps or cell
+// means, and 0 for the black outside): this differs from the other filters, which clamp to their central
+// neighbours. A non-finite value read gives a non-finite result (NaN, or an infinity), as without clamp,
+// whatever the order of the reads.
 template <class PIX, int nComponents, bool clamp>
 static void
 separableBlurSample(const Image *srcImg,
-                    const SummedAreaTable &sat,
+                    LazySummedAreaTable<PIX, nComponents> &lazySat,
                     bool blackOutside,
                     FilterEnum filter,
                     double sx,
@@ -1546,18 +1539,24 @@ separableBlurSample(const Image *srcImg,
     }
     separableWeights(filter, sx, wx, &wxs);
     separableWeights(filter, sy, wy, &wys);
-    const bool cells = ( (wxs.stride > 1) || (wys.stride > 1) ) && !sat.empty();
+    // a stride (a kernel wider than kSeparableBlurMaxTaps pixels) always reads cells, from the table
+    const bool cells = (wxs.stride > 1) || (wys.stride > 1);
+    const SummedAreaTable *sat = cells ? &lazySat.get(*srcImg) : nullptr;
+    assert( !cells || !sat->empty() );
     double acc[4] = {0., 0., 0., 0.};
     double lo[4] = {0., 0., 0., 0.};
     double hi[4] = {0., 0., 0., 0.};
-    bool any = false;
-    // the range of the values read, for clamp
+    bool any[4] = {false, false, false, false};
+    // the range of the finite values read, for clamp
     auto extend = [&](const double *v) {
         for (int c = 0; c < nComponents; ++c) {
-            lo[c] = any ? (std::min)(lo[c], v[c]) : v[c];
-            hi[c] = any ? (std::max)(hi[c], v[c]) : v[c];
+            if ( OFX::IsNaN(v[c]) || OFX::IsInfinite(v[c]) ) {
+                continue;
+            }
+            lo[c] = any[c] ? (std::min)(lo[c], v[c]) : v[c];
+            hi[c] = any[c] ? (std::max)(hi[c], v[c]) : v[c];
+            any[c] = true;
         }
-        any = true;
     };
     const double zero[4] = {0., 0., 0., 0.};
     for (std::size_t j = 0; j < wys.weights.size(); ++j) {
@@ -1572,7 +1571,7 @@ separableBlurSample(const Image *srcImg,
                 const double xb = xa + wxs.stride;
                 const double ya = ty + 0.5 - 0.5 * wys.stride;
                 const double yb = ya + wys.stride;
-                const SummedAreaTable::Sums m = areaMean<PIX, nComponents>(sat, *srcImg, xa, ya, xb, yb, blackOutside);
+                const SummedAreaTable::Sums m = areaMean(*sat, nComponents, xa, ya, xb, yb, blackOutside);
                 for (int c = 0; c < nComponents; ++c) {
                     v[c] = m[c];
                 }
@@ -1613,7 +1612,8 @@ separableBlurSample(const Image *srcImg,
     }
     for (int c = 0; c < nComponents; ++c) {
         double v = acc[c];
-        if (clamp && any) {
+        // a non-finite sum stays non-finite (a NaN is not hidden by the comparisons of the clamp)
+        if ( clamp && any[c] && !OFX::IsNaN(v) && !OFX::IsInfinite(v) ) {
             v = (std::max)( lo[c], (std::min)(v, hi[c]) );
         }
         tmpPix[c] = static_cast<float>(v);
@@ -1625,7 +1625,7 @@ separableBlurSample(const Image *srcImg,
 // image: black (blackOutside), else the nearest edge pixel (edge repeat, as ofxsFilterIntegrate2d).
 template <class PIX, int nComponents>
 static void
-boxBlurSample(const SummedAreaTable &sat,
+boxBlurSample(LazySummedAreaTable<PIX, nComponents> &lazySat,
               const Image &srcImg,
               bool blackOutside,
               double sx,
@@ -1636,11 +1636,15 @@ boxBlurSample(const SummedAreaTable &sat,
     std::fill(tmpPix, tmpPix + nComponents, 0.f);
     const double hx = 0.5 * ( std::abs(J.xx) + std::abs(J.xy) );
     const double hy = 0.5 * ( std::abs(J.yx) + std::abs(J.yy) );
-    if ( sat.empty() || !(hx > 0.) || !(hy > 0.) ||
+    if ( !(hx > 0.) || !(hy > 0.) ||
          !(std::abs(sx) < kSeparableBlurMaxPosition) || !(std::abs(sy) < kSeparableBlurMaxPosition) ) {
         return;
     }
-    const SummedAreaTable::Sums m = areaMean<PIX, nComponents>(sat, srcImg, sx - hx, sy - hy, sx + hx, sy + hy, blackOutside);
+    const SummedAreaTable &sat = lazySat.get(srcImg);
+    if ( sat.empty() ) {
+        return;
+    }
+    const SummedAreaTable::Sums m = areaMean(sat, nComponents, sx - hx, sy - hy, sx + hx, sy + hy, blackOutside);
     for (int c = 0; c < nComponents; ++c) {
         tmpPix[c] = static_cast<float>(m[c]);
     }
@@ -1824,7 +1828,7 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
             const bool blurred = (bx > 0.) || (by > 0.);
             const bool v3 = (_uvBehaviour == eUVBehaviourV3);
             const bool separableBlur = v3 && blurred && (filter != eFilterImpulse) && (filter != eFilterBox);
-            const bool boxBlur = v3 && blurred && (filter == eFilterBox) && !_sat.empty();
+            const bool boxBlur = v3 && blurred && (filter == eFilterBox) && _srcImg;
             if (filter != eFilterImpulse) {
                 const Jacobian S = {sxx, sxy, syx, syy};
                 J = separableBlur ? S : addBlurToFootprint(S, bx, by, maxBlur);
@@ -1952,7 +1956,7 @@ public:
         , _processA(NULL)
         , _uvChannels()
         , _unpremultUV(NULL)
-        , _blurScale(NULL)
+        , _blurScale(nullptr)
         , _uvOffset(NULL)
         , _uvScale(NULL)
         , _uWrap(NULL)
@@ -3222,7 +3226,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
             {
                 InputPlaneChannel b;
                 b.channelIndex = getChannelIndex(blurChannel, uvComponents);
-                b.img = (b.channelIndex >= 0) ? uv : NULL;
+                b.img = (b.channelIndex >= 0) ? uv : nullptr;
                 // a missing channel (e.g. A of an RGB or disconnected UV input) is no blur; 1 only for the constant 1
                 b.fillZero = (b.channelIndex >= 0) ? false : (blurChannel != eInputChannel1);
                 planeChannels.push_back(b);
