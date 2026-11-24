@@ -53,9 +53,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 2.0: support multiplane
 // version 2.1: add kParamSetGBAFromR
 // version 3.0: B input is now the default, pass-through when plugin is disabled
-// version 3.1: fix crashes and failed renders in the filter context, and when the default input (B) is disconnected
+// version 3.1: fix crashes and failed renders in the filter context (with the multiplane suites, its channel
+//              choices list the Source channels), and when the default input (B) is disconnected
 // version 4.0: on hosts without the multiplane suites, the A channels read the A input and the B channels the B input
 //              (version 3 swapped them, which is kept so that version 3 projects render the same)
+//              Also: R, G, B from the color plane of an input and A from another plane was taken for an
+//              identity, so the alpha was not written.
+// version 2.2, 3.2: the same identity fix as in 4.0 (the alpha read from another plane was not written)
 #define kPluginVersionMajor 4 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -814,29 +818,28 @@ ShufflePlugin::isIdentityInternal(double time,
         }
         
 
+        // The A choice is written only if the output has an alpha channel (RGBA or Alpha).
+        const int dstComponents = dstPlane.getNumComponents();
+        const bool dstHasAlpha = dstPlane.isColorPlane() && (dstComponents == 4 || dstComponents == 1);
+        const int nChannelsChecked = dstHasAlpha ? 4 : 3;
         int expectedIndex = -1;
-        for (int i = 0; i < 4; ++i) {
+        for (int i = 0; i < nChannelsChecked; ++i) {
             MultiPlane::MultiPlaneEffect::GetPlaneNeededRetCodeEnum stat = getPlaneNeeded(_channelParam[i]->getName(), &data[i].clip, &data[i].plane, &data[i].index);
 
             if (stat != MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedChannelInPlane) {
                 return false;
             }
-            if (!data[i].plane.isColorPlane()) {
-                if (i != 3) {
-                    //This is not the color plane, no identity
-                    return false;
-                } else {
-
-                    //In this case if the A choice is visible, the user either checked "Create alpha" or he/she set it explicitly to 0 or 1
-                    if (data[i].index == 3 && !_channelParam[3]->getIsSecret()) {
-                        return false;
-                    } else {
-                        ///Do not do the checks below
-                        continue;
-                    }
-                }
+            if ( !data[i].plane.isColorPlane() ) {
+                // a channel of another plane is written to the output: no identity, whatever its index in
+                // its plane (the only channel of a one-channel plane has index 0)
+                return false;
             }
-            if (i > 0) {
+            if (i == 0) {
+                if (data[0].index != 0) {
+                    // e.g. R, G, B read G, B, A: the channels are shifted
+                    return false;
+                }
+            } else {
                 if ( (data[i].index != expectedIndex) || (data[i].plane != data[0].plane) ||
                      ( data[i].clip != data[0].clip) ) {
                     return false;
@@ -1919,11 +1922,9 @@ ShufflePluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
     gIsMultiPlanar = false;
 #endif
 
-    // The filter context is not supported with the multiplane suites: the A. and B. channel options
-    // cannot resolve to the single Source clip. Natron and Nuke instantiate Shuffle in the general context.
-    if (!gIsMultiPlanarV1 && !gIsMultiPlanarV2) {
-        desc.addSupportedContext(eContextFilter);
-    }
+    // With the multiplane suites, the channel choices of the filter context list the Source planes only
+    // (see describeInContext()).
+    desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
 } // ShufflePluginFactory::describe
 
@@ -2074,19 +2075,26 @@ ShufflePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &des
         }
     }
 
-    std::vector<std::string> clipsForChannels(2);
-    clipsForChannels[0] = kClipA; //this->getMajorVersion() < 3 ? kClipA : kClipB;
-    clipsForChannels[1] = kClipB; //this->getMajorVersion() < 3 ? kClipB : kClipA;
+    // With the multiplane suites, the options of the channel choices are matched with the clips that the
+    // instance gives (fetchDynamicMultiplaneChoiceParameter): with several clips they have a clip prefix
+    // ("A.", "B."), with one clip they have none. The filter context only has Source, which the instance
+    // gives as its only clip (issue #255): list Source only, so that the options are those of that clip.
+    // The A channels are its first options (R, G, B, A, as in the A.r to A.a options of two clips).
+    const bool channelsFromSourceOnly = (context == eContextFilter) && (gIsMultiPlanarV1 || gIsMultiPlanarV2);
+    const std::vector<std::string> clipsForChannels = channelsFromSourceOnly ?
+        std::vector<std::string>{kOfxImageEffectSimpleSourceClipName} :
+        std::vector<std::string>{kClipA, kClipB};
+    const bool defaultIsA = (this->getMajorVersion() < 3) || channelsFromSourceOnly;
 
     if (gSupportsRGB || gSupportsRGBA) {
         // outputR
         if (gIsMultiPlanarV1 || gIsMultiPlanarV2) {
             ChoiceParamDescriptor* r = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clipsForChannels, kParamOutputR, kParamOutputRLabel, kParamOutputRHint);
-            r->setDefault(this->getMajorVersion() < 3 ? eInputChannelAR : eInputChannelBR);
+            r->setDefault(defaultIsA ? eInputChannelAR : eInputChannelBR);
             ChoiceParamDescriptor* g = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clipsForChannels, kParamOutputG, kParamOutputGLabel, kParamOutputGHint);
-            g->setDefault(this->getMajorVersion() < 3 ? eInputChannelAG : eInputChannelBG);
+            g->setDefault(defaultIsA ? eInputChannelAG : eInputChannelBG);
             ChoiceParamDescriptor* b = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clipsForChannels, kParamOutputB, kParamOutputBLabel, kParamOutputBHint);
-            b->setDefault(this->getMajorVersion() < 3 ? eInputChannelAB : eInputChannelBB);
+            b->setDefault(defaultIsA ? eInputChannelAB : eInputChannelBB);
         } else {
             {
                 ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputR);
@@ -2124,7 +2132,7 @@ ShufflePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &des
     if (gSupportsRGBA || gSupportsAlpha) {
         if (gIsMultiPlanarV1 || gIsMultiPlanarV2) {
             ChoiceParamDescriptor* a = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clipsForChannels, kParamOutputA, kParamOutputALabel, kParamOutputAHint);
-            a->setDefault(this->getMajorVersion() < 3 ? eInputChannelAA : eInputChannelBA);
+            a->setDefault(defaultIsA ? eInputChannelAA : eInputChannelBA);
         } else {
             {
                 ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputA);
@@ -2173,11 +2181,11 @@ ShufflePluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
 
 // Each major version needs its own factory class: FactoryMainEntryHelper stores
 // the plugin UID in a static shared by all objects of the same class.
-static ShufflePluginFactory<2> p2(kPluginIdentifier, 0);
+static ShufflePluginFactory<2> p2(kPluginIdentifier, 2);
 mRegisterPluginFactoryInstance(p2)
 
 // version 3: A and B are swapped on hosts without the multiplane suites (deprecated, kept so that old projects render the same)
-static ShufflePluginFactory<3> p3(kPluginIdentifier, 1);
+static ShufflePluginFactory<3> p3(kPluginIdentifier, 2);
 mRegisterPluginFactoryInstance(p3)
 
 static ShufflePluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
