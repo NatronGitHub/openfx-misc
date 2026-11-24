@@ -97,11 +97,10 @@ jobs:
     # framework. MacPorts (never Homebrew) provides the other tools.
     runs-on: macos-15
     env:
-      # The bundles load on macOS 14 and later (CMakeLists.txt's default
-      # CMAKE_OSX_DEPLOYMENT_TARGET), as the binary releases (release.yml).
-      # No OpenMP: the bundles are deployed (OFX_DEPLOY_BUNDLES, osxDeploy.sh),
-      # and MacPorts' libomp is built for the runner's macOS (minos 15), so bundles with it
-      # would not load on macOS 14.
+      # The bundles target the runner's macOS, except the uploaded ones, which target macOS 14
+      # as the binary releases (release.yml); see "Target the runner's macOS". Deployed (OFX_DEPLOY_BUNDLES, osxDeploy.sh)
+      # and without OpenMP, as the macOS release build: MacPorts' libomp is built for the
+      # runner's macOS (minos 15), so release bundles with it would not load on macOS 14.
       MACOS_OPTIONS: -DOFX_DEPLOY_BUNDLES=ON -DOFX_USE_OPENMP=OFF
     steps:
       - name: Checkout branch
@@ -119,9 +118,22 @@ jobs:
         run: |
           PATH=$(printf '%s' "$PATH" | tr ':' '\n' | grep -v -e '^/opt/homebrew' -e '^/usr/local/' | paste -sd: -)
           echo "PATH=/opt/local/bin:/opt/local/sbin:$PATH" >> "$GITHUB_ENV"
+      - name: Target the runner's macOS
+        # Builds that are not uploaded target the runner's macOS major version (e.g. 15.0 on
+        # macos-15), not CMakeLists.txt's default 14.0. CMake reads MACOSX_DEPLOYMENT_TARGET at
+        # the first configure. Uploaded builds (UPLOAD_ARTIFACTS: manual runs and Natron-*
+        # pre-release tags, offered in README.md as "macOS 14 or later") and the binary releases
+        # (release.yml) keep 14.0.
+        if: env.UPLOAD_ARTIFACTS != 'true'
+        run: |
+          v=$(sw_vers -productVersion)
+          m=${v%%.*}
+          case $m in ''|*[!0-9]*) echo "bad macOS version $v"; exit 1;; esac
+          echo "MACOSX_DEPLOYMENT_TARGET=$m.0" >> "$GITHUB_ENV"
       - name: Show tools
         run: |
           echo "PATH=$PATH"
+          echo "MACOSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET:-(unset: CMakeLists.txt's 14.0)}"
           command -v c++ gsed cmake
           c++ --version
           cmake --version
