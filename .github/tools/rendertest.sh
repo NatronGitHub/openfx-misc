@@ -802,6 +802,16 @@ tests=(
     "KeyMix no A inverted|net.sf.openfx.KeyMix|filter|*|notidentity+mean=0.125,0.25,0.375,0.5||-i A=none -i Source=solid:0.25,0.5,0.75,1 -i Mask=solid:0.5,0.5,0.5,0.5 maskInvert=1"
     "KeyMix inverted out of mask|net.sf.openfx.KeyMix|filter|*|notidentity+mean=1,1,1,1||-i A=solid:1,1,1,1 -i Source=solid:0.25,0.5,0.75,1 -i Mask=file:autocrop.pfm maskInvert=1 --frames 0 --window 100,100,200,200"
     "KeyMix out of mask|net.sf.openfx.KeyMix|filter|*|identity+mean=0.25,0.5,0.75,1||-i A=solid:1,1,1,1 -i Source=solid:0.25,0.5,0.75,1 -i Mask=file:autocrop.pfm --frames 0 --window 100,100,200,200"
+    # KeyMix Bounding Box (issue #278), with autocrop.pfm (64x48, 1/6 white: 512 pixels, opaque) as inputs
+    # and a mask: only the chosen bounding box is rendered. Union: B at (0,0) and A at (100,50) give
+    # the box (0,0)-(164,98), 0.5 * 512 + 0.5 * 512 white in 164 * 98 pixels: 0.0319 (B or A alone
+    # would give 0.0833). B (RGB): 0.5 * A + 0.5 * B = 0.5 + 0.5/6 in the B box. A, with alpha from
+    # B: A in the A box. Where the output is B (no A channel), the RoD is B's whatever the choice:
+    # B in its box, 1/6 (the A RoD, the project frame, would give 0.0012)
+    "KeyMix bbox union|net.sf.openfx.KeyMix|filter|*|tol=0.002+mean=0.0319,0.0319,0.0319,0.1911||-i A=file:autocrop.pfm@100,50 -i Source=file:autocrop.pfm -i Mask=solid:0.5,0.5,0.5,0.5"
+    "KeyMix bbox B|net.sf.openfx.KeyMix|filter|*|mean=0.5833,0.5833,0.5833,1||-i A=solid:1,1,1,1 -i Source=file:autocrop.pfm -i Mask=solid:0.5,0.5,0.5,0.5 bbox=1"
+    "KeyMix bbox A|net.sf.openfx.KeyMix|filter|*|mean=0.1667,0.1667,0.1667,1||-i A=file:autocrop.pfm -i Source=solid:0,0,0,1 -i Mask=solid:1,1,1,1 bbox=2 NatronOfxParamProcessA=0"
+    "KeyMix bbox A no channel|net.sf.openfx.KeyMix|filter|*|identity+mean=0.1667,0.1667,0.1667,1||-i A=solid:1,1,1,1 -i Source=file:autocrop.pfm -i Mask=solid:1,1,1,1 bbox=2 NatronOfxParamProcessR=0 NatronOfxParamProcessG=0 NatronOfxParamProcessB=0 NatronOfxParamProcessA=0"
     # HSVTool (issue #322): the default Output Alpha (Hue, full range) sets alpha to 1, even with Mix
     # 0; Clamp Black (on by default) clamps float images; a gain other than 1 adjusts (saturation
     # 2/3 -> 0.5 here); outside the mask, a non-Source Output Alpha is 0. With Output Alpha = Source,
