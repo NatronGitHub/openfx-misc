@@ -91,7 +91,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamPremultLabel "Premultiply"
 #define kParamPremultHint "Multiply the red, green and blue channels of the Source by the alpha of the shapes before drawing: " \
     "where there are no shapes, they are set to black. " \
-    "With Replace and A also checked, the output alpha is the alpha of the shapes, and the output is premultiplied."
+    "With Replace and A also checked, the output alpha is the alpha of the shapes, and the output is premultiplied. " \
+    "Does nothing on an RGB, XY or Alpha Source: only RGBA has both the RGB and an alpha."
 
 #define kParamReplace "replace"
 #define kParamReplaceLabel "Replace"
