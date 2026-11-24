@@ -10,16 +10,16 @@ knobs and the labels and separators) and the plug-in's params in
 definition order (hostDemo --describe lists them in that order; pages,
 groups and secret params are left out). Names are compared after the
 mapping below (NAMES, then COMMON_NAMES), ignoring case, "_" and "."
-(two knobs whose names differ only so are an error); params that map to the same
-knob (e.g. the four NatronOfxParamProcess* and "channels") count once, at
-the first one. The params common to both sides must be in the same
+(two knobs whose names differ only so are an error); params that map to
+the same knob (e.g. the four NatronOfxParamProcess* and "channels") count
+once, at the first one. The params common to both sides must be in the same
 relative order.
 
 A known difference is a strict expected failure whose reason is the
 GitHub issue that records it (see KNOWN and ISSUES), as in
-test_compatibility.py; the first out-of-order pair must be the one in
-KNOWN. Any other failure (a different pair, a stale mapping, a name
-collision, fewer than two params in common) is a plain failure.
+test_compatibility.py, while the common params keep exactly the order
+recorded in KNOWN. Any other failure (a different order, a stale mapping,
+a name collision, fewer than two params in common) is a plain failure.
 """
 
 import pytest
@@ -158,38 +158,92 @@ NAMES = {
 }
 
 # The known differences: plug-in -> (the GitHub issue that records it, the
-# first out-of-order pair of Nuke knob names: ours has the first before the
-# second).
-_PREMULT_MASK = (377, ("unpremult", "invert_mask"))
+# params common with the Nuke node, as Nuke knob names, in our order). The
+# test is an expected failure only while the common params keep exactly this
+# order, so a new misorder fails; a fixed order passes (a strict XPASS).
 KNOWN = {
-    "net.sf.openfx.AddPlugin": _PREMULT_MASK,
-    "net.sf.openfx.MultiplyPlugin": _PREMULT_MASK,
-    "net.sf.openfx.GammaPlugin": _PREMULT_MASK,
-    "net.sf.openfx.Clamp": _PREMULT_MASK,
-    "net.sf.openfx.GradePlugin": _PREMULT_MASK,
-    "net.sf.openfx.ColorCorrectPlugin": _PREMULT_MASK,
-    "net.sf.openfx.ColorMatrixPlugin": _PREMULT_MASK,
-    "net.sf.openfx.SaturationPlugin": _PREMULT_MASK,
-    "net.sf.openfx.Invert": _PREMULT_MASK,
-    "net.sf.openfx.Log2Lin": _PREMULT_MASK,
-    "net.sf.openfx.PLogLin": _PREMULT_MASK,
-    "net.sf.openfx.Quantize": _PREMULT_MASK,
-    "net.sf.cimg.CImgExpression": _PREMULT_MASK,
-    "net.sf.openfx.MergePlugin": (378, ("bbox", "screen_alpha")),
-    "net.sf.openfx.CopyRectanglePlugin": (379, ("area", "channels")),
-    "net.sf.openfx.KeyerPlugin": (380, ("operation", "invert")),
-    "net.sf.openfx.ConstantPlugin": (381, ("format", "channels")),
-    "net.sf.openfx.ColorWheel": (382, ("area", "channels")),
-    "net.sf.openfx.Ramp": (383, ("type", "p0")),
-    "net.sf.openfx.Radial": (384, ("area", "invert_mask")),
-    "net.sf.openfx.Rectangle": (384, ("area", "invert_mask")),
-    "net.sf.openfx.CornerPinPlugin": (385, ("from1", "transform_matrix")),
-    "net.sf.openfx.IDistort": (386, ("filter", "invert_mask")),
-    "net.sf.openfx.STMap": (386, ("filter", "invert_mask")),
-    "net.sf.openfx.LensDistortion": (387, ("format", "anamorphicSqueeze")),
-    "eu.cimg.EdgeDetect": (388, ("channels", "edgedetector")),
-    "net.sf.cimg.CImgZDefocus": (389, ("focal_point", "center")),
-    "net.sf.openfx.Retime": (390, ("filter", "before")),
+    "net.sf.openfx.AddPlugin": (
+        377,
+        "channels value unpremult invert_mask mix"),
+    "net.sf.openfx.MultiplyPlugin": (
+        377,
+        "channels value unpremult invert_mask mix"),
+    "net.sf.openfx.GammaPlugin": (
+        377,
+        "channels value unpremult invert_mask mix"),
+    "net.sf.openfx.Clamp": (
+        377,
+        "channels minimum minimum_enable maximum maximum_enable "
+        "MinClampTo MinClampTo_enable MaxClampTo MaxClampTo_enable "
+        "unpremult invert_mask mix"),
+    "net.sf.openfx.GradePlugin": (
+        377,
+        "channels blackpoint whitepoint black white multiply add "
+        "gamma reverse black_clamp white_clamp unpremult invert_mask "
+        "mix"),
+    "net.sf.openfx.ColorCorrectPlugin": (
+        377,
+        "channels saturation contrast gamma gain offset "
+        "shadows.saturation shadows.contrast shadows.gamma "
+        "shadows.gain shadows.offset midtones.saturation "
+        "midtones.contrast midtones.gamma midtones.gain "
+        "midtones.offset highlights.saturation highlights.contrast "
+        "highlights.gamma highlights.gain highlights.offset lookup "
+        "unpremult invert_mask mix"),
+    "net.sf.openfx.ColorMatrixPlugin": (
+        377,
+        "channels matrix unpremult invert_mask mix"),
+    "net.sf.openfx.SaturationPlugin": (
+        377,
+        "channels saturation mode unpremult invert_mask mix"),
+    "net.sf.openfx.Invert": (377, "channels unpremult invert_mask mix"),
+    "net.sf.openfx.Log2Lin": (
+        377,
+        "channels operation black white gamma unpremult invert_mask "
+        "mix"),
+    "net.sf.openfx.PLogLin": (
+        377,
+        "channels operation linref logref ngamma density unpremult "
+        "invert_mask mix"),
+    "net.sf.openfx.Quantize": (
+        377,
+        "channels Colors unpremult invert_mask mix"),
+    "net.sf.cimg.CImgExpression": (377, "unpremult invert_mask mix"),
+    "net.sf.openfx.MergePlugin": (
+        378,
+        "operation bbox screen_alpha Achannels Bchannels output "
+        "invert_mask mix"),
+    "net.sf.openfx.CopyRectanglePlugin": (379, "area channels softness mix"),
+    "net.sf.openfx.KeyerPlugin": (380, "operation range invert"),
+    "net.sf.openfx.ConstantPlugin": (381, "format first channels color"),
+    "net.sf.openfx.ColorWheel": (
+        382,
+        "format area channels centerSaturation edgeSaturation "
+        "centerValue edgeValue gamma rotate"),
+    "net.sf.openfx.Ramp": (383, "output type p0 p1 color invert_mask"),
+    "net.sf.openfx.Radial": (
+        384,
+        "output area softness plinear color0 color invert_mask"),
+    "net.sf.openfx.Rectangle": (
+        384,
+        "output area softness color0 color invert_mask"),
+    "net.sf.openfx.CornerPinPlugin": (
+        385,
+        "to1 enable1 to2 enable2 to3 enable3 to4 enable4 copy_from "
+        "from1 from2 from3 from4 set_to_input copy_to "
+        "transform_matrix invert filter clamp black_outside "
+        "motionblur shutter shutteroffset shuttercustomoffset"),
+    "net.sf.openfx.IDistort": (
+        386,
+        "channels uv uv_offset uv_scale filter invert_mask"),
+    "net.sf.openfx.STMap": (386, "channels uv filter invert_mask"),
+    "net.sf.openfx.LensDistortion": (387, "format anamorphicSqueeze filter"),
+    "eu.cimg.EdgeDetect": (388, "channels edgedetector"),
+    "net.sf.cimg.CImgZDefocus": (
+        389,
+        "z_channel math focal_point center dof size max_size layers "
+        "shape blur_dof"),
+    "net.sf.openfx.Retime": (390, "reverse speed filter before after"),
 }
 
 # The short titles of the issues (xfail reasons).
@@ -248,6 +302,12 @@ def _key(name):
 
 def knobs_by_key(knobs):
     """The knobs by their _key.
+
+    Args:
+        knobs: the Nuke node's knob names.
+
+    Returns:
+        A dict from _key(knob) to knob.
 
     Raises:
         ValueError: two knobs have the same key.
@@ -315,8 +375,9 @@ def test_tables():
     for table in (EXCLUDED, NAMES, KNOWN):
         missing = sorted(set(table) - set(PLUGINS))
         assert not missing, "no compatibility case: %s" % missing
-    excluded_known = sorted(set(KNOWN) & set(EXCLUDED))
-    assert not excluded_known, "excluded but KNOWN: %s" % excluded_known
+    for table, name in ((KNOWN, "KNOWN"), (NAMES, "NAMES")):
+        excluded = sorted(set(table) & set(EXCLUDED))
+        assert not excluded, "excluded but in %s: %s" % (name, excluded)
     untitled = sorted(set(i for i, _ in KNOWN.values()) - set(ISSUES))
     assert not untitled, "KNOWN issues without a title: %s" % untitled
 
@@ -366,9 +427,10 @@ def test_param_order(plugin, renderer):
                     % (node_class, " ".join(params), " ".join(knobs)))
     inversion = first_inversion(ours, nuke)
     expected = KNOWN.get(plugin, (None, None))[1]
-    if inversion and expected and inversion != expected:
-        pytest.fail("the first out-of-order pair is %s, %s, not %s, %s "
-                    "(KNOWN)" % (inversion + expected))
+    if inversion and expected and ours != expected.split():
+        pytest.fail("the common params are not in the known order (KNOWN)"
+                    "\n  known:      %s\n  our order:  %s\n  Nuke order: %s"
+                    % (expected, " ".join(ours), " ".join(nuke)))
     assert inversion is None, (
         "%s comes before %s, but after it in %s\n"
         "  common, our order:  %s\n  common, Nuke order: %s\n"
@@ -381,14 +443,19 @@ def test_param_order(plugin, renderer):
 def test_common_names_used(renderer):
     """Every COMMON_NAMES entry maps a param of a plug-in to a knob."""
     unused = set(COMMON_NAMES)
+    missing = []
     for plugin in COMPARED:
         try:
             params, knobs = _orders(renderer, plugin)
         except pytest.skip.Exception:  # the plug-in is not installed
+            missing.append(plugin)
             continue
         keys = set(_key(k) for k in knobs)
         unused -= set(p for p in params if p in COMMON_NAMES
                       and p not in NAMES.get(plugin, {})
                       and _key(COMMON_NAMES[p]) in keys)
+    if unused and missing:
+        pytest.skip("partial install: %s may be used by %s"
+                    % (" ".join(sorted(unused)), " ".join(missing)))
     assert not unused, ("COMMON_NAMES entries that match no param and "
                         "knob: %s" % " ".join(sorted(unused)))

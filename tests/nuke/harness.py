@@ -387,6 +387,9 @@ def pick_context(plugin, contexts, wanted=None):
         wanted: the case's "context", or None for the default: filter,
             else general, else generator, else the first one.
 
+    Returns:
+        The context name.
+
     Raises:
         CaseError: the plug-in has no such context.
     """
