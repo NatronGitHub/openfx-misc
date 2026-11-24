@@ -460,9 +460,13 @@ hostdemo() {
 # that the entry is updated when the bug is fixed. A "debug:" known bug (a
 # failed assertion) is only expected in debug builds.
 # ContactSheet (filter context): hostDemo connects every clip that has no -i, so the inputs
-# after the last one of a test are disconnected with -i N=none
-cs_none2=$(for i in $(seq 2 15); do printf -- ' -i %d=none' "$i"; done)
-cs_none3=$(for i in $(seq 3 15); do printf -- ' -i %d=none' "$i"; done)
+# after the last one of a test are disconnected with -i N=none (Center Rows depends on the last
+# connected input). The clips of inputs 10 to 15 are named 01, 11, 21, 31, 41 and 51: the
+# plug-in's unsignedToString() writes the digits in reverse order (a bug, to be fixed separately,
+# which will rename them here)
+cs_none10="01 11 21 31 41 51"
+cs_none2=$(for i in $(seq 2 9) $cs_none10; do printf -- ' -i %s=none' "$i"; done)
+cs_none3=$(for i in $(seq 3 9) $cs_none10; do printf -- ' -i %s=none' "$i"; done)
 tests=(
     # generators. The byte and short outputs of Constant are sRGB and Rec.709:
     # 1 and 0 are the same in all three.
