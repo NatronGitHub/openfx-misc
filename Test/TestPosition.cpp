@@ -41,7 +41,11 @@
 #define kPluginPositionIdentifier "net.sf.openfx.TestPosition"
 // History:
 // version 1.0: initial version
-// version 1.1: the inverse of a transform matrix with huge entries (e.g. a concatenated source transform) no longer overflows to NaN or 0 (SupportExt #81)
+// version 1.1: the inverse of a transform matrix with huge entries (e.g. a concatenated source transform) no longer overflows to NaN or 0 (SupportExt #81);
+//              also in 1.1 (not released yet): with Mix < 1 and no mask, the region of definition includes the
+//              source (SupportExt#185); directional blur with Motion Blur 0 renders the full transform (SupportExt#184);
+//              the Mask checkbox works on DaVinci Resolve (SupportExt#183); the Shutter can be up to 1000 frames
+//              (SupportExt#205), and a longer one gives an infinite region of definition (SupportExt#207).
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 

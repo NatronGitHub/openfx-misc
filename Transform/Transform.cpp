@@ -55,6 +55,18 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // SupportExt#179, in the current minor versions (not released yet, so no further bump): with the Box
 //              filter, the thin band just outside the source image is black (Black Outside) or the
 //              edge colour, not about 4x the edge value (garbage).
+// SupportExt#183-#185, #205 and #207, also in the current minor versions:
+//              - TransformMasked, DirBlur: with Mix < 1 and no mask, the region of definition
+//                includes the source, which the output blends with (it was clipped to the
+//                transformed region), and the source under the output is fetched (SupportExt#185);
+//              - all three: directional blur with Motion Blur 0 renders the full transform, not
+//                0.999 of it (SupportExt#184);
+//              - TransformMasked, DirBlur: the Mask checkbox works on hosts where the mask always
+//                looks connected (DaVinci Resolve, SupportExt#183);
+//              - Transform, TransformMasked: the Shutter can be up to 1000 frames and the custom
+//                shutter offset +-1000 (they were limited to 2 and +-1, SupportExt#205; part of
+//                openfx-misc#273), and a longer, infinite or NaN shutter gives an infinite region
+//                of definition (SupportExt#207).
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 

@@ -712,6 +712,21 @@ tests=(
     # vramp(center + (p - center) * 32 / k) over k = 1..32 is 0.578 (the old code gave 0.907)
     "GodRays scale 0 Y|net.sf.openfx.GodRays|filter|float|mean=0.578,0.578,0.578,1||-i Source=file:vramp.pfm center=200,150 scale=5,0 --window 280,200,312,232"
     "GodRays scale 0 uniform|net.sf.openfx.GodRays|filter|float|mean=0.578,0.578,0.578,1||-i Source=file:vramp.pfm center=200,150 uniform=1 scale=0,5 --window 280,200,312,232"
+    # SupportExt#185: with Mix < 1 and no mask, the RoD of TransformMasked and CornerPinMasked was the
+    # transformed one, without the source, which the output blends with, and the RoI did not fetch
+    # the source under the output. Translated by 200 (187.5 pixels at the PAR 768/720), the output is
+    # now the whole project: 0.5 (half the source) on the left 187.5 pixels, 1 elsewhere, a mean of
+    # 0.870 (it was 0.824 and 0.857: no left part, and only half the source on part of the right)
+    "TransformMasked mix 0.5|net.sf.openfx.TransformMaskedPlugin|general|*|mean=0.870,0.870,0.870,0.870+tol=0.005||-i Source=solid:1,1,1,1 -i Mask=none translate=200,0 mix=0.5"
+    "CornerPinMasked mix 0.5|net.sf.openfx.CornerPinMaskedPlugin|general|*|mean=0.870,0.870,0.870,0.870+tol=0.005||-i Source=solid:1,1,1,1 -i Mask=none to1=200,0 to2=920,0 to3=920,576 to4=200,576 mix=0.5"
+    # SupportExt#184: DirBlur with Motion Blur 0 rendered 0.999 of the transform (a 337.16 pixel
+    # translation instead of 337.5 here). The mean of the shifted ramp on the window is 162.5/720
+    # (it was 0.22616)
+    "DirBlur motion blur 0|net.sf.openfx.DirBlur|general|float|mean=0.225694,0.225694,0.225694,0.225694+tol=0.0001||-i Source=ramp -i Mask=none translate=360,0 motionBlur=0 --window 400,100,600,200"
+    # SupportExt#205 (part of #273): a shutter longer than 2 frames. The red of the default input is
+    # the time: TimeBlur over [0,4) averages the frames 0, 0.4, ..., 3.6, a mean red of 1.8 minus the
+    # digits (hostDemo does not clamp to the parameter range, so this also passed before #205)
+    "TimeBlur shutter 4|net.sf.openfx.TimeBlur|filter|float|mean=1.797,0,0,1||-i Source=default shutter=4"
     # Rand with density 0 computed 0/0 for its noise level
     "Rand density 0|net.sf.openfx.Noise|general|*|mean=0,0,0,0||-i Source=none density=0"
     "ImageStatistics auto crop seq|net.sf.openfx.ImageStatistics|filter|float|value:autoCropSize=34.133333,16+keys:autoCropBottomLeft=26+keys:autoCropSize=26+keyrange:autoCropSize=0,25||-i Source=file:autocrop.pfm@100,50 -s analyzeSequenceAutoCrop"

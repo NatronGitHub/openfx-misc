@@ -48,6 +48,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // SupportExt#179, in the current minor versions (not released yet, so no further bump): with the Box
 //              filter, the thin band just outside the source image is black (Black Outside) or the
 //              edge colour, not about 4x the edge value (garbage).
+// SupportExt#183 and #185, also in the current minor versions: with Mix < 1 and no mask, the region of
+//              definition includes the source, which the output blends with, and the region of
+//              interest includes the source under the output (SupportExt#185); the Mask checkbox
+//              works on hosts where the mask always looks connected (DaVinci Resolve, SupportExt#183).
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 // 1.1: a Gamma of magnitude below 1e-8 (e.g. 0) interpolates the colors geometrically, the limit of the "gamma"
