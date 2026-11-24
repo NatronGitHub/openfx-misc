@@ -75,19 +75,19 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamColor0 "color0"
 #define kParamColor0Label "Color 0"
-#define kParamColor0Hint "Color to fill the box on top-left of image center and every other row and column."
+#define kParamColor0Hint "Color to fill the box on top-right of image center and every other row and column."
 
 #define kParamColor1 "color1"
 #define kParamColor1Label "Color 1"
-#define kParamColor1Hint "Color to fill the box on top-right of image center and every other row and column."
+#define kParamColor1Hint "Color to fill the box on top-left of image center and every other row and column."
 
 #define kParamColor2 "color2"
 #define kParamColor2Label "Color 2"
-#define kParamColor2Hint "Color to fill the box on bottom-right of image center and every other row and column."
+#define kParamColor2Hint "Color to fill the box on bottom-left of image center and every other row and column."
 
 #define kParamColor3 "color3"
 #define kParamColor3Label "Color 3"
-#define kParamColor3Hint "Color to fill the box on bottom-left of image center and every other row and column."
+#define kParamColor3Hint "Color to fill the box on bottom-right of image center and every other row and column."
 
 #define kParamLineColor "lineColor"
 #define kParamLineColorLabel "Line Color"

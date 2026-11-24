@@ -349,7 +349,9 @@ DistortionModelNuke::DistortionModelNuke(const OfxRectD& format,
 }
 
 
-// Nuke's distortion function, reverse engineered from the resulting images on a checkerboard (and a little science, too)
+// The "Nuke" distortion model. With x = xd - cx, y = yd - cy and r^2 = x^2 + y^2:
+//   xu = x / (1 + (k1*r^2 + k2*r^4 + ax*y^2) / squeeze) + cx
+//   yu = y / (1 + k1*r^2 + k2*r^4 + ay*x^2) + cy
 // this function undistorts positions, but is also used to distort the image.
 // Similar to the function distortNuke in Obq_LensDistortion.h
 static inline void

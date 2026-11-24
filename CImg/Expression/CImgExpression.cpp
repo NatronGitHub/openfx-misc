@@ -310,6 +310,7 @@ public:
     /* Override the clip preferences, we need to say we are setting the frame varying flag */
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL
     {
+        CImgFilterPluginHelperBase::getClipPreferences(clipPreferences); // components (#251)
         clipPreferences.setOutputFrameVarying(true);
         clipPreferences.setOutputHasContinuousSamples(true);
     }
