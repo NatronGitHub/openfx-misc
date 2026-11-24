@@ -789,8 +789,9 @@ tests=(
     "FrameHold Set to Current Frame key|net.sf.openfx.FrameHold|general|float|identity+tol=0.05+mean=7,0,0,1+value:firstFrame=3+keys:firstFrame=3+keyrange:firstFrame=0,20||-s firstFrame@0=3 -s firstFrame@20=3 -s setToCurrentFrame@7 --frames 7"
     "FrameHold Set to Current Frame clamped|net.sf.openfx.FrameHold|general|float|identity+value:firstFrame=25||-s setToCurrentFrame@40"
     # animated and clamped: keys at 0 and 50 (value 3), pressed at t=40: a key at 40 (not at 25) with value
-    # 25, so the render at t=40 is frame 25 (a key at 25 would give about 11.8 at t=40)
-    "FrameHold Set to Current Frame key clamped|net.sf.openfx.FrameHold|general|float|identity+tol=0.05+mean=25,0,0,1+keys:firstFrame=3+keyrange:firstFrame=0,50||-s firstFrame@0=3 -s firstFrame@50=3 -s setToCurrentFrame@40 --frames 40"
+    # 25, so the render at t=40 is frame 25 (a key at 25 would give about 11.8 at t=40); the time drawn in
+    # black makes the mean of frame 25 24.949
+    "FrameHold Set to Current Frame key clamped|net.sf.openfx.FrameHold|general|float|identity+tol=0.005+mean=24.949,0,0,1+keys:firstFrame=3+keyrange:firstFrame=0,50||-s firstFrame@0=3 -s firstFrame@50=3 -s setToCurrentFrame@40 --frames 40"
     # GodRays with gamma 0 computed pow(x, 1/0) of x = 1 up to rounding: the colors were 1 (or
     # infinite); they are now interpolated geometrically from fromColor to toColor
     "GodRays gamma 0|net.sf.openfx.GodRays|filter|float|mean=0.209,0.264,0.310,0.351||-i Source=checker:16 scale=0.7,0.7 fromColor=1,1,1,1 toColor=0.2,0.3,0.4,0.5 gamma=0,0,0,0"
