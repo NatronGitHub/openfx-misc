@@ -54,7 +54,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginName "FrameRangeOFX"
 #define kPluginGrouping "Time"
-#define kPluginDescription "Set the frame range for a clip. Useful in conjunction with AppendClipOFX."
+#define kPluginDescription "Set the frame range for a clip. Useful in conjunction with AppendClipOFX.\n" \
+    "By default (Before and After: Black), frames outside the range render black. To only change the frame range and let the input through, set Before and After to Original."
 #define kPluginIdentifier "net.sf.openfx.FrameRange"
 // History:
 // version 1.0: initial version
@@ -79,8 +80,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamResetLabel "Reset"
 #define kParamResetHint "Resets the frame range to its initial value."
 
-#define kParamBeforeHint "What the plugin should return for frames before the first frame."
-#define kParamAfterHint "What the plugin should return for frames after the last frame."
+#define kParamBeforeHint "What the plugin should return for frames before the first frame. The default, Black, renders those frames black; Original passes the input through, so that only the frame range changes."
+#define kParamAfterHint "What the plugin should return for frames after the last frame. The default, Black, renders those frames black; Original passes the input through, so that only the frame range changes."
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
