@@ -1322,7 +1322,7 @@ RadialPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     // color1
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor1);
-        desc.addClipPreferencesSlaveParam(*param); // its alpha, and the RGB of Color 0: see ShapeDraw::Params::outputIsPremultipliedByShape()
+        desc.addClipPreferencesSlaveParam(*param); // its alpha: see ShapeDraw::Params::outputIsPremultipliedByShape()
         param->setLabel(kParamColor1Label);
         param->setDefault(1., 1., 1., 1. );
         if (page) {
