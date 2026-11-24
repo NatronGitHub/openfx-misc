@@ -44,7 +44,8 @@
 #   has values outside [lo, hi] at the first time (range=lo,hi, normalized like mean=),
 #   takes more than N seconds (maxsec=N: the whole hostDemo run),
 #   does not have the expected maximum value (max=r,g,b,a, as mean=), e.g. the peak
-#   of a blurred impulse, which gives the blur size, or
+#   of a blurred impulse, which gives the blur size, has values outside [lo, hi]
+#   (range=lo,hi), or
 #   is the same image as an input (changed:Clip: the CRC32 of the output
 #   must differ from the one of the input Clip, copied at the same depth by
 #   Invert with no channel to process; NoOp would be simpler, but its debug
@@ -179,6 +180,8 @@ pfm("delta.pfm", 1, 1, lambda x, y, c: 1.)
 # with opaque inputs (#opaque)
 pfm("diffa.pfm", 64, 48, lambda x, y, c: (0.25, 0.5, 0.75)[c])
 pfm("diffb.pfm", 64, 48, lambda x, y, c: (0.5, 0.5, 0.25)[c])
+# kimpulse.pfm: a 64x64 PF, black except a white pixel at (32,32) (the filter kernels, #270)
+pfm("kimpulse.pfm", 64, 64, lambda x, y, c: 1. if (x, y) == (32, 32) else 0.)
 EOF2
 
 # check REPORT DEPTH EXPECT [CLIP=CRC32...]: check the --report JSON file of a
@@ -298,6 +301,12 @@ if out0:
                 if rng is None or len(rng) != 2 or any(abs(a - b) > 1e-9 for a, b in zip(rng, want)):
                     errors.append("time domain %s (%s), expected %s" % (rng, td.get("status"), expect[11:]))
             desc += " timeDomain=%s" % (",".join("%g" % v for v in rng) if rng else "default")
+        elif expect.startswith("range="):
+            # every channel of the output at the first time is within [lo, hi]
+            lo, hi = (float(v) for v in expect[6:].split(","))
+            if min(out0["min"]) < lo or max(out0["max"]) > hi:
+                errors.append("t=0: values from %s to %s, expected all in [%g, %g]" % (out0["min"], out0["max"], lo, hi))
+            desc += " range=%.4g..%.4g" % (min(out0["min"]), max(out0["max"]))
         elif expect == "framesdiffer":
             crcs = [(k.get("output") or {}).get("crc32") for k in renders]
             if len(set(crcs)) != len(crcs):
@@ -737,6 +746,42 @@ tests=(
     # a 64x48 PFM at (100,50): its format (in canonical coordinates, x times the PAR 768/720) is not the project's
     "CornerPin set to input format, file|net.sf.openfx.CornerPinPlugin|filter|float|value:from1=106.666667,50+value:from2=174.933333,50+value:from3=174.933333,98+value:from4=106.666667,98||-i Source=file:autocrop.pfm@100,50 -s setToInputFormat --frames 0"
     "CornerPin set to input rod|net.sf.openfx.CornerPinPlugin|filter|float|value:from1=10,20+value:from2=300,20+value:from3=300,200+value:from4=10,200||-i Source=rod:10,20,300,200 -s setToInputRod --frames 0"
+    # Lanczos4, Lanczos6, Sinc4 (#270): the impulse translated by 0.25 in y (the x weights are 1 and 0),
+    # so each output pixel is one weight of the kernel at d = 0.75, divided by the sum of the
+    # truncated kernel: Lanczos4 -0.08388 0.86861 0.233 -0.01773 (rows 31-34),
+    # Lanczos6 0.03011 -0.13327 0.89277 0.27101 -0.068 0.00738 (rows 30-35), Sinc4 -0.20192 1.00962
+    # 0.33654 -0.14423 (rows 31-34); with Clamp, each 1D pass is clamped to its two nearest pixels
+    "Transform Lanczos4 impulse|net.sf.openfx.TransformPlugin|filter|float|tol=1e-4+mean=0.86861,0.86861,0.86861,1||-i Source=file:kimpulse.pfm translate=0,0.25 filter=Lanczos4 --frames 0 --window 32,32,33,33"
+    "Transform Lanczos4 impulse row 31|net.sf.openfx.TransformPlugin|filter|float|tol=1e-4+mean=-0.08388,-0.08388,-0.08388,1||-i Source=file:kimpulse.pfm translate=0,0.25 filter=Lanczos4 --frames 0 --window 32,31,33,32"
+    "Transform Lanczos6 impulse|net.sf.openfx.TransformPlugin|filter|float|tol=1e-4+mean=0.89277,0.89277,0.89277,1||-i Source=file:kimpulse.pfm translate=0,0.25 filter=Lanczos6 --frames 0 --window 32,32,33,33"
+    "Transform Lanczos6 impulse row 30|net.sf.openfx.TransformPlugin|filter|float|tol=1e-4+mean=0.03011,0.03011,0.03011,1||-i Source=file:kimpulse.pfm translate=0,0.25 filter=Lanczos6 --frames 0 --window 32,30,33,31"
+    "Transform Sinc4 impulse|net.sf.openfx.TransformPlugin|filter|float|tol=1e-4+mean=1.00962,1.00962,1.00962,1||-i Source=file:kimpulse.pfm translate=0,0.25 filter=Sinc4 --frames 0 --window 32,32,33,33"
+    "Transform Sinc4 impulse row 34|net.sf.openfx.TransformPlugin|filter|float|tol=1e-4+mean=-0.14423,-0.14423,-0.14423,1||-i Source=file:kimpulse.pfm translate=0,0.25 filter=Sinc4 --frames 0 --window 32,34,33,35"
+    "Transform Sinc4 clamp impulse|net.sf.openfx.TransformPlugin|filter|float|tol=1e-4+mean=1,1,1,1||-i Source=file:kimpulse.pfm translate=0,0.25 filter=Sinc4 clamp=1 --frames 0 --window 32,32,33,33"
+    "Transform Sinc4 clamp impulse row 31|net.sf.openfx.TransformPlugin|filter|float|tol=1e-4+mean=0,0,0,1||-i Source=file:kimpulse.pfm translate=0,0.25 filter=Sinc4 clamp=1 --frames 0 --window 32,31,33,32"
+    # a constant image stays constant (the weights sum to 1), also through CornerPin, Card3D and Reformat
+    "Transform Lanczos6 rotate solid|net.sf.openfx.TransformPlugin|filter|*|mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 rotate=30 filter=Lanczos6 --frames 0 --window 200,200,400,300"
+    "CornerPin Sinc4 solid|net.sf.openfx.CornerPinPlugin|filter|float|mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 filter=Sinc4 to2=700,30 --frames 0 --window 200,200,400,300"
+    "Card3D Lanczos4 solid|net.sf.openfx.Card3D|filter|float|mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 filter=Lanczos4 cardRotate=0,0,10 --frames 0 --window 300,250,400,300"
+    "Reformat Lanczos6 scale 0.5 solid|net.sf.openfx.Reformat|filter|float|mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 reformatType=Scale reformatScale=0.5,0.5 filter=Lanczos6 --frames 0 --window 100,100,200,200"
+    # Prefilter Downscaling (#270): a 1-pixel checker scaled by 0.4 aliases with the default
+    # supersampling (0.474 to 0.526); with the kernel widened by 2.5, it is uniform grey (0.4996 to 0.5004)
+    "Transform prefilter scale 0.4 checker|net.sf.openfx.TransformPlugin|filter|float|range=0.499,0.501||-i Source=checker:1 scale=0.4,0.4 prefilter=1 --frames 0 --window 300,250,340,290"
+    "Transform no prefilter scale 0.4 checker|net.sf.openfx.TransformPlugin|filter|float|tol=0.005+max=0.5263,0.5263,0.5263,0.5263||-i Source=checker:1 scale=0.4,0.4 --frames 0 --window 300,250,340,290"
+    "Reformat prefilter scale 0.4 checker|net.sf.openfx.Reformat|filter|float|range=0.499,0.501||-i Source=checker:1 reformatType=Scale reformatScale=0.4,0.4 prefilter=1 --frames 0 --window 100,100,140,140"
+    "Transform prefilter tile|net.sf.openfx.TransformPlugin|filter|float|nonconst+tile||-i Source=checker:4 scale=0.3,0.4 rotate=20 filter=Lanczos4 prefilter=1 --frames 0 --window 250,200,450,330"
+    # tiled renders are the same as the full render with the prefilter (the RoI covers the widened
+    # kernel): anisotropic scale and rotation with the PAR of the PAL input, a perspective CornerPin,
+    # DirBlur (always the blurred path), motion blur, Lanczos6 near the image edge, render scale 0.5
+    # (the RoI divides by it), Reformat and Card3D (projective: the RoI takes the 16x cap)
+    "Transform prefilter scale 0.5 tile|net.sf.openfx.TransformPlugin|filter|float|nonconst+tile||-i Source=checker:3 scale=0.3,0.4 rotate=30 filter=Lanczos4 prefilter=1 --scale 0.5 --frames 0 --window 140,110,210,165"
+    "Reformat prefilter tile|net.sf.openfx.Reformat|filter|float|nonconst+tile||-i Source=checker:3 reformatType=Scale reformatScale=0.3,0.45 filter=Lanczos6 prefilter=1 --frames 0 --window 40,40,160,140"
+    "Card3D prefilter tile|net.sf.openfx.Card3D|filter|float|nonconst+tile||-i Source=checker:3 cardUniformScale=0.4 cardRotate=0,25,10 prefilter=1 --frames 0 --window 300,220,420,330"
+    "Transform prefilter rotate scale tile|net.sf.openfx.TransformPlugin|filter|float|nonconst+tile||-i Source=checker:3 scale=0.25,0.6 rotate=45 filter=Cubic prefilter=1 --frames 0 --window 280,220,420,330"
+    "CornerPin prefilter perspective tile|net.sf.openfx.CornerPinPlugin|filter|float|nonconst+tile||-i Source=checker:3 to1=300,200 to2=420,180 to3=460,330 to4=330,300 filter=Lanczos4 prefilter=1 --frames 0 --window 320,210,440,300"
+    "DirBlur prefilter tile|net.sf.openfx.DirBlur|filter|float|nonconst+tile||-i Source=checker:3 scale=0.3,0.3 rotate=20 prefilter=1 --frames 0 --window 280,220,420,330"
+    "Transform prefilter motion blur tile|net.sf.openfx.TransformPlugin|filter|float|nonconst+tile||-i Source=checker:3 -s scale@0=0.3,0.3 -s scale@1=0.2,0.2 -s rotate@0=0 -s rotate@1=10 motionBlur=1 prefilter=1 --frames 0 --window 280,220,420,330"
+    "Transform Lanczos6 edge tile|net.sf.openfx.TransformPlugin|filter|float|nonconst+tile||-i Source=checker:5 translate=3,2.5 rotate=10 filter=Lanczos6 --frames 0 --window 0,0,120,90"
     "CImgBlur scale 0.5|net.sf.cimg.CImgBlur|filter|float|mean=0.497,0.497,0.497,0.497||-i Source=checker:8 -i Mask=none size=5,5 expandRoD=0 --scale 0.5"
     # filter=2: Box (FIR). The default IIR filters have an infinite support, so
     # their tiles differ slightly (up to 0.003) from the full render.

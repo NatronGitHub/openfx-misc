@@ -3511,6 +3511,9 @@ DistortionPlugin::renderInternalForBitDepth(const RenderArguments &args)
         setupAndProcess(fred, args);
         break;
     }
+    case eFilterLanczos4: // not in this plug-in's Filter list (ofxsFilter.h eFilterSetCubic)
+    case eFilterLanczos6:
+    case eFilterSinc4:
     case eFilterCubic: {
         DistortionProcessor<PIX, nComponents, maxValue, plugin, eFilterCubic, false> fred(*this);
         setupAndProcess(fred, args);

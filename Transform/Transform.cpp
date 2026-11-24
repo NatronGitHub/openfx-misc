@@ -74,6 +74,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //                of definition (SupportExt#207).
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+// 1.1 (Transform, TransformMasked, DirBlur) (unreleased, fixed in place): the Lanczos4, Lanczos6 and Sinc4 filters (appended options) and the
+//      Prefilter Downscaling checkbox (after Black Outside, off) (issue #270); the default output is unchanged.
 
 #define kParamSrcClipChanged "srcClipChanged"
 
@@ -468,7 +470,7 @@ TransformPluginFactory::describeInContext(ImageEffectDescriptor &desc,
 
     TransformPluginDescribeInContext(desc, context, page);
 
-    Transform3x3DescribeInContextEnd(desc, context, page, false, Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur);
+    Transform3x3DescribeInContextEnd(desc, context, page, false, Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur, eTransform3x3FilteringSincPrefilter); // opt-in (issue #270)
 
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
@@ -512,7 +514,7 @@ TransformMaskedPluginFactory::describeInContext(ImageEffectDescriptor &desc,
 
     TransformPluginDescribeInContext(desc, context, page);
 
-    Transform3x3DescribeInContextEnd(desc, context, page, true, Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur);
+    Transform3x3DescribeInContextEnd(desc, context, page, true, Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur, eTransform3x3FilteringSincPrefilter); // opt-in (issue #270)
 
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
@@ -556,7 +558,7 @@ DirBlurPluginFactory::describeInContext(ImageEffectDescriptor &desc,
 
     TransformPluginDescribeInContext(desc, context, page);
 
-    Transform3x3DescribeInContextEnd(desc, context, page, true, Transform3x3Plugin::eTransform3x3ParamsTypeDirBlur);
+    Transform3x3DescribeInContextEnd(desc, context, page, true, Transform3x3Plugin::eTransform3x3ParamsTypeDirBlur, eTransform3x3FilteringSincPrefilter); // opt-in (issue #270)
 
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);

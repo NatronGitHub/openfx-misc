@@ -64,6 +64,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              edge colour, not about 4x the edge value (garbage).
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+// 2.1 and 1.2 (unreleased, fixed in place): the Lanczos4, Lanczos6 and Sinc4 filters (appended options) and
+//      the Prefilter Downscaling checkbox (after the filter parameters, off) (issue #270); the default output is unchanged.
 
 #define kParamUseRoD "useRoD"
 #define kParamUseRoDLabel "Use Source RoD"
@@ -1081,7 +1083,10 @@ ReformatPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &de
     }
 
     // filter, clamp, black outside, then Preserve BBox (the order of Foundry's Reformat panel)
-    ofxsFilterDescribeParamsInterpolate2D(desc, page, /*blackOutsideDefault*/ false);
+    ofxsFilterDescribeParamsInterpolate2D(desc, page, /*blackOutsideDefault*/ false, eFilterSetSinc);
+
+    // after the filter parameters (issue #270): off, the supersampling of the previous versions
+    ofxsFilterDescribeParamPrefilter(desc, page);
 
     // Preserve bounding box
     {

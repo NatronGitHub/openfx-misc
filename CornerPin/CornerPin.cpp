@@ -137,6 +137,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //      the inverse of a transform matrix with huge entries (e.g. a concatenated source transform) no longer overflows to NaN or 0 (SupportExt #81)
 // 1.1 and 2.1 (unreleased, fixed in place): new "Set to input format" button (appended), which copies the
 //      input format into the "from" points (issue #270); "Set to input rod" is unchanged.
+// 1.1 and 2.1 (unreleased, fixed in place): the Lanczos4, Lanczos6 and Sinc4 filters (appended options) and the
+//      Prefilter Downscaling checkbox (after Black Outside, off) (issue #270); the default output is unchanged.
 
 #define POINT_SIZE 5
 // Pick tolerance in screen pixels, through kOfxInteractPropPixelScale. As in RectangleInteract and
@@ -1803,7 +1805,7 @@ CornerPinPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &d
 
     CornerPinPluginDescribeInContext(desc, context, page);
 
-    Transform3x3DescribeInContextEnd(desc, context, page, false, Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur);
+    Transform3x3DescribeInContextEnd(desc, context, page, false, Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur, eTransform3x3FilteringSincPrefilter); // opt-in (issue #270)
 
     // srcClipChanged
     {
@@ -1854,7 +1856,7 @@ CornerPinMaskedPluginFactory<majorVersion>::describeInContext(ImageEffectDescrip
 
     CornerPinPluginDescribeInContext(desc, context, page);
 
-    Transform3x3DescribeInContextEnd(desc, context, page, true, Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur);
+    Transform3x3DescribeInContextEnd(desc, context, page, true, Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur, eTransform3x3FilteringSincPrefilter); // opt-in (issue #270)
 
     // srcClipChanged
     {
