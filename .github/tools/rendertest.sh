@@ -665,6 +665,11 @@ tests=(
     # identity, another squeeze is not (issue #326; it tested Squeeze 0)
     "LensDistortion 3DE Anamorphic 4 default|net.sf.openfx.LensDistortion|general|*|identity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 model=6"
     "LensDistortion 3DE Anamorphic 4 squeeze 2|net.sf.openfx.LensDistortion|general|float|notidentity||-i Source=checker:16 model=6 tde4_Squeeze_X=2"
+    # Squeeze-X 0 maps the image to its center column: the RoI (Distort) and the RoD (Undistort)
+    # are zero-wide before their margin, which aborted debug builds (issue #336). Distort: each
+    # output pixel samples the center column of the source, so the output is the solid colour
+    "LensDistortion 3DE Anamorphic 4 squeeze 0|net.sf.openfx.LensDistortion|general|*|notidentity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 model=6 tde4_Squeeze_X=0"
+    "LensDistortion 3DE Anamorphic 4 squeeze 0 undistort|net.sf.openfx.LensDistortion|general|float|notidentity||-i Source=checker:16 model=6 tde4_Squeeze_X=0 direction=1"
     # Rectangle and Radial with Process A on an opaque Source make the Output UnPremultiplied, also
     # with Mix 0 (issue #328)
     "Rectangle opaque mix 0|net.sf.openfx.Rectangle|general|*|notidentity||-i Source=file:convsrc.pfm#opaque -i Mask=none mix=0"
