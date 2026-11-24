@@ -25,7 +25,7 @@
 /*
    TODO: this plugin has to be improved a lot
    - propose a "timewarp" curve (as ParametricParam)
-   - selection of the integration filter (box or nearest) and shutter time
+   - shutter time for the Box filter (it is one output frame)
    - handle fielded input correctly
 
    - retiming based on optical flow computation will be done separately
@@ -36,6 +36,8 @@
 #include <cassert>
 #include <climits> // INT_MAX
 #include <algorithm> // std::sort
+#include <optional>
+#include <vector>
 
 #include "ofxsImageEffect.h"
 #include "ofxsThreadSuite.h"
@@ -56,6 +58,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "RetimeOFX"
 #define kPluginGrouping "Time"
 #define kPluginDescription "Change the timing of the input clip.\n" \
+    "In the general context (e.g. in Natron), the output frame range starts with the input frame range, and lasts as long as it takes to play the input frame range at the given Speed (e.g. twice as long at speed 0.5), forwards, or backwards with Reverse input. It is the input frame range if the speed is 0 or negative, or so small that the output would last more than 1000 times the input or 100000 frames. An animated speed, or one driven by an expression, is integrated numerically over at most that many frames, which may take a moment with slow expressions. On hosts without parametric parameters, the Duration parameter sets it instead.\n" \
     "The Before and After parameters set what is read when the source frame falls outside the frame range of the input clip: the input frame itself (Original), the first or last frame (Hold), transparent black (Black), or frames repeated from the input range (Loop, Bounce).\n" \
     "Before and After refer to the source frame range, not to the output: when the input is played backwards (Reverse input, or a negative speed or warp slope), Before sets what is shown at the end of the output.\n" \
     "See also: https://web.archive.org/web/20220627032808/http://www.opticalenquiry.com/nuke/index.php?title=Retime"
@@ -64,7 +67,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 1.1: a NULL Source image (disconnected input; render is called although isIdentity returned true,
-//              e.g. by hostDemo) renders black instead of crashing (SupportExt copyPixels)
+//              e.g. by hostDemo) renders black instead of crashing (SupportExt copyPixels);
+//              (#309, in the current minor version, not released yet) in the general context, the time
+//              domain (output frame range) follows the speed: it ends where the integrated speed covers the
+//              input frame range (it was the input frame range at any speed), except with the Duration
+//              parameter (hosts without parametric parameters), which still sets it. In old projects, this
+//              also changes what the nodes downstream see as their input frame range (e.g. Write,
+//              FrameRange, FrameHold, the Before/After of another Retime). The Box filter
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -85,25 +94,29 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamDuration "duration"
 #define kParamDurationLabel "Duration"
-#define kParamDurationHint "How long the output clip should be, as a proportion of the input clip's length."
+#define kParamDurationHint "How long the output clip should be, as a proportion of the input clip's length. Only on hosts without parametric parameters (no Warp curve), where it sets the output frame range: the speed is not used for it."
 
 #define kParamFilter "filter"
 #define kParamFilterLabel "Filter"
 #define kParamFilterHint "How input images are combined to compute the output image."
 
 #define kParamFilterOptionNone "None", "Do not interpolate, ask for images with fractional time to the input effect. Useful if the input effect can interpolate itself.", "none"
-#define kParamFilterOptionNearest "Nearest", "Pick input image with nearest integer time.", "nearest"
+#define kParamFilterOptionNearest "Nearest", "Pick input image with nearest integer time. Half frames are rounded up (e.g. 1.5 gives frame 2).", "nearest"
 #define kParamFilterOptionLinear "Linear", "Blend the two nearest images with linear interpolation.", "linear"
-// TODO:
-#define kParamFilterOptionBox "Box", "Weighted average of images over the shutter time (shutter time is defined in the output sequence).", "box" // requires shutter parameter
+#define kParamFilterOptionBox "Box", "Average the input frames covered by the output frame (from half a frame before it to half a frame after it, mapped to the input time), each weighted by the part of it that is covered (input frame n covers the times from n-0.5 to n+0.5). At speed 1, this is the input frame; faster speeds blend several frames (motion blur), at most " STRINGISE(kBoxMaxFrames) " frames plus a partial frame at each end. At the ends of the input frame range, the frames outside it are read according to Before/After, so the first and last frames fade (to black, or to what the input gives there) unless Before/After is Hold. In the Retimer context, where the host only gives the source time of the current frame, Box reads the nearest frame.", "box"
 
 enum FilterEnum
 {
     eFilterNone,
     eFilterNearest,
     eFilterLinear,
-    //eFilterBox,
+    eFilterBox,
 };
+
+// the maximum length, in frames (or fields), of the source interval averaged by the Box filter: beyond
+// that, the part around its middle is used. It covers up to kBoxMaxFrames + 1 samples, the first and last
+// ones partially.
+#define kBoxMaxFrames 64
 
 #define kParamFilterDefault eFilterLinear
 
@@ -118,6 +131,16 @@ enum FilterEnum
 #define kParamWarpHint "Curve that maps input range (after applying speed) to the output range. A low positive slope slows down the input clip, and a negative slope plays it backwards."
 
 
+// A frame (or field) averaged by the Box filter.
+struct BoxSample
+{
+    double time; // source time
+    double weight;
+    BeforeAfterEnum mode; // the Before/After behaviour that applies (Black: transparent black)
+
+    bool black() const { return mode == eBeforeAfterBlack; }
+};
+
 // The source frames used at a given output time, after applying Before/After.
 struct SourceFrames
 {
@@ -126,6 +149,8 @@ struct SourceFrames
     bool original; // no Before/After behaviour applies: keeps old projects rendering as before these params existed
     bool blended; // blend "from" and "to" (Linear filter), else only "from" is used
     double blend; // weight of "to"
+    bool boxed; // average the frames of box (Box filter, at least two frames), instead of from and to
+    std::vector<BoxSample> box; // their weights sum to 1
 };
 
 // beyond this, frame numbers could overflow an int in frameLoop/frameBounce
@@ -236,6 +261,9 @@ public:
     template <int nComponents>
     void renderInternal(const RenderArguments &args, const SourceFrames &frames, BitDepthEnum dstBitDepth);
 
+    template <class PIX, int nComponents, int maxValue>
+    void renderBox(const RenderArguments &args, const SourceFrames &frames);
+
     /** Override the get frames needed action */
     virtual void getFramesNeeded(const FramesNeededArguments &args, FramesNeededSetter &frames) OVERRIDE FINAL;
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
@@ -249,8 +277,104 @@ public:
     void setupAndProcess(ImageBlenderBase &, const RenderArguments &args, const SourceFrames &frames);
 
 private:
+    auto_ptr<Image> fetchDstImage(const RenderArguments &args);
     void getSourceFrames(double time, FieldEnum fieldToRender, SourceFrames *frames);
+    std::vector<BoxSample> getBoxSamples(double time, double sourceTime, FieldEnum fieldToRender);
     double getSourceTime(double time);
+    std::optional<double> getSpeedDuration(const OfxRangeD &srcRange);
+};
+
+// Box filter: accumulate weight * src into a float buffer that covers the render window.
+// Pixels missing from src (outside its bounds, or no image) are transparent black.
+template <class PIX, int nComponents>
+class BoxAccumulator
+    : public ImageProcessor
+{
+public:
+    BoxAccumulator(ImageEffect &instance,
+                   const Image *src,
+                   float weight,
+                   float *acc,
+                   const OfxRectI &accBounds)
+        : ImageProcessor(instance)
+        , _src(src)
+        , _weight(weight)
+        , _acc(acc)
+        , _accBounds(accBounds)
+    {
+    }
+
+private:
+    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
+    {
+        unused(rs);
+        const std::size_t accWidth = (std::size_t)(_accBounds.x2 - _accBounds.x1);
+        for (int y = procWindow.y1; y < procWindow.y2; ++y) {
+            if ( _effect.abort() ) {
+                break;
+            }
+            float *a = _acc + ( (std::size_t)(y - _accBounds.y1) * accWidth + (std::size_t)(procWindow.x1 - _accBounds.x1) ) * nComponents;
+            for (int x = procWindow.x1; x < procWindow.x2; ++x, a += nComponents) {
+                const PIX *p = (const PIX *)( _src ? _src->getPixelAddress(x, y) : 0 );
+                if (p) {
+                    for (int c = 0; c < nComponents; ++c) {
+                        a[c] += _weight * (float)p[c];
+                    }
+                }
+            }
+        }
+    }
+
+    const Image *_src;
+    const float _weight;
+    float *_acc;
+    const OfxRectI _accBounds;
+};
+
+// Box filter: write the float buffer that covers the render window to the destination image
+// (integer depths: rounded to the nearest value, and clamped)
+template <class PIX, int nComponents, int maxValue>
+class BoxWriter
+    : public ImageProcessor
+{
+public:
+    BoxWriter(ImageEffect &instance,
+              const float *acc,
+              const OfxRectI &accBounds)
+        : ImageProcessor(instance)
+        , _acc(acc)
+        , _accBounds(accBounds)
+    {
+    }
+
+private:
+    void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
+    {
+        unused(rs);
+        const std::size_t accWidth = (std::size_t)(_accBounds.x2 - _accBounds.x1);
+        for (int y = procWindow.y1; y < procWindow.y2; ++y) {
+            if ( _effect.abort() ) {
+                break;
+            }
+            const float *a = _acc + ( (std::size_t)(y - _accBounds.y1) * accWidth + (std::size_t)(procWindow.x1 - _accBounds.x1) ) * nComponents;
+            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+            assert(dstPix);
+            for (int x = procWindow.x1; x < procWindow.x2; ++x, a += nComponents, dstPix += nComponents) {
+                for (int c = 0; c < nComponents; ++c) {
+                    if (maxValue == 1) {
+                        dstPix[c] = PIX(a[c]);
+                    } else {
+                        // the weights sum to 1, so a[c] is in [0, maxValue], up to rounding errors
+                        const float v = std::floor(a[c] + 0.5f);
+                        dstPix[c] = PIX( (v <= 0.f) ? 0.f : ( (v >= (float)maxValue) ? (float)maxValue : v ) );
+                    }
+                }
+            }
+        }
+    }
+
+    const float *_acc;
+    const OfxRectI _accBounds;
 };
 
 
@@ -311,30 +435,36 @@ framesNeeded(double sourceTime,
     *blendp = blend;
 }
 
-/* set up and run a processor */
-void
-RetimePlugin::setupAndProcess(ImageBlenderBase &processor,
-                              const RenderArguments &args,
-                              const SourceFrames &frames)
+// the destination image, checked (never NULL: throws on failure)
+auto_ptr<Image>
+RetimePlugin::fetchDstImage(const RenderArguments &args)
 {
-    const double time = args.time;
-
-    // get a dst image
-    auto_ptr<Image>  dst( _dstClip->fetchImage(time) );
+    auto_ptr<Image> dst( _dstClip->fetchImage(args.time) );
 
     if ( !dst.get() ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
-    BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    PixelComponentEnum dstComponents  = dst->getPixelComponents();
-    if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
-         ( dstComponents != _dstClip->getPixelComponents() ) ) {
+    if ( ( dst->getPixelDepth() != _dstClip->getPixelDepth() ) ||
+         ( dst->getPixelComponents() != _dstClip->getPixelComponents() ) ) {
         setPersistentMessage(Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         throwSuiteStatusException(kOfxStatFailed);
     }
 # ifndef NDEBUG
     checkBadRenderScaleOrField(dst, args);
 # endif
+
+    return dst;
+}
+
+/* set up and run a processor */
+void
+RetimePlugin::setupAndProcess(ImageBlenderBase &processor,
+                              const RenderArguments &args,
+                              const SourceFrames &frames)
+{
+    const auto_ptr<Image> dst = fetchDstImage(args);
+    const BitDepthEnum dstBitDepth = dst->getPixelDepth();
+    const PixelComponentEnum dstComponents = dst->getPixelComponents();
 
     const bool srcConnected = _srcClip && _srcClip->isConnected();
     if (!frames.blended) {
@@ -395,6 +525,45 @@ RetimePlugin::setupAndProcess(ImageBlenderBase &processor,
     processor.process();
 } // RetimePlugin::setupAndProcess
 
+// Box filter: average the frames of frames.box (a black frame, or a missing image, is transparent black)
+template <class PIX, int nComponents, int maxValue>
+void
+RetimePlugin::renderBox(const RenderArguments &args,
+                        const SourceFrames &frames)
+{
+    assert(frames.boxed);
+    const auto_ptr<Image> dst = fetchDstImage(args);
+    const OfxRectI& window = args.renderWindow;
+    if ( (window.x2 <= window.x1) || (window.y2 <= window.y1) ) {
+        return;
+    }
+    std::vector<float> acc( (std::size_t)(window.x2 - window.x1) * (std::size_t)(window.y2 - window.y1) * nComponents, 0.f );
+    const bool srcConnected = _srcClip && _srcClip->isConnected();
+    for (std::vector<BoxSample>::const_iterator it = frames.box.begin(); it != frames.box.end(); ++it) {
+        if ( abort() ) {
+            return;
+        }
+        if ( it->black() || !srcConnected ) {
+            continue;
+        }
+        auto_ptr<const Image> src( _srcClip->fetchImage(it->time) );
+        if ( !src.get() ) {
+            continue;
+        }
+# ifndef NDEBUG
+        checkBadRenderScaleOrField(src, args);
+# endif
+        checkComponents( *src, dst->getPixelDepth(), dst->getPixelComponents() );
+        BoxAccumulator<PIX, nComponents> accumulator(*this, src.get(), (float)it->weight, &acc[0], window);
+        accumulator.setRenderWindow(window, args.renderScale);
+        accumulator.process();
+    }
+    BoxWriter<PIX, nComponents, maxValue> writer(*this, &acc[0], window);
+    writer.setDstImg( dst.get() );
+    writer.setRenderWindow(window, args.renderScale);
+    writer.process();
+}
+
 // figure the source frame we should be retiming from at the given output time
 double
 RetimePlugin::getSourceTime(double time)
@@ -438,7 +607,17 @@ RetimePlugin::getSourceFrames(double time,
 
     frames->blended = false;
     frames->blend = 0.;
-    if ( (sourceTime == (int)sourceTime) || (filter == eFilterNone) ) {
+    frames->boxed = false;
+    frames->box.clear();
+    if (filter == eFilterBox) {
+        frames->box = getBoxSamples(time, sourceTime, fieldToRender);
+        assert( !frames->box.empty() );
+        frames->from = frames->box[0].time;
+        frames->boxed = frames->box.size() > 1;
+        if (!frames->boxed) {
+            frames->box.clear();
+        }
+    } else if ( (sourceTime == (int)sourceTime) || (filter == eFilterNone) ) {
         frames->from = sourceTime;
     } else if (filter == eFilterNearest) {
         frames->from = std::floor(sourceTime + 0.5);
@@ -463,6 +642,42 @@ RetimePlugin::getSourceFrames(double time,
         const BeforeAfterEnum after = (BeforeAfterEnum)_after->getValue();
         fromMode = mapSourceTime(first, last, before, after, &frames->from);
         toMode = mapSourceTime(first, last, before, after, &frames->to);
+        for (std::vector<BoxSample>::iterator it = frames->box.begin(); it != frames->box.end(); ++it) {
+            it->mode = mapSourceTime(first, last, before, after, &it->time);
+        }
+    }
+    if (frames->boxed) {
+        // merge the samples that read the same frame (e.g. Hold), and the black ones
+        std::vector<BoxSample> merged;
+        for (std::vector<BoxSample>::const_iterator it = frames->box.begin(); it != frames->box.end(); ++it) {
+            const BoxSample &sample = *it;
+            std::vector<BoxSample>::iterator m =
+                std::find_if( merged.begin(), merged.end(), [&sample](const BoxSample &other) {
+                    return sample.black() ? other.black() : ( !other.black() && (other.time == sample.time) );
+                } );
+            if ( m == merged.end() ) {
+                merged.push_back(sample);
+            } else {
+                m->weight += sample.weight;
+                if (m->mode == eBeforeAfterOriginal) {
+                    m->mode = sample.mode; // e.g. Hold: the merged frame is held
+                }
+            }
+        }
+        frames->box.swap(merged);
+        if (frames->box.size() == 1) {
+            // a single frame: a copy (or black)
+            frames->boxed = false;
+            frames->from = frames->to = frames->box[0].time;
+            fromMode = frames->box[0].mode;
+            frames->box.clear();
+        } else {
+            frames->from = frames->to = frames->box[0].time;
+            frames->fromBlack = frames->toBlack = false;
+            frames->original = false;
+
+            return;
+        }
     }
     frames->fromBlack = (fromMode == eBeforeAfterBlack);
     frames->toBlack = frames->blended && (toMode == eBeforeAfterBlack);
@@ -473,6 +688,55 @@ RetimePlugin::getSourceFrames(double time,
     frames->original = (fromMode == eBeforeAfterOriginal) && (!frames->blended || toMode == eBeforeAfterOriginal);
 }
 
+// Box filter: the source frames (or fields, at half-frame times) covered by the output frame (or
+// field), from half a frame (or field) before the output time to half a frame (or field) after it,
+// mapped to the source time. Source frame (or field) n covers the times n-1/2 to n+1/2 (in frames, or
+// fields), and its weight is the part of the mapped interval that it covers. Before/After is not applied
+// here. At least one sample, the one at sourceTime if the mapped interval is empty. In the Retimer
+// context, the host gives the source time of the current time only: one sample, at sourceTime.
+std::vector<BoxSample>
+RetimePlugin::getBoxSamples(double time,
+                            double sourceTime,
+                            FieldEnum fieldToRender)
+{
+    const double step = (fieldToRender == eFieldNone) ? 1. : 0.5;
+    std::vector<BoxSample> samples;
+    double a = sourceTime;
+    double b = sourceTime;
+    if (getContext() != eContextRetimer) {
+        a = getSourceTime(time - step / 2);
+        b = getSourceTime(time + step / 2);
+        if (b < a) {
+            std::swap(a, b);
+        }
+    }
+    // a finite, reasonable interval (also false for NaN)
+    if ( (std::fabs(a) < kMaxBeforeAfterFrame) && (std::fabs(b) < kMaxBeforeAfterFrame) && (b > a) ) {
+        if (b - a > kBoxMaxFrames * step) {
+            const double middle = (a + b) / 2;
+            a = middle - kBoxMaxFrames * step / 2;
+            b = middle + kBoxMaxFrames * step / 2;
+        }
+        const double first = std::floor(a / step + 0.5);
+        const double last = std::floor(b / step + 0.5);
+        for (double n = first; n <= last; ++n) {
+            const double overlap = (std::min)(b, (n + 0.5) * step) - (std::max)(a, (n - 0.5) * step);
+            if (overlap > 0.) {
+                const BoxSample sample = { n * step, overlap / (b - a), eBeforeAfterOriginal };
+                samples.push_back(sample);
+            }
+        }
+    }
+    if ( samples.empty() ) {
+        // speed 0, the Retimer context, or no reasonable interval: the frame (or field) at the source time
+        const double n = (std::fabs(sourceTime) < kMaxBeforeAfterFrame) ? std::floor(sourceTime / step + 0.5) * step : sourceTime;
+        const BoxSample sample = { n, 1., eBeforeAfterOriginal };
+        samples.push_back(sample);
+    }
+
+    return samples;
+}
+
 void
 RetimePlugin::getFramesNeeded(const FramesNeededArguments &args,
                               FramesNeededSetter &frames)
@@ -481,24 +745,32 @@ RetimePlugin::getFramesNeeded(const FramesNeededArguments &args,
         return;
     }
     // The rendered field is not known here: collect the frames read for unfielded and fielded renders.
-    double times[4];
-    int n = 0;
+    std::vector<double> times;
     const FieldEnum fields[2] = {eFieldNone, eFieldBoth};
     for (int i = 0; i < 2; ++i) {
         SourceFrames src;
         getSourceFrames(args.time, fields[i], &src);
+        if (src.boxed) {
+            for (std::vector<BoxSample>::const_iterator it = src.box.begin(); it != src.box.end(); ++it) {
+                if ( !it->black() ) {
+                    times.push_back(it->time);
+                }
+            }
+            continue;
+        }
         if (!src.fromBlack) {
-            times[n++] = src.from;
+            times.push_back(src.from);
         }
         if (src.blended && !src.toBlack) {
-            times[n++] = src.to;
+            times.push_back(src.to);
         }
     }
     // Times at most one frame apart make one continuous range, e.g. [n, n+1] as before Before/After
     // existed, which also covers the field n+0.5. A Loop/Bounce wrap gives separate ranges.
     // If every frame is black, nothing is requested and the host uses its default (the frame at args.time).
-    std::sort(times, times + n);
-    for (int i = 0; i < n; ) {
+    std::sort( times.begin(), times.end() );
+    const std::size_t n = times.size();
+    for (std::size_t i = 0; i < n; ) {
         OfxRangeD range = {times[i], times[i]};
         while ( (++i < n) && (times[i] - range.max <= 1.) ) {
             range.max = times[i];
@@ -516,6 +788,26 @@ RetimePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
     }
     SourceFrames src;
     getSourceFrames(args.time, eFieldNone, &src);
+    if (src.boxed) {
+        // the union of the RoDs of the frames read. The black samples are merged into one, so at
+        // least one of the (two or more) samples is not black.
+        bool first = true;
+        for (std::vector<BoxSample>::const_iterator it = src.box.begin(); it != src.box.end(); ++it) {
+            if ( it->black() ) {
+                continue;
+            }
+            const OfxRectD frameRoD = _srcClip->getRegionOfDefinition(it->time, args.view);
+            if (first) {
+                rod = frameRoD;
+                first = false;
+            } else {
+                Coords::rectBoundingBox(rod, frameRoD, &rod);
+            }
+        }
+        assert(!first);
+
+        return true;
+    }
     if (src.blended && src.original) {
         // keep the host default, as before Before/After existed
         return false;
@@ -548,7 +840,7 @@ RetimePlugin::isIdentity(const IsIdentityArguments &args,
     }
     SourceFrames src;
     getSourceFrames(args.time, args.fieldToRender, &src);
-    if (src.blended || src.fromBlack) {
+    if (src.blended || src.boxed || src.fromBlack) {
         return false;
     }
     identityClip = _srcClip;
@@ -567,31 +859,118 @@ RetimePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     }
 }
 
+// the furthest output duration that getSpeedDuration() considers, for an input frame range of the given
+// length: a slower speed gives the host default. Hosts may evaluate an integral slowly (e.g. Natron
+// integrates an expression numerically, frame by frame), and this is called from the host's frame range
+// queries, so the search must stay short.
+static double
+maxSpeedDuration(double length)
+{
+    return (std::min)(length * 1000., 1e5);
+}
+
+// The output duration at the current speed: the largest whole number of frames d such that the
+// signed integral I(d) of the speed, from the start of the input frame range to that start plus d,
+// stays within the length of the input frame range, i.e. the time at which the last input frame is
+// reached (forwards, from the first input frame; with Reverse input, backwards from the last one: the
+// source time is first + I or last - I, in the input range for 0 <= I <= length). None (the host
+// default) if the input range is empty, if the integral is negative (the speed plays the frames before
+// the input, or after it with Reverse input), or if the input length is not reached within
+// maxSpeedDuration() frames (a speed that is 0, too small or not finite).
+// - A constant speed (no keys, and the same value at the start, middle and end of the input range):
+//   d = length / speed. Natron reports keys for a parameter with an expression, so an expression is
+//   searched as below; the probes guard against hosts that report no keys for a varying speed.
+// - An animated speed: d is searched by doubling, then by bisection on whole frames. This is exact
+//   if the integral is monotonic (the speed does not change sign). If the speed changes sign, d is the
+//   first probed duration where the integral reaches the length: frames where the integral is negative
+//   or goes back may be included.
+std::optional<double>
+RetimePlugin::getSpeedDuration(const OfxRangeD &srcRange)
+{
+    const double length = srcRange.max - srcRange.min;
+    if ( !(length > 0.) || !(length < kMaxBeforeAfterFrame) ) {
+        return std::nullopt;
+    }
+    const double maxDuration = maxSpeedDuration(length);
+    // a small tolerance, so that rounding errors do not drop the last frame
+    const double target = length * (1. - 1e-9);
+    const double limit = length * (1. + 1e-9);
+    const double speed = _speed->getValueAtTime(srcRange.min);
+    if ( (_speed->getNumKeys() == 0) &&
+         (_speed->getValueAtTime(srcRange.min + length / 2) == speed) &&
+         (_speed->getValueAtTime(srcRange.max) == speed) ) {
+        if ( !(speed > 0.) ) { // also NaN
+            return std::nullopt;
+        }
+        const double d = length / speed;
+        if ( !(d <= maxDuration) ) {
+            return std::nullopt;
+        }
+
+        return std::floor(d * (1. + 1e-9));
+    }
+    double lo = 0.; // the integral is below the length after lo frames
+    double hi = 1.;
+    for (;;) {
+        const double c = _speed->integrate(srcRange.min, srcRange.min + hi);
+        if (c >= target) {
+            break;
+        }
+        if ( !(c == c) || (hi >= maxDuration) ) { // NaN, or too slow (or negative)
+            return std::nullopt;
+        }
+        lo = hi;
+        hi = (std::min)(hi * 2, maxDuration);
+    }
+    // the integral reaches the length after hi frames, not after lo frames: the last whole frame not past it
+    while (hi - lo > 1.) {
+        const double mid = std::floor( (lo + hi) / 2 );
+        if (_speed->integrate(srcRange.min, srcRange.min + mid) >= target) {
+            hi = mid;
+        } else {
+            lo = mid;
+        }
+    }
+
+    return (_speed->integrate(srcRange.min, srcRange.min + hi) <= limit) ? hi : lo;
+}
+
 /* override the time domain action, only for the general context */
 bool
 RetimePlugin::getTimeDomain(OfxRangeD &range)
 {
-    // this should only be called in the general context, ever!
-    if ( (getContext() == eContextGeneral) && _srcClip && _duration ) {
+    // kOfxImageEffectActionGetTimeDomain: "Only effects instantiated in the General Context can have
+    // this called on them. In all other the host is in strict control over the temporal duration of the effect."
+    if ( (getContext() != eContextGeneral) || !_srcClip || !_srcClip->isConnected() ) {
+        return false;
+    }
+    // how many frames on the input clip
+    const OfxRangeD srcRange = _srcClip->getFrameRange();
+    if (_duration) {
         assert(!_warp);
-        // If we are a general context, we can changed the duration of the effect, so have a param to do that
-        // We need a separate param as it is impossible to derive this from a speed param and the input clip
-        // duration (the speed may be animating or wired to an expression).
+        // Hosts without parametric parameters: the Duration param sets the duration of the effect
+        // (it can not always be derived from the speed, e.g. one wired to an expression).
         double duration;
         _duration->getValue(duration); //don't animate
-
-        // how many frames on the input clip
-        OfxRangeD srcRange = _srcClip->getFrameRange();
 
         range.min = srcRange.min;
         range.max = srcRange.min + (srcRange.max - srcRange.min) * duration;
 
         return true;
     }
+    // From the speed: the output starts with the input (the speed is integrated from there) and ends
+    // when the input frame range has been played (forwards, or backwards). The warp curve maps that
+    // part of the output, from 0 to 1 on its X axis, so it does not change the range.
+    if (_speed) {
+        if ( const std::optional<double> duration = getSpeedDuration(srcRange) ) {
+            range.min = srcRange.min;
+            range.max = srcRange.min + *duration;
 
-    // If there's a warp curve, the time domain could be determined from the intersections of the warp curve with y=0 and y=1.
+            return true;
+        }
+    }
 
-    // for now, we prefer returning the input time domain.
+    // the input range is empty, or the speed is 0, negative or too small: the default, i.e. the input time domain
     return false;
 }
 
@@ -604,16 +983,28 @@ RetimePlugin::renderInternal(const RenderArguments &args,
 {
     switch (dstBitDepth) {
     case eBitDepthUByte: {
+        if (frames.boxed) {
+            renderBox<unsigned char, nComponents, 255>(args, frames);
+            break;
+        }
         ImageBlender<unsigned char, nComponents> fred(*this);
         setupAndProcess(fred, args, frames);
         break;
     }
     case eBitDepthUShort: {
+        if (frames.boxed) {
+            renderBox<unsigned short, nComponents, 65535>(args, frames);
+            break;
+        }
         ImageBlender<unsigned short, nComponents> fred(*this);
         setupAndProcess(fred, args, frames);
         break;
     }
     case eBitDepthFloat: {
+        if (frames.boxed) {
+            renderBox<float, nComponents, 1>(args, frames);
+            break;
+        }
         ImageBlender<float, nComponents> fred(*this);
         setupAndProcess(fred, args, frames);
         break;
@@ -640,7 +1031,7 @@ RetimePlugin::render(const RenderArguments &args)
     getSourceFrames(time, args.fieldToRender, &frames);
 
 #ifdef DEBUG
-    if (!frames.blended && !frames.fromBlack) {
+    if (!frames.blended && !frames.boxed && !frames.fromBlack) {
         // should be caught by isIdentity!
         setPersistentMessage(Message::eMessageError, "", "OFX Host should not render");
         throwSuiteStatusException(kOfxStatFailed);
@@ -850,8 +1241,8 @@ RetimePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->appendOption(kParamFilterOptionNearest);
         assert(param->getNOptions() == eFilterLinear);
         param->appendOption(kParamFilterOptionLinear);
-        //assert(param->getNOptions() == eFilterBox);
-        //param->appendOption(kParamFilterOptionBox, kParamFilterOptionBoxHint);
+        assert(param->getNOptions() == eFilterBox);
+        param->appendOption(kParamFilterOptionBox);
         param->setDefault( (int)kParamFilterDefault );
         if (page) {
             page->addChild(*param);

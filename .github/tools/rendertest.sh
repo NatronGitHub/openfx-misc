@@ -37,9 +37,11 @@
 #   (premult=Opaque, PreMultiplied or UnPreMultiplied: the clip preferences), is
 #   constant though it should not be (nonconst), or
 #   is not the same region of the full render (tile: for a --window render),
-#   renders the same image at different times (framesdiffer: --frames), or
+#   renders the same image at different times (framesdiffer: --frames), has a time
+#   domain (the getTimeDomain action, general context) other than the expected one
+#   (timedomain=min,max, or timedomain=default if the plugin lets the host use its default),
 #   does not have the expected maximum value (max=r,g,b,a, as mean=), e.g. the peak
-#   of a blurred impulse, which gives the blur size,
+#   of a blurred impulse, which gives the blur size, or
 #   is the same image as an input (changed:Clip: the CRC32 of the output
 #   must differ from the one of the input Clip, copied at the same depth by
 #   Invert with no channel to process; NoOp would be simpler, but its debug
@@ -267,6 +269,17 @@ if out0:
             got = (r.get("clipPreferences") or {}).get("outputPremultiplication")
             if got != want:
                 errors.append("output premultiplication %s, expected %s" % (got, want))
+        elif expect.startswith("timedomain="):
+            td = r.get("timeDomain") or {}
+            rng = td.get("range")
+            if expect[11:] == "default":
+                if rng is not None:
+                    errors.append("time domain %s, expected the host default" % rng)
+            else:
+                want = [float(v) for v in expect[11:].split(",")]
+                if rng is None or len(rng) != 2 or any(abs(a - b) > 1e-9 for a, b in zip(rng, want)):
+                    errors.append("time domain %s (%s), expected %s" % (rng, td.get("status"), expect[11:]))
+            desc += " timeDomain=%s" % (",".join("%g" % v for v in rng) if rng else "default")
         elif expect == "framesdiffer":
             crcs = [(k.get("output") or {}).get("crc32") for k in renders]
             if len(set(crcs)) != len(crcs):
@@ -738,6 +751,19 @@ tests=(
     "FrameBlend Min no frame|net.sf.openfx.FrameBlend|filter|*|mean=0,0,0,0||-i Source=solid:0.5,0.5,0.5,1 -i FgM=solid:1,1,1,1 -i Mask=none operation=Min"
     "FrameBlend Max no frame|net.sf.openfx.FrameBlend|filter|*|mean=0,0,0,0||-i Source=solid:0.5,0.5,0.5,1 -i FgM=solid:1,1,1,1 -i Mask=none operation=Max"
     "FrameBlend Min|net.sf.openfx.FrameBlend|filter|*|mean=0.5,0.25,0.75,1||-i Source=solid:0.5,0.25,0.75,1 -i FgM=none -i Mask=none operation=Min frameRange=-2,0"
+    # Retime (#309), general context, float, on hostDemo's default input (frames 0 to 25, red = t in
+    # view 0, with the time drawn in black: tol=0.05). hostDemo has no parametric parameters, so the
+    # time domain is set by Duration (the speed is used on hosts with a Warp curve, e.g. Natron).
+    "Retime speed 1|net.sf.openfx.Retime|general|float|identity+timedomain=0,25+tol=0.05+mean=10,0,0,1||--frames 10"
+    "Retime speed 2|net.sf.openfx.Retime|general|float|identity+timedomain=0,25+tol=0.05+mean=20,0,0,1||speed=2 --frames 10"
+    "Retime duration 2|net.sf.openfx.Retime|general|float|identity+timedomain=0,50+tol=0.05+mean=5,0,0,1||speed=0.5 duration=2 --frames 10"
+    # Box filter (filter=3): at speed 1, the input frame; at speed 10, t=0 covers the source frames
+    # -5 to 5 (weights 0.05, 0.1 x 9, 0.05), and -5 to -1 are transparent black (Before = Black): the
+    # mean is 0.1 x (1+2+3+4) + 0.05 x 5 = 1.25, alpha 0.55 (Linear gives frame 0: 0, alpha 1);
+    # at speed 0.5, t=21 is the source time 10.5: frames 10 and 11, half each.
+    "Retime Box speed 1|net.sf.openfx.Retime|general|float|identity+tol=0.05+mean=10,0,0,1||filter=3 --frames 10"
+    "Retime Box speed 10|net.sf.openfx.Retime|general|float|mean=1.25,0,0,0.55||filter=3 speed=10 before=2 --frames 0"
+    "Retime Box speed 0.5|net.sf.openfx.Retime|general|float|tol=0.05+mean=10.5,0,0,1||filter=3 speed=0.5 --frames 21"
     # GodRays with gamma 0 computed pow(x, 1/0) of x = 1 up to rounding: the colors were 1 (or
     # infinite); they are now interpolated geometrically from fromColor to toColor
     "GodRays gamma 0|net.sf.openfx.GodRays|filter|float|mean=0.209,0.264,0.310,0.351||-i Source=checker:16 scale=0.7,0.7 fromColor=1,1,1,1 toColor=0.2,0.3,0.4,0.5 gamma=0,0,0,0"
