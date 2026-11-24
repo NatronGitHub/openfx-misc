@@ -165,6 +165,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              10, and the old samples are kept), so that the RoD may be slightly larger where every sample
 //              converges;
 //              2.1, 3.1 and 4.1: 3DE Anamorphic 4 with zero coefficients is a pass-through for Squeeze 1 (it was for Squeeze 0) (issue #326)
+//              2.1, 3.1 and 4.1: a degenerate model that maps the image to a line (e.g. a 3DE Anamorphic 4
+//              Squeeze-X of 0) no longer aborts debug builds in the RoI and RoD actions (issue #336); the
+//              release builds and the rendered pixels are unchanged
 #define kPluginVersionLensDistortionMajor 4 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionLensDistortionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -3041,7 +3044,10 @@ DistortionPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
                 roiPixel.y2 = (std::max)(roiPixel.y2, yi);
             }
         }
-        assert( !OFX::Coords::rectIsEmpty(roiPixel) );
+        // at least one point was added. The box may be zero-wide or zero-high (not empty): a
+        // degenerate model, e.g. a squeeze of 0, maps the render window to a line (issue #336);
+        // the margin below makes it non-empty
+        assert(roiPixel.x1 <= roiPixel.x2 && roiPixel.y1 <= roiPixel.y2);
         // Slight extra margin, just in case.
         roiPixel.x1 -= 2;
         roiPixel.x2 += 2;
@@ -3407,7 +3413,10 @@ DistortionPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                 rodPixel.y2 = (std::max)(rodPixel.y2, rodPixelNonConverged.y2);
             }
         }
-        assert( !OFX::Coords::rectIsEmpty(rodPixel) );
+        // at least one point was added. The box may be zero-wide or zero-high (not empty): a
+        // degenerate model, e.g. a squeeze of 0, maps the source to a line (issue #336); the
+        // margin below makes it non-empty
+        assert(rodPixel.x1 <= rodPixel.x2 && rodPixel.y1 <= rodPixel.y2);
         // extra margin for blackOutside
         if ( _blackOutside->getValueAtTime(time) ) {
             rodPixel.x1 -= 1;
