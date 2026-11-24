@@ -37,7 +37,7 @@
 #define kParamShapePremultLabel "Premultiply"
 #define kParamShapePremultHint "Multiply the red, green and blue channels of the Source by the shape (1 inside, 0 outside, " \
     "and the Softness in between; inverted by Invert) before drawing: outside of the shape, they are set to black. " \
-    "With Replace and A checked, Color 0 alpha 0 and Color 1 alpha 1, the output alpha is the shape and the output is premultiplied " \
+    "With Replace and A checked, Color 0 black and transparent (in the drawn channels) and Color 1 alpha 1, the output alpha is the shape and the output is premultiplied " \
     "(also with Mix below 1 or a Mask, if the Source is premultiplied or opaque). Does nothing on an Alpha Source."
 
 #define kParamShapeReplace "replace"
@@ -156,31 +156,47 @@ public:
         return ( (comps == ePixelComponentRGB) || (comps == ePixelComponentRGBA) ) && _premult->getValueAtTime(time);
     }
 
+    /// The checkboxes of the processed channels.
+    struct ProcessChannels
+    {
+        bool r;
+        bool g;
+        bool b;
+        bool a;
+    };
+
     /// true if the Output alpha is the shape and the RGB are premultiplied by it: Premultiply, Replace
-    /// and Process A on an RGBA Source, with Color 0 alpha 0 and Color 1 alpha 1 (the alpha is then
-    /// the shape weight w, or 1 - w with Invert, which is the Premultiply weight). Mix and the Mask
-    /// mix that with the Source, which keeps it premultiplied only if the Source is premultiplied or
-    /// opaque: fullMix is true when Mix is 1 and no Mask applies.
+    /// and Process A on an RGB or RGBA Source (the unmapped components: an RGB Source is mapped to RGBA
+    /// when A is processed), with Color 0 alpha 0 and Color 1 alpha 1 (the alpha is then the shape
+    /// weight w, or 1 - w with Invert, which is the Premultiply weight), and the processed RGB of
+    /// Color 0 at 0 (Color 0 is drawn where that alpha is 0: outside, or inside with Invert).
+    /// Mix and the Mask mix that with the Source, which keeps it premultiplied only if the Source is
+    /// premultiplied or opaque: fullMix is true when Mix is 1 and no Mask applies.
     /// For the clip preferences, which do not depend on time: the colors and Mix are read at the
-    /// current time (they trigger the clip preferences), so with animated values the declared state
-    /// follows the current time.
-    bool outputIsPremultipliedByShape(bool processA,
+    /// time of the last clip preferences call (they trigger it), so with animated values the declared
+    /// state follows that time.
+    bool outputIsPremultipliedByShape(const ProcessChannels& process,
                                       const Clip* srcClip,
                                       bool fullMix) const
     {
-        if ( !processA || !_premult->getValue() || !_replace->getValue() ||
-             !srcClip || !srcClip->isConnected() || (srcClip->getPixelComponents() != ePixelComponentRGBA) ) {
+        if ( !process.a || !_premult->getValue() || !_replace->getValue() || !srcClip || !srcClip->isConnected() ) {
+            return false;
+        }
+        const PixelComponentEnum srcComps = srcClip->getUnmappedPixelComponents();
+        if ( (srcComps != ePixelComponentRGB) && (srcComps != ePixelComponentRGBA) ) {
             return false;
         }
         const PreMultiplicationEnum srcPremult = srcClip->getPreMultiplication();
         if ( !fullMix && (srcPremult != eImagePreMultiplied) && (srcPremult != eImageOpaque) ) {
             return false;
         }
-        double r, g, b, a0, a1;
-        _color0->getValue(r, g, b, a0);
-        _color1->getValue(r, g, b, a1);
+        double r0, g0, b0, a0;
+        _color0->getValue(r0, g0, b0, a0);
+        double r1, g1, b1, a1;
+        _color1->getValue(r1, g1, b1, a1);
 
-        return (a0 == 0.) && (a1 == 1.);
+        return (a0 == 0.) && (a1 == 1.) &&
+               (!process.r || r0 == 0.) && (!process.g || g0 == 0.) && (!process.b || b0 == 0.);
     }
 
 private:

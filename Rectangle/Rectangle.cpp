@@ -955,6 +955,12 @@ private:
     BooleanParam* _maskInvert;
     ShapeDraw::Params _draw; // the Draw options and the colors
 
+    // the R, G, B and A checkboxes (for the clip preferences)
+    ShapeDraw::Params::ProcessChannels processChannels() const
+    {
+        return { _processR->getValue(), _processG->getValue(), _processB->getValue(), _processA->getValue() };
+    }
+
     // true if Mix is 1 and no Mask applies, at the current time (for the clip preferences)
     bool isFullMix() const
     {
@@ -1147,7 +1153,7 @@ RectanglePlugin::isIdentity(const IsIdentityArguments &args,
         // pass-through would keep the Source premultiplication (issue #328)
         return false;
     }
-    if ( _draw.outputIsPremultipliedByShape( _processA->getValue(), _srcClip, isFullMix() ) ) {
+    if ( _draw.outputIsPremultipliedByShape( processChannels(), _srcClip, isFullMix() ) ) {
         // the Output is PreMultiplied (see getClipPreferences()), also where Mix is 0
         return false;
     }
@@ -1230,7 +1236,7 @@ RectanglePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
             clipPreferences.setClipComponents(*_srcClip, ePixelComponentRGBA);
             clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
         }
-        if ( _draw.outputIsPremultipliedByShape( _processA->getValue(), _srcClip, isFullMix() ) ) {
+        if ( _draw.outputIsPremultipliedByShape( processChannels(), _srcClip, isFullMix() ) ) {
             // the output alpha is the shape, and the Source RGB are multiplied by it
             clipPreferences.setOutputPremultiplication(eImagePreMultiplied);
         }
