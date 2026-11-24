@@ -33,7 +33,9 @@
 #   the effect is not an identity at all times though it should be (identity:
 #   the isIdentity action), is an identity at some time though its render changes
 #   the input (notidentity: a host would pass the input through), does not have
-#   the expected components (comps=RGBA, RGB or Alpha), is constant though it should not be (nonconst), or
+#   the expected components (comps=RGBA, RGB or Alpha) or output premultiplication
+#   (premult=Opaque, PreMultiplied or UnPreMultiplied: the clip preferences), is
+#   constant though it should not be (nonconst), or
 #   is not the same region of the full render (tile: for a --window render),
 #   renders the same image at different times (framesdiffer: --frames), or
 #   does not have the expected maximum value (max=r,g,b,a, as mean=), e.g. the peak
@@ -168,6 +170,10 @@ pfm("vramp.pfm", 720, 576, lambda x, y, c: (y + 0.5) / 576.)
 # delta.pfm: a 1x1 PF kernel (for the "conv" check of an output that must be its input)
 pfm("impulse.pfm", 64, 48, lambda x, y, c: 1. if (x, y) == (32, 24) else 0.)
 pfm("delta.pfm", 1, 1, lambda x, y, c: 1.)
+# diffa.pfm, diffb.pfm: 64x48 PF solid colours (0.25,0.5,0.75) and (0.5,0.5,0.25), for Difference
+# with opaque inputs (#opaque)
+pfm("diffa.pfm", 64, 48, lambda x, y, c: (0.25, 0.5, 0.75)[c])
+pfm("diffb.pfm", 64, 48, lambda x, y, c: (0.5, 0.5, 0.25)[c])
 EOF2
 
 # check REPORT DEPTH EXPECT [CLIP=CRC32...]: check the --report JSON file of a
@@ -254,6 +260,13 @@ if out0:
         elif expect.startswith("comps="):
             if out0["comps"] != expect[6:]:
                 errors.append("t=0: components %s, expected %s" % (out0["comps"], expect[6:]))
+        elif expect.startswith("premult="):
+            # the kOfxImageEffectPropPreMultiplication values (ofxImageEffect.h)
+            want = {"Opaque": "OfxImageOpaque", "PreMultiplied": "OfxImageAlphaPremultiplied",
+                    "UnPreMultiplied": "OfxImageAlphaUnPremultiplied"}[expect[8:]]
+            got = (r.get("clipPreferences") or {}).get("outputPremultiplication")
+            if got != want:
+                errors.append("output premultiplication %s, expected %s" % (got, want))
         elif expect == "framesdiffer":
             crcs = [(k.get("output") or {}).get("crc32") for k in renders]
             if len(set(crcs)) != len(crcs):
@@ -543,6 +556,16 @@ tests=(
     # PIK: a soft screen replace color with zero Rec.709 luminance (was 0/0 = NaN where alpha
     # is raised to 1 by Clip White, or a huge color with FMA contraction, e.g. on arm64): white
     "PIK replace color lum 0|net.sf.openfx.PIK|general|float|comps=RGBA+mean=0.0045,0.0045,0.0045,1||-i Fg=solid:0,0,0.25,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0,0,1 screenClipMax=0.5 screenReplaceColor=0.072175,0,-0.2126729"
+    # Difference: RGB from B, alpha = gain * sum of the squared RGB differences - offset, in an RGBA
+    # unpremultiplied output (issue #275: RGB inputs gave an RGB output with the matte in blue;
+    # hostDemo's inputs are RGBA, so the RGB case is not tested: only the RGBA output, the alpha
+    # matte and the output premultiplication are checked here). Only the opaque-inputs case can
+    # detect a wrong premultiplication flag: with unpremultiplied inputs, the host default is
+    # already unpremultiplied
+    "Difference|net.sf.openfx.DifferencePlugin|general|*|comps=RGBA+premult=UnPreMultiplied+mean=0.5,0.5,0.25,0.3125||-i A=solid:0.25,0.5,0.75,1 -i B=solid:0.5,0.5,0.25,0.3"
+    # opaque inputs: the output is still unpremultiplied, since alpha is the matte
+    "Difference opaque inputs|net.sf.openfx.DifferencePlugin|general|*|comps=RGBA+premult=UnPreMultiplied+mean=0.5,0.5,0.25,0.3125||-i A=file:diffa.pfm#opaque -i B=file:diffb.pfm#opaque"
+    "Difference gain offset|net.sf.openfx.DifferencePlugin|general|*|comps=RGBA+mean=0.5,0.5,0.25,0.525||-i A=solid:0.25,0.5,0.75,1 -i B=solid:0.5,0.5,0.25,0.3 gain=2 offset=0.1"
     # PIK (version 2 unless -m): the Colorspace (1: Rec. 2020, 2: ACES AP0, 3: ACES AP1) also
     # gives the luminance of the Soft Color screen and inside replace colors, and the conversion of
     # Bg for Use Bg Luminance/Chroma; version 1 always used Rec. 709 there, and is kept so that old
@@ -843,7 +866,7 @@ for t in "${tests[@]}"; do
         fi
     done
 done
-rm -f out.* full.* report.json ref.json autocrop.pfm convsrc.pfm convk.pfm
+rm -f out.* full.* report.json ref.json autocrop.pfm convsrc.pfm convk.pfm diffa.pfm diffb.pfm
 
 if [ $n = 0 ]; then
     echo "no render matches RENDERTEST_ONLY=$RENDERTEST_ONLY"
