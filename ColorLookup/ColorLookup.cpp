@@ -24,6 +24,7 @@
 #include <cmath>
 #include <cfloat> // DBL_MAX
 #include <algorithm>
+#include <memory>
 
 #if !( defined(_WIN32) || defined(__WIN32__) || defined(WIN32) )
 #define GL_GLEXT_PROTOTYPES
@@ -86,7 +87,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Color"
 #define kPluginDescription \
     "Apply a parametric lookup curve with the possibility to adjust each channel separately.\n" \
-    "The master curve is combined with the red, green and blue curves, but not with the alpha curve.\n" \
+    "The master curve is combined with the red, green and blue curves, and with the alpha curve if \"Master Curve on Alpha\" is checked.\n" \
     "Different algorithms are available when applying the master curve, which are selectable using the \"Master Curve Mode\" parameter.\n" \
     "Computation is faster for values that are within the given range, so it is recommended to set the Range parameter if the input range goes beyond [0,1].\n" \
     "\n" \
@@ -102,10 +103,15 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // 1.0 initial version
 // 1.1 (10/2017) add display/computation of histogram and master curve modes
 // 1.2 premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79);
-//     a NaN value no longer converts NaN to int for the curve lookup (undefined behaviour) (#178)
+//     a NaN value no longer converts NaN to int for the curve lookup (undefined behaviour) (#178);
+//     (1.2 is unreleased, extended in place, issue #290) "Composed" master curve mode (channel(master(x))), and
+//     "Master Curve on Alpha" parameter (default off: the alpha curve is used alone, as before)
+// 2.0 (issue #290) the defaults follow the node of the same name: Master Curve Mode is Composed and Master Curve on
+//     Alpha is checked; version 1.2 is kept, obsolete, with the old defaults (Standard, off), for existing projects
 #define kPluginIdentifier "net.sf.openfx.ColorLookupPlugin"
-#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 2 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMajor1Minor 2 // the obsolete version 1 (1.2)
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -116,7 +122,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamLookupTable "lookupTable"
 #define kParamLookupTableLabel "Lookup Table"
-#define kParamLookupTableHint "Colour lookup table. The master curve is combined with the red, green and blue curves, but not with the alpha curve."
+#define kParamLookupTableHint "Colour lookup table. The master curve is combined with the red, green and blue curves, and with the alpha curve if \"Master Curve on Alpha\" is checked."
 
 #define kParamSource "source"
 #define kParamSourceLabel "Source"
@@ -157,6 +163,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamMasterCurveModeOptionStandard "Standard", "The marster curve is applied independently to R, G and B channels. The drawback of this mode is that e.g. considering an S-curve shape to get more contrast, an orange color with a high value of red and green and a low value of blue will tend to shift toward yellow, because the red and green channel will be raised, while the blue one will be lowered.", "standard"
 #define kParamMasterCurveModeOptionWeightedStandard "Weighted Standard", "You can use this method to limit the color shift of the standard curve, even if it won't suppress it entirely.", "weightedstandard"
 #define kParamMasterCurveModeOptionFilmLike "Film-Like", "The film-like curve provides a result highly similar to the standard type (that is strong saturation increase with increased contrast), but the RGB-HSV hue is kept constant - that is, there are less color-shift problems. This curve type was designed by Adobe as a part of DNG and is thus the one used by Adobe Camera Raw and Lightroom.", "filmlike"
+#define kParamMasterCurveModeOptionComposed "Composed", "The master curve is applied first, then the red, green and blue curves: each channel is channel(master(x)). In Standard mode, it is channel(x) + master(x) - x, which is the same if one of the two curves is the identity. The default from version 2.0.", "composed"
 #define kParamMasterCurveModeOptionLuminance "Luminance", "Each component of the pixel is boosted by the same factor so color and saturation is kept stable, that is the result is very true to the original color. However contrast-increasing curves can still lead to a slightly desaturated look. First the relative luminance value of a pixel is obtained, then the curve is applied to that value, the multiplication factor between before and after luminance is calculated, and then this factor is applied to each R, G and B component. The formula used to compute the luminance can be selected using the \"luminanceMath\" parameter.", "luminance"
 enum MasterCurveModeEnum
 {
@@ -164,8 +171,18 @@ enum MasterCurveModeEnum
     eMasterCurveModeWeightedStandard,
     eMasterCurveModeFilmLike,
     eMasterCurveModeLuminance,
+    eMasterCurveModeComposed, // last: added in 1.2 (issue #290)
 };
-#define kParamMasterCurveModeDefault eMasterCurveModeStandard
+// the default Master Curve Mode of a major version: Composed from 2.0, Standard before
+inline MasterCurveModeEnum
+masterCurveModeDefault(unsigned int majorVersion)
+{
+    return (majorVersion >= 2) ? eMasterCurveModeComposed : eMasterCurveModeStandard;
+}
+
+#define kParamMasterOnAlpha "masterOnAlpha"
+#define kParamMasterOnAlphaLabel "Master Curve on Alpha"
+#define kParamMasterOnAlphaHint "When checked, the master curve is also combined with the alpha curve: alpha(master(x)) in Composed mode, alpha(x) + master(x) - x in the other modes. When unchecked, the alpha curve is used alone. Checked by default from version 2.0."
 
 #define kParamLuminanceMathHint "Formula used to compute luminance from RGB values (only used by 'Set Master')."
 
@@ -349,12 +366,14 @@ public:
                          double rangeMax,
                          bool clampBlack,
                          bool clampWhite,
-                         LuminanceMathEnum luminanceMath)
+                         LuminanceMathEnum luminanceMath,
+                         bool masterOnAlpha)
         : ColorLookupProcessorBase(instance, clampBlack, clampWhite)
         , _lookupTableParam(lookupTableParam)
         , _rangeMin( (std::min)(rangeMin, rangeMax) )
         , _rangeMax( (std::max)(rangeMin, rangeMax) )
         , _luminanceMath( luminanceMath )
+        , _masterOnAlpha(masterOnAlpha)
     {
         // build the LUT
         assert(_lookupTableParam);
@@ -366,41 +385,17 @@ public:
         assert( (PIX)maxValue == maxValue );
         // except for float, maxValue is the same as nbValues
         assert( maxValue == 1 || (maxValue == nbValues) );
-        if (masterCurveMode == eMasterCurveModeStandard ||
-            masterCurveMode == eMasterCurveModeWeightedStandard) {
-            // Standard and WeightedStandard use separate R,G,B curves
-            for (int component = 0; component < nComponents; ++component) {
-                _lookupTable[component].resize(nbValues + 1);
-                int lutIndex = nComponents == 1 ? kCurveAlpha : componentToCurve(component); // special case for components == alpha only
-                for (int position = 0; position <= nbValues; ++position) {
-                    // position to evaluate the param at
-                    double parametricPos = _rangeMin + (_rangeMax - _rangeMin) * double(position) / nbValues;
+        // FilmLike and Luminance apply the master curve separately: it has its own table
+        const int nTables = separateMaster ? nComponents + 1 : nComponents;
+        for (int component = 0; component < nTables; ++component) {
+            _lookupTable[component].resize(nbValues + 1);
+            const int lutIndex = curveIndex(component);
+            for (int position = 0; position <= nbValues; ++position) {
+                // position to evaluate the param at
+                double parametricPos = _rangeMin + (_rangeMax - _rangeMin) * double(position) / nbValues;
 
-                    // evaluate the parametric param
-                    double value = _lookupTableParam->getValue(lutIndex, _time, parametricPos);
-                    if ( (nComponents != 1) && (lutIndex != kCurveAlpha) ) {
-                        value += _lookupTableParam->getValue(kCurveMaster, _time, parametricPos) - parametricPos;
-                    }
-                    // set that in the lut
-                    _lookupTable[component][position] = (float)clamp<PIX>(value, maxValue);
-                }
-            }
-        } else {
-            // FilmLike and Luminance require a separate master curve
-            for (int component = 0; component <= nComponents; ++component) {
-                _lookupTable[component].resize(nbValues + 1);
-                int lutIndex = component == nComponents ? kCurveMaster :
-                                ( (nComponents == 1  && component == 0) ? kCurveAlpha :
-                                 componentToCurve(component) ); // special case for components == alpha only
-                for (int position = 0; position <= nbValues; ++position) {
-                    // position to evaluate the param at
-                    double parametricPos = _rangeMin + (_rangeMax - _rangeMin) * double(position) / nbValues;
-
-                    // evaluate the parametric param
-                    double value = _lookupTableParam->getValue(lutIndex, _time, parametricPos);
-                    // set that in the lut
-                    _lookupTable[component][position] = (float)clamp<PIX>(value, maxValue);
-                }
+                // set that in the lut
+                _lookupTable[component][position] = (float)clamp<PIX>(curveValue(lutIndex, parametricPos), maxValue);
             }
         }
     }
@@ -436,7 +431,8 @@ private:
                     float b = srcPix ? (srcPix[2] / (float)maxValue) : 0.f;
                     // normalize/denormalize properly
                     switch (masterCurveMode) {
-                        case eMasterCurveModeStandard: {
+                        case eMasterCurveModeStandard:
+                        case eMasterCurveModeComposed: { // the tables combine the curves
                             tmpPix[0] = interpolate(0, r) * maxValue;
                             tmpPix[1] = interpolate(1, g) * maxValue;
                             tmpPix[2] = interpolate(2, b) * maxValue;
@@ -519,7 +515,8 @@ private:
                     float b = unpPix[2];
                     // ofxsUnPremult outputs normalized data
                     switch (masterCurveMode) {
-                        case eMasterCurveModeStandard: {
+                        case eMasterCurveModeStandard:
+                        case eMasterCurveModeComposed: { // the tables combine the curves
                             tmpPix[0] = interpolate(0, r);
                             tmpPix[1] = interpolate(1, g);
                             tmpPix[2] = interpolate(2, b);
@@ -610,17 +607,7 @@ private:
     {
         if ( (value < _rangeMin) || (_rangeMax < value) ) {
             // slow version
-            int lutIndex = component == nComponents ? kCurveMaster :
-                            ( (nComponents == 1  && component == 0) ? kCurveAlpha :
-                             componentToCurve(component) ); // special case for components == alpha only
-            double ret = _lookupTableParam->getValue(lutIndex, _time, value);
-            if ( (masterCurveMode == eMasterCurveModeStandard ||
-                  masterCurveMode == eMasterCurveModeWeightedStandard) &&
-                 (nComponents != 1) && (lutIndex != kCurveAlpha) ) {
-                ret += _lookupTableParam->getValue(kCurveMaster, _time, value) - value;
-            }
-
-            return static_cast<float>( clamp<float>(ret, 1) );
+            return static_cast<float>( clamp<float>(curveValue(curveIndex(component), value), 1) );
         } else {
             double x = (value - _rangeMin) / (_rangeMax - _rangeMin);
             if (x <= 0.) {
@@ -642,6 +629,38 @@ private:
     }
 
 private:
+    // FilmLike and Luminance apply the master curve separately from the R, G and B curves
+    static constexpr bool separateMaster = (masterCurveMode == eMasterCurveModeFilmLike ||
+                                            masterCurveMode == eMasterCurveModeLuminance);
+
+    // the curve of a component (nComponents: the master curve; an Alpha image has the alpha curve)
+    static int curveIndex(int component)
+    {
+        return component == nComponents ? kCurveMaster :
+               ( (nComponents == 1  && component == 0) ? kCurveAlpha :
+                 componentToCurve(component) );
+    }
+
+    // The value at x of the curve lutIndex, combined with the master curve: in the Standard,
+    // Weighted Standard and Composed modes for R, G and B, and for alpha with Master Curve on
+    // Alpha. Composed gives curve(master(x)), the others curve(x) + master(x) - x.
+    double curveValue(int lutIndex,
+                      double x) const
+    {
+        const bool combine = (lutIndex == kCurveAlpha) ? _masterOnAlpha :
+                             (lutIndex != kCurveMaster && !separateMaster);
+        if (!combine) {
+            return _lookupTableParam->getValue(lutIndex, _time, x);
+        }
+        const double master = _lookupTableParam->getValue(kCurveMaster, _time, x);
+        if (masterCurveMode == eMasterCurveModeComposed) {
+            return _lookupTableParam->getValue(lutIndex, _time, master);
+        }
+
+        // the same rounding as before 1.2: curve(x) + (master(x) - x)
+        return _lookupTableParam->getValue(lutIndex, _time, x) + (master - x);
+    }
+
     float Triangle(float a, float a1, float b) const
     {
         if (a != b) {
@@ -678,9 +697,21 @@ private:
     double _rangeMin;
     double _rangeMax;
     LuminanceMathEnum _luminanceMath;
+    bool _masterOnAlpha;
 };
 
 #define HISTOGRAM_BINS 256
+
+// the parameter values of a ColorLookupProcessor
+struct ColorLookupProcessorArgs
+{
+    double rangeMin;
+    double rangeMax;
+    bool clampBlack;
+    bool clampWhite;
+    LuminanceMathEnum luminanceMath;
+    bool masterOnAlpha;
+};
 
 struct RGBAValues
 {
@@ -866,7 +897,8 @@ public:
         _target = fetchRGBAParam(kParamTarget);
         assert(_source && _target);
         _masterCurveMode = fetchChoiceParam(kParamMasterCurveMode);
-        assert(_masterCurveMode);
+        _masterOnAlpha = fetchBooleanParam(kParamMasterOnAlpha);
+        assert(_masterCurveMode && _masterOnAlpha);
         _luminanceMath = fetchChoiceParam(kParamLuminanceMath);
         assert(_luminanceMath);
         _clampBlack = fetchBooleanParam(kParamClampBlack);
@@ -909,6 +941,9 @@ private:
 
     template <int nComponents>
     void renderForComponents(const RenderArguments &args, BitDepthEnum dstBitDepth);
+
+    template <int nComponents, MasterCurveModeEnum masterCurveMode>
+    std::unique_ptr<ColorLookupProcessorBase> makeProcessor(BitDepthEnum dstBitDepth, const RenderArguments &args, const ColorLookupProcessorArgs &a);
 
     void setupAndProcess(ColorLookupProcessorBase &, const RenderArguments &args);
 
@@ -1039,6 +1074,7 @@ private:
     RGBAParam* _source;
     RGBAParam* _target;
     ChoiceParam* _masterCurveMode;
+    BooleanParam* _masterOnAlpha;
     ChoiceParam* _luminanceMath;
     BooleanParam* _clampBlack;
     BooleanParam* _clampWhite;
@@ -1122,6 +1158,25 @@ ColorLookupPlugin::setupAndProcess(ColorLookupProcessorBase &processor,
     processor.process();
 } // ColorLookupPlugin::setupAndProcess
 
+// a processor for the depth of the output (empty if it is not supported)
+template <int nComponents, MasterCurveModeEnum masterCurveMode>
+std::unique_ptr<ColorLookupProcessorBase>
+ColorLookupPlugin::makeProcessor(BitDepthEnum dstBitDepth,
+                                 const RenderArguments &args,
+                                 const ColorLookupProcessorArgs &a)
+{
+    switch (dstBitDepth) {
+        case eBitDepthUByte:
+            return std::make_unique<ColorLookupProcessor<unsigned char, nComponents, 255, 255, masterCurveMode> >(*this, args, _lookupTable, a.rangeMin, a.rangeMax, a.clampBlack, a.clampWhite, a.luminanceMath, a.masterOnAlpha);
+        case eBitDepthUShort:
+            return std::make_unique<ColorLookupProcessor<unsigned short, nComponents, 65535, 65535, masterCurveMode> >(*this, args, _lookupTable, a.rangeMin, a.rangeMax, a.clampBlack, a.clampWhite, a.luminanceMath, a.masterOnAlpha);
+        case eBitDepthFloat:
+            return std::make_unique<ColorLookupProcessor<float, nComponents, 1, 1023, masterCurveMode> >(*this, args, _lookupTable, a.rangeMin, a.rangeMax, a.clampBlack, a.clampWhite, a.luminanceMath, a.masterOnAlpha);
+        default:
+            return nullptr;
+    }
+}
+
 // the internal render function
 template <int nComponents>
 void
@@ -1136,86 +1191,29 @@ ColorLookupPlugin::renderForComponents(const RenderArguments &args,
     bool clampWhite = _clampWhite->getValueAtTime(time);
     LuminanceMathEnum luminanceMath = (LuminanceMathEnum)_luminanceMath->getValueAtTime(time);
     MasterCurveModeEnum masterCurveMode = (MasterCurveModeEnum)_masterCurveMode->getValueAtTime(time);
-    auto_ptr<ColorLookupProcessorBase> proc;
+    const bool masterOnAlpha = _masterOnAlpha->getValueAtTime(time);
+    const ColorLookupProcessorArgs procArgs = {
+        rangeMin, rangeMax, clampBlack, clampWhite, luminanceMath, masterOnAlpha
+    };
+    std::unique_ptr<ColorLookupProcessorBase> proc;
     switch (masterCurveMode) {
-        case eMasterCurveModeStandard: {
-            switch (dstBitDepth) {
-                case eBitDepthUByte: {
-                    proc.reset( new ColorLookupProcessor<unsigned char, nComponents, 255, 255, eMasterCurveModeStandard>(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite, luminanceMath) );
-                    break;
-                }
-                case eBitDepthUShort: {
-                    proc.reset( new ColorLookupProcessor<unsigned short, nComponents, 65535, 65535, eMasterCurveModeStandard>(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite, luminanceMath) );
-                    break;
-                }
-                case eBitDepthFloat: {
-                    proc.reset( new ColorLookupProcessor<float, nComponents, 1, 1023, eMasterCurveModeStandard>(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite, luminanceMath) );
-                    break;
-                }
-                default:
-                    throwSuiteStatusException(kOfxStatErrUnsupported);
-            }
+        case eMasterCurveModeStandard:
+            proc = makeProcessor<nComponents, eMasterCurveModeStandard>(dstBitDepth, args, procArgs);
             break;
-        }
-        case eMasterCurveModeWeightedStandard: {
-            switch (dstBitDepth) {
-                case eBitDepthUByte: {
-                    proc.reset( new ColorLookupProcessor<unsigned char, nComponents, 255, 255, eMasterCurveModeWeightedStandard>(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite, luminanceMath) );
-                    break;
-                }
-                case eBitDepthUShort: {
-                    proc.reset( new ColorLookupProcessor<unsigned short, nComponents, 65535, 65535, eMasterCurveModeWeightedStandard>(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite, luminanceMath) );
-                    break;
-                }
-                case eBitDepthFloat: {
-                    proc.reset( new ColorLookupProcessor<float, nComponents, 1, 1023, eMasterCurveModeWeightedStandard>(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite, luminanceMath) );
-                    break;
-                }
-                default:
-                    throwSuiteStatusException(kOfxStatErrUnsupported);
-            }
+        case eMasterCurveModeWeightedStandard:
+            proc = makeProcessor<nComponents, eMasterCurveModeWeightedStandard>(dstBitDepth, args, procArgs);
             break;
-        }
-        case eMasterCurveModeFilmLike: {
-            switch (dstBitDepth) {
-                case eBitDepthUByte: {
-                    proc.reset( new ColorLookupProcessor<unsigned char, nComponents, 255, 255, eMasterCurveModeFilmLike>(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite, luminanceMath) );
-                    break;
-                }
-                case eBitDepthUShort: {
-                    proc.reset( new ColorLookupProcessor<unsigned short, nComponents, 65535, 65535, eMasterCurveModeFilmLike>(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite, luminanceMath) );
-                    break;
-                }
-                case eBitDepthFloat: {
-                    proc.reset( new ColorLookupProcessor<float, nComponents, 1, 1023, eMasterCurveModeFilmLike>(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite, luminanceMath) );
-                    break;
-                }
-                default:
-                    throwSuiteStatusException(kOfxStatErrUnsupported);
-            }
+        case eMasterCurveModeFilmLike:
+            proc = makeProcessor<nComponents, eMasterCurveModeFilmLike>(dstBitDepth, args, procArgs);
             break;
-        }
-        case eMasterCurveModeLuminance: {
-            switch (dstBitDepth) {
-                case eBitDepthUByte: {
-                    proc.reset( new ColorLookupProcessor<unsigned char, nComponents, 255, 255, eMasterCurveModeLuminance>(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite, luminanceMath) );
-                    break;
-                }
-                case eBitDepthUShort: {
-                    proc.reset( new ColorLookupProcessor<unsigned short, nComponents, 65535, 65535, eMasterCurveModeLuminance>(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite, luminanceMath) );
-                    break;
-                }
-                case eBitDepthFloat: {
-                    proc.reset( new ColorLookupProcessor<float, nComponents, 1, 1023, eMasterCurveModeLuminance>(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite, luminanceMath) );
-                    break;
-                }
-                default:
-                    throwSuiteStatusException(kOfxStatErrUnsupported);
-            }
+        case eMasterCurveModeLuminance:
+            proc = makeProcessor<nComponents, eMasterCurveModeLuminance>(dstBitDepth, args, procArgs);
             break;
-        }
+        case eMasterCurveModeComposed:
+            proc = makeProcessor<nComponents, eMasterCurveModeComposed>(dstBitDepth, args, procArgs);
+            break;
     }
-    if (!proc.get()) {
+    if (!proc) {
         throwSuiteStatusException(kOfxStatErrUnsupported);
     }
     setupAndProcess(*proc, args);
@@ -1433,6 +1431,8 @@ public:
         _updateHistogram = effect->fetchPushButtonParam(kParamUpdateHistogram);
         _lookupTableParam = effect->fetchParametricParam(paramName);
         _range = effect->fetchDouble2DParam(kParamRange);
+        _masterCurveMode = effect->fetchChoiceParam(kParamMasterCurveMode);
+        addParamToSlaveTo(_masterCurveMode);
         setColourPicking(true); // we always want colour picking if the host has it
         addParamToSlaveTo(_display);
         addParamToSlaveTo(_updateHistogram);
@@ -1467,6 +1467,9 @@ public:
                 // let us draw one slice every 8 pixels
                 const int nComponents = 3;
                 GLfloat color[nComponents];
+                // Composed applies the channel curves to the master curve; the other modes are drawn
+                // with the additive combination of Standard
+                const bool composed = (MasterCurveModeEnum)_masterCurveMode->getValueAtTime(time) == eMasterCurveModeComposed;
                 glBegin(GL_TRIANGLE_STRIP);
                 try { // getValue may throw
                     for (int position = 0; position <= nbValues; ++position) {
@@ -1476,8 +1479,14 @@ public:
                         for (int component = 0; component < nComponents; ++component) {
                             int lutIndex = componentToCurve(component); // special case for components == alpha only
                             // evaluate the parametric param
-                            double value = _lookupTableParam->getValue(lutIndex, time, parametricPos);
-                            value += _lookupTableParam->getValue(kCurveMaster, time, parametricPos) - parametricPos;
+                            const double master = _lookupTableParam->getValue(kCurveMaster, time, parametricPos);
+                            double value;
+                            if (composed) {
+                                value = _lookupTableParam->getValue(lutIndex, time, master);
+                            } else {
+                                value = _lookupTableParam->getValue(lutIndex, time, parametricPos);
+                                value += master - parametricPos;
+                            }
                             // set that in the lut
                             color[component] = (GLfloat)value;
                         }
@@ -1581,6 +1590,7 @@ protected:
     PushButtonParam* _updateHistogram;
     ParametricParam* _lookupTableParam;
     Double2DParam* _range;
+    ChoiceParam* _masterCurveMode;
 private:
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
     PFNGLBLENDEQUATIONSEPARATEPROC glBlendEquationSeparate;
@@ -1601,11 +1611,14 @@ public:
     }
 };
 
-mDeclarePluginFactory(ColorLookupPluginFactory, {ofxsThreadSuiteCheck();}, {});
+mDeclarePluginFactoryVersioned(ColorLookupPluginFactory, {ofxsThreadSuiteCheck();}, {});
 
+template<unsigned int majorVersion>
 void
-ColorLookupPluginFactory::describe(ImageEffectDescriptor &desc)
+ColorLookupPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
+    // version 1 (Standard mode and no master curve on alpha by default) is kept for existing projects
+    desc.setIsObsolete(majorVersion < kPluginVersionMajor);
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
@@ -1635,8 +1648,9 @@ ColorLookupPluginFactory::describe(ImageEffectDescriptor &desc)
 #endif
 }
 
+template<unsigned int majorVersion>
 void
-ColorLookupPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+ColorLookupPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
                                             ContextEnum context)
 {
     const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
@@ -1885,8 +1899,22 @@ ColorLookupPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->appendOption(kParamMasterCurveModeOptionFilmLike);
         assert(param->getNOptions() == eMasterCurveModeLuminance);
         param->appendOption(kParamMasterCurveModeOptionLuminance);
+        assert(param->getNOptions() == eMasterCurveModeComposed);
+        param->appendOption(kParamMasterCurveModeOptionComposed);
         param->setAnimates(false);
-        param->setDefault(kParamMasterCurveModeDefault);
+        param->setDefault( (int)masterCurveModeDefault(majorVersion) );
+    }
+    {
+        // added in 1.2 (issue #290): on from 2.0, as in the node of the same name; off in 1.2, so that
+        // existing projects render the same
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamMasterOnAlpha);
+        param->setLabel(kParamMasterOnAlphaLabel);
+        param->setHint(kParamMasterOnAlphaHint);
+        param->setDefault(majorVersion >= kPluginVersionMajor);
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamLuminanceMath);
@@ -1946,16 +1974,19 @@ ColorLookupPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
-} // ColorLookupPluginFactory::describeInContext
+} // >::describeInContext
 
+template<unsigned int majorVersion>
 ImageEffect*
-ColorLookupPluginFactory::createInstance(OfxImageEffectHandle handle,
+ColorLookupPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                          ContextEnum /*context*/)
 {
     return new ColorLookupPlugin(handle);
 }
 
-static ColorLookupPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static ColorLookupPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
+static ColorLookupPluginFactory<1> p1(kPluginIdentifier, kPluginVersionMajor1Minor); // obsolete
 mRegisterPluginFactoryInstance(p)
+mRegisterPluginFactoryInstance(p1)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

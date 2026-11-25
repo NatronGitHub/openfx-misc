@@ -85,7 +85,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              in a range that includes it was set to 0); isIdentity no longer passes the source through
 //              when the render sets the alpha (Output Alpha other than Source, even with Mix 0 or outside the
 //              mask), clamps float images (Clamp Black, on by default, or Clamp White), or applies a gain
-//              other than 1
+//              other than 1;
+//              (1.1 is unreleased, extended in place, issue #293) Set Saturation and Set Brightness parameters
+//              (default off): the adjustment is the value that the saturation or brightness is set to
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -146,6 +148,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamSaturationRangeRolloff "saturationRangeRolloff"
 #define kParamSaturationRangeRolloffLabel "Saturation Range Rolloff"
 #define kParamSaturationRangeRolloffHint "Interval around Saturation Range, in the same units as saturation, where the modifications decrease progressively to zero."
+#define kParamSetSaturation "setSaturation"
+#define kParamSetSaturationLabel "Set Saturation"
+#define kParamSetSaturationHint "When checked, the saturation of the colors within the range is set to Saturation Adjustment (clamped to zero), instead of being offset by it, and Saturation Adjustment Gain is not used. In the rolloff, the saturation goes progressively from its value to Saturation Adjustment. Src and Dst Color then set Saturation Adjustment to the saturation of Dst Color."
 
 #define kGroupBrightness "brightness"
 #define kGroupBrightnessLabel "Brightness"
@@ -162,6 +167,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamBrightnessRangeRolloff "brightnessRangeRolloff"
 #define kParamBrightnessRangeRolloffLabel "Brightness Range Rolloff"
 #define kParamBrightnessRangeRolloffHint "Interval around Brightness Range, in the same units as brightness, where the modifications decrease progressively to zero."
+#define kParamSetBrightness "setBrightness"
+#define kParamSetBrightnessLabel "Set Brightness"
+#define kParamSetBrightnessHint "When checked, the brightness of the colors within the range is set to Brightness Adjustment, instead of being offset by it, and Brightness Adjustment Gain is not used. In the rolloff, the brightness goes progressively from its value to Brightness Adjustment. Src and Dst Color then set Brightness Adjustment to the brightness of Dst Color."
 
 #define kParamClampBlack "clampBlack"
 #define kParamClampBlackLabel "Clamp Black"
@@ -227,6 +235,18 @@ static bool gHostSupportsDefaultCoordinateSystem = true; // for kParamDefaultsNo
    - when setting srcColor: compute hueRange, satRange, valRange (as empty ranges), set rolloffs to (50,0.3,0.3)
    - when setting dstColor: compute hueRotation, satAdjust and valAdjust
  */
+// a saturation or brightness of the Src Color, and of the Dst Color (distinct types, so that
+// they cannot be swapped)
+struct SrcValue
+{
+    double value;
+};
+
+struct DstValue
+{
+    double value;
+};
+
 struct HSVToolValues
 {
     double hueRange[2];
@@ -239,10 +259,12 @@ struct HSVToolValues
     double satAdjust;
     double satAdjustGain;
     double satRolloff;
+    bool setSat; // Set Saturation: satAdjust is the saturation within the range, not an offset
     double valRange[2];
     double valAdjust;
     double valAdjustGain;
     double valRolloff;
+    bool setVal; // Set Brightness: valAdjust is the brightness within the range, not an offset
     HSVToolValues()
     {
         hueRange[0] = hueRange[1] = 0.;
@@ -255,10 +277,12 @@ struct HSVToolValues
         satAdjust = 0.;
         satAdjustGain = 1.;
         satRolloff = 0.;
+        setSat = false;
         valRange[0] = valRange[1] = 0.;
         valAdjust = 0.;
         valAdjustGain = 1.;
         valRolloff = 0.;
+        setVal = false;
     }
 
     // true if hsvtool() changes the hue, saturation or brightness of the pixels whose range
@@ -266,8 +290,8 @@ struct HSVToolValues
     bool adjustsColor() const
     {
         return (hueRotation != 0.) || (hueRotationGain != 1.) ||
-               (satAdjust != 0.) || (satAdjustGain != 1.) ||
-               (valAdjust != 0.) || (valAdjustGain != 1.);
+               setSat || (satAdjust != 0.) || (satAdjustGain != 1.) ||
+               setVal || (valAdjust != 0.) || (valAdjustGain != 1.);
     }
 };
 
@@ -615,11 +639,21 @@ public:
         } else {
             //h += coeff * (float)_values.hueRotation;
             h += coeff * ( (float)_values.hueRotation + (_values.hueRotationGain - 1.) * normalizeAngleSigned(h - _values.hueMean) );
-            s += coeff * ( (float)_values.satAdjust + (_values.satAdjustGain - 1.) * (s - (s0 + s1) / 2) );
+            if (_values.setSat) {
+                // Set Saturation: from s (coeff 0) to satAdjust (coeff 1)
+                s += coeff * ( (float)_values.satAdjust - s );
+            } else {
+                s += coeff * ( (float)_values.satAdjust + (_values.satAdjustGain - 1.) * (s - (s0 + s1) / 2) );
+            }
             if (s < 0) {
                 s = 0;
             }
-            v += coeff * ( (float)_values.valAdjust + (_values.valAdjustGain - 1.) * (v - (v0 + v1) / 2) );
+            if (_values.setVal) {
+                // Set Brightness: from v (coeff 0) to valAdjust (coeff 1)
+                v += coeff * ( (float)_values.valAdjust - v );
+            } else {
+                v += coeff * ( (float)_values.valAdjust + (_values.valAdjustGain - 1.) * (v - (v0 + v1) / 2) );
+            }
             h *= OFXS_HUE_CIRCLE / 360.;
             Color::hsv_to_rgb(h, s, v, rout, gout, bout, true);
         }
@@ -1039,10 +1073,12 @@ public:
         , _saturationAdjustment(NULL)
         , _saturationAdjustmentGain(NULL)
         , _saturationRangeRolloff(NULL)
+        , _setSaturation(NULL)
         , _brightnessRange(NULL)
         , _brightnessAdjustment(NULL)
         , _brightnessAdjustmentGain(NULL)
         , _brightnessRangeRolloff(NULL)
+        , _setBrightness(NULL)
         , _clampBlack(NULL)
         , _clampWhite(NULL)
         , _outputAlpha(NULL)
@@ -1084,10 +1120,14 @@ public:
         _saturationAdjustment = fetchDoubleParam(kParamSaturationAdjustment);
         _saturationAdjustmentGain = fetchDoubleParam(kParamSaturationAdjustmentGain);
         _saturationRangeRolloff = fetchDoubleParam(kParamSaturationRangeRolloff);
+        _setSaturation = fetchBooleanParam(kParamSetSaturation);
+        assert(_setSaturation);
         _brightnessRange = fetchDouble2DParam(kParamBrightnessRange);
         _brightnessAdjustment = fetchDoubleParam(kParamBrightnessAdjustment);
         _brightnessAdjustmentGain = fetchDoubleParam(kParamBrightnessAdjustmentGain);
         _brightnessRangeRolloff = fetchDoubleParam(kParamBrightnessRangeRolloff);
+        _setBrightness = fetchBooleanParam(kParamSetBrightness);
+        assert(_setBrightness);
         assert(_srcColor && _dstColor &&
                _hueRange && _hueRotation && _hueRotationGain && _hueRangeRolloff &&
                _saturationRange && _saturationAdjustment && _saturationAdjustmentGain && _saturationRangeRolloff &&
@@ -1142,6 +1182,20 @@ private:
 
     /* the hue, saturation and brightness parameters at time, as render() uses them */
     HSVToolValues getValuesAtTime(double time) const;
+
+    // The Saturation Adjustment that takes the saturation of the Src Color to the one of the Dst
+    // Color: the Dst value itself with Set Saturation, the offset otherwise.
+    double saturationAdjustmentTo(double time, SrcValue src, DstValue dst) const
+    {
+        return _setSaturation->getValueAtTime(time) ? dst.value : (dst.value - src.value);
+    }
+
+    // The Brightness Adjustment that takes the brightness of the Src Color to the one of the Dst
+    // Color (see above).
+    double brightnessAdjustmentTo(double time, SrcValue src, DstValue dst) const
+    {
+        return _setBrightness->getValueAtTime(time) ? dst.value : (dst.value - src.value);
+    }
 
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
     virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
@@ -1237,10 +1291,12 @@ private:
     DoubleParam *_saturationAdjustment;
     DoubleParam *_saturationAdjustmentGain;
     DoubleParam *_saturationRangeRolloff;
+    BooleanParam *_setSaturation;
     Double2DParam *_brightnessRange;
     DoubleParam *_brightnessAdjustment;
     DoubleParam *_brightnessAdjustmentGain;
     DoubleParam *_brightnessRangeRolloff;
+    BooleanParam *_setBrightness;
     BooleanParam *_clampBlack;
     BooleanParam *_clampWhite;
     ChoiceParam *_outputAlpha;
@@ -1273,10 +1329,12 @@ HSVToolPlugin::getValuesAtTime(double time) const
     values.satAdjust = _saturationAdjustment->getValueAtTime(time);
     values.satAdjustGain = _saturationAdjustmentGain->getValueAtTime(time);
     values.satRolloff = _saturationRangeRolloff->getValueAtTime(time);
+    values.setSat = _setSaturation->getValueAtTime(time);
     _brightnessRange->getValueAtTime(time, values.valRange[0], values.valRange[1]);
     values.valAdjust = _brightnessAdjustment->getValueAtTime(time);
     values.valAdjustGain = _brightnessAdjustmentGain->getValueAtTime(time);
     values.valRolloff = _brightnessRangeRolloff->getValueAtTime(time);
+    values.setVal = _setBrightness->getValueAtTime(time);
 
     return values;
 }
@@ -1576,11 +1634,11 @@ HSVToolPlugin::setSrcFromRectangle(const Image* srcImg,
     _saturationRange->setValue( ffloor(hsvmin.s, 4), fceil(hsvmax.s, 4) );
     _saturationRangeRolloff->setValue( ffloor( (hsvmax.s - hsvmin.s) * DEFAULT_RECTANGLE_ROLLOFF, 4 ) );
     if (tov != 0.) { // no need to adjust saturation if target color is black
-        _saturationAdjustment->setValue( fround(tos - s, 4) );
+        _saturationAdjustment->setValue( fround(saturationAdjustmentTo( time, SrcValue{s}, DstValue{tos} ), 4) );
     }
     _brightnessRange->setValue( ffloor(hsvmin.v, 4), fceil(hsvmax.v, 4) );
     _brightnessRangeRolloff->setValue( ffloor( (hsvmax.v - hsvmin.v) * DEFAULT_RECTANGLE_ROLLOFF, 4 ) );
-    _brightnessAdjustment->setValue( fround(tov - v, 4) );
+    _brightnessAdjustment->setValue( fround(brightnessAdjustmentTo( time, SrcValue{v}, DstValue{tov} ), 4) );
 } // HSVToolPlugin::setSrcFromRectangle
 
 /* set up and run a processor */
@@ -1655,11 +1713,11 @@ HSVToolPlugin::changedParam(const InstanceChangedArgs &args,
         _saturationRange->setValue(s, s);
         _saturationRangeRolloff->setValue(0.3);
         if (tov != 0.) { // no need to adjust saturation if target color is black
-            _saturationAdjustment->setValue(tos - s);
+            _saturationAdjustment->setValue( saturationAdjustmentTo( time, SrcValue{s}, DstValue{tos} ) );
         }
         _brightnessRange->setValue(v, v);
         _brightnessRangeRolloff->setValue(0.3);
-        _brightnessAdjustment->setValue(tov - v);
+        _brightnessAdjustment->setValue( brightnessAdjustmentTo( time, SrcValue{v}, DstValue{tov} ) );
     } else if (paramName == kParamEnableRectangle) {
         // update visibility
         bool enableRectangle = _enableRectangle->getValueAtTime(time);
@@ -1695,9 +1753,9 @@ HSVToolPlugin::changedParam(const InstanceChangedArgs &args,
         EditBlock eb(*this, "setDst");
         if (tov != 0.) { // no need to adjust hue or saturation if target color is black
             _hueRotation->setValue(dh);
-            _saturationAdjustment->setValue(tos - s);
+            _saturationAdjustment->setValue( saturationAdjustmentTo( time, SrcValue{s}, DstValue{tos} ) );
         }
-        _brightnessAdjustment->setValue(tov - v);
+        _brightnessAdjustment->setValue( brightnessAdjustmentTo( time, SrcValue{v}, DstValue{tov} ) );
     } else if ( (paramName == kParamPremult) && (args.reason == eChangeUserEdit) ) {
         _premultChanged->setValue(true);
     }
@@ -2134,6 +2192,20 @@ HSVToolPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->setHint(kParamSaturationRangeRolloffHint);
             param->setRange(0., 1.);
             param->setDisplayRange(0., 1.);
+            if (group) {
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            // after the rolloff, as in the node of the same name (issue #293)
+            BooleanParamDescriptor *param = desc.defineBooleanParam(kParamSetSaturation);
+            param->setLabel(kParamSetSaturationLabel);
+            param->setHint(kParamSetSaturationHint);
+            param->setDefault(false);
+            param->setAnimates(true);
             param->setLayoutHint(eLayoutHintDivider); // last parameter in the group
             if (group) {
                 param->setParent(*group);
@@ -2205,6 +2277,20 @@ HSVToolPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->setHint(kParamBrightnessRangeRolloffHint);
             param->setRange(0., DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0., 1.);
+            if (group) {
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            // after the rolloff, as in the node of the same name (issue #293)
+            BooleanParamDescriptor *param = desc.defineBooleanParam(kParamSetBrightness);
+            param->setLabel(kParamSetBrightnessLabel);
+            param->setHint(kParamSetBrightnessHint);
+            param->setDefault(false);
+            param->setAnimates(true);
             param->setLayoutHint(eLayoutHintDivider); // last parameter in the group
             if (group) {
                 param->setParent(*group);
