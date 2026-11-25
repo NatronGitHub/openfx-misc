@@ -18,7 +18,8 @@
  * ***** END LICENSE BLOCK ***** */
 
 /*
- * The Draw options shared by the Radial and Rectangle plugins: Premultiply, Replace and Invert.
+ * The Draw options shared by the Radial and Rectangle plugins: Premultiply, Replace and Invert,
+ * and the falloff curve of the Softness.
  * Included by Rectangle/Rectangle.cpp and Radial/Radial.cpp.
  */
 
@@ -48,8 +49,94 @@
 #define kParamShapeInvertLabel "Invert"
 #define kParamShapeInvertHint "Invert the shape: Color 0 is drawn inside and Color 1 outside, and Premultiply uses the inverted shape."
 
+#define kParamShapeFalloff "falloff"
+#define kParamShapeFalloffLabel "Falloff"
+#define kParamShapeFalloffHint "The curve of the edge in the Softness, from Color 0 (0) to Color 1 (1), as a function of " \
+    "the distance t across the Softness, from 0 at the outer edge to 1 at the inner edge."
+#define kParamShapeFalloffOptionQuadratic "Quadratic", "Two parabolas, 2t^2 then 1 - 2(1 - t)^2 (the default before version 3).", "quadratic"
+#define kParamShapeFalloffOptionLinear "Linear", "t.", "linear"
+#define kParamShapeFalloffOptionSmooth0 "Smooth0", "Smooth at the outer edge, linear at the inner edge: t^2 (2 - t).", "smooth0"
+#define kParamShapeFalloffOptionSmooth1 "Smooth1", "Linear at the outer edge, smooth at the inner edge: t (1 + t (1 - t)).", "smooth1"
+#define kParamShapeFalloffOptionSmooth "Smooth", "Smooth at both edges (smoothstep): t^2 (3 - 2t). The default since version 3.", "smooth"
+
 namespace OFX {
 namespace ShapeDraw {
+
+/// The falloff curve of the Softness (the options of the Falloff parameter, in order).
+enum class FalloffEnum
+{
+    eFalloffQuadratic = 0, // the default before version 3
+    eFalloffLinear,
+    eFalloffSmooth0,
+    eFalloffSmooth1,
+    eFalloffSmooth,
+};
+
+/// The shape weight at the distance t across the Softness (0 at the outer edge, 1 at the inner one).
+/// The callers pass t < 1. Quadratic is the formula of the versions without the parameter, unchanged
+/// (it is not clamped); the other curves are clamped to [0, 1], and Smooth0, Smooth1 and Smooth are
+/// those of ofxsRamp (the Ramp plug-in).
+inline double
+falloff(FalloffEnum curve,
+        double t)
+{
+    if ( (curve <= FalloffEnum::eFalloffQuadratic) || (FalloffEnum::eFalloffSmooth < curve) ) {
+        // 2t^2 then 1 - 2(1 - t)^2, written as in these versions
+        t *= 2.;
+        if (t < 1.) {
+            return t * t / 2.;
+        }
+        t -= 1.;
+
+        return -0.5 * (t * (t - 2.) - 1.);
+    }
+    if ( !(t > 0.) ) {
+        return 0.;
+    }
+    if (t >= 1.) {
+        return 1.;
+    }
+    switch (curve) {
+    case FalloffEnum::eFalloffLinear:
+
+        return t;
+    case FalloffEnum::eFalloffSmooth0:
+
+        return t * t * (2. - t);
+    case FalloffEnum::eFalloffSmooth1:
+
+        return t * ( 1. + t * (1. - t) );
+    case FalloffEnum::eFalloffSmooth:
+    default:
+
+        return t * t * (3. - 2. * t);
+    }
+}
+
+/// Describe the Falloff parameter (put it after Softness), with its default.
+inline void
+describeFalloffParam(ImageEffectDescriptor& desc,
+                     PageParamDescriptor* page,
+                     FalloffEnum defaultCurve)
+{
+    ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamShapeFalloff);
+    param->setLabel(kParamShapeFalloffLabel);
+    param->setHint(kParamShapeFalloffHint);
+    assert(param->getNOptions() == (int)FalloffEnum::eFalloffQuadratic);
+    param->appendOption(kParamShapeFalloffOptionQuadratic);
+    assert(param->getNOptions() == (int)FalloffEnum::eFalloffLinear);
+    param->appendOption(kParamShapeFalloffOptionLinear);
+    assert(param->getNOptions() == (int)FalloffEnum::eFalloffSmooth0);
+    param->appendOption(kParamShapeFalloffOptionSmooth0);
+    assert(param->getNOptions() == (int)FalloffEnum::eFalloffSmooth1);
+    param->appendOption(kParamShapeFalloffOptionSmooth1);
+    assert(param->getNOptions() == (int)FalloffEnum::eFalloffSmooth);
+    param->appendOption(kParamShapeFalloffOptionSmooth);
+    param->setDefault( static_cast<int>(defaultCurve) );
+    if (page) {
+        page->addChild(*param);
+    }
+}
 
 /// The drawing options at one time. All off by default: the output of older versions.
 struct Options
@@ -57,7 +144,31 @@ struct Options
     bool premult = false; // multiply the Source RGB by the shape weight
     bool replace = false; // clear the drawn channels of the Source
     bool invert = false; // swap the colors, and invert the Premultiply weight
+    FalloffEnum falloff = FalloffEnum::eFalloffQuadratic; // the curve of the Softness
+    bool pixelCenterSoftness = false; // version 3: the Softness is computed at the pixel center (see softWeight())
 };
+
+/// The shape weight of a pixel in the Softness, in versions 3 and later (Options::pixelCenterSoftness): the falloff
+/// curve of the distance t across the Softness (0 at the outer edge, 1 at the inner one), taken at the pixel
+/// center, 0 outside and 1 inside (no other antialiasing: the Softness is the edge).
+inline float
+softWeight(FalloffEnum curve,
+           double t,
+           bool plinear)
+{
+    if ( !(t > 0.) ) {
+        return 0.f;
+    }
+    if (t >= 1.) {
+        return 1.f;
+    }
+    double w = falloff(curve, t);
+    if (plinear) {
+        w = w * w * w; // perceptually linear
+    }
+
+    return static_cast<float>(w);
+}
 
 /// The Source pixel srcPixRGBA (RGBA, not normalized), before the shape is drawn over it: Premultiply
 /// multiplies its RGB by the shape weight w (1 inside the shape, 0 outside; 1 - w with Invert), and
@@ -112,8 +223,9 @@ public:
         , _premult( effect.fetchBooleanParam(kParamShapePremult) )
         , _replace( effect.fetchBooleanParam(kParamShapeReplace) )
         , _invert( effect.fetchBooleanParam(kParamShapeInvert) )
+        , _falloff( effect.fetchChoiceParam(kParamShapeFalloff) )
     {
-        assert(_color0 && _color1 && _premult && _replace && _invert);
+        assert(_color0 && _color1 && _premult && _replace && _invert && _falloff);
     }
 
     Options options(double time) const
@@ -122,6 +234,9 @@ public:
         o.premult = _premult->getValueAtTime(time);
         o.replace = _replace->getValueAtTime(time);
         o.invert = _invert->getValueAtTime(time);
+        const int curve = _falloff->getValueAtTime(time);
+        o.falloff = ( (curve >= static_cast<int>(FalloffEnum::eFalloffQuadratic)) && (curve <= static_cast<int>(FalloffEnum::eFalloffSmooth)) ) ?
+                    static_cast<FalloffEnum>(curve) : FalloffEnum::eFalloffQuadratic;
 
         return o;
     }
@@ -205,6 +320,7 @@ private:
     BooleanParam* _premult;
     BooleanParam* _replace;
     BooleanParam* _invert;
+    ChoiceParam* _falloff;
 };
 
 /// Describe the drawing options (Premultiply, Replace, Invert), then the mask and mix parameters

@@ -162,6 +162,14 @@ enum MergePluginEnum
 // 3.0 (unreleased, fixed in place): in the general context, the time domain is the frame range of B, or of
 //      A with the new "Range From" parameter (default B), instead of the host default (issue #277).
 //      Rendered images are unchanged. Versions 1 and 2 keep the host default, with no parameter.
+// 3.0 (unreleased, fixed in place, issue #277): the operators match the tests/nuke reference (MergeV3):
+//      Alpha masking leaves each input unchanged where the other one has zero alpha, with a blend term on
+//      premultiplied colors (it only set the output alpha), and its alpha is a+b-ab in [0, 1], else max(a, b);
+//      in the separable operators (not the HSL modes, which are unchanged), alpha values outside [0, 1] are
+//      clamped where they weigh the inputs (e.g. over), and the alpha of atop is b; divide is A where B <= 0 (it
+//      was 0); soft-light is 2AB+BB(1-AB) (it was the W3C formula; two opaque inputs give an alpha of 2);
+//      screen, exclusion, hard-light, overlay, geometric, color-dodge and color-burn change outside [0, 1].
+//      Versions 1 and 2 render as before.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -182,6 +190,11 @@ enum MergePluginEnum
 #define kParamAlphaMaskingLabel "Alpha masking"
 #define kParamAlphaMaskingHint "When enabled, the input images are unchanged where the other image has 0 alpha, and" \
     " the output alpha is set to a+b - a*b. When disabled the alpha channel is processed as " \
+    "any other channel. Option is disabled for operations where it does not apply or makes no difference."
+#define kParamAlphaMaskingHintV3 "When enabled, the input images are unchanged where the other image has 0 alpha, and" \
+    " the output alpha is set to a+b - a*b (or max(a, b) if a or b is outside [0, 1]). Where both alphas are not 0, " \
+    "the color is A(1-b) + B(1-a) plus a blend term on the premultiplied colors, which is the operator where both inputs " \
+    "are opaque. When disabled the alpha channel is processed as " \
     "any other channel. Option is disabled for operations where it does not apply or makes no difference."
 
 #define kParamBBox "bbox"
@@ -369,6 +382,351 @@ alphaUsesAChannel(int nComponents,
     return (nComponents == 1) && (majorVersion >= 3);
 }
 
+// Merge 3 (issue #277): the operators that differ from SupportExt's (ofxsMerging.h) outside [0, 1], alpha
+// values clamped to [0, 1] where they weigh the inputs, and Alpha masking that leaves each input unchanged where
+// the other one is transparent. Merge 1 and 2 keep MergeImages2D::mergePixel() unchanged.
+// The results match the tests/nuke reference (tests/nuke/cases.py: the Merge cases, with values from -1 to 3 and
+// alphas from -0.5 to 1.44). Foundry's documentation of the Merge node
+// (https://learn.foundry.com/nuke/content/reference_guide/merge_nodes/merge.html) gives the formulas in [0, 1].
+// Floating point only (maxValue 1): the processor works in float.
+namespace MergeV3 {
+
+// The formula of the operators that differ from SupportExt's in Merge 3, or an empty string.
+inline const char*
+formula(MergingFunctionEnum f)
+{
+    switch (f) {
+    case eMergeColorBurn:
+
+        return "1-(1-B)/max(A,1-B), with B>=0; 0 if A<=0";
+    case eMergeColorDodge:
+
+        return "B/max(1-A,B), with A,B>=0; 1 if A>=1";
+    case eMergeDivide:
+
+        return "A/B if B>0, otherwise A";
+    case eMergeExclusion:
+
+        return "A+B-2AB if A,B>=0, otherwise A+B";
+    case eMergeGeometric:
+
+        return "2AB/(A+B) if A,B>0, otherwise 0";
+    case eMergeHardLight:
+
+        return "2AB if 2A<1, otherwise 1-2(1-A)(1-B), with A,B>=0, and A,B<=1 in 1-2(1-A)(1-B)";
+    case eMergeOverlay:
+
+        return "2AB if 2B<1, otherwise 1-2(1-A)(1-B), with A,B>=0, and A,B<=1 in 1-2(1-A)(1-B)";
+    case eMergeScreen:
+
+        return "A+B-AB if 0<A<1 and 0<B<1, otherwise max(A,B)";
+    case eMergeSoftLight:
+
+        return "2AB+BB(1-AB) if AB<1, otherwise 2AB, with A,B>=0";
+    default:
+
+        return "";
+    }
+}
+
+inline double
+positive(double v)
+{
+    return (v > 0.) ? v : 0.; // NaN gives 0
+}
+
+inline double
+clamp01(double v)
+{
+    return (v > 1.) ? 1. : positive(v);
+}
+
+// "A+B-AB if 0<A<1 and 0<B<1, otherwise max(A,B)"
+inline double
+screen(double A,
+       double B)
+{
+    return ( (0. < A) && (A < 1.) && (0. < B) && (B < 1.) ) ? (A + B - A * B) : (std::max)(A, B);
+}
+
+// The operator f on one channel (Alpha masking off): A and B are the channel values, a and b the alphas
+// (in [0, 1]). f is separable (not an HSL mode).
+template <MergingFunctionEnum f>
+double
+channel(double A,
+        double B,
+        double a,
+        double b)
+{
+    switch (f) {
+    case eMergeColorBurn: {
+        if (A <= 0.) {
+            return 0.;
+        }
+        const double Bp = positive(B);
+
+        return 1. - (1. - Bp) / (std::max)(A, 1. - Bp); // the denominator is >= A > 0
+    }
+    case eMergeColorDodge: {
+        if (A >= 1.) {
+            return 1.;
+        }
+        const double Bp = positive(B);
+
+        return Bp / (std::max)(1. - positive(A), Bp); // the denominator is >= 1 - A > 0
+    }
+    case eMergeDivide:
+
+        return (B > 0.) ? (A / B) : A;
+    case eMergeExclusion:
+
+        return ( (A >= 0.) && (B >= 0.) ) ? (A + B - 2. * A * B) : (A + B);
+    case eMergeGeometric:
+
+        return ( (A > 0.) && (B > 0.) ) ? (2. * A * B / (A + B)) : 0.;
+    case eMergeHardLight:
+
+        return (2. * A < 1.) ? (2. * positive(A) * positive(B)) : ( 1. - 2. * ( 1. - (std::min)(A, 1.) ) * ( 1. - clamp01(B) ) );
+    case eMergeOverlay:
+
+        return (2. * B < 1.) ? (2. * positive(A) * positive(B)) : ( 1. - 2. * ( 1. - (std::min)(B, 1.) ) * ( 1. - clamp01(A) ) );
+    case eMergeScreen:
+
+        return screen(A, B);
+    case eMergeSoftLight: {
+        A = positive(A);
+        B = positive(B);
+        const double AB = A * B;
+
+        return (AB < 1.) ? (2. * AB + B * B * (1. - AB) ) : (2. * AB);
+    }
+    default: {
+        // the other separable operators are those of SupportExt, on one channel
+        const float Af = static_cast<float>(A);
+        const float Bf = static_cast<float>(B);
+        float r = 0.f;
+        MergeImages2D::mergePixel<f, float, 1, 1>(false, &Af, static_cast<float>(a), &Bf, static_cast<float>(b), &r);
+
+        return r;
+    }
+    }
+} // channel
+
+// The operators whose A and B are made positive in Alpha masking too, as without it.
+constexpr bool
+masksPositiveInputs(MergingFunctionEnum f)
+{
+    return (f == eMergeColorBurn) || (f == eMergeColorDodge) || (f == eMergeHardLight) || (f == eMergeOverlay) ||
+           (f == eMergeSoftLight);
+}
+
+// The blend term T of Alpha masking, on premultiplied colors: the color is A(1-b) + B(1-a) + T, which is A where
+// b = 0 and B where a = 0 if T is 0 there, and channel(A, B) where both inputs are opaque. Most terms are
+// ab channel(A/a, B/b), written without the division (as in the premultiplied formulas of the SVG Compositing
+// Specification). The exceptions, which match the tests/nuke reference, whose masking cases have alphas from 0
+// to 1 in both inputs: geometric (unweighted 2AB/(A+B)), from, minus and hypot (ab times the operator on A and B),
+// divide (A/B where B > 0, also where b = 0, instead of ab (A/a)/(B/b) = A b^2 / B; Ab elsewhere) and soft-light
+// (2AB + (a/b)B^2(1 - AB/a) where AB < a, instead of the AB/(ab) and AB < ab of ab f(A/a, B/b)). a and b are in [0, 1].
+template <MergingFunctionEnum f>
+double
+maskedTerm(double A,
+           double B,
+           double a,
+           double b)
+{
+    const double Ab = A * b;
+    const double Ba = B * a;
+    switch (f) {
+    case eMergeAverage:
+
+        return (Ab + Ba) / 2.;
+    case eMergeColorBurn:
+
+        return ( (A <= 0.) || (Ab + Ba <= a * b) ) ? 0. : ( a * (Ab + Ba - a * b) / A );
+    case eMergeColorDodge:
+
+        return ( (a > 0.) && (b > 0.) ) ? ( a * b * channel<f>(A / a, B / b, 1., 1.) ) : 0.;
+    case eMergeDifference:
+
+        return std::abs(Ab - Ba);
+    case eMergeDivide:
+
+        return (B > 0.) ? (A / B) : Ab;
+    case eMergeExclusion:
+
+        return ( (A >= 0.) && (B >= 0.) ) ? (Ab + Ba - 2. * A * B) : (Ab + Ba);
+    case eMergeFrom:
+
+        return a * b * (B - A);
+    case eMergeGeometric:
+
+        return channel<f>(A, B, a, b);
+    case eMergeHardLight:
+
+        return (2. * A < a) ? (2. * A * B) : ( a * b - 2. * ( b - (std::min)(B, b) ) * ( a - (std::min)(A, a) ) );
+    case eMergeHypot:
+
+        return a * b * std::sqrt(A * A + B * B);
+    case eMergeMax:
+
+        return (std::max)(Ab, Ba);
+    case eMergeMin:
+
+        return (std::min)(Ab, Ba);
+    case eMergeMinus:
+
+        return a * b * (A - B);
+    case eMergeMultiply:
+
+        return ( (A < 0.) && (B < 0.) ) ? Ab : (A * B);
+    case eMergeOverlay:
+
+        return (2. * B < b) ? (2. * A * B) : ( a * b - 2. * ( a - (std::min)(A, a) ) * ( b - (std::min)(B, b) ) );
+    case eMergePlus:
+
+        return Ab + Ba;
+    case eMergeSoftLight:
+
+        return ( (a > 0.) && (b > 0.) && (A * B < a) ) ? ( 2. * A * B + (a / b) * B * B * (1. - A * B / a) ) : (2. * A * B);
+    default:
+
+        // the operators that are not in Foundry's list (freeze, grain-extract, grain-merge, pinlight,
+        // reflect): the general formula of W3C Compositing and Blending Level 1, 0 where an alpha is 0
+        return ( (a > 0.) && (b > 0.) ) ? ( a * b * channel<f>(A / a, B / b, 1., 1.) ) : 0.;
+    }
+} // maskedTerm
+
+inline float
+clampAlpha(float a)
+{
+    // NaN stays NaN
+    return (a < 0.f) ? 0.f : ( (a > 1.f) ? 1.f : a );
+}
+
+// Merge 3's mergePixel(): A and B have nComponents (at most 4) components, a and b are their alphas.
+// - The HSL modes are those of Merge 2 (MergeImages2D::mergePixel()).
+// - In the other (separable) operators, the alphas a and b are clamped to [0, 1] where they weigh the inputs
+//   (over: "A+B(1-a)" with a = 1.44 gave a negative contribution of B).
+// - Alpha masking (RGBA, with a maskable operator): "the input images are unchanged where the other image
+//   has zero alpha, and the output alpha is set to a+b-a*b" (Foundry): the color is A(1-b) + B(1-a) + T
+//   (maskedTerm()), and the alpha is a+b-ab in [0, 1], else max(a, b) (as screen), as in matte. Merge 2 only
+//   replaced the output alpha.
+template <MergingFunctionEnum f, int nComponents>
+void
+mergePixel(bool doAlphaMasking,
+           const float *A,
+           float a,
+           const float *B,
+           float b,
+           float* dst)
+{
+    if ( !isSeparable(f) ) {
+        MergeImages2D::mergePixel<f, float, nComponents, 1>(doAlphaMasking, A, a, B, b, dst);
+
+        return;
+    }
+    float Af[4] = {};
+    float Bf[4] = {};
+    for (int i = 0; i < nComponents; ++i) {
+        Af[i] = mergeFiniteInput<float>(A[i]);
+        Bf[i] = mergeFiniteInput<float>(B[i]);
+    }
+    const float aRaw = mergeFiniteInput<float>(a);
+    const float bRaw = mergeFiniteInput<float>(b);
+    a = clampAlpha(aRaw);
+    b = clampAlpha(bRaw);
+    const bool masked = (nComponents == 4) && doAlphaMasking && isMaskable(f);
+    if ( (nComponents == 4) && ( masked || (f == eMergeMatte) ) ) {
+        // the alpha of Alpha masking and of matte ("Aa+B(1-a)"): a+b-ab in [0, 1], else max(a, b)
+        dst[3] = mergeDoubleToPIX<float>( screen(aRaw, bRaw) );
+    } else if ( (nComponents == 4) && (f == eMergeATop) ) {
+        // atop, "Ab+B(1-a). Where a,b>=0", on the alpha: the alpha of A is clamped to [0, 1] like a, and b is not,
+        // so that the output alpha is b
+        dst[3] = mergeDoubleToPIX<float>( clamp01(Af[3]) * static_cast<double>(bRaw) + static_cast<double>(Bf[3]) * (1. - a) );
+    }
+    const int maxComp = ( (nComponents == 4) && ( masked || (f == eMergeMatte) || (f == eMergeATop) ) ) ? 3 : nComponents;
+    for (int i = 0; i < maxComp; ++i) {
+        if (!masked) {
+            dst[i] = mergeDoubleToPIX<float>( channel<f>(Af[i], Bf[i], a, b) );
+        } else {
+            double Ai = Af[i];
+            double Bi = Bf[i];
+            if ( masksPositiveInputs(f) ) {
+                Ai = positive(Ai);
+                Bi = positive(Bi);
+            }
+            dst[i] = mergeDoubleToPIX<float>( Ai * (1. - b) + Bi * (1. - a) + maskedTerm<f>(Ai, Bi, a, b) );
+        }
+    }
+} // mergePixel
+} // namespace MergeV3
+
+// The description of operator e in Merge majorVersion: the formula of the operators that Merge 3 changed
+// (MergeV3::formula()), else SupportExt's.
+std::string
+operationDescription(MergingFunctionEnum e,
+                     unsigned int majorVersion)
+{
+    const char* formula = (majorVersion >= 3) ? MergeV3::formula(e) : "";
+    if (*formula == '\0') {
+        return getOperationDescription(e);
+    }
+    std::string description(formula);
+    if (e == eMergeSoftLight) {
+        // the alpha channel follows the same formula: two opaque inputs give an alpha of 2
+        description += " (on the alpha too: two opaque inputs give 2, unless Alpha masking is checked)";
+    }
+
+    return description;
+}
+
+// getOperationHelp(e, true) (markdown) with the description of Merge majorVersion
+std::string
+operationHelpMarkdown(MergingFunctionEnum e,
+                      unsigned int majorVersion)
+{
+    const char* formula = (majorVersion >= 3) ? MergeV3::formula(e) : "";
+    if (*formula == '\0') {
+        return getOperationHelp(e, true);
+    }
+    std::string help = getOperationString(e) + ": ";
+    for (const char* c = formula; *c != '\0'; ++c) {
+        if ( std::strchr("\\`*_{}[]()#+-.!", *c) ) {
+            help += '\\'; // a markdown special character
+        }
+        help += *c;
+    }
+
+    return help;
+}
+
+// isIdentityForBOnly() in Merge majorVersion: in Merge 3, screen with A = 0 is "max(A,B)", which is 0, not B,
+// where B is negative.
+inline bool
+isIdentityForBOnlyVersioned(MergingFunctionEnum f,
+                            unsigned int majorVersion)
+{
+    return isIdentityForBOnly(f) && !( (majorVersion >= 3) && (f == eMergeScreen) );
+}
+
+// The merge of the processor: Merge 3's (MergeV3::mergePixel()), or that of Merge 1 and 2, unchanged.
+template <MergingFunctionEnum f, int nComponents>
+void
+mergePixelVersioned(unsigned int majorVersion,
+                    bool doAlphaMasking,
+                    const float *A,
+                    float a,
+                    const float *B,
+                    float b,
+                    float* dst)
+{
+    if (majorVersion >= 3) {
+        MergeV3::mergePixel<f, nComponents>(doAlphaMasking, A, a, B, b, dst);
+    } else {
+        MergeImages2D::mergePixel<f, float, nComponents, 1>(doAlphaMasking, A, a, B, b, dst);
+    }
+}
+
 class MergeProcessorBase
     : public ImageProcessor
 {
@@ -517,7 +875,7 @@ private:
                 // If the operator is not identity when B only is connected, still process
                 // one A input, even if none is connected.
                 // This behavior was introduced in version 2.0.
-                if ( _srcImgAs.size() == 0 && ( isIdentityForBOnly(f) || _majorVersion == 1 ) ) {
+                if ( _srcImgAs.size() == 0 && ( isIdentityForBOnlyVersioned(f, _majorVersion) || _majorVersion == 1 ) ) {
                     const PIX *srcPixB = (const PIX *)  (_srcImgB ? _srcImgB->getPixelAddress(x, y) : 0);
                     for (int c = 0; c < nComponents; ++c) {
                         dstPix[c] = (_outputChannels[nComponents > 1 ? c : 3] && srcPixB) ? srcPixB[c] : 0;
@@ -560,7 +918,7 @@ private:
                             }
                         }
 
-                        mergePixel<f, float, nComponents, 1>(_alphaMasking, tmpA, a, tmpB, b, tmpPix);
+                        mergePixelVersioned<f, nComponents>(_majorVersion, _alphaMasking, tmpA, a, tmpB, b, tmpPix);
                     } else {
                         // everything is black and transparent
                         for (int c = 0; c < nComponents; ++c) {
@@ -595,7 +953,7 @@ private:
                                 b = 1.;
                             }
 
-                            mergePixel<f, float, nComponents, 1>(_alphaMasking, tmpA, a, tmpPix, b, tmpPix);
+                            mergePixelVersioned<f, nComponents>(_majorVersion, _alphaMasking, tmpA, a, tmpPix, b, tmpPix);
                         }
                     }
 
@@ -1427,7 +1785,7 @@ MergePlugin::isIdentity(const IsIdentityArguments &args,
     }
 
     MergingFunctionEnum blendingOperator = (MergingFunctionEnum)_operation->getValueAtTime(args.time);
-    if ( !isIdentityForBOnly(blendingOperator) ) {
+    if ( !isIdentityForBOnlyVersioned( blendingOperator, getMajorVersion() ) ) {
         // For most operators, we cannot be identity on regions where the A RoD does not intersect the render window.
         // E.g: multiply should produce black and transparent in B regions that do not intersect A
         return false;
@@ -1557,57 +1915,57 @@ MergePluginFactory<majorVersion,plugin>::describe(ImageEffectDescriptor &desc)
         help += "The following operators are available.\n";
         help += "\n#### Porter-Duff compositing operators\n";
         // missing: clear
-        help += "\n- " + getOperationHelp(eMergeCopy, true) + '\n'; // src
+        help += "\n- " + operationHelpMarkdown(eMergeCopy, majorVersion) + '\n'; // src
         // missing: dst
-        help += "\n- " + getOperationHelp(eMergeOver, true) + '\n'; // src-over
-        help += "\n- " + getOperationHelp(eMergeUnder, true) + '\n'; // dst-over
-        help += "\n- " + getOperationHelp(eMergeIn, true) + '\n'; // src-in
-        help += "\n- " + getOperationHelp(eMergeMask, true) + '\n'; // dst-in
-        help += "\n- " + getOperationHelp(eMergeOut, true) + '\n'; // src-out
-        help += "\n- " + getOperationHelp(eMergeStencil, true) + '\n'; // dst-out
-        help += "\n- " + getOperationHelp(eMergeATop, true) + '\n'; // src-atop
+        help += "\n- " + operationHelpMarkdown(eMergeOver, majorVersion) + '\n'; // src-over
+        help += "\n- " + operationHelpMarkdown(eMergeUnder, majorVersion) + '\n'; // dst-over
+        help += "\n- " + operationHelpMarkdown(eMergeIn, majorVersion) + '\n'; // src-in
+        help += "\n- " + operationHelpMarkdown(eMergeMask, majorVersion) + '\n'; // dst-in
+        help += "\n- " + operationHelpMarkdown(eMergeOut, majorVersion) + '\n'; // src-out
+        help += "\n- " + operationHelpMarkdown(eMergeStencil, majorVersion) + '\n'; // dst-out
+        help += "\n- " + operationHelpMarkdown(eMergeATop, majorVersion) + '\n'; // src-atop
         // missing: dst-atop
-        help += "\n- " + getOperationHelp(eMergeXOR, true) + '\n'; // xor
+        help += "\n- " + operationHelpMarkdown(eMergeXOR, majorVersion) + '\n'; // xor
 
         help += "\n#### Blend modes, see https://en.wikipedia.org/wiki/Blend_modes\n";
         help += "\n##### Multiply and Screen\n";
-        help += "\n- " + getOperationHelp(eMergeMultiply, true) + '\n';
-        help += "\n- " + getOperationHelp(eMergeScreen, true) + '\n';
-        help += "\n- " + getOperationHelp(eMergeOverlay, true) + '\n';
-        help += "\n- " + getOperationHelp(eMergeHardLight, true) + '\n';
-        help += "\n- " + getOperationHelp(eMergeSoftLight, true) + '\n';
+        help += "\n- " + operationHelpMarkdown(eMergeMultiply, majorVersion) + '\n';
+        help += "\n- " + operationHelpMarkdown(eMergeScreen, majorVersion) + '\n';
+        help += "\n- " + operationHelpMarkdown(eMergeOverlay, majorVersion) + '\n';
+        help += "\n- " + operationHelpMarkdown(eMergeHardLight, majorVersion) + '\n';
+        help += "\n- " + operationHelpMarkdown(eMergeSoftLight, majorVersion) + '\n';
         help += "\n##### Dodge and burn\n";
-        help += "\n- " + getOperationHelp(eMergeColorDodge, true) + '\n';
-        help += "\n- " + getOperationHelp(eMergeColorBurn, true) + '\n';
-        help += "\n- " + getOperationHelp(eMergePinLight, true) + '\n';
-        help += "\n- " + getOperationHelp(eMergeDifference, true) + '\n';
-        help += "\n- " + getOperationHelp(eMergeExclusion, true) + '\n';
-        help += "\n- " + getOperationHelp(eMergeDivide, true) + '\n';
+        help += "\n- " + operationHelpMarkdown(eMergeColorDodge, majorVersion) + '\n';
+        help += "\n- " + operationHelpMarkdown(eMergeColorBurn, majorVersion) + '\n';
+        help += "\n- " + operationHelpMarkdown(eMergePinLight, majorVersion) + '\n';
+        help += "\n- " + operationHelpMarkdown(eMergeDifference, majorVersion) + '\n';
+        help += "\n- " + operationHelpMarkdown(eMergeExclusion, majorVersion) + '\n';
+        help += "\n- " + operationHelpMarkdown(eMergeDivide, majorVersion) + '\n';
         help += "\n##### Simple arithmetic blend modes\n";
-        help += "\n- " + getOperationHelp(eMergeDivide, true) + '\n';
-        help += "\n- " + getOperationHelp(eMergePlus, true) + '\n';// add (see <http://keithp.com/~keithp/render/protocol.html>)
-        help += "\n- " + getOperationHelp(eMergeFrom, true) + '\n';
-        help += "\n- " + getOperationHelp(eMergeMinus, true) + '\n';
-        help += "\n- " + getOperationHelp(eMergeDifference, true) + '\n';
-        help += "\n- " + getOperationHelp(eMergeMin, true) + '\n';
-        help += "\n- " + getOperationHelp(eMergeMax, true) + '\n';
+        help += "\n- " + operationHelpMarkdown(eMergeDivide, majorVersion) + '\n';
+        help += "\n- " + operationHelpMarkdown(eMergePlus, majorVersion) + '\n';// add (see <http://keithp.com/~keithp/render/protocol.html>)
+        help += "\n- " + operationHelpMarkdown(eMergeFrom, majorVersion) + '\n';
+        help += "\n- " + operationHelpMarkdown(eMergeMinus, majorVersion) + '\n';
+        help += "\n- " + operationHelpMarkdown(eMergeDifference, majorVersion) + '\n';
+        help += "\n- " + operationHelpMarkdown(eMergeMin, majorVersion) + '\n';
+        help += "\n- " + operationHelpMarkdown(eMergeMax, majorVersion) + '\n';
         help += "\n##### Hue, saturation and luminosity\n";
-        help += "\n- " + getOperationHelp(eMergeHue, true) + '\n';
-        help += "\n- " + getOperationHelp(eMergeSaturation, true) + '\n';
-        help += "\n- " + getOperationHelp(eMergeColor, true) + '\n';
-        help += "\n- " + getOperationHelp(eMergeLuminosity, true) + '\n';
+        help += "\n- " + operationHelpMarkdown(eMergeHue, majorVersion) + '\n';
+        help += "\n- " + operationHelpMarkdown(eMergeSaturation, majorVersion) + '\n';
+        help += "\n- " + operationHelpMarkdown(eMergeColor, majorVersion) + '\n';
+        help += "\n- " + operationHelpMarkdown(eMergeLuminosity, majorVersion) + '\n';
         help += "\n#### Other\n";
-        help += "\n- " + getOperationHelp(eMergeAverage, true) + '\n';
-        help += "\n- " + getOperationHelp(eMergeConjointOver, true) + '\n';
-        help += "\n- " + getOperationHelp(eMergeDisjointOver, true) + '\n';
-        help += "\n- " + getOperationHelp(eMergeFreeze, true) + '\n';
-        help += "\n- " + getOperationHelp(eMergeGeometric, true) + '\n';
-        help += "\n- " + getOperationHelp(eMergeGrainExtract, true) + '\n';
-        help += "\n- " + getOperationHelp(eMergeGrainMerge, true) + '\n';
-        help += "\n- " + getOperationHelp(eMergeHypot, true) + '\n';
-        //help += "\n- " + getOperationHelp(eMergeInterpolated, true) + '\n';
-        help += "\n- " + getOperationHelp(eMergeMatte, true) + '\n';
-        help += "\n- " + getOperationHelp(eMergeReflect, true) + '\n';
+        help += "\n- " + operationHelpMarkdown(eMergeAverage, majorVersion) + '\n';
+        help += "\n- " + operationHelpMarkdown(eMergeConjointOver, majorVersion) + '\n';
+        help += "\n- " + operationHelpMarkdown(eMergeDisjointOver, majorVersion) + '\n';
+        help += "\n- " + operationHelpMarkdown(eMergeFreeze, majorVersion) + '\n';
+        help += "\n- " + operationHelpMarkdown(eMergeGeometric, majorVersion) + '\n';
+        help += "\n- " + operationHelpMarkdown(eMergeGrainExtract, majorVersion) + '\n';
+        help += "\n- " + operationHelpMarkdown(eMergeGrainMerge, majorVersion) + '\n';
+        help += "\n- " + operationHelpMarkdown(eMergeHypot, majorVersion) + '\n';
+        //help += "\n- " + operationHelpMarkdown(eMergeInterpolated, majorVersion) + '\n';
+        help += "\n- " + operationHelpMarkdown(eMergeMatte, majorVersion) + '\n';
+        help += "\n- " + operationHelpMarkdown(eMergeReflect, majorVersion) + '\n';
         help += '\n';
     }
     help += kPluginDescriptionEnd;
@@ -1644,13 +2002,14 @@ MergePluginFactory<majorVersion,plugin>::describe(ImageEffectDescriptor &desc)
 static void
 addMergeOption(ChoiceParamDescriptor* param,
                MergingFunctionEnum e,
-               bool cascading)
+               bool cascading,
+               unsigned int majorVersion)
 {
     assert(param->getNOptions() == e);
     if (cascading) {
-        param->appendOption( getOperationGroupString(e) + '/' + getOperationString(e), getOperationDescription(e) );
+        param->appendOption( getOperationGroupString(e) + '/' + getOperationString(e), operationDescription(e, majorVersion) );
     } else {
-        param->appendOption( getOperationString(e), /*'(' + getOperationGroupString(e) + ") " +*/ getOperationDescription(e) );
+        param->appendOption( getOperationString(e), /*'(' + getOperationGroupString(e) + ") " +*/ operationDescription(e, majorVersion) );
     }
 }
 
@@ -1756,46 +2115,46 @@ MergePluginFactory<majorVersion,plugin>::describeInContext(ImageEffectDescriptor
         param->setHint(kParamOperationHint);
         bool cascading = false;// getImageEffectHostDescription()->supportsCascadingChoices;
         param->setCascading(cascading);
-        addMergeOption(param, eMergeATop, cascading);
-        addMergeOption(param, eMergeAverage, cascading);
-        addMergeOption(param, eMergeColor, cascading);
-        addMergeOption(param, eMergeColorBurn, cascading);
-        addMergeOption(param, eMergeColorDodge, cascading);
-        addMergeOption(param, eMergeConjointOver, cascading);
-        addMergeOption(param, eMergeCopy, cascading);
-        addMergeOption(param, eMergeDifference, cascading);
-        addMergeOption(param, eMergeDisjointOver, cascading);
-        addMergeOption(param, eMergeDivide, cascading);
-        addMergeOption(param, eMergeExclusion, cascading);
-        addMergeOption(param, eMergeFreeze, cascading);
-        addMergeOption(param, eMergeFrom, cascading);
-        addMergeOption(param, eMergeGeometric, cascading);
-        addMergeOption(param, eMergeGrainExtract, cascading);
-        addMergeOption(param, eMergeGrainMerge, cascading);
-        addMergeOption(param, eMergeHardLight, cascading);
-        addMergeOption(param, eMergeHue, cascading);
-        addMergeOption(param, eMergeHypot, cascading);
-        addMergeOption(param, eMergeIn, cascading);
-        //addMergeOption(param, eMergeInterpolated, cascading);
-        addMergeOption(param, eMergeLuminosity, cascading);
-        addMergeOption(param, eMergeMask, cascading);
-        addMergeOption(param, eMergeMatte, cascading);
-        addMergeOption(param, eMergeMax, cascading);
-        addMergeOption(param, eMergeMin, cascading);
-        addMergeOption(param, eMergeMinus, cascading);
-        addMergeOption(param, eMergeMultiply, cascading);
-        addMergeOption(param, eMergeOut, cascading);
-        addMergeOption(param, eMergeOver, cascading);
-        addMergeOption(param, eMergeOverlay, cascading);
-        addMergeOption(param, eMergePinLight, cascading);
-        addMergeOption(param, eMergePlus, cascading);
-        addMergeOption(param, eMergeReflect, cascading);
-        addMergeOption(param, eMergeSaturation, cascading);
-        addMergeOption(param, eMergeScreen, cascading);
-        addMergeOption(param, eMergeSoftLight, cascading);
-        addMergeOption(param, eMergeStencil, cascading);
-        addMergeOption(param, eMergeUnder, cascading);
-        addMergeOption(param, eMergeXOR, cascading);
+        addMergeOption(param, eMergeATop, cascading, majorVersion);
+        addMergeOption(param, eMergeAverage, cascading, majorVersion);
+        addMergeOption(param, eMergeColor, cascading, majorVersion);
+        addMergeOption(param, eMergeColorBurn, cascading, majorVersion);
+        addMergeOption(param, eMergeColorDodge, cascading, majorVersion);
+        addMergeOption(param, eMergeConjointOver, cascading, majorVersion);
+        addMergeOption(param, eMergeCopy, cascading, majorVersion);
+        addMergeOption(param, eMergeDifference, cascading, majorVersion);
+        addMergeOption(param, eMergeDisjointOver, cascading, majorVersion);
+        addMergeOption(param, eMergeDivide, cascading, majorVersion);
+        addMergeOption(param, eMergeExclusion, cascading, majorVersion);
+        addMergeOption(param, eMergeFreeze, cascading, majorVersion);
+        addMergeOption(param, eMergeFrom, cascading, majorVersion);
+        addMergeOption(param, eMergeGeometric, cascading, majorVersion);
+        addMergeOption(param, eMergeGrainExtract, cascading, majorVersion);
+        addMergeOption(param, eMergeGrainMerge, cascading, majorVersion);
+        addMergeOption(param, eMergeHardLight, cascading, majorVersion);
+        addMergeOption(param, eMergeHue, cascading, majorVersion);
+        addMergeOption(param, eMergeHypot, cascading, majorVersion);
+        addMergeOption(param, eMergeIn, cascading, majorVersion);
+        //addMergeOption(param, eMergeInterpolated, cascading, majorVersion);
+        addMergeOption(param, eMergeLuminosity, cascading, majorVersion);
+        addMergeOption(param, eMergeMask, cascading, majorVersion);
+        addMergeOption(param, eMergeMatte, cascading, majorVersion);
+        addMergeOption(param, eMergeMax, cascading, majorVersion);
+        addMergeOption(param, eMergeMin, cascading, majorVersion);
+        addMergeOption(param, eMergeMinus, cascading, majorVersion);
+        addMergeOption(param, eMergeMultiply, cascading, majorVersion);
+        addMergeOption(param, eMergeOut, cascading, majorVersion);
+        addMergeOption(param, eMergeOver, cascading, majorVersion);
+        addMergeOption(param, eMergeOverlay, cascading, majorVersion);
+        addMergeOption(param, eMergePinLight, cascading, majorVersion);
+        addMergeOption(param, eMergePlus, cascading, majorVersion);
+        addMergeOption(param, eMergeReflect, cascading, majorVersion);
+        addMergeOption(param, eMergeSaturation, cascading, majorVersion);
+        addMergeOption(param, eMergeScreen, cascading, majorVersion);
+        addMergeOption(param, eMergeSoftLight, cascading, majorVersion);
+        addMergeOption(param, eMergeStencil, cascading, majorVersion);
+        addMergeOption(param, eMergeUnder, cascading, majorVersion);
+        addMergeOption(param, eMergeXOR, cascading, majorVersion);
         param->setDefault( getDefaultOperation(plugin) );
         param->setAnimates(true);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
@@ -1811,7 +2170,7 @@ MergePluginFactory<majorVersion,plugin>::describeInContext(ImageEffectDescriptor
         param->setAnimates(true);
         param->setDefault(false);
         param->setEnabled( MergeImages2D::isMaskable(eMergeOver) );
-        param->setHint(kParamAlphaMaskingHint);
+        param->setHint( (majorVersion >= 3) ? kParamAlphaMaskingHintV3 : kParamAlphaMaskingHint );
         if (page) {
             page->addChild(*param);
         }

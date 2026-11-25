@@ -76,8 +76,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "its images fill the first rows, and the other rows are empty, unless Center Rows is checked.\n" \
     "Each image is scaled to fit its cell, minus the gap, keeping its aspect ratio."
 #define kPluginIdentifier "net.sf.openfx.ContactSheetOFX"
-#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+// 2.0: (unreleased) the clips of inputs 10 to 15 (and 10 to 127 in Natron) are named "10", "11", ...:
+//      ContactSheet 1 wrote the digits in reverse order ("01", "11", "21", ...; issue #401). Version 1 is kept,
+//      obsolete, with the old clip names.
 // 1.1: (unreleased) the Snake column order, the Center Rows option, and the hints that say how the cells are placed;
 //      a click with Enable Selection sets Selection Frame to first + the frame index, as the overlay reads it
 //      (it was the frame index alone, so the highlighted cell was not the clicked one unless Frame Range starts at 0);
@@ -191,16 +194,16 @@ toColumnOrder(int option)
 #define kClipSourceCountNumerous 128
 
 
-static
+// The name of the clip of input i. ContactSheet 1 wrote the digits in reverse order (inputs 10 to
+// 15 are "01", "11", ..., "51"; issue #401): its clips keep these names, so that the connections of
+// saved projects and scripts still match.
 std::string
-unsignedToString(unsigned i)
+clipName(unsigned i,
+         unsigned majorVersion)
 {
-    if (i == 0) {
-        return "0";
-    }
-    std::string nb;
-    for (unsigned j = i; j != 0; j /= 10) {
-        nb += ( '0' + (j % 10) );
+    std::string nb = std::to_string(i);
+    if (majorVersion < 2) {
+        std::reverse( nb.begin(), nb.end() );
     }
 
     return nb;
@@ -213,7 +216,7 @@ class ContactSheetPlugin
 {
 public:
     /** @brief ctor */
-    ContactSheetPlugin(OfxImageEffectHandle handle, bool numerousInputs);
+    ContactSheetPlugin(OfxImageEffectHandle handle, bool numerousInputs, unsigned majorVersion);
 
     // The grid of cells at time "time", with "count" frames per input (also used by the overlay).
     ContactSheet::Grid getGrid(double time, int count) const;
@@ -261,7 +264,8 @@ private:
 };
 
 ContactSheetPlugin::ContactSheetPlugin(OfxImageEffectHandle handle,
-                           bool numerousInputs)
+                                       bool numerousInputs,
+                                       unsigned majorVersion)
     : ImageEffect(handle)
     , _dstClip(NULL)
     , _srcClip(numerousInputs ? kClipSourceCountNumerous : kClipSourceCount)
@@ -284,7 +288,7 @@ ContactSheetPlugin::ContactSheetPlugin(OfxImageEffectHandle handle,
         if ( (getContext() == OFX::eContextFilter) && (i == 0) ) {
             _srcClip[i] = fetchClip(kOfxImageEffectSimpleSourceClipName);
         } else {
-            _srcClip[i] = fetchClip( unsignedToString(i) );
+            _srcClip[i] = fetchClip( clipName(i, majorVersion) );
         }
         assert(_srcClip[i]);
     }
@@ -869,20 +873,24 @@ ContactSheetInteract::penMotion(const OFX::PenArgs &args)
 
 //////////// FACTORY
 
-mDeclarePluginFactory(ContactSheetPluginFactory, {}, {});
+mDeclarePluginFactoryVersioned(ContactSheetPluginFactory, {}, {});
 
 #ifdef SELECTION
 // draws through OverlayDraw: the DrawSuite in V2 draws, OpenGL (with shadows) in V1 draws
 class ContactSheetOverlayDescriptor : public DefaultEffectOverlayDescriptorV2<ContactSheetOverlayDescriptor, ContactSheetInteract> {};
 #endif
 
+template<unsigned int majorVersion>
 void
-ContactSheetPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+ContactSheetPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsObsolete(true);
+    }
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);
@@ -925,8 +933,9 @@ ContactSheetPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 #endif
 }
 
+template<unsigned int majorVersion>
 void
-ContactSheetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
+ContactSheetPluginFactory<majorVersion>::describeInContext(OFX::ImageEffectDescriptor &desc,
                                              OFX::ContextEnum context)
 {
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
@@ -979,7 +988,7 @@ ContactSheetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     //if (numerousInputs) {
         for (unsigned i = 2; i < clipSourceCount; ++i) {
-            ClipDescriptor *srcClip = desc.defineClip( unsignedToString(i) );
+            ClipDescriptor *srcClip = desc.defineClip( clipName(i, majorVersion) );
             srcClip->setOptional(true);
 #ifdef OFX_EXTENSIONS_NATRON
             srcClip->addSupportedComponent(ePixelComponentXY);
@@ -1173,8 +1182,9 @@ ContactSheetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 #endif
 } // ContactSheetPluginFactory::describeInContext
 
+template<unsigned int majorVersion>
 OFX::ImageEffect*
-ContactSheetPluginFactory::createInstance(OfxImageEffectHandle handle,
+ContactSheetPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                     OFX::ContextEnum /*context*/)
 {
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
@@ -1182,10 +1192,13 @@ ContactSheetPluginFactory::createInstance(OfxImageEffectHandle handle,
     bool numerousInputs =  (OFX::getImageEffectHostDescription()->isNatron &&
                             OFX::getImageEffectHostDescription()->versionMajor >= 2);
 
-    return new ContactSheetPlugin(handle, numerousInputs);
+    return new ContactSheetPlugin(handle, numerousInputs, majorVersion);
 }
 
-static ContactSheetPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static ContactSheetPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+// 1.1: the inputs 10 to 15 are named "01", "11", ..., "51" (see clipName)
+static ContactSheetPluginFactory<1> p1(kPluginIdentifier, 1);
+mRegisterPluginFactoryInstance(p1)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
