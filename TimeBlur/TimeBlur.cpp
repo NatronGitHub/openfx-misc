@@ -56,9 +56,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.0: initial version
 // version 1.1: the Shutter can be up to 1000 frames and the custom shutter offset +-1000 (they were
 //              limited to 2 and +-1; SupportExt#205, part of #273)
-// version 2.0: use kNatronOfxParamProcess* parameters
-#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+// version 2.0: with Divisions 1, the output is the input at the current time, whatever the Shutter and Shutter
+//              Offset (version 1: the input at the start of the shutter range), as the tests/nuke reference
+//              (#273). Version 1 is kept, obsolete, for old projects.
+#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinorV1 1 // the minor version of the obsolete version 1
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -69,7 +72,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamDivisions     "division"
 #define kParamDivisionsLabel "Divisions"
-#define kParamDivisionsHint  "Number of time samples along the shutter time. The first frame is always at the start of the shutter range, and the shutter range is divided by divisions. The frame corresponding to the end of the shutter range is not included. If divisions=4, Shutter=1, Shutter Offset=Centered, this leads to blending the frames at t-0.5, t-0.25, t, t+0.25."
+#define kParamDivisionsHintStart  "Number of time samples along the shutter time. The first frame is always at the start of the shutter range, and the shutter range is divided by divisions. The frame corresponding to the end of the shutter range is not included. If divisions=4, Shutter=1, Shutter Offset=Centered, this leads to blending the frames at t-0.5, t-0.25, t, t+0.25."
+#define kParamDivisionsHint kParamDivisionsHintStart " With 1, the output is the input at the current time t, whatever the shutter."
+#define kParamDivisionsHintV1 kParamDivisionsHintStart " With 1, the output is the input at the start of the shutter range."
 
 #define kFrameChunk 4 // how many frames to process simultaneously
 
@@ -185,7 +190,8 @@ class TimeBlurPlugin
 {
 public:
     /** @brief ctor */
-    TimeBlurPlugin(OfxImageEffectHandle handle)
+    TimeBlurPlugin(OfxImageEffectHandle handle,
+                   unsigned int majorVersion)
         : ImageEffect(handle)
         , _dstClip(NULL)
         , _srcClip(NULL)
@@ -193,6 +199,7 @@ public:
         , _shutter(NULL)
         , _shutteroffset(NULL)
         , _shuttercustomoffset(NULL)
+        , _singleSampleAtTime(majorVersion >= 2)
     {
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -228,6 +235,10 @@ private:
     template <class PIX, int nComponents, int maxValue>
     void renderForBitDepth(const RenderArguments &args);
 
+    // the range of the samples at the given time: the shutter range, except with divisions <= 1 in
+    // version 2, where the only sample is at the given time
+    OfxRangeD getSampleRange(double time, int divisions) const;
+
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
     Clip *_srcClip;
@@ -235,7 +246,24 @@ private:
     DoubleParam* _shutter;
     ChoiceParam* _shutteroffset;
     DoubleParam* _shuttercustomoffset;
+    const bool _singleSampleAtTime; // version 2: with divisions <= 1, the only sample is at the current time
 };
+
+OfxRangeD
+TimeBlurPlugin::getSampleRange(double time,
+                               int divisions) const
+{
+    OfxRangeD range = {time, time};
+    if ( (divisions <= 1) && _singleSampleAtTime ) {
+        return range;
+    }
+    const double shutter = _shutter->getValueAtTime(time);
+    const ShutterOffsetEnum shutteroffset = (ShutterOffsetEnum)_shutteroffset->getValueAtTime(time);
+    const double shuttercustomoffset = _shuttercustomoffset->getValueAtTime(time);
+    shutterRange(time, shutter, shutteroffset, shuttercustomoffset, &range);
+
+    return range;
+}
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -295,12 +323,8 @@ TimeBlurPlugin::setupAndProcess(TimeBlurProcessorBase &processor,
     float *accumulatorData = NULL;
 
     // compute range
-    double shutter = _shutter->getValueAtTime(time);
-    ShutterOffsetEnum shutteroffset = (ShutterOffsetEnum)_shutteroffset->getValueAtTime(time);
-    double shuttercustomoffset = _shuttercustomoffset->getValueAtTime(time);
-    OfxRangeD range;
-    shutterRange(time, shutter, shutteroffset, shuttercustomoffset, &range);
     int divisions = _divisions->getValueAtTime(time);
+    const OfxRangeD range = getSampleRange(time, divisions);
     double interval = divisions >= 1 ? (range.max - range.min) / divisions : 1.;
     const OfxRectI& renderWindow = args.renderWindow;
     size_t nPixels = (size_t)(renderWindow.y2 - renderWindow.y1) * (renderWindow.x2 - renderWindow.x1);
@@ -308,11 +332,8 @@ TimeBlurPlugin::setupAndProcess(TimeBlurProcessorBase &processor,
     // Main processing loop.
     // We process the frame range by chunks, to avoid using too much memory.
     //
-    // Note that Nuke has a bug in TimeBlur when divisions=1:
-    // -the RoD is the expected RoD from the beginning of the shutter time
-    // - the image is always identity
-    // We chose not to reproduce this bug: when divisions = 1 both the RoD
-    // and the image correspond to the start of shutter time.
+    // With divisions <= 1, there is one sample: at the current time (version 2, as the tests/nuke
+    // reference), or at the start of the shutter range (version 1); the RoD is the one of that sample.
 
     int imin;
     int imax = 0;
@@ -432,26 +453,15 @@ TimeBlurPlugin::isIdentity(const IsIdentityArguments &args,
     const double time = args.time;
 
     // compute range
-    double shutter = 0.;
-
-    _shutter->getValueAtTime(time, shutter);
-    if (shutter != 0) {
-        int divisions;
-        _divisions->getValueAtTime(time, divisions);
-        if (divisions > 1) {
-            return false;
-        }
+    const double shutter = _shutter->getValueAtTime(time);
+    const int divisions = _divisions->getValueAtTime(time);
+    if ( (shutter != 0) && (divisions > 1) ) {
+        return false;
     }
-    ShutterOffsetEnum shutteroffset_i = (ShutterOffsetEnum)_shutteroffset->getValueAtTime(time);
-    double shuttercustomoffset = _shuttercustomoffset->getValueAtTime(time);
-    OfxRangeD range;
-    shutterRange(time, shutter, (ShutterOffsetEnum)shutteroffset_i, shuttercustomoffset, &range);
+    const OfxRangeD range = getSampleRange(time, divisions);
 
-    // Note that Nuke has a bug in TimeBlur when divisions=1:
-    // -the RoD is the expected RoD from the beginning of the shutter time
-    // - the image is always identity
-    // We chose not to reproduce this bug: when divisions = 1 both the RoD
-    // and the image correspond to the start of shutter time.
+    // With divisions <= 1, there is one sample: at the current time (version 2, as the tests/nuke
+    // reference), or at the start of the shutter range (version 1); the RoD is the one of that sample.
     //
     identityClip = _srcClip;
     identityTime = range.min;
@@ -465,19 +475,12 @@ TimeBlurPlugin::getFramesNeeded(const FramesNeededArguments &args,
 {
     const double time = args.time;
     // compute range
-    double shutter = _shutter->getValueAtTime(time);
-    ShutterOffsetEnum shutteroffset_i = (ShutterOffsetEnum)_shutteroffset->getValueAtTime(time);
-    double shuttercustomoffset = _shuttercustomoffset->getValueAtTime(time);
-    OfxRangeD range;
+    const double shutter = _shutter->getValueAtTime(time);
+    // With divisions <= 1, there is one sample: at the current time (version 2, as the tests/nuke
+    // reference), or at the start of the shutter range (version 1); the RoD is the one of that sample.
 
-    // Note that Nuke has a bug in TimeBlur when divisions=1:
-    // -the RoD is the expected RoD from the beginning of the shutter time
-    // - the image is always identity
-    // We chose not to reproduce this bug: when divisions = 1 both the RoD
-    // and the image correspond to the start of shutter time.
-
-    shutterRange(time, shutter, (ShutterOffsetEnum)shutteroffset_i, shuttercustomoffset, &range);
-    int divisions = _divisions->getValueAtTime(time);
+    const int divisions = _divisions->getValueAtTime(time);
+    OfxRangeD range = getSampleRange(time, divisions);
 
     if ( (shutter == 0) || (divisions <= 1) ) {
         range.max = range.min;
@@ -508,22 +511,14 @@ TimeBlurPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                       OfxRectD &rod)
 {
     const double time = args.time;
-    // compute range
-    double shutter = _shutter->getValueAtTime(time);
-    ShutterOffsetEnum shutteroffset = (ShutterOffsetEnum)_shutteroffset->getValueAtTime(time);
-    double shuttercustomoffset = _shuttercustomoffset->getValueAtTime(time);
-    OfxRangeD range;
 
     // Compute the RoD as the union of all fetched input's RoDs
     //
-    // Note that Nuke has a bug in TimeBlur when divisions=1:
-    // -the RoD is the expected RoD from the beginning of the shutter time
-    // - the image is always identity
-    // We chose not to reproduce this bug: when divisions = 1 both the RoD
-    // and the image correspond to the start of shutter time.
+    // With divisions <= 1, there is one sample: at the current time (version 2, as the tests/nuke
+    // reference), or at the start of the shutter range (version 1); the RoD is the one of that sample.
 
-    shutterRange(time, shutter, shutteroffset, shuttercustomoffset, &range);
-    int divisions = _divisions->getValueAtTime(time);
+    const int divisions = _divisions->getValueAtTime(time);
+    const OfxRangeD range = getSampleRange(time, divisions);
     double interval = divisions > 1 ? (range.max - range.min) / divisions : 1.;
 
     rod = _srcClip->getRegionOfDefinition(range.min);
@@ -536,10 +531,13 @@ TimeBlurPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
     return true;
 }
 
-mDeclarePluginFactory(TimeBlurPluginFactory, {ofxsThreadSuiteCheck();}, {});
+mDeclarePluginFactoryVersioned(TimeBlurPluginFactory, {ofxsThreadSuiteCheck();}, {});
+template<unsigned int majorVersion>
 void
-TimeBlurPluginFactory::describe(ImageEffectDescriptor &desc)
+TimeBlurPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
+    // version 1 (Natron 2.5 and earlier) is kept for old projects
+    desc.setIsObsolete(majorVersion < kPluginVersionMajor);
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -571,8 +569,9 @@ TimeBlurPluginFactory::describe(ImageEffectDescriptor &desc)
 #endif
 }
 
+template<unsigned int majorVersion>
 void
-TimeBlurPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+TimeBlurPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
                                          ContextEnum context)
 {
     // Source clip only in the filter context
@@ -605,7 +604,7 @@ TimeBlurPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     {
         IntParamDescriptor *param = desc.defineIntParam(kParamDivisions);
         param->setLabel(kParamDivisionsLabel);
-        param->setHint(kParamDivisionsHint);
+        param->setHint( (majorVersion >= 2) ? kParamDivisionsHint : kParamDivisionsHintV1 );
         param->setDefault(10);
         param->setRange(1, INT_MAX);
         param->setDisplayRange(1, 10);
@@ -617,14 +616,17 @@ TimeBlurPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     shutterDescribeInContext(desc, context, page);
 }
 
+template<unsigned int majorVersion>
 ImageEffect*
-TimeBlurPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                      ContextEnum /*context*/)
+TimeBlurPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
+                                                    ContextEnum /*context*/)
 {
-    return new TimeBlurPlugin(handle);
+    return new TimeBlurPlugin(handle, majorVersion);
 }
 
-static TimeBlurPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static TimeBlurPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
+static TimeBlurPluginFactory<1> p_v1(kPluginIdentifier, kPluginVersionMinorV1);
 mRegisterPluginFactoryInstance(p)
+mRegisterPluginFactoryInstance(p_v1)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

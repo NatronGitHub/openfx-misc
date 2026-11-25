@@ -1414,13 +1414,16 @@ tests=(
     # (version 2's default filter is Box, which blends frames at speed 2: Linear here)
     "Retime speed 2|net.sf.openfx.Retime|general|float|identity+timedomain=0,25+tol=0.05+mean=20,0,0,1||filter=2 speed=2 --frames 10"
     "Retime duration 2|net.sf.openfx.Retime|general|float|identity+timedomain=0,50+tol=0.05+mean=5,0,0,1||filter=2 speed=0.5 duration=2 --frames 10"
-    # Box filter (filter=3): at speed 1, the input frame; at speed 10, t=0 covers the source frames
-    # -5 to 5 (weights 0.05, 0.1 x 9, 0.05), and -5 to -1 are transparent black (Before = Black): the
-    # mean is 0.1 x (1+2+3+4) + 0.05 x 5 = 1.25, alpha 0.55 (Linear gives frame 0: 0, alpha 1);
-    # at speed 0.5, t=21 is the source time 10.5: frames 10 and 11, half each.
+    # Box filter (filter=3): the source frames from the output time to Shutter (default 1) frames after
+    # it, source frame n covering n to n+1. At speed 1, the input frame; at speed 10, t=2 covers the
+    # source frames 20 to 29, a tenth each, and 26 to 29 are transparent black (After = Black): the
+    # mean is 0.1 x 0.998 x (20+...+25) = 13.47 (the time drawn in black: 0.998), alpha 0.6; at speed
+    # 0.5, t=21 covers the source times 10.5 to 11: frame 10 only; with Shutter 2 at speed 2, t=5
+    # covers the frames 10 to 13 (mean 11.5 x 0.998).
     "Retime Box speed 1|net.sf.openfx.Retime|general|float|identity+tol=0.05+mean=10,0,0,1||filter=3 --frames 10"
-    "Retime Box speed 10|net.sf.openfx.Retime|general|float|mean=1.25,0,0,0.55||filter=3 speed=10 before=2 --frames 0"
-    "Retime Box speed 0.5|net.sf.openfx.Retime|general|float|tol=0.05+mean=10.5,0,0,1||filter=3 speed=0.5 --frames 21"
+    "Retime Box speed 10|net.sf.openfx.Retime|general|float|tol=0.05+mean=13.47,0,0,0.6||filter=3 speed=10 after=2 --frames 2"
+    "Retime Box speed 0.5|net.sf.openfx.Retime|general|float|identity+tol=0.05+mean=10,0,0,1||filter=3 speed=0.5 --frames 21"
+    "Retime Box shutter 2|net.sf.openfx.Retime|general|float|notidentity+tol=0.05+mean=11.48,0,0,1||filter=3 speed=2 shutter=2 --frames 5"
     # FrameHold Set to Current Frame (#307), on the same default input: pressed at t=7, First Frame is 7
     # and every frame shows frame 7; with First Frame animated (keys at 0 and 20), it adds a key at 7.
     # Pressed at t=40, the value is clamped to the last input frame, 25. (Setting First Frame when the Source
@@ -1448,14 +1451,17 @@ tests=(
     # at t = 10.25 shows the input at 5.25 (as version 1)
     "TimeOffset fractional time|net.sf.openfx.timeOffset|general|float|identity+tol=0.05+mean=5.25,0,0,1||timeOffset=5 --frames 10.25"
     "TimeOffset v1 fractional time|net.sf.openfx.timeOffset|general|float|identity+tol=0.05+mean=5.25,0,0,1||-m 1 timeOffset=5 --frames 10.25"
-    # Retime Nearest (#309), speed 0.5 at t = 21: source time 10.5; version 2 rounds half frames down (frame 10),
-    # version 1 up (frame 11)
+    # Retime Nearest (#309), speed 0.5 at t = 21: source time 10.5; version 2 takes the frame at the middle of
+    # the Box interval (10.5 to 11: frame 10), version 1 the nearest frame, half frames rounded up (frame 11);
+    # at speed 2, t = 10: the interval 20 to 22, frame 21 (version 1: frame 20)
     "Retime Nearest|net.sf.openfx.Retime|general|float|identity+tol=0.05+mean=10,0,0,1||filter=1 speed=0.5 --frames 21"
     "Retime v1 Nearest|net.sf.openfx.Retime|general|float|identity+tol=0.05+mean=11,0,0,1||-m 1 filter=1 speed=0.5 --frames 21"
-    # the defaults: version 2, Box (several frames at speed 2: not an identity) and After = Hold (frame 25 at
-    # t = 30, whose time drawn in black makes the mean 24.949); version 1, Linear (frame 20 at speed 2) and
-    # After = Original (frame 30)
-    "Retime default Box|net.sf.openfx.Retime|general|float|notidentity+tol=0.1+mean=20,0,0,1||speed=2 --frames 10"
+    "Retime Nearest speed 2|net.sf.openfx.Retime|general|float|identity+tol=0.05+mean=21,0,0,1||filter=1 speed=2 --frames 10"
+    "Retime v1 Nearest speed 2|net.sf.openfx.Retime|general|float|identity+tol=0.05+mean=20,0,0,1||-m 1 filter=1 speed=2 --frames 10"
+    # the defaults: version 2, Box (frames 20 and 21 at speed 2, t = 10: not an identity) and After = Hold
+    # (frame 25 at t = 30, whose time drawn in black makes the mean 24.949); version 1, Linear (frame 20 at
+    # speed 2) and After = Original (frame 30)
+    "Retime default Box|net.sf.openfx.Retime|general|float|notidentity+tol=0.05+mean=20.46,0,0,1||speed=2 --frames 10"
     "Retime v1 default Linear|net.sf.openfx.Retime|general|float|identity+tol=0.05+mean=20,0,0,1||-m 1 speed=2 --frames 10"
     "Retime default After Hold|net.sf.openfx.Retime|general|float|identity+tol=0.005+mean=24.949,0,0,1||--frames 30"
     "Retime v1 default After Original|net.sf.openfx.Retime|general|float|identity+tol=0.1+mean=30,0,0,1||-m 1 --frames 30"
@@ -1560,6 +1566,10 @@ tests=(
     # radius = Size*(|1 - d/d_f| - dof/2) = 10*(1.667 - 0.305) = 13.6 pixels, center weight
     # 0.0019 (in disparity units, 6.5 pixels: 0.0087)
     "CImgZDefocus depth of focus|net.sf.cimg.CImgZDefocus|general|float|max=0.00186,0.00186,0.00186,1+tol=0.0003||--frames 0 -i Source=file:impulse.pfm -i Depth=solid:0.8,0.8,0.8,1 -i Filter=none depthType=1 useFocusPoint=0 focus=0.3 depthOfFocus=0.61 size=10 maxSize=20 slices=10 aperture=1"
+    # TimeBlur (#273), Divisions 1, Shutter 1, Centered at t = 10: version 2 shows the input at the current
+    # time (frame 10), version 1 at the start of the shutter range (t = 9.5)
+    "TimeBlur divisions 1|net.sf.openfx.TimeBlur|filter|float|identity+tol=0.05+mean=10,0,0,1||division=1 shutter=1 shutterOffset=0 --frames 10"
+    "TimeBlur 1 divisions 1|net.sf.openfx.TimeBlur|filter|float|identity+tol=0.05+mean=9.48,0,0,1||-m 1 division=1 shutter=1 shutterOffset=0 --frames 10"
     # TimeDissolve, In 1 and Out 10 (the defaults): the In and Out frames are part of the dissolve
     # (issue #320). The curve abscissa is 0 at the frame before In and 1 at the frame after Out:
     # frame 0 is A, frame 11 is B, and with the smoothstep curve (hostDemo has no parametric
@@ -1582,18 +1592,27 @@ tests=(
     "AppendClip first frame 5|net.sf.openfx.AppendClip|general|float|identity+mean=0.002,0,0,1+framesdiffer||-i 1=default -i 2=solid:0.5,0.5,0.5,1 firstFrame=5 --frames 5,6,30"
     "AppendClip end of clip 1|net.sf.openfx.AppendClip|general|float|identity+mean=24.949,0,0,1||-i 1=default -i 2=solid:0.5,0.5,0.5,1 --frames 26"
     "AppendClip start of clip 2|net.sf.openfx.AppendClip|general|*|identity+mean=0.5,0.5,0.5,1||-i 1=default -i 2=solid:0.5,0.5,0.5,1 --frames 27"
-    # linear fades over N frames: 1/(N+1)... N/(N+1); Fade In 3 at frames 1 and 3, then not faded
-    "AppendClip fade in 3 first|net.sf.openfx.AppendClip|general|*|mean=0.25,0.25,0.25,0.25||-i 1=solid:1,1,1,1 -i 2=solid:0.5,0.5,0.5,1 fadeIn=3 --frames 1"
-    "AppendClip fade in 3 last|net.sf.openfx.AppendClip|general|*|mean=0.75,0.75,0.75,0.75||-i 1=solid:1,1,1,1 -i 2=solid:0.5,0.5,0.5,1 fadeIn=3 --frames 3"
+    # quadratic fades over N frames (version 2): (1/(N+1))^2... (N/(N+1))^2; Fade In 3 at frames 1 and 3
+    # (1/16 and 9/16), then not faded; version 1: linear, 1/(N+1)... N/(N+1)
+    "AppendClip fade in 3 first|net.sf.openfx.AppendClip|general|*|mean=0.0625,0.0625,0.0625,0.0625||-i 1=solid:1,1,1,1 -i 2=solid:0.5,0.5,0.5,1 fadeIn=3 --frames 1"
+    "AppendClip fade in 3 last|net.sf.openfx.AppendClip|general|*|mean=0.5625,0.5625,0.5625,0.5625||-i 1=solid:1,1,1,1 -i 2=solid:0.5,0.5,0.5,1 fadeIn=3 --frames 3"
     "AppendClip fade in 3 after|net.sf.openfx.AppendClip|general|*|identity+mean=1,1,1,1||-i 1=solid:1,1,1,1 -i 2=solid:0.5,0.5,0.5,1 fadeIn=3 --frames 4"
-    # Fade Out 2: frame 50 is not faded, frame 51 is at 2/3, the last frame (52) at 1/3
+    "AppendClip 1 fade in 3 first|net.sf.openfx.AppendClip|general|*|mean=0.25,0.25,0.25,0.25||-m 1 -i 1=solid:1,1,1,1 -i 2=solid:0.5,0.5,0.5,1 fadeIn=3 --frames 1"
+    "AppendClip 1 fade in 3 last|net.sf.openfx.AppendClip|general|*|mean=0.75,0.75,0.75,0.75||-m 1 -i 1=solid:1,1,1,1 -i 2=solid:0.5,0.5,0.5,1 fadeIn=3 --frames 3"
+    # Fade Out 2: frame 50 is not faded, frame 51 is at (2/3)^2, the last frame (52) at (1/3)^2 (version 1:
+    # 2/3 and 1/3)
     "AppendClip fade out 2 before|net.sf.openfx.AppendClip|general|*|identity+mean=0.5,0.5,0.5,1||-i 1=solid:1,1,1,1 -i 2=solid:0.5,0.5,0.5,1 fadeOut=2 --frames 50"
-    "AppendClip fade out 2 first|net.sf.openfx.AppendClip|general|*|mean=0.3333,0.3333,0.3333,0.6667||-i 1=solid:1,1,1,1 -i 2=solid:0.5,0.5,0.5,1 fadeOut=2 --frames 51"
-    "AppendClip fade out 2 last|net.sf.openfx.AppendClip|general|*|mean=0.1667,0.1667,0.1667,0.3333||-i 1=solid:1,1,1,1 -i 2=solid:0.5,0.5,0.5,1 fadeOut=2 --frames 52"
+    "AppendClip fade out 2 first|net.sf.openfx.AppendClip|general|*|mean=0.2222,0.2222,0.2222,0.4444||-i 1=solid:1,1,1,1 -i 2=solid:0.5,0.5,0.5,1 fadeOut=2 --frames 51"
+    "AppendClip fade out 2 last|net.sf.openfx.AppendClip|general|*|mean=0.0556,0.0556,0.0556,0.1111||-i 1=solid:1,1,1,1 -i 2=solid:0.5,0.5,0.5,1 fadeOut=2 --frames 52"
+    "AppendClip 1 fade out 2 first|net.sf.openfx.AppendClip|general|*|mean=0.3333,0.3333,0.3333,0.6667||-m 1 -i 1=solid:1,1,1,1 -i 2=solid:0.5,0.5,0.5,1 fadeOut=2 --frames 51"
+    "AppendClip 1 fade out 2 last|net.sf.openfx.AppendClip|general|*|mean=0.1667,0.1667,0.1667,0.3333||-m 1 -i 1=solid:1,1,1,1 -i 2=solid:0.5,0.5,0.5,1 fadeOut=2 --frames 52"
     # Cross Dissolve 4: the last 4 frames of clip 1 (frames 23 to 26) overlap the first 4 of clip 2;
-    # clip 1 (its frame 22, then 25) is weighted by 0.8 at frame 23 and 0.2 at frame 26
-    "AppendClip dissolve 4 first|net.sf.openfx.AppendClip|general|float|mean=17.665,0.1,0.1,1||-i 1=default -i 2=solid:0.5,0.5,0.5,1 crossDissolve=4 --frames 23"
-    "AppendClip dissolve 4 last|net.sf.openfx.AppendClip|general|float|mean=5.390,0.4,0.4,1||-i 1=default -i 2=solid:0.5,0.5,0.5,1 crossDissolve=4 --frames 26"
+    # clip 2 is weighted by the smoothstep of 0.2 (0.104) at frame 23 and of 0.8 (0.896) at frame 26, clip 1
+    # (its frame 22, then 25, mean 21.956 and 24.949) by 1 minus that; version 1: linear, 0.2 and 0.8
+    "AppendClip dissolve 4 first|net.sf.openfx.AppendClip|general|float|mean=19.725,0.052,0.052,1||-i 1=default -i 2=solid:0.5,0.5,0.5,1 crossDissolve=4 --frames 23"
+    "AppendClip dissolve 4 last|net.sf.openfx.AppendClip|general|float|mean=3.043,0.448,0.448,1||-i 1=default -i 2=solid:0.5,0.5,0.5,1 crossDissolve=4 --frames 26"
+    "AppendClip 1 dissolve 4 first|net.sf.openfx.AppendClip|general|float|mean=17.665,0.1,0.1,1||-m 1 -i 1=default -i 2=solid:0.5,0.5,0.5,1 crossDissolve=4 --frames 23"
+    "AppendClip 1 dissolve 4 last|net.sf.openfx.AppendClip|general|float|mean=5.390,0.4,0.4,1||-m 1 -i 1=default -i 2=solid:0.5,0.5,0.5,1 crossDissolve=4 --frames 26"
     # ContactSheet, 2x2 cells of 32x32 pixels (#305). The 720x576 inputs fit the width of a cell,
     # at its bottom left: the 8x8 windows are inside the image of a cell. Two inputs, top to
     # bottom: they fill the top row, and the bottom row is empty; with Center Rows, the row of

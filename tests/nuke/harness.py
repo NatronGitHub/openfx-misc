@@ -248,6 +248,11 @@ def nuke_script(case, result_path):
     if case.get("nuke_post"):
         lines.append(case["nuke_post"])
     lines += [
+        # In `nuke -t`, samples taken at the initial frame (0) before any
+        # frame change come back once more at the next frame (frame 1
+        # sampled right after frame 0 gives frame 0): change the frame
+        # first.
+        "nuke.frame(%d)" % (min(case_frames(case)) - 1000),
         "points = %r" % (case_points(case),),
         "results = {}",
         "for view in %r:" % (case_views(case),),

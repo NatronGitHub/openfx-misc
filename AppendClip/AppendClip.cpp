@@ -45,12 +45,18 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginName "AppendClipOFX"
 #define kPluginGrouping "Time"
-#define kPluginDescription \
+#define kPluginDescriptionStart \
     "Append one clip to another.\n" \
     "The first frame of the first clip is shown at First Frame, and each clip starts right after the previous one; " \
-    "with a Cross Dissolve of N frames, the last N frames of a clip overlap the first N frames of the next one (fewer if a clip is shorter). " \
+    "with a Cross Dissolve of N frames, the last N frames of a clip overlap the first N frames of the next one (fewer if a clip is shorter). "
+#define kPluginDescriptionCurves \
+    "With N frames, the fades weight the faded clip by (1/(N+1))^2, (2/(N+1))^2... (N/(N+1))^2, and the cross-dissolve weights " \
+    "the next clip by the smoothstep 3x^2-2x^3 of x = 1/(N+1), 2/(N+1)... N/(N+1), " \
+    "so that no faded frame is entirely black, and every frame of a cross-dissolve shows both clips.\n"
+#define kPluginDescriptionCurvesV1 \
     "The fades and the cross-dissolve are linear: with N frames, they weight the faded clip by 1/(N+1), 2/(N+1)... N/(N+1), " \
-    "so that no faded frame is entirely black, and every frame of a cross-dissolve shows both clips.\n" \
+    "so that no faded frame is entirely black, and every frame of a cross-dissolve shows both clips.\n"
+#define kPluginDescriptionEnd \
     "See also: https://web.archive.org/web/20220627030729/http://www.opticalenquiry.com/nuke/index.php?title=AppendClip"
 
 #define kPluginIdentifier "net.sf.openfx.AppendClip"
@@ -58,7 +64,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.0: initial version
 // version 2.0: during a cross-dissolve, weight the second clip by its own factor (including fade in/out),
 //              instead of 1 minus the weight of the first clip, and include its RoD in the output RoD;
-//              a NULL Source image (disconnected input) renders black instead of crashing (SupportExt copyPixels)
+//              a NULL Source image (disconnected input) renders black instead of crashing (SupportExt copyPixels);
+//              (#319, not released yet) the fades are quadratic ((k/(N+1))^2) and the cross-dissolve a
+//              smoothstep, as the tests/nuke reference (version 1: linear)
 // version 1.1: (the deprecated version 1) a NULL Source image renders black instead of crashing
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
@@ -72,15 +80,20 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamFadeIn "fadeIn"
 #define kParamFadeInLabel "Fade In"
-#define kParamFadeInHint "Number of frames to fade in from black at the beginning of the first clip. With N frames, the first N frames are weighted by 1/(N+1), 2/(N+1)... N/(N+1), and the next one is not faded."
+#define kParamFadeInHint "Number of frames to fade in from black at the beginning of the first clip. With N frames, the first N frames are weighted by (1/(N+1))^2, (2/(N+1))^2... (N/(N+1))^2, and the next one is not faded."
+#define kParamFadeInHintV1 "Number of frames to fade in from black at the beginning of the first clip. With N frames, the first N frames are weighted by 1/(N+1), 2/(N+1)... N/(N+1), and the next one is not faded."
 
 #define kParamFadeOut "fadeOut"
 #define kParamFadeOutLabel "Fade Out"
-#define kParamFadeOutHint "Number of frames to fade out to black at the end of the last clip. With N frames, the last N frames are weighted by N/(N+1)... 2/(N+1), 1/(N+1)."
+#define kParamFadeOutHint "Number of frames to fade out to black at the end of the last clip. With N frames, the last N frames are weighted by (N/(N+1))^2... (2/(N+1))^2, (1/(N+1))^2."
+#define kParamFadeOutHintV1 "Number of frames to fade out to black at the end of the last clip. With N frames, the last N frames are weighted by N/(N+1)... 2/(N+1), 1/(N+1)."
 
 #define kParamCrossDissolve "crossDissolve"
 #define kParamCrossDissolveLabel "Cross Dissolve"
-#define kParamCrossDissolveHint "Number of frames to cross-dissolve between clips: the last N frames of a clip overlap the first N frames of the next one (fewer if a clip is shorter). " \
+#define kParamCrossDissolveHintStart "Number of frames to cross-dissolve between clips: the last N frames of a clip overlap the first N frames of the next one (fewer if a clip is shorter). "
+#define kParamCrossDissolveHint kParamCrossDissolveHintStart \
+    "Over these N frames, the next clip is weighted by the smoothstep 3x^2-2x^3 of x = 1/(N+1)... N/(N+1), and the previous one by 1 minus that."
+#define kParamCrossDissolveHintV1 kParamCrossDissolveHintStart \
     "Over these N frames, the previous clip is weighted by N/(N+1)... 1/(N+1), and the next one by 1/(N+1)... N/(N+1)."
 
 #define kParamFirstFrame "firstFrame"
@@ -203,6 +216,7 @@ public:
         , _firstFrame(NULL)
         , _lastFrame(NULL)
         , _legacyCrossDissolve(majorVersion < 2)
+        , _linearCurves(majorVersion < 2)
     {
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -292,6 +306,7 @@ private:
     IntParam* _firstFrame;
     IntParam* _lastFrame;
     bool _legacyCrossDissolve; // version 1 cross-dissolve: clip1 is weighted by 1-alpha0, and the RoD is clip0's only
+    bool _linearCurves; // version 1: linear fades and cross-dissolve (version 2: quadratic fades, smoothstep cross-dissolve)
 };
 
 
@@ -314,6 +329,22 @@ checkComponents(const Image &src,
     if ( ( srcBitDepth != dstBitDepth) || ( srcComponents != dstComponents) ) {
         throwSuiteStatusException(kOfxStatErrImageFormat);
     }
+}
+
+// the weight of a frame faded in or out, at x = k/(N+1) (k = 1 to N, from the black end of the fade)
+static double
+fadeWeight(double x,
+           bool linear)
+{
+    return linear ? x : x * x;
+}
+
+// the weight of the next clip during a cross-dissolve, at x = k/(N+1) (k = 1 to N)
+static double
+dissolveWeight(double x,
+               bool linear)
+{
+    return linear ? x : x * x * (3. - 2. * x);
 }
 
 // copy the getSources() results to the non-NULL output pointers
@@ -489,7 +520,7 @@ AppendClipPlugin::getSources(int firstFrame,
         // clip0 and clip1: cross-dissolve
         assert(clip1OutMin + crossDissolve - 1 >= clip0OutMax);
         t0 = clip0Min + (time - clip0OutMin);
-        alpha0 = 1. - (time + 1 - clip1OutMin) / (double)(crossDissolve + 1);
+        alpha0 = 1. - dissolveWeight( (time + 1 - clip1OutMin) / (double)(crossDissolve + 1), _linearCurves );
         assert(0 < alpha0 && alpha0 < 1.);
         t1 = clip1Min + (time - clip1OutMin);
         alpha1 = (std::max)(0., 1. - alpha0);
@@ -552,8 +583,9 @@ AppendClipPlugin::getSources(int firstFrame,
             if ( (time - firstFrame) < fadeIn ) {
                 // fade in
                 assert(alpha0 > 0.);
-                alpha0 *= (time - firstFrame + 1) / (fadeIn + 1);
-                alpha1 *= (time - firstFrame + 1) / (fadeIn + 1);
+                const double fade = fadeWeight( (time - firstFrame + 1) / (fadeIn + 1), _linearCurves );
+                alpha0 *= fade;
+                alpha1 *= fade;
             }
         }
     }
@@ -564,8 +596,9 @@ AppendClipPlugin::getSources(int firstFrame,
             if ( (clip0OutMax - time) < fadeOut ) {
                 // fade out
                 assert(alpha0 > 0.);
-                alpha0 *= (clip0OutMax - time + 1) / (fadeOut + 1);
-                alpha1 *= (clip0OutMax - time + 1) / (fadeOut + 1);
+                const double fade = fadeWeight( (clip0OutMax - time + 1) / (fadeOut + 1), _linearCurves );
+                alpha0 *= fade;
+                alpha1 *= fade;
             }
         }
         if ( (clip1 == lastClip) && (time <= clip1OutMax) ) {
@@ -574,8 +607,9 @@ AppendClipPlugin::getSources(int firstFrame,
             if ( (clip1OutMax - time) < fadeOut ) {
                 // fade out
                 assert(alpha0 > 0.);
-                alpha0 *= (clip1OutMax - time + 1) / (fadeOut + 1);
-                alpha1 *= (clip1OutMax - time + 1) / (fadeOut + 1);
+                const double fade = fadeWeight( (clip1OutMax - time + 1) / (fadeOut + 1), _linearCurves );
+                alpha0 *= fade;
+                alpha1 *= fade;
             }
         }
     }
@@ -939,7 +973,9 @@ AppendClipPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
-    desc.setPluginDescription(kPluginDescription);
+    desc.setPluginDescription( (majorVersion < 2) ?
+                               kPluginDescriptionStart kPluginDescriptionCurvesV1 kPluginDescriptionEnd :
+                               kPluginDescriptionStart kPluginDescriptionCurves kPluginDescriptionEnd );
     if (majorVersion < kPluginVersionMajor) {
         desc.setIsObsolete(true);
     }
@@ -1059,7 +1095,7 @@ AppendClipPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &
     {
         IntParamDescriptor *param = desc.defineIntParam(kParamFadeIn);
         param->setLabel(kParamFadeInLabel);
-        param->setHint(kParamFadeInHint);
+        param->setHint( (majorVersion < 2) ? kParamFadeInHintV1 : kParamFadeInHint );
         param->setRange(0, INT_MAX); // Resolve requires range and display range
         param->setDisplayRange(0, 50);
         param->setAnimates(false); // used in getTimeDomain()
@@ -1070,7 +1106,7 @@ AppendClipPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &
     {
         IntParamDescriptor *param = desc.defineIntParam(kParamFadeOut);
         param->setLabel(kParamFadeOutLabel);
-        param->setHint(kParamFadeOutHint);
+        param->setHint( (majorVersion < 2) ? kParamFadeOutHintV1 : kParamFadeOutHint );
         param->setRange(0, INT_MAX); // Resolve requires range and display range
         param->setDisplayRange(0, 50);
         param->setAnimates(false); // used in getTimeDomain()
@@ -1081,7 +1117,7 @@ AppendClipPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &
     {
         IntParamDescriptor *param = desc.defineIntParam(kParamCrossDissolve);
         param->setLabel(kParamCrossDissolveLabel);
-        param->setHint(kParamCrossDissolveHint);
+        param->setHint( (majorVersion < 2) ? kParamCrossDissolveHintV1 : kParamCrossDissolveHint );
         param->setRange(0, INT_MAX); // Resolve requires range and display range
         param->setDisplayRange(0, 50);
         param->setAnimates(false); // used in getTimeDomain()
