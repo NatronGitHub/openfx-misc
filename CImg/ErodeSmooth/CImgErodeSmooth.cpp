@@ -647,6 +647,7 @@ CImgErodeSmoothPluginFactory::describeInContext(ImageEffectDescriptor& desc,
         param->setDisplayRange(-100, -100, 100, 100);
         param->setDefault(kParamSizeDefault, kParamSizeDefault);
         param->setDoubleType(eDoubleTypeXY);
+        param->setDefaultCoordinateSystem(eCoordinatesCanonical); // Nuke defaults to Normalized for XY and XYAbsolute!
         param->setDigits(1);
         param->setIncrement(0.1);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);

@@ -544,7 +544,6 @@ TimeDissolvePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamOutLabel);
         param->setHint(kParamOutHint);
         param->setDefault(10);
-        param->setDisplayRange(INT_MIN, INT_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         if (page) {
             page->addChild(*param);
         }

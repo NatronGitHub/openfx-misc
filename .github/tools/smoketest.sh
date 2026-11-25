@@ -209,7 +209,7 @@ watchdog() {
     local log=$1 bundle=$2 host=()
     shift 2
     # --ofx14 or --ofx11: an OFX 1.4 or OFX 1.1 host
-    [ "$SMOKETEST_PROFILE" = default ] || host=("--$SMOKETEST_PROFILE")
+    [ "${SMOKETEST_PROFILE:-default}" = default ] || host=("--$SMOKETEST_PROFILE")
     status=0
     ( OFX_PLUGIN_PATH=$SMOKETEST_WORK/path/$bundle exec perl -e 'alarm shift; exec @ARGV or die "$!\n"' \
           "$SMOKETEST_TIMEOUT" "$HOSTDEMO" --no-std-paths --no-cache --quiet "${host[@]}" "$@" ) > "$log" 2>&1 || status=$?

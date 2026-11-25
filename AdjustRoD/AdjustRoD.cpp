@@ -583,6 +583,7 @@ AdjustRoDPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &d
         param->setLabel(kParamAddPixelsLabel);
         param->setHint( (majorVersion >= 2) ? kParamAddPixelsHint : kParamAddPixelsHintV1 );
         param->setDoubleType(eDoubleTypeXY);
+        param->setDefaultCoordinateSystem(eCoordinatesCanonical); // Nuke defaults to Normalized for XY and XYAbsolute!
         const double amount = (majorVersion >= 2) ? kParamAddPixelsDefault : kParamAddPixelsDefaultV1;
         param->setDefault(amount, amount);
         param->setIncrement(1.);

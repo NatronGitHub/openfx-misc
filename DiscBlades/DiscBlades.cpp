@@ -534,6 +534,7 @@ DiscBladesPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamOffsetLabel);
         param->setHint(kParamOffsetHint);
         param->setDoubleType(eDoubleTypeXY);
+        param->setDefaultCoordinateSystem(eCoordinatesCanonical); // Nuke defaults to Normalized for XY and XYAbsolute!
         param->setDefault(0., 0.);
         param->setDisplayRange(-100., -100., 100., 100.);
         param->setAnimates(true);
