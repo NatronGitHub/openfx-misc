@@ -1343,6 +1343,11 @@ tests=(
     # LensDistortion 5 Twist 30 and Scale 1.5,1 (no radial distortion, center 0.5,0, Distort): the STMap is
     # the scale along the twisted axes about the center, mean u 0.0116 and v 0.3521 in the same window
     "LensDistortion twist scale|net.sf.openfx.LensDistortion|general|float|mean=0.0116,0.3521,1,1||-i Source=checker:16 center=0.5,0 anamorphicTwist=30 anamorphicScale=1.5,1 direction=0 outputMode=STMap --frames 0 --window 100,250,200,330"
+    # Undistort (the default) with Twist and Scale: K1 0.05, center 0.5,0, in the same window, mean u, v
+    # -0.0598, 1.1396 (Twist 45, Scale 2,0.5) and 0.2538, 0.5700 (Twist 20, Scale 1.2,0.9); the linear part
+    # is inverted in closed form (Newton alone did not converge with Twist 45 and Scale 2,0.5)
+    "LensDistortion undistort twist 45 scale 2,0.5|net.sf.openfx.LensDistortion|general|float|mean=-0.0598,1.1396,1,1||-i Source=checker:16 k1=0.05 center=0.5,0 anamorphicTwist=45 anamorphicScale=2,0.5 outputMode=STMap --frames 0 --window 100,250,200,330"
+    "LensDistortion undistort twist 20 scale 1.2,0.9|net.sf.openfx.LensDistortion|general|float|mean=0.2538,0.57,1,1||-i Source=checker:16 k1=0.05 center=0.5,0 anamorphicTwist=20 anamorphicScale=1.2,0.9 outputMode=STMap --frames 0 --window 100,250,200,330"
     # LensDistortion STMap output (u, v, 1, 1): PFBarrel squeeze 0, 3DE Classic filmback width 0 and
     # 3DE Standard cylindric bending b=-2 (sqrt(1+b)) gave a NaN RoD (nothing rendered). Models: 1
     # PFBarrel, 2 3DE Classic, 5 3DE4 Radial Standard Degree 4.

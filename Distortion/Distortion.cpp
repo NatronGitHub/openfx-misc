@@ -167,7 +167,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              are forward differences (0 on the last column and row), and the separable blur's kernel
 //              width along x is the length of (|dx/dX| + blur, dx/dY), at least 1 pixel (it was
 //              max(1, |dx/dX| + |dx/dY|) + blur), likewise along y; the kernel scale (1/width) is rounded to
-//              a multiple of 1/64.
+//              a multiple of 1/64, for widths up to 64/3 pixels.
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 #define kPluginVersionMinorV2 1 // the minor version of the obsolete version 2 (IDistort and STMap)
@@ -429,7 +429,7 @@ enum OutputModeEnum {
 #define kParamTwistLabel "Twist", "Nuke: Anamorphic twist, in degrees: the rotation of the axes of Squeeze, Asymmetric and Scale (only for anamorphic lens; version 5 and later)."
 
 #define kParamAnamorphicScale "anamorphicScale"
-#define kParamAnamorphicScaleLabel "Scale", "Nuke: Anamorphic scale of the undistorted positions, along the axes of Twist, about the distortion center (only for anamorphic lens; version 5 and later)."
+#define kParamAnamorphicScaleLabel "Scale", "Nuke: Anamorphic scale of the undistorted positions, along the axes of Twist, about the distortion center (only for anamorphic lens; version 5 and later). At least 0.001."
 
 #define kParamAsymmetric "asymmetricDistortion"
 #define kParamAsymmetricLabel "Asymmetric", "Nuke: Asymmetric distortion (only for anamorphic lens)."
@@ -877,6 +877,7 @@ protected:
     WrapEnum _vWrap;
     OfxPointD _renderScale;
     const DistortionModel* _distortionModel;
+    bool _blackIfNoInverse; // LensDistortion 5: transparent black where Undistort has no solution
     DirectionEnum _direction;
     OutputModeEnum _outputMode;
     bool _blackOutside;
@@ -909,6 +910,7 @@ public:
         , _uWrap(eWrapClamp)
         , _vWrap(eWrapClamp)
         , _distortionModel(NULL)
+        , _blackIfNoInverse(false)
         , _direction(eDirectionDistort)
         , _outputMode(eOutputModeImage)
         , _blackOutside(false)
@@ -927,6 +929,9 @@ public:
                     bool maskInvert) { _maskImg = v; _maskInvert = maskInvert; }
 
     void doMasking(bool v) {_doMasking = v; }
+
+    // LensDistortion version 5: transparent black where Undistort has no solution
+    void setBlackIfNoInverse(bool blackIfNoInverse) { _blackIfNoInverse = blackIfNoInverse; }
 
     void setValues(bool processR,
                    bool processG,
@@ -1516,6 +1521,19 @@ struct SeparableWeights
     std::vector<CellSpan> cells;
 };
 
+// The kernel width of the separable blur along one axis, in source pixels: the footprint's own extent along
+// that axis (|own|, e.g. |dx/dX|) plus the blur (in source pixels), combined with the shear (e.g. dx/dY) as
+// the length of a vector, at least 1 pixel (so a magnified footprint, |own| < 1, adds less than 1 pixel to
+// the blur), and at most maxWidth. The behaviour of the tests/nuke reference.
+static double
+separableKernelWidth(double own,
+                     double shear,
+                     double blur,
+                     double maxWidth)
+{
+    return (std::min)( (std::max)( 1., std::hypot(std::abs(own) + blur, shear) ), maxWidth );
+}
+
 // the weights for a sample at c (pixel i covers [i, i+1), its center is i + 0.5) and a kernel width
 // w >= 1 (in pixels), normalized; the kernel is evaluated at (i + 0.5 - c) / w
 static void
@@ -1524,13 +1542,10 @@ separableWeights(FilterEnum filter,
                  double w,
                  SeparableWeights *sw)
 {
-    // as the tests/nuke reference: the kernel's scale, 1/w, is a multiple of 1/64 (rounded), up to widths
-    // of about 40 pixels (beyond, w is kept)
-    {
-        const double n = std::round(kSeparableBlurScaleSteps / w);
-        if (n >= 2.) {
-            w = kSeparableBlurScaleSteps / n;
-        }
+    // the kernel's scale, 1/w, is rounded to a multiple of 1/64 (as the tests/nuke reference, checked up to
+    // widths of 21.3 pixels, 64/3); wider kernels are not rounded (the reference's are not a rounded scale)
+    if ( w <= kSeparableBlurScaleSteps / 3. ) {
+        w = kSeparableBlurScaleSteps / std::round(kSeparableBlurScaleSteps / w);
     }
     // the kernel's support, in pixels: the pixel centers strictly inside it have a non-zero weight
     const double radius = filterKernelRadius(filter) * w;
@@ -1802,17 +1817,20 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
 
         for (int x = procWindow.x1; x < procWindow.x2; x++) {
             double sx, sy, sxx, sxy, syx, syy; // the source pixel coordinates and their derivatives
+            bool noInverse = false; // LensDistortion 5, Undistort: no source position
             double a = 1.;
             double blur = 0.; // added to the size of the sampled source area, in source pixels
 
             switch (plugin) {
             case eDistortionPluginSTMap:
             case eDistortionPluginIDistort: {
+                // the previous pixels: only version 2 (central differences) reads them
+                const bool central = (_uvBehaviour != eUVBehaviourV3);
                 const PIX *uPix    = getPix(eUVChannelU, x, y  );
                 const PIX *uPix_xn = getPix(eUVChannelU, x + 1, y  );
-                const PIX *uPix_xp = getPix(eUVChannelU, x - 1, y  );
+                const PIX *uPix_xp = (central ? getPix(eUVChannelU, x - 1, y  ) : nullptr);
                 const PIX *uPix_yn = getPix(eUVChannelU, x, y + 1);
-                const PIX *uPix_yp = getPix(eUVChannelU, x, y - 1);
+                const PIX *uPix_yp = (central ? getPix(eUVChannelU, x, y - 1) : nullptr);
                 const PIX *vPix, *vPix_xn, *vPix_xp, *vPix_yn, *vPix_yp;
                 if (_planeChannels[eUVChannelV].img == _planeChannels[eUVChannelU].img) {
                     vPix    = uPix;
@@ -1823,9 +1841,9 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
                 } else {
                     vPix =    getPix(eUVChannelV, x, y  );
                     vPix_xn = getPix(eUVChannelV, x + 1, y  );
-                    vPix_xp = getPix(eUVChannelV, x - 1, y  );
+                    vPix_xp = (central ? getPix(eUVChannelV, x - 1, y  ) : nullptr);
                     vPix_yn = getPix(eUVChannelV, x, y + 1);
-                    vPix_yp = getPix(eUVChannelV, x, y - 1);
+                    vPix_yp = (central ? getPix(eUVChannelV, x, y - 1) : nullptr);
                 }
                 const PIX *aPix, *aPix_xn, *aPix_xp, *aPix_yn, *aPix_yp;
                 if (_planeChannels[eUVChannelAlpha].img == _planeChannels[eUVChannelU].img) {
@@ -1843,9 +1861,9 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
                 } else {
                     aPix =    getPix(eUVChannelAlpha, x, y  );
                     aPix_xn = getPix(eUVChannelAlpha, x + 1, y  );
-                    aPix_xp = getPix(eUVChannelAlpha, x - 1, y  );
+                    aPix_xp = (central ? getPix(eUVChannelAlpha, x - 1, y  ) : nullptr);
                     aPix_yn = getPix(eUVChannelAlpha, x, y + 1);
-                    aPix_yp = getPix(eUVChannelAlpha, x, y - 1);
+                    aPix_yp = (central ? getPix(eUVChannelAlpha, x, y - 1) : nullptr);
                 }
                 // compute gradients before wrapping
                 double u = getVal(eUVChannelU, uPix, nullptr);
@@ -1863,18 +1881,12 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
                 double ux, uy, vx, vy;
                 {
                     double u_xn = getVal(eUVChannelU, uPix_xn, uPix);
-                    double u_xp = getVal(eUVChannelU, uPix_xp, uPix);
                     double u_yn = getVal(eUVChannelU, uPix_yn, uPix);
-                    double u_yp = getVal(eUVChannelU, uPix_yp, uPix);
                     double v_xn = getVal(eUVChannelV, vPix_xn, vPix);
-                    double v_xp = getVal(eUVChannelV, vPix_xp, vPix);
                     double v_yn = getVal(eUVChannelV, vPix_yn, vPix);
-                    double v_yp = getVal(eUVChannelV, vPix_yp, vPix);
                     if (_unpremultUV) {
                         unpremult(getVal(eUVChannelAlpha, aPix_xn, aPix), &u_xn, &v_xn);
-                        unpremult(getVal(eUVChannelAlpha, aPix_xp, aPix), &u_xp, &v_xp);
                         unpremult(getVal(eUVChannelAlpha, aPix_yn, aPix), &u_yn, &v_yn);
-                        unpremult(getVal(eUVChannelAlpha, aPix_yp, aPix), &u_yp, &v_yp);
                     }
                     if (_uvBehaviour == eUVBehaviourV3) {
                         // forward differences, as the tests/nuke reference: on the last column (row),
@@ -1885,6 +1897,14 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
                         vy = v_yn - v;
                     } else {
                         // version 2: central differences
+                        double u_xp = getVal(eUVChannelU, uPix_xp, uPix);
+                        double u_yp = getVal(eUVChannelU, uPix_yp, uPix);
+                        double v_xp = getVal(eUVChannelV, vPix_xp, vPix);
+                        double v_yp = getVal(eUVChannelV, vPix_yp, vPix);
+                        if (_unpremultUV) {
+                            unpremult(getVal(eUVChannelAlpha, aPix_xp, aPix), &u_xp, &v_xp);
+                            unpremult(getVal(eUVChannelAlpha, aPix_yp, aPix), &u_yp, &v_yp);
+                        }
                         ux = (u_xn - u_xp) / 2.;
                         vx = (v_xn - v_xp) / 2.;
                         uy = (u_yn - u_yp) / 2.;
@@ -1937,6 +1957,9 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
                     _distortionModel->undistort( x + 0.5,
                                                  y + 0.5,
                                                  &sx, &sy);
+                } else if (_blackIfNoInverse) {
+                    // version 5: transparent black where the model has no inverse (the solver did not converge)
+                    noInverse = !_distortionModel->distortConverged(x + 0.5, y + 0.5, &sx, &sy);
                 } else {
                     _distortionModel->distort( x + 0.5,
                                                y + 0.5,
@@ -1967,7 +1990,7 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
                 const Jacobian S = {sxx, sxy, syx, syy};
                 J = separableBlur ? S : addBlurToFootprint(S, bx, by, maxBlur);
             }
-            bool atInfinity = false; // the source position is at infinity: nothing to sample
+            bool atInfinity = noInverse; // the source position is at infinity (or none): nothing to sample
             if (!_transformIsIdentity) {
                 const Matrix3x3 & H = _srcTransformInverse;
                 double transformedx = H(0,0) * sx + H(0,1) * sy + H(0,2);
@@ -2016,16 +2039,9 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
                 } else if (boxBlur) {
                     boxBlurSample<PIX, nComponents>(_sat, _blackOutside, sx, sy, J, tmpPix);
                 } else if (separableBlur) {
-                    // the kernel widths, in source pixels, as the tests/nuke reference: along x, the
-                    // footprint's own extent (|dx/dX|) plus the blur (bx, by in the pixels of the
-                    // transformed source, through the upstream transform), combined with the shear
-                    // (dx/dY) as the length of a vector, and at least 1 pixel (so a magnified footprint,
-                    // |dx/dX| < 1, adds less than 1 pixel to the blur); along y likewise
                     const double maxWidth = 2 * maxBlur + 1; // a wild UV gradient must not cost hours either
-                    const double wx = (std::min)( (std::max)( 1., std::hypot(std::abs(J.xx) + std::abs(JH.xx) * bx + std::abs(JH.xy) * by,
-                                                                             J.xy) ), maxWidth );
-                    const double wy = (std::min)( (std::max)( 1., std::hypot(std::abs(J.yy) + std::abs(JH.yx) * bx + std::abs(JH.yy) * by,
-                                                                             J.yx) ), maxWidth );
+                    const double wx = separableKernelWidth(J.xx, J.xy, std::abs(JH.xx) * bx + std::abs(JH.xy) * by, maxWidth);
+                    const double wy = separableKernelWidth(J.yy, J.yx, std::abs(JH.yx) * bx + std::abs(JH.yy) * by, maxWidth);
                     separableBlurSample<PIX, nComponents, clamp>(_srcImg, _sat, _blackOutside, filter, sx, sy,
                                                                  wx, wy, blurWeightsX, blurWeightsY, tmpPix);
                 } else {
@@ -2110,10 +2126,10 @@ public:
         , _k1(NULL)
         , _k2(NULL)
         , _center(NULL)
-        , _squeeze(NULL)
+        , _squeeze(nullptr)
         , _twist(nullptr)
         , _anamorphicScale(nullptr)
-        , _asymmetric(NULL)
+        , _asymmetric(nullptr)
         , _pfFile(NULL)
         , _pfReload(NULL)
         , _pfC3(NULL)
@@ -2729,30 +2745,21 @@ DistortionPlugin::getDistortionModel(const OfxRectD& format, const OfxPointD& re
         if (_srcClip) {
             par = _srcClip->getPixelAspectRatio();
         }
-        double k1 = _k1->getValueAtTime(time);
-        double k2 = _k2->getValueAtTime(time);
-        double cx, cy;
-        _center->getValueAtTime(time, cx, cy);
-        double squeeze = (std::max)(0.001, _squeeze->getValueAtTime(time));
-        double ax, ay;
-        _asymmetric->getValueAtTime(time, ax, ay);
-        const double twist = _twist ? _twist->getValueAtTime(time) : 0.;
-        double scaleX = 1., scaleY = 1.;
-        if (_anamorphicScale) {
-            _anamorphicScale->getValueAtTime(time, scaleX, scaleY);
+        DistortionModelNukeParams params;
+        params.k1 = _k1->getValueAtTime(time);
+        params.k2 = _k2->getValueAtTime(time);
+        _center->getValueAtTime(time, params.cx, params.cy);
+        // the model's preconditions: squeeze and scale at least 0.001 (the tests/nuke reference takes a
+        // scale of 0 or less as 0, a degenerate map)
+        params.squeeze = (std::max)(0.001, _squeeze->getValueAtTime(time));
+        _asymmetric->getValueAtTime(time, params.ax, params.ay);
+        if (_twist) {
+            params.twist = _twist->getValueAtTime(time);
+            _anamorphicScale->getValueAtTime(time, params.scaleX, params.scaleY);
+            params.scaleX = (std::max)(0.001, params.scaleX);
+            params.scaleY = (std::max)(0.001, params.scaleY);
         }
-        return new DistortionModelNuke(format,
-                                       par,
-                                       k1,
-                                       k2,
-                                       cx,
-                                       cy,
-                                       squeeze,
-                                       ax,
-                                       ay,
-                                       twist,
-                                       scaleX,
-                                       scaleY);
+        return new DistortionModelNuke(format, par, params);
         break;
     }
     case eDistortionModelPFBarrel: {
@@ -3514,6 +3521,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
 
     DirectionEnum direction = _direction ? (DirectionEnum)_direction->getValue() : eDirectionDistort;
     auto_ptr<DistortionModel> distortionModel( getDistortionModel(format, args.renderScale, time) );
+    processor.setBlackIfNoInverse( (_plugin == eDistortionPluginLensDistortion) && (_majorVersion >= kPluginVersionLensDistortionUndistortDefault) );
     processor.setValues(processR, processG, processB, processA,
                         transformIsIdentity, srcTransformInverse,
                         format,
@@ -5051,33 +5059,40 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
                 page->addChild(*param);
             }
         }
+        // Nuke (Squeeze, Twist and Scale first, then K1, K2 and Center, as the tests/nuke reference)
         {
-            ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamDistortionDirection);
-            param->setLabelAndHint(kParamDistortionDirectionLabel);
-            assert(param->getNOptions() == eDirectionDistort);
-            param->appendOption(kParamDistortionDirectionOptionDistort);
-            assert(param->getNOptions() == eDirectionUndistort);
-            param->appendOption(kParamDistortionDirectionOptionUndistort);
-            // version 5: Undistort, as in the tests/nuke reference; before: Distort, the most straightforward
-            // (non-iterative) transform for most models
-            param->setDefault( (int)( (majorVersion >= kPluginVersionLensDistortionUndistortDefault) ? eDirectionUndistort : eDirectionDistort ) );
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSqueeze);
+            param->setLabelAndHint(kParamSqueezeLabel);
+            param->setDefault(1.);
+            param->setDisplayRange(0., 1.);
             if (page) {
                 page->addChild(*param);
             }
         }
-        {
-            ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamDistortionOutputMode);
-            param->setLabelAndHint(kParamDistortionOutputModeLabel);
-            assert(param->getNOptions() == eOutputModeImage);
-            param->appendOption(kParamDistortionOutputModeOptionImage);
-            assert(param->getNOptions() == eOutputModeSTMap);
-            param->appendOption(kParamDistortionOutputModeOptionSTMap);
-            if (page) {
-                page->addChild(*param);
+        if (majorVersion >= kPluginVersionLensDistortionUndistortDefault) {
+            // version 5: Twist and Scale, after Squeeze as in the tests/nuke reference
+            {
+                DoubleParamDescriptor *param = desc.defineDoubleParam(kParamTwist);
+                param->setLabelAndHint(kParamTwistLabel);
+                param->setDefault(0.);
+                param->setDisplayRange(-90., 90.);
+                if (page) {
+                    page->addChild(*param);
+                }
+            }
+            {
+                Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamAnamorphicScale);
+                param->setLabelAndHint(kParamAnamorphicScaleLabel);
+                param->setDefault(1., 1.);
+                param->setRange(0.001, 0.001, DBL_MAX, DBL_MAX); // Scale must be positive (DistortionModel.h)
+                param->setDisplayRange(0.5, 0.5, 2., 2.);
+                param->setDoubleType(eDoubleTypeScale);
+                param->setUseHostNativeOverlayHandle(false);
+                if (page) {
+                    page->addChild(*param);
+                }
             }
         }
-
-        // Nuke
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamK1);
             param->setLabelAndHint(kParamK1Label);
@@ -5102,40 +5117,6 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
             param->setDisplayRange(-1, -1, 1, 1);
             if (page) {
                 page->addChild(*param);
-            }
-        }
-        {
-            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSqueeze);
-            param->setLabelAndHint(kParamSqueezeLabel);
-            param->setDefault(1.);
-            param->setDisplayRange(0., 1.);
-            if (page) {
-                page->addChild(*param);
-            }
-        }
-        if (majorVersion >= kPluginVersionLensDistortionUndistortDefault) {
-            // version 5: Twist and Scale, after Squeeze as in the tests/nuke reference
-            {
-                DoubleParamDescriptor *param = desc.defineDoubleParam(kParamTwist);
-                param->setLabelAndHint(kParamTwistLabel);
-                param->setDefault(0.);
-                param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
-                param->setDisplayRange(-90., 90.);
-                if (page) {
-                    page->addChild(*param);
-                }
-            }
-            {
-                Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamAnamorphicScale);
-                param->setLabelAndHint(kParamAnamorphicScaleLabel);
-                param->setDefault(1., 1.);
-                param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
-                param->setDisplayRange(0.5, 0.5, 2., 2.);
-                param->setDoubleType(eDoubleTypeScale);
-                param->setUseHostNativeOverlayHandle(false);
-                if (page) {
-                    page->addChild(*param);
-                }
             }
         }
         {
@@ -5709,6 +5690,32 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
             }
         }
 
+        // Direction and Output Mode after the model's parameters, as the tests/nuke reference's Mode
+        {
+            ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamDistortionDirection);
+            param->setLabelAndHint(kParamDistortionDirectionLabel);
+            assert(param->getNOptions() == eDirectionDistort);
+            param->appendOption(kParamDistortionDirectionOptionDistort);
+            assert(param->getNOptions() == eDirectionUndistort);
+            param->appendOption(kParamDistortionDirectionOptionUndistort);
+            // version 5: Undistort, as in the tests/nuke reference; before: Distort, the most straightforward
+            // (non-iterative) transform for most models
+            param->setDefault( (int)( (majorVersion >= kPluginVersionLensDistortionUndistortDefault) ? eDirectionUndistort : eDirectionDistort ) );
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamDistortionOutputMode);
+            param->setLabelAndHint(kParamDistortionOutputModeLabel);
+            assert(param->getNOptions() == eOutputModeImage);
+            param->appendOption(kParamDistortionOutputModeOptionImage);
+            assert(param->getNOptions() == eOutputModeSTMap);
+            param->appendOption(kParamDistortionOutputModeOptionSTMap);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
     }
 
     if (plugin != eDistortionPluginLensDistortion) {

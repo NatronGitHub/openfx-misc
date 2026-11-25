@@ -133,6 +133,11 @@ NAMES = {
         **{"axisMatrix%d%d" % (_i, _j): "matrix"
            for _i in range(1, 5) for _j in range(1, 5)}),
     "net.sf.openfx.IDistort": {"channelU": "uv", "channelV": "uv"},
+    # the Nuke model's coefficients are LensDistortion2's NukeX Classic
+    # knobs; Direction is its Mode (output)
+    "net.sf.openfx.LensDistortion": {
+        "k1": "distortionDenominator0", "k2": "distortionDenominator1",
+        "center": "centre", "direction": "output"},
     "net.sf.openfx.STMap": {"channelU": "uv", "channelV": "uv"},
     "net.sf.openfx.GodRays": {"skewX": "skew", "skewY": "skew"},
     "eu.cimg.EdgeDetect": {"filter": "edgedetector"},
