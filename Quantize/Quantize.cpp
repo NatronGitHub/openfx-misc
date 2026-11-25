@@ -1061,8 +1061,9 @@ QuantizePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         }
     }
 
+    ofxsMaskDescribeParams(desc, page);
     ofxsPremultDescribeParams(desc, page);
-    ofxsMaskMixDescribeParams(desc, page);
+    ofxsMixDescribeParams(desc, page);
     //std::cout << "describeInContext! OK\n";
 } // QuantizePluginFactory::describeInContext
 

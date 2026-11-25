@@ -716,6 +716,8 @@ KeyMixPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc
             page->addChild(*param);
         }
     }
+
+    ofxsMaskMixDescribeParams(desc, page);
     {
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamBBox);
         param->setLabel(kParamBBoxLabel);
@@ -732,8 +734,6 @@ KeyMixPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc
             page->addChild(*param);
         }
     }
-
-    ofxsMaskMixDescribeParams(desc, page);
 } // >::describeInContext
 
 template<unsigned int majorVersion>

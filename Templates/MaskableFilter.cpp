@@ -729,8 +729,9 @@ MaskableFilterPluginFactory::describeInContext(ImageEffectDescriptor &desc,
 
     // TODO: describe plugin params
 
+    ofxsMaskDescribeParams(desc, page);
     ofxsPremultDescribeParams(desc, page);
-    ofxsMaskMixDescribeParams(desc, page);
+    ofxsMixDescribeParams(desc, page);
     //std::cout << "describeInContext! OK\n";
 } // MaskableFilterPluginFactory::describeInContext
 

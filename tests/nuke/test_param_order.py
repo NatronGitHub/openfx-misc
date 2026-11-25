@@ -162,74 +162,19 @@ NAMES = {
 # test is an expected failure only while the common params keep exactly this
 # order, so a new misorder fails; a fixed order passes (a strict XPASS).
 KNOWN = {
-    "net.sf.openfx.AddPlugin": (
-        377,
-        "channels value unpremult invert_mask mix"),
-    "net.sf.openfx.MultiplyPlugin": (
-        377,
-        "channels value unpremult invert_mask mix"),
-    "net.sf.openfx.GammaPlugin": (
-        377,
-        "channels value unpremult invert_mask mix"),
-    "net.sf.openfx.Clamp": (
-        377,
-        "channels minimum minimum_enable maximum maximum_enable "
-        "MinClampTo MinClampTo_enable MaxClampTo MaxClampTo_enable "
-        "unpremult invert_mask mix"),
-    "net.sf.openfx.GradePlugin": (
-        377,
-        "channels blackpoint whitepoint black white multiply add "
-        "gamma reverse black_clamp white_clamp unpremult invert_mask "
-        "mix"),
-    "net.sf.openfx.ColorCorrectPlugin": (
-        377,
-        "channels saturation contrast gamma gain offset "
-        "shadows.saturation shadows.contrast shadows.gamma "
-        "shadows.gain shadows.offset midtones.saturation "
-        "midtones.contrast midtones.gamma midtones.gain "
-        "midtones.offset highlights.saturation highlights.contrast "
-        "highlights.gamma highlights.gain highlights.offset lookup "
-        "unpremult invert_mask mix"),
-    "net.sf.openfx.ColorMatrixPlugin": (
-        377,
-        "channels matrix unpremult invert_mask mix"),
-    "net.sf.openfx.SaturationPlugin": (
-        377,
-        "channels saturation mode unpremult invert_mask mix"),
-    "net.sf.openfx.Invert": (377, "channels unpremult invert_mask mix"),
-    "net.sf.openfx.Log2Lin": (
-        377,
-        "channels operation black white gamma unpremult invert_mask "
-        "mix"),
-    "net.sf.openfx.PLogLin": (
-        377,
-        "channels operation linref logref ngamma density unpremult "
-        "invert_mask mix"),
-    "net.sf.openfx.Quantize": (
-        377,
-        "channels Colors unpremult invert_mask mix"),
-    "net.sf.cimg.CImgExpression": (377, "unpremult invert_mask mix"),
     "net.sf.openfx.ConstantPlugin": (381, "format first channels color"),
     "net.sf.openfx.ColorWheel": (
         382,
         "format area channels centerSaturation edgeSaturation "
         "centerValue edgeValue gamma rotate"),
     "net.sf.openfx.Ramp": (383, "output type p0 p1 color invert_mask"),
-    "net.sf.openfx.Radial": (
-        384,
-        "output area softness plinear color0 color invert_mask"),
-    "net.sf.openfx.Rectangle": (
-        384,
-        "output area softness color0 color invert_mask"),
 }
 
 # The short titles of the issues (xfail reasons).
 ISSUES = {
-    377: "Colour filters: (Un)premult comes before the mask controls",
     381: "Constant: format and frame range come before the colour",
     382: "ColorWheel: the area comes before the wheel controls",
     383: "Ramp: Type comes before the points, mask controls last",
-    384: "Radial, Rectangle: the mask controls come last",
 }
 
 

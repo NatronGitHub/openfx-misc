@@ -1260,8 +1260,9 @@ WhiteBalancePluginFactory::describeInContext(ImageEffectDescriptor &desc,
     defineTemperature(desc, page, kParamTargetTemperature, kParamTargetTemperatureLabel, kParamTargetTemperatureHint);
     defineTint(desc, page, kParamTargetTint, kParamTargetTintLabel, kParamTargetTintHint);
 
+    ofxsMaskDescribeParams(desc, page);
     ofxsPremultDescribeParams(desc, page);
-    ofxsMaskMixDescribeParams(desc, page);
+    ofxsMixDescribeParams(desc, page);
 
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);

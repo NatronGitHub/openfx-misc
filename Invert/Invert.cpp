@@ -638,8 +638,9 @@ InvertPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         }
     }
 
+    ofxsMaskDescribeParams(desc, page);
     ofxsPremultDescribeParams(desc, page);
-    ofxsMaskMixDescribeParams(desc, page);
+    ofxsMixDescribeParams(desc, page);
     //std::cout << "describeincontext!" << (int)context << " OK\n";
 
     {

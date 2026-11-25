@@ -1932,8 +1932,9 @@ ColorLookupPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         }
     }
 
+    ofxsMaskDescribeParams(desc, page);
     ofxsPremultDescribeParams(desc, page);
-    ofxsMaskMixDescribeParams(desc, page);
+    ofxsMixDescribeParams(desc, page);
 
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);

@@ -1036,7 +1036,6 @@ HueCorrectPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         }
     }
 
-    ofxsPremultDescribeParams(desc, page);
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamMixLuminanceEnable);
         param->setLabel(kParamMixLuminanceEnableLabel);
@@ -1061,7 +1060,9 @@ HueCorrectPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         }
     }
 
-    ofxsMaskMixDescribeParams(desc, page);
+    ofxsMaskDescribeParams(desc, page);
+    ofxsPremultDescribeParams(desc, page);
+    ofxsMixDescribeParams(desc, page);
 
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
