@@ -16,12 +16,13 @@ name: Continous Integration tests
 # Frugal CI (NatronGitHub runners are shared by all repos): one run per change.
 # Pushes are built only on master, RB-* and tags (not the final release tags,
 # which release.yml builds); feature branches are built
-# through their pull request (not twice). Draft pull requests run no CI: a PR is
-# rebased on the latest master, then marked ready, which runs CI (ready_for_review),
-# and goes back to draft if CI fails. A branch can still be tested on demand with
-# workflow_dispatch (it also uploads the bundles, and is grouped by branch, not by PR:
-# cancel it before marking the PR ready). Superseded runs are cancelled, except for
-# tags. Jobs time out.
+# through their pull request (not twice). Draft pull requests run no CI: their jobs
+# show as "skipped", which means not run, not passed. Marking a PR ready runs CI
+# (ready_for_review); by convention, the author rebases it on master first and puts it
+# back to draft by hand if CI fails. A branch can still be tested on demand with
+# workflow_dispatch, but that also builds macOS and uploads the bundles, and is grouped
+# by branch, not by PR: cancel it before marking the PR ready. Superseded runs are
+# cancelled, except for tags. Jobs time out.
 on:
   push:
     branches: [master, 'RB-*']
