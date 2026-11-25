@@ -529,7 +529,7 @@ No host description was recorded. Leads for Flame 2027 (2027.1 and 2027.2 on Roc
 
 No host description was recorded.
 - (unconfirmed) suspected: CPU images always have a negative row bytes (kOfxImagePropRowBytes), because Baselight stores them top-down. Source: ntsc-rs/ntsc-rs#600, where the developer of Baselight's OFX host code gives it as a suspicion ("My suspicion is that..."); the ntsc-rs author then fixed a bug in its negative row bytes handling.
-- (unconfirmed) a region of interest equal to the source RoD makes Baselight log "requests infinite ROI for Source; using expanded working format", which may cost performance. Source: the log in ntsc-rs/ntsc-rs#600.
+- (unconfirmed) Baselight may log "requests infinite ROI for Source; using expanded working format" for a plug-in whose region of interest it treats as infinite (the cause is not stated in the source), which may cost performance. Source: the log in ntsc-rs/ntsc-rs#600.
 - (unconfirmed) see also "Several hosts" (animated choices, clips at project load).
 
 * Assimilate Scratch
