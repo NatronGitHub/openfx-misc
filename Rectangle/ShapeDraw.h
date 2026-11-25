@@ -207,18 +207,14 @@ private:
     BooleanParam* _invert;
 };
 
-/// Describe the parameters, at the end of the page: new parameters keep the output of older versions.
-/// Call it after ofxsMaskMixDescribeParams(): Mix and Apply Mask trigger the clip preferences
-/// (see Params::outputIsPremultipliedByShape()).
+/// Describe the drawing options (Premultiply, Replace, Invert), then the mask and mix parameters
+/// (ofxsMaskMixDescribeParams()), in the order of the Radial and Rectangle references: "premult,
+/// clip to, replace, invert, opacity, mask, maskChannelInput, inject, invert". Call it right after
+/// the output channels. The defaults keep the output of older versions.
 inline void
 describeParams(ImageEffectDescriptor& desc,
                PageParamDescriptor* page)
 {
-    for (const char* name : {kParamMix, kParamMaskApply}) {
-        if ( ParamDescriptor* param = desc.getParamDescriptor(name) ) {
-            desc.addClipPreferencesSlaveParam(*param);
-        }
-    }
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamShapePremult);
         param->setLabel(kParamShapePremultLabel);
@@ -250,6 +246,14 @@ describeParams(ImageEffectDescriptor& desc,
         param->setDefault(false);
         if (page) {
             page->addChild(*param);
+        }
+    }
+
+    ofxsMaskMixDescribeParams(desc, page);
+    // Mix and Apply Mask trigger the clip preferences (see Params::outputIsPremultipliedByShape()).
+    for (const char* name : {kParamMix, kParamMaskApply}) {
+        if ( ParamDescriptor* param = desc.getParamDescriptor(name) ) {
+            desc.addClipPreferencesSlaveParam(*param);
         }
     }
 }

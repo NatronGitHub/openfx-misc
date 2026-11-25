@@ -1620,6 +1620,8 @@ RectanglePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         }
     }
 
+    ShapeDraw::describeParams(desc, page);
+
     generatorDescribeInContext(page, desc, *dstClip, eGeneratorExtentSize, ePixelComponentRGBA, false,  context);
 
     // angle
@@ -1667,23 +1669,23 @@ RectanglePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         }
     }
 
-    // color0
-    {
-        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor0);
-        desc.addClipPreferencesSlaveParam(*param); // its alpha, and the RGB of Color 0: see ShapeDraw::Params::outputIsPremultipliedByShape()
-        param->setLabel(kParamColor0Label);
-        param->setDefault(0, 0, 0, 0);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-
     // color1
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor1);
         desc.addClipPreferencesSlaveParam(*param); // its alpha: see ShapeDraw::Params::outputIsPremultipliedByShape()
         param->setLabel(kParamColor1Label);
         param->setDefault(1., 1., 1., 1. );
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    // color0
+    {
+        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor0);
+        desc.addClipPreferencesSlaveParam(*param); // its alpha, and the RGB of Color 0: see ShapeDraw::Params::outputIsPremultipliedByShape()
+        param->setLabel(kParamColor0Label);
+        param->setDefault(0, 0, 0, 0);
         if (page) {
             page->addChild(*param);
         }
@@ -1699,11 +1701,6 @@ RectanglePluginFactory::describeInContext(ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
-
-    ofxsMaskMixDescribeParams(desc, page);
-
-    // new parameters go at the end, with defaults that keep the output of older versions
-    ShapeDraw::describeParams(desc, page);
 } // RectanglePluginFactory::describeInContext
 
 static RectanglePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);

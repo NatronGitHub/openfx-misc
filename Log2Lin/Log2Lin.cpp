@@ -903,8 +903,9 @@ Log2LinPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         }
     }
 
+    ofxsMaskDescribeParams(desc, page);
     ofxsPremultDescribeParams(desc, page);
-    ofxsMaskMixDescribeParams(desc, page);
+    ofxsMixDescribeParams(desc, page);
     //std::cout << "describeInContext! OK\n";
 } // Log2LinPluginFactory::describeInContext
 

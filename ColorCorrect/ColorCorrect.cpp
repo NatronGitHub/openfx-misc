@@ -1350,6 +1350,16 @@ ColorCorrectPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     defineColorGroup(kGroupShadows, "", page, desc, false);
     defineColorGroup(kGroupMidtones, "", page, desc, false);
     defineColorGroup(kGroupHighlights, "", page, desc, false);
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamTest);
+        param->setLabel(kParamTestLabel);
+        param->setHint(kParamTestHint);
+        param->setDefault(false);
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
 
     {
         PageParamDescriptor* ranges = desc.definePageParam("Ranges");
@@ -1454,21 +1464,8 @@ ColorCorrectPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         }
     }
 
+    ofxsMaskDescribeParams(desc, page);
     ofxsPremultDescribeParams(desc, page);
-    ofxsMaskMixDescribeParams(desc, page);
-    //std::cout << "describeInCotext! OK\n";
-
-    {
-        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
-        param->setDefault(false);
-        param->setIsSecretAndDisabled(true);
-        param->setAnimates(false);
-        param->setEvaluateOnChange(false);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-    // new parameters go at the end, with defaults that keep the output of older versions
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamMixLuminance);
         param->setLabel(kParamMixLuminanceLabel);
@@ -1480,12 +1477,15 @@ ColorCorrectPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
+    ofxsMixDescribeParams(desc, page);
+    //std::cout << "describeInCotext! OK\n";
+
     {
-        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamTest);
-        param->setLabel(kParamTestLabel);
-        param->setHint(kParamTestHint);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
         param->setDefault(false);
+        param->setIsSecretAndDisabled(true);
         param->setAnimates(false);
+        param->setEvaluateOnChange(false);
         if (page) {
             page->addChild(*param);
         }
