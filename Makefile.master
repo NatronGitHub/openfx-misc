@@ -15,6 +15,21 @@ override OBJECTPATH = $(CURDIR)/$(OS)-$(BITS)-$(DEBUGNAME)
 
 include $(PATHTOROOT)/Plugins/Makefile.master
 
+# PYPLUGS: the PyPlugs of the bundle (.py, .gizmo and their icons), copied to
+# Contents/Resources/PyPlugs, where Natron loads the PyPlugs of a bundle (and finds each
+# icon next to its .py); the other RESOURCES go to Contents/Resources (Plugins/Makefile.master)
+ifneq ($(strip $(PYPLUGS)),)
+all: $(OBJECTPATH)/$(PLUGINNAME).ofx.bundle/Contents/Resources/PyPlugs
+
+# (after the bundle rule, which copies the RESOURCES: also under make -j, since it depends on
+# the bundle; the copies that older builds left in Contents/Resources are removed)
+$(OBJECTPATH)/$(PLUGINNAME).ofx.bundle/Contents/Resources/PyPlugs: $(OBJECTPATH)/$(PLUGINNAME).ofx.bundle $(PYPLUGS)
+	mkdir -p $@
+	cp $(PYPLUGS) $@
+	cd $(OBJECTPATH)/$(PLUGINNAME).ofx.bundle/Contents/Resources && rm -f $(notdir $(PYPLUGS))
+	touch $@
+endif
+
 CXXFLAGS += -DOFX_EXTENSIONS_VEGAS -DOFX_EXTENSIONS_NUKE -DOFX_EXTENSIONS_NATRON -DOFX_EXTENSIONS_TUTTLE -DOFX_SUPPORTS_OPENGLRENDER
 
 CXXFLAGS += -I$(TOP_SRCDIR)/Misc -I$(OFXSEXTPATH)

@@ -22,10 +22,10 @@ def getLabel():
     return "PIKColor"
 
 def getVersion():
-    return 1
+    return 3
 
 def getIconPath():
-    return "PIKColor.png"
+    return "fr.inria.PIKColor.png"
 
 def getGrouping():
     return "Keyer"
@@ -254,11 +254,6 @@ def createInstance(app,group):
         param.setValue(True)
         del param
 
-    param = lastNode.getParam("mix")
-    if param is not None:
-        param.setValue(0.326, 0)
-        del param
-
     param = lastNode.getParam("userTextArea")
     if param is not None:
         param.setValue("<font size=\"6\" color=\"#000000\" face=\"Droid Sans\">*mult+off</font>")
@@ -432,13 +427,20 @@ def createInstance(app,group):
     # End of node "Dot3"
 
     # Start of node "Premult3"
-    lastNode = app.createNode("net.sf.openfx.Premult", 2, group)
+    lastNode = app.createNode("net.sf.openfx.Premult", 3, group)
     lastNode.setScriptName("Premult3")
     lastNode.setLabel("Premult3")
     lastNode.setPosition(272, 99)
     lastNode.setSize(104, 30)
     lastNode.setColor(0.3, 0.37, 0.776)
     groupPremult3 = lastNode
+
+    # (Premult 3 clamps the alpha by default: off, as the alpha may leave
+    # [0, 1] with RGBA Legal off in PIK)
+    param = lastNode.getParam("clampAlpha")
+    if param is not None:
+        param.setValue(False)
+        del param
 
     del lastNode
     # End of node "Premult3"
@@ -648,13 +650,20 @@ def createInstance(app,group):
     # End of node "Switch1"
 
     # Start of node "Premult1"
-    lastNode = app.createNode("net.sf.openfx.Premult", 2, group)
+    lastNode = app.createNode("net.sf.openfx.Premult", 3, group)
     lastNode.setScriptName("Premult1")
     lastNode.setLabel("Premult1")
     lastNode.setPosition(411, 727)
     lastNode.setSize(104, 34)
     lastNode.setColor(0.3, 0.37, 0.776)
     groupPremult1 = lastNode
+
+    # (Premult 3 clamps the alpha by default: off, as the alpha may leave
+    # [0, 1] with RGBA Legal off in PIK)
+    param = lastNode.getParam("clampAlpha")
+    if param is not None:
+        param.setValue(False)
+        del param
 
     del lastNode
     # End of node "Premult1"
@@ -797,11 +806,18 @@ def createInstance(app,group):
         param.setValue(1, 0)
         del param
 
+    # RGBA Legal is on by default in PIK 2 (issue #281), off in the IBK
+    # node of the IBKColour gizmo
+    param = lastNode.getParam("rgbal")
+    if param is not None:
+        param.setValue(False)
+        del param
+
     del lastNode
     # End of node "PIK2"
 
     # Start of node "Blur2"
-    lastNode = app.createNode("net.sf.cimg.CImgBlur", 4, group)
+    lastNode = app.createNode("net.sf.cimg.CImgBlur", 5, group)
     lastNode.setScriptName("Blur2")
     lastNode.setLabel("Blur1")
     lastNode.setPosition(411, 351)
@@ -817,7 +833,12 @@ def createInstance(app,group):
 
     param = lastNode.getParam("filter")
     if param is not None:
-        param.set("Quadratic")
+        param.set("FIR Gaussian")
+        del param
+
+    param = lastNode.getParam("boundary")
+    if param is not None:
+        param.set("Nearest")
         del param
 
     param = lastNode.getParam("expandRoD")
@@ -834,7 +855,7 @@ def createInstance(app,group):
     # End of node "Blur2"
 
     # Start of node "Blur4"
-    lastNode = app.createNode("net.sf.cimg.CImgBlur", 4, group)
+    lastNode = app.createNode("net.sf.cimg.CImgBlur", 5, group)
     lastNode.setScriptName("Blur4")
     lastNode.setLabel("Blur4")
     lastNode.setPosition(272, 159)
@@ -850,7 +871,12 @@ def createInstance(app,group):
 
     param = lastNode.getParam("filter")
     if param is not None:
-        param.set("Quadratic")
+        param.set("FIR Gaussian")
+        del param
+
+    param = lastNode.getParam("boundary")
+    if param is not None:
+        param.set("Nearest")
         del param
 
     param = lastNode.getParam("expandRoD")
@@ -900,119 +926,6 @@ def createInstance(app,group):
     del lastNode
     # End of node "Dot7"
 
-    # Start of node "BlurBox1"
-    lastNode = app.createNode("net.sf.cimg.CImgBlur", 4, group)
-    lastNode.setScriptName("BlurBox1")
-    lastNode.setLabel("BlurBox1")
-    lastNode.setPosition(579, 509)
-    lastNode.setSize(104, 43)
-    lastNode.setColor(0.8, 0.5, 0.3)
-    groupBlurBox1 = lastNode
-
-    param = lastNode.getParam("NatronOfxParamProcessR")
-    if param is not None:
-        param.setValue(False)
-        del param
-
-    param = lastNode.getParam("NatronOfxParamProcessG")
-    if param is not None:
-        param.setValue(False)
-        del param
-
-    param = lastNode.getParam("NatronOfxParamProcessB")
-    if param is not None:
-        param.setValue(False)
-        del param
-
-    param = lastNode.getParam("size")
-    if param is not None:
-        param.setValue(0, 0)
-        param.setValue(0, 1)
-        del param
-
-    param = lastNode.getParam("expandRoD")
-    if param is not None:
-        param.setValue(False)
-        del param
-
-    param = lastNode.getParam("cropToFormat")
-    if param is not None:
-        param.setValue(False)
-        del param
-
-    param = lastNode.getParam("userTextArea")
-    if param is not None:
-        param.setValue("<font size=\"6\" color=\"#000000\" face=\"Droid Sans\">(size/5)*multi*4</font>")
-        del param
-
-    del lastNode
-    # End of node "BlurBox1"
-
-    # Start of node "BlurBox2"
-    lastNode = app.createNode("net.sf.cimg.CImgBlur", 4, group)
-    lastNode.setScriptName("BlurBox2")
-    lastNode.setLabel("BlurBox2")
-    lastNode.setPosition(803, 511)
-    lastNode.setSize(104, 43)
-    lastNode.setColor(0.8, 0.5, 0.3)
-    groupBlurBox2 = lastNode
-
-    param = lastNode.getParam("NatronOfxParamProcessR")
-    if param is not None:
-        param.setValue(False)
-        del param
-
-    param = lastNode.getParam("NatronOfxParamProcessG")
-    if param is not None:
-        param.setValue(False)
-        del param
-
-    param = lastNode.getParam("NatronOfxParamProcessB")
-    if param is not None:
-        param.setValue(False)
-        del param
-
-    param = lastNode.getParam("size")
-    if param is not None:
-        param.setValue(4, 0)
-        param.setValue(4, 1)
-        del param
-
-    param = lastNode.getParam("filter")
-    if param is not None:
-        param.set("Box")
-        del param
-
-    param = lastNode.getParam("expandRoD")
-    if param is not None:
-        param.setValue(False)
-        del param
-
-    param = lastNode.getParam("cropToFormat")
-    if param is not None:
-        param.setValue(False)
-        del param
-
-    param = lastNode.getParam("userTextArea")
-    if param is not None:
-        param.setValue("<font size=\"6\" color=\"#000000\" face=\"Droid Sans\">(size/5)*2</font>")
-        del param
-
-    del lastNode
-    # End of node "BlurBox2"
-
-    # Start of node "Unpremult2"
-    lastNode = app.createNode("net.sf.openfx.Unpremult", 2, group)
-    lastNode.setScriptName("Unpremult2")
-    lastNode.setLabel("Unpremult2")
-    lastNode.setPosition(272, 803)
-    lastNode.setSize(104, 34)
-    lastNode.setColor(0.3, 0.37, 0.776)
-    groupUnpremult2 = lastNode
-
-    del lastNode
-    # End of node "Unpremult2"
-
     # Start of node "Shuffle1"
     lastNode = app.createNode("net.sf.openfx.ShufflePlugin", 4, group)
     lastNode.setScriptName("Shuffle1")
@@ -1029,25 +942,45 @@ def createInstance(app,group):
 
     param = lastNode.getParam("outputA")
     if param is not None:
-        param.set("A.uk.co.thefoundry.OfxImagePlaneColour.B")
+        param.set("A.uk.co.thefoundry.OfxImagePlaneColour.R")
         del param
 
     param = lastNode.getParam("userTextArea")
     if param is not None:
-        param.setValue("<font size=\"6\" color=\"#000000\" face=\"Droid Sans\">(g or b->a)</font>")
+        param.setValue("<font size=\"6\" color=\"#000000\" face=\"Droid Sans\">(r->a)</font>")
         del param
 
     del lastNode
     # End of node "Shuffle1"
 
-    # Start of node "DilateFast1"
-    lastNode = app.createNode("net.sf.cimg.CImgDilate", 2, group)
-    lastNode.setScriptName("DilateFast1")
-    lastNode.setLabel("DilateFast1")
+    # Start of node "FilterErode1"
+    lastNode = app.createNode("net.sf.cimg.CImgErodeSmooth", 2, group)
+    lastNode.setScriptName("FilterErode1")
+    lastNode.setLabel("FilterErode1")
     lastNode.setPosition(579, 428)
     lastNode.setSize(104, 43)
     lastNode.setColor(0.8, 0.5, 0.3)
-    groupDilateFast1 = lastNode
+    groupFilterErode1 = lastNode
+
+    param = lastNode.getParam("NatronOfxParamProcessR")
+    if param is not None:
+        param.setValue(False)
+        del param
+
+    param = lastNode.getParam("NatronOfxParamProcessG")
+    if param is not None:
+        param.setValue(False)
+        del param
+
+    param = lastNode.getParam("NatronOfxParamProcessB")
+    if param is not None:
+        param.setValue(False)
+        del param
+
+    param = lastNode.getParam("NatronOfxParamProcessA")
+    if param is not None:
+        param.setValue(True)
+        del param
 
     param = lastNode.getParam("size")
     if param is not None:
@@ -1060,9 +993,9 @@ def createInstance(app,group):
         param.setValue(False)
         del param
 
-    param = lastNode.getParam("premult")
+    param = lastNode.getParam("filter")
     if param is not None:
-        param.setValue(True)
+        param.set("Gaussian")
         del param
 
     param = lastNode.getParam("premultChanged")
@@ -1072,20 +1005,40 @@ def createInstance(app,group):
 
     param = lastNode.getParam("userTextArea")
     if param is not None:
-        param.setValue("<font size=\"6\" color=\"#000000\" face=\"Droid Sans\">(size/5)*multi*2</font>")
+        param.setValue("<font size=\"6\" color=\"#000000\" face=\"Droid Sans\">-(size/5)*multi*2</font>")
         del param
 
     del lastNode
-    # End of node "DilateFast1"
+    # End of node "FilterErode1"
 
-    # Start of node "DilateFast2"
-    lastNode = app.createNode("net.sf.cimg.CImgDilate", 2, group)
-    lastNode.setScriptName("DilateFast2")
-    lastNode.setLabel("DilateFast2")
+    # Start of node "FilterErode2"
+    lastNode = app.createNode("net.sf.cimg.CImgErodeSmooth", 2, group)
+    lastNode.setScriptName("FilterErode2")
+    lastNode.setLabel("FilterErode2")
     lastNode.setPosition(803, 431)
     lastNode.setSize(104, 43)
     lastNode.setColor(0.8, 0.5, 0.3)
-    groupDilateFast2 = lastNode
+    groupFilterErode2 = lastNode
+
+    param = lastNode.getParam("NatronOfxParamProcessR")
+    if param is not None:
+        param.setValue(False)
+        del param
+
+    param = lastNode.getParam("NatronOfxParamProcessG")
+    if param is not None:
+        param.setValue(False)
+        del param
+
+    param = lastNode.getParam("NatronOfxParamProcessB")
+    if param is not None:
+        param.setValue(False)
+        del param
+
+    param = lastNode.getParam("NatronOfxParamProcessA")
+    if param is not None:
+        param.setValue(True)
+        del param
 
     param = lastNode.getParam("size")
     if param is not None:
@@ -1098,9 +1051,9 @@ def createInstance(app,group):
         param.setValue(False)
         del param
 
-    param = lastNode.getParam("premult")
+    param = lastNode.getParam("filter")
     if param is not None:
-        param.setValue(True)
+        param.set("Gaussian")
         del param
 
     param = lastNode.getParam("premultChanged")
@@ -1110,11 +1063,11 @@ def createInstance(app,group):
 
     param = lastNode.getParam("userTextArea")
     if param is not None:
-        param.setValue("<font size=\"6\" color=\"#000000\" face=\"Droid Sans\">size/5</font>")
+        param.setValue("<font size=\"6\" color=\"#000000\" face=\"Droid Sans\">-size/5</font>")
         del param
 
     del lastNode
-    # End of node "DilateFast2"
+    # End of node "FilterErode2"
 
     # Now that all nodes are created we can connect them together, restore expressions
     groupGrade11.connectInput(0, groupDot2)
@@ -1136,12 +1089,12 @@ def createInstance(app,group):
     groupShuffleCopy2.connectInput(1, groupSwitch1)
     groupUnpremult1.connectInput(0, groupBlur2)
     groupInvert2.connectInput(0, groupClamp1)
-    groupSwitch1.connectInput(0, groupBlurBox1)
-    groupSwitch1.connectInput(1, groupBlurBox2)
+    groupSwitch1.connectInput(0, groupFilterErode1)
+    groupSwitch1.connectInput(1, groupFilterErode2)
     groupPremult1.connectInput(0, groupShuffleCopy2)
     groupMerge1.connectInput(0, groupDot7)
     groupMerge1.connectInput(1, groupPremult1)
-    groupChannelCopy2.connectInput(0, groupUnpremult2)
+    groupChannelCopy2.connectInput(0, groupMerge1)
     groupChannelCopy2.connectInput(1, groupDot6)
     groupDot6.connectInput(0, groupErode1)
     groupGrade1.connectInput(0, groupChannelCopy2)
@@ -1153,12 +1106,10 @@ def createInstance(app,group):
     groupBlur2.connectInput(0, groupChannelCopy1)
     groupBlur4.connectInput(0, groupPremult3)
     groupDot7.connectInput(0, groupChannelCopy1)
-    groupBlurBox1.connectInput(0, groupDilateFast1)
-    groupBlurBox2.connectInput(0, groupDilateFast2)
-    groupUnpremult2.connectInput(0, groupMerge1)
+    groupShuffle1.connectInput(0, groupUnpremult4)
     groupShuffle1.connectInput(1, groupUnpremult4)
-    groupDilateFast1.connectInput(0, groupInvert2)
-    groupDilateFast2.connectInput(0, groupInvert2)
+    groupFilterErode1.connectInput(0, groupInvert2)
+    groupFilterErode2.connectInput(0, groupInvert2)
 
     param = groupGrade11.getParam("multiply")
     param.setExpression("thisGroup.mult.get().r", False, 0)
@@ -1193,24 +1144,13 @@ def createInstance(app,group):
     param.setExpression("thisGroup.size.get()", False, 0)
     param.setExpression("thisGroup.size.get()", False, 1)
     del param
-    param = groupBlurBox1.getParam("size")
-    param.setExpression("(thisGroup.size.get()/5)*thisGroup.multi.get()*4", False, 0)
-    param.setExpression("(thisGroup.size.get()/5)*thisGroup.multi.get()*4", False, 1)
+    param = groupFilterErode1.getParam("size")
+    param.setExpression("-(thisGroup.size.get()/5)*thisGroup.multi.get()*2", False, 0)
+    param.setExpression("-(thisGroup.size.get()/5)*thisGroup.multi.get()*2", False, 1)
     del param
-    param = groupBlurBox2.getParam("size")
-    param.setExpression("(thisGroup.size.get()/5)*2", False, 0)
-    param.setExpression("(thisGroup.size.get()/5)*2", False, 1)
-    del param
-    param = groupShuffle1.getParam("outputA")
-    param.setExpression("thisGroup.screenType.get()+1", False, 0)
-    del param
-    param = groupDilateFast1.getParam("size")
-    param.setExpression("(thisGroup.size.get()/5)*thisGroup.multi.get()*2", False, 0)
-    param.setExpression("(thisGroup.size.get()/5)*thisGroup.multi.get()*2", False, 1)
-    del param
-    param = groupDilateFast2.getParam("size")
-    param.setExpression("thisGroup.size.get()/5", False, 0)
-    param.setExpression("thisGroup.size.get()/5", False, 1)
+    param = groupFilterErode2.getParam("size")
+    param.setExpression("-thisGroup.size.get()/5", False, 0)
+    param.setExpression("-thisGroup.size.get()/5", False, 1)
     del param
 
     try:

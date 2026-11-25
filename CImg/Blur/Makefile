@@ -17,8 +17,6 @@ PLUGINNAME = CImgBlur
 
 # ls *png *.svg|sort |sed -e 's!$! \\!'
 RESOURCES = \
-fr.inria.EdgeBlur.png \
-fr.inria.EdgeBlur.svg \
 net.sf.cimg.CImgBlur.png \
 net.sf.cimg.CImgBlur.svg \
 net.sf.cimg.CImgBloom.png \
@@ -33,9 +31,10 @@ eu.cimg.EdgeDetect.png \
 eu.cimg.EdgeDetect.svg \
 eu.cimg.EdgeExtend.png \
 eu.cimg.EdgeExtend.svg \
-EdgeBlur.py \
-EdgeBlur.nps \
-EdgeBlur.gizmo
+EdgeBlur.nps
+
+# the EdgeBlur PyPlug, with its icons: in Contents/Resources/PyPlugs (Makefile.master)
+PYPLUGS = EdgeBlur.py EdgeBlur.gizmo fr.inria.EdgeBlur.png fr.inria.EdgeBlur.svg
 
 TOP_SRCDIR = ../..
 include $(TOP_SRCDIR)/Makefile.master

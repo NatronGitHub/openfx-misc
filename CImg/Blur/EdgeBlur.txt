@@ -4,7 +4,9 @@ EdgeBlur
 
 Filter
 
-1
+3
 
 
 Blur the image where there are edges in the alpha/matte channel.
+
+Note: EdgeBlur.py (version 3) has hand edits that must be kept if it is re-exported: getIconPath(), BlurCImg 5 with the FIR Gaussian, and the RGBA matte of Shuffle1 (a workaround for a Shuffle identity bug with Alpha output, to be fixed in #409).

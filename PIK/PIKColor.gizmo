@@ -42,7 +42,7 @@ set N1919d910 [stack 0]
   xpos -94
   ypos -21
  }
- OFXnet.sf.openfx.gradeplugin_v2 {
+ OFXnet.sf.openfx.gradeplugin_v3 {
   NatronOfxParamProcessR true
   NatronOfxParamProcessG true
   NatronOfxParamProcessB true
@@ -52,7 +52,7 @@ set N1919d910 [stack 0]
   black 0
   white 1
   multiply {{mult.r} {mult.g} {mult.b} 0}
-  offset {{off.r} {off.g} {pff.b} 0}
+  offset {{off.r} {off.g} {off.b} 0}
   gamma 1
   clampBlack true
   clampWhite false
@@ -90,10 +90,17 @@ set N1919d910 [stack 0]
   ypos 92
  }
 set N191a4330 [stack 0]
+ Input {
+  inputs 0
+  name InM
+  number 1
+ }
+push 0
 push $N191a4330
 push $N191a4330
- OFXnet.sf.openfx.pik_v1 {
-  inputs 3
+push $N191a4330
+ OFXnet.sf.openfx.pik_v2 {
+  inputs 5
   screenType {{screen}}
   color {0 0 1}
   redWeight 1
@@ -103,7 +110,7 @@ push $N191a4330
   despillBiasIsAlphaBias true
   lmEnable false
   level 1
-  luma 0
+  luma 1
   llEnable false
   autolevels false
   yellow false
@@ -187,7 +194,8 @@ push $N1919d910
   xpos 92
   ypos 179
  }
- OFXnet.sf.openfx.premult_v2 {
+ OFXnet.sf.openfx.premult_v3 {
+  clampAlpha false
   NatronOfxParamProcessR true
   NatronOfxParamProcessG true
   NatronOfxParamProcessB true
@@ -199,7 +207,7 @@ push $N1919d910
   ypos 235
  }
 set N191ba840 [stack 0]
- OFXnet.sf.cimg.cimgblur_v4 {
+ OFXnet.sf.cimg.cimgblur_v5 {
   NatronOfxParamProcessR true
   NatronOfxParamProcessG true
   NatronOfxParamProcessB true
@@ -208,8 +216,8 @@ set N191ba840 [stack 0]
   uniform true
   orderX 0
   orderY 0
-  boundary Black
-  filter Quadratic
+  boundary Nearest
+  filter "FIR Gaussian"
   expandRoD false
   alphaThreshold 0
   premult false
@@ -279,10 +287,15 @@ push $N191c1b60
   ypos 338
  }
 set N191caea0 [stack 0]
- Blur {
-  channels rgba
-  size {{Size*3*multi}}
-  filter quadratic
+ OFXnet.sf.cimg.cimgblur_v5 {
+  NatronOfxParamProcessR true
+  NatronOfxParamProcessG true
+  NatronOfxParamProcessB true
+  NatronOfxParamProcessA true
+  size {{Size*3*multi} {Size*3*multi}}
+  boundary Nearest
+  filter "FIR Gaussian"
+  expandRoD false
   name Blur1
   xpos 212
   ypos 390
@@ -322,83 +335,40 @@ set N191caea0 [stack 0]
   ypos 477
  }
 set N1ba5ba00 [stack 0]
- OFXnet.sf.cimg.cimgerode_v2 {
+ OFXnet.sf.cimg.cimgerodesmooth_v2 {
   NatronOfxParamProcessR false
   NatronOfxParamProcessG false
   NatronOfxParamProcessB false
   NatronOfxParamProcessA true
   size {{(-Size/5)} {(-Size/5)}}
+  filter Gaussian
   expandRoD false
   premult false
   premultChannel A
   maskInvert false
   mix 1
   premultChanged true
-  name ErodeFast2
+  name FilterErode2
   xpos 334
   ypos 535
  }
- OFXnet.sf.cimg.cimgblur_v4 {
-  NatronOfxParamProcessR false
-  NatronOfxParamProcessG false
-  NatronOfxParamProcessB false
-  NatronOfxParamProcessA true
-  size {{(Size/5)*2} {(Size/5)*2}}
-  uniform true
-  orderX 0
-  orderY 0
-  boundary Black
-  filter Box
-  expandRoD false
-  alphaThreshold 0
-  premult false
-  premultChannel A
-  maskInvert false
-  mix 1
-  premultChanged false
-  name BlurCImg2
-  selected true
-  xpos 334
-  ypos 578
- }
 push $N1ba5ba00
- OFXnet.sf.cimg.cimgerode_v2 {
+ OFXnet.sf.cimg.cimgerodesmooth_v2 {
   NatronOfxParamProcessR false
   NatronOfxParamProcessG false
   NatronOfxParamProcessB false
   NatronOfxParamProcessA true
   size {{(-Size/5)*multi*2} {(-Size/5)*multi*2}}
+  filter Gaussian
   expandRoD false
   premult false
   premultChannel A
   maskInvert false
   mix 1
   premultChanged true
-  name ErodeFast1
+  name FilterErode1
   xpos 217
   ypos 477
- }
- OFXnet.sf.cimg.cimgblur_v4 {
-  NatronOfxParamProcessR false
-  NatronOfxParamProcessG false
-  NatronOfxParamProcessB false
-  NatronOfxParamProcessA true
-  size {{(Size/5)*multi*4} {(Size/5)*multi*4}}
-  uniform true
-  orderX 0
-  orderY 0
-  boundary Black
-  filter Box
-  expandRoD false
-  alphaThreshold 0
-  premult false
-  premultChannel A
-  maskInvert false
-  mix 1
-  premultChanged false
-  name BlurCImg1
-  xpos 217
-  ypos 513
  }
  Switch {
   inputs 2
@@ -407,7 +377,8 @@ push $N1ba5ba00
   xpos 217
   ypos 578
  }
- OFXnet.sf.openfx.premult_v2 {
+ OFXnet.sf.openfx.premult_v3 {
+  clampAlpha false
   NatronOfxParamProcessR true
   NatronOfxParamProcessG true
   NatronOfxParamProcessB true
@@ -424,7 +395,7 @@ push $N191caea0
   xpos 126
   ypos 388
  }
- OFXnet.sf.openfx.mergeplugin_v1 {
+ OFXnet.sf.openfx.mergeplugin_v3 {
   inputs 2
   NatronOfxParamStringSublabelName over
   operation over
@@ -449,17 +420,6 @@ push $N191caea0
   xpos 92
   ypos 616
  }
- OFXnet.sf.openfx.unpremult_v2 {
-  NatronOfxParamProcessR true
-  NatronOfxParamProcessG true
-  NatronOfxParamProcessB true
-  NatronOfxParamProcessA false
-  premultChannel A
-  premultChanged false
-  name Unpremult5
-  xpos 92
-  ypos 640
- }
  Copy {
   inputs 2
   from0 rgba.alpha
@@ -469,7 +429,7 @@ push $N191caea0
   xpos 92
   ypos 673
  }
- OFXnet.sf.openfx.gradeplugin_v2 {
+ OFXnet.sf.openfx.gradeplugin_v3 {
   NatronOfxParamProcessR true
   NatronOfxParamProcessG true
   NatronOfxParamProcessB true

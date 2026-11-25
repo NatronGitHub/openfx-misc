@@ -71,6 +71,32 @@ if [ -n "$windows" ]; then
     done
 fi
 
+# The bundles that contain PIK or CImgBlur (the combined Misc or CImg, the separate one of CMake,
+# or of make nomulti) must have the PIKColor or EdgeBlur PyPlug and its icons in
+# Contents/Resources/PyPlugs, where Natron loads the PyPlugs of a bundle (and finds each icon
+# next to its .py), and not in Contents/Resources itself
+for f in "${binaries[@]}"; do
+    bundle=${f%/Contents/*}
+    case "${bundle##*/}" in
+        Misc.ofx.bundle|PIK.ofx.bundle|net.sf.openfx.PIK.ofx.bundle)
+            pyplugs="PIKColor.py PIKColor.gizmo fr.inria.PIKColor.png fr.inria.PIKColor.svg" ;;
+        CImg.ofx.bundle|CImgBlur.ofx.bundle|net.sf.cimg.CImgBlur.ofx.bundle)
+            pyplugs="EdgeBlur.py EdgeBlur.gizmo fr.inria.EdgeBlur.png fr.inria.EdgeBlur.svg" ;;
+        *) pyplugs= ;;
+    esac
+    for r in $pyplugs; do
+        if [ ! -f "$bundle/Contents/Resources/PyPlugs/$r" ]; then
+            echo "ERROR: $bundle has no Contents/Resources/PyPlugs/$r"
+            status=1
+        fi
+        # (moved, not copied: no dead copy in Contents/Resources)
+        if [ -e "$bundle/Contents/Resources/$r" ]; then
+            echo "ERROR: $bundle has Contents/Resources/$r (it belongs in Contents/Resources/PyPlugs)"
+            status=1
+        fi
+    done
+done
+
 # Duplicate identifier+version are checked across all the binaries given to
 # one ofxload run. The Test bundle is checked on its own: it is for developers,
 # and in debug builds Misc also registers its TestRender plugins.
