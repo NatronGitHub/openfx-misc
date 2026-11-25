@@ -7,9 +7,9 @@ partly AI-written.
 
 * Several hosts
 
-- (unconfirmed) animated Choice parameters: in Resolve and Silhouette, paramGetValue returns the value of the first key; Nuke, Baselight, Scratch and Fusion interpolate choices linearly. Source: AcademySoftwareFoundation/openfx#116.
+- (unconfirmed) animated Choice parameters: in Resolve and Silhouette, paramGetValue returns the value of the first key; Nuke, Baselight, Scratch and Fusion interpolate choices linearly (in Fusion, only its OFX host does: native Fusion tools step choices). Source: AcademySoftwareFoundation/openfx#116.
 - (unconfirmed) clips at project load: Baselight's clips are not connected yet at createInstance; Scratch connects them afterwards and sends kOfxActionInstanceChanged with kOfxChangeUserEdited, and Silhouette did the same from 2025-06. A plug-in that sets parameters when a clip gets connected thus overwrites the values restored from the project (FrameHold only does it on hosts known to skip that, see hostSkipsChangedClipOnLoad()). Sources: AcademySoftwareFoundation/openfx#184 and #294.
-- (unconfirmed) Resolve, Fusion and Flame: the interactive and sequential render flags (kOfxImageEffectPropInteractiveRenderStatus, kOfxImageEffectPropSequentialRenderStatus) of the render action can't be relied on, e.g. to tell a final render from a viewer render. Source: creativevideotips/cvt-ltx-alpha-gen, src/upstream-notes/ofx.md (Flame: every render reports interactive=0, sequential=1) and src/ofx/src/plugin.cpp (Fusion: interactive=0 for viewer renders too).
+- (unconfirmed) Resolve, Fusion and Flame: the interactive and sequential render flags (kOfxImageEffectPropInteractiveRenderStatus, kOfxImageEffectPropSequentialRenderStatus) of the render action can't be relied on, e.g. to tell a final render from a viewer render. Source: creativevideotips/cvt-ltx-alpha-gen (https://github.com/creativevideotips/cvt-ltx-alpha-gen), src/upstream-notes/ofx.md (Flame: every render reports interactive=0, sequential=1) and src/ofx/src/plugin.cpp (Fusion: interactive=0 for viewer renders too).
 
 
 * Blackmagic DaVinci Resolve Lite
@@ -112,21 +112,25 @@ Caveats/Bugs:
 - kOfxImageEffectActionRender is called to generate thumbnails, but the renderscale argument is always (1,1) although it should be much smaller. Source: README-hosts.txt history (864c348d, 2017, Resolve 12.5). Newer versions differ: see the Resolve 21.0.4 thumbnail lead below.
 - OfxMultiThreadSuite is a dummy implementation (CPU plug-ins don't run multithreaded): on Resolve, SupportExt's ofxsThreadSuiteCheck() (ofxsThreadSuite.cpp, comment "Resolve has a dummy MT Suite, use our own") replaces it with its own implementation, as it does on hosts that miss some of the suite's functions. Source: https://github.com/NatronGitHub/openfx-misc/issues/46.
 - the render action is always the CPU render (see "Version 19" above), but an OpenGL context may be current: Shadertoy and TestOpenGL render with it if one is current (openGLContextIsCurrent(), see ShadertoyRenderGL.cpp), and else with OSMesa. On the Fusion page, there is no current context, and OpenGL calls crash Resolve. Without OSMesa, both plug-ins refuse to load on a host that does not advertise OpenGL render support, so their "no context" error path is only defensive. Source: https://github.com/NatronGitHub/openfx-misc/issues/69 (Resolve 19.1.4) and #127.
-- in kOfxImageEffectActionGetFramesNeeded, the out args have no OfxImageClipPropFrameRange_<clip> property for the clips that are not connected: the Support library (framesNeededAction() in ofxsImageEffect.cpp, comment "The host may not have the property if the clip is not connected (Resolve)") skips them instead of failing. Source: NatronGitHub/openfx commit 3aa67825 (2017).
-- images fetched with clipGetImage from kOfxActionInstanceChanged (e.g. on a button press) have the right bounds but garbage content, so DenoiseSharpen's Analysis does not work. Source: https://github.com/NatronGitHub/openfx-misc/issues/46 (Resolve 14 and 15, 2019).
+- in kOfxImageEffectActionGetFramesNeeded, the out args have no OfxImageClipPropFrameRange_<clip> property for the clips that are not connected: the Support library (framesNeededAction() in ofxsImageEffect.cpp, comment "The host may not have the property if the clip is not connected (Resolve)") skips them instead of failing. Source: NatronGitHub/openfx commit 3e2c0c87 (2016-02-03, "Support: do not fail in getFramesNeeded if output properties do not exist").
+- images fetched with clipGetImage from kOfxActionInstanceChanged (e.g. on a button press) have the right bounds but garbage content, so DenoiseSharpen's Analysis does not work. Source: https://github.com/NatronGitHub/openfx-misc/issues/46 (Resolve 14).
 - OpenGL overlays are drawn too small (as in Fusion): the plug-ins with overlays have a "HiDPI" checkbox. Source: https://github.com/NatronGitHub/openfx-misc/issues/46.
 
 Leads for newer versions (unconfirmed, not reproduced here):
-- (unconfirmed) Resolve 21.0.4, Cut page: the effect label is taken only from kOfxPropLongLabel, so it is empty if the plug-in sets only kOfxPropLabel. Source: ntsc-rs/ntsc-rs#875. NatronGitHub/openfx#351 makes the Support library's setLabel() set the short and long labels too.
-- (unconfirmed) Resolve 2026, Edit and Color pages: a failed render is silent, and the viewer (and a Deliver) shows the plain footage; the Fusion page and Fusion Studio show a red node. Source: creativevideotips/cvt-ltx-alpha-gen, src/ofx/src/plugin.cpp.
-- (unconfirmed) Resolve and Fusion 2026: persistent messages are refused (setting and clearing), sendMessage(kOfxMessageQuestion) returns kOfxStatFailed, and a kOfxParamStringIsLabel parameter shows its name, not its value. Source: creativevideotips/cvt-ltx-alpha-gen, src/ofx/src/plugin.cpp and src/upstream-notes/ofx.md.
+- (unconfirmed) Resolve 21.0.4 (macOS App Store), Cut page: the Effects side panel takes the effect label only from kOfxPropLongLabel, without falling back to kOfxPropLabel, so the label is empty if the plug-in sets only kOfxPropLabel. Source: ntsc-rs/ntsc-rs#875 (a PR, with screenshots). NatronGitHub/openfx#351 makes the Support library's setLabel() set the short and long labels too.
+- (unconfirmed) Resolve 2026, Edit and Color pages: a failed render is silent, and the viewer (and a Deliver) shows the plain footage; the Fusion page and Fusion Studio show a red node. Source: creativevideotips/cvt-ltx-alpha-gen (https://github.com/creativevideotips/cvt-ltx-alpha-gen), src/ofx/src/plugin.cpp.
+- (unconfirmed) Resolve and Fusion 2026: persistent messages are refused (setting and clearing), sendMessage(kOfxMessageQuestion) returns kOfxStatFailed, and a kOfxParamStringIsLabel parameter shows its name, not its value. Source: creativevideotips/cvt-ltx-alpha-gen (https://github.com/creativevideotips/cvt-ltx-alpha-gen), src/ofx/src/plugin.cpp and src/upstream-notes/ofx.md.
 - (unconfirmed) Resolve 21.1: every clip frame range is the whole media file (or multicam), the effect instance frame range is 0..0, and on the Fusion page the OFX time is the comp frame plus an offset. Sources: gyroflow/gyroflow-plugins#39; https://github.com/dpovey/gigsteady/blob/HEAD/docs/OFX-EXPLORATION.md.
 - (unconfirmed) Resolve 21.0.4: thumbnails are rendered at their real render scale, which may be non-uniform (184x92 images at renderScale 0.04x0.02 and 0.02x0.01), so the "(1,1)" entry above is outdated. Source: the capture logs of light-sail-vr/lsvr-vrndi-resolve-plugin, docs/captures/2026-08-28-stereo-timeline-edit-page.log and 2026-08-28-stereo-timeline-color-page.log (its docs/2026-08-28-render-call-probe-findings.md reports the 184x92 thumbnail renders, but not their scale).
-- (unconfirmed) Resolve 2026: the plug-in process runs with umask 000, so the files a plug-in creates are world-writable unless it sets their mode. Source: creativevideotips/cvt-ltx-alpha-gen, src/ofx/src/plugin.cpp.
+- (unconfirmed) Resolve 2026: the plug-in process runs with umask 000, so the files a plug-in creates are world-writable unless it sets their mode. Source: creativevideotips/cvt-ltx-alpha-gen (https://github.com/creativevideotips/cvt-ltx-alpha-gen), src/ofx/src/plugin.cpp.
+- (unconfirmed) a plug-in that returns kOfxStatReplyDefault for kOfxActionCreateInstance or kOfxActionDestroyInstance is loaded, but shows no controls and never renders, although the spec allows that reply. Support-based plug-ins are not affected: the Support library's mainEntry returns kOfxStatOK for both. Source: ntsc-rs, https://github.com/ntsc-rs/ntsc-rs/blob/8cfc51014092a6dc1da5eb0217bb9ae6516b124e/crates/openfx-plugin/src/lib.rs#L1596.
+- (unconfirmed) the plug-ins' stderr is not shown, but their stdout is. Sources: ntsc-rs, https://github.com/ntsc-rs/ntsc-rs/blob/8cfc51014092a6dc1da5eb0217bb9ae6516b124e/crates/openfx-plugin/src/lib.rs#L1621 (panic messages are printed on stdout "so Resolve doesn't swallow" them); the DEBUG_STDOUT comment in DenoiseSharpen.cpp ("output debugging messages on stdout (for Resolve)").
+- (unconfirmed) Edit and Cut pages: effects get the clip after it is scaled to the timeline resolution; on the Fusion page, they get it before. Source: https://github.com/ntsc-rs/ntsc-rs-website/blob/main/src/docs/openfx-plugin.md (lines 30-49).
+- (unconfirmed) the effects menu groups plug-ins by vendor, not by kOfxImageEffectPluginPropGrouping. Source: the same ntsc-rs page ("In software that groups plugins by vendor instead of by category, such as DaVinci Resolve").
 
 Extensions:
 - plugin descriptors may have the extra properties OfxImageEffectPropCudaRenderSupported OfxImageEffectPropOpenCLRenderSupported OfxImageEffectPropPlanarIOSupported (see below) OfxImageEffectPropSupportedComponents (redundant with clip descriptors?)
-- there is an extra parameter type OfxParamTypeStrChoice, which is like a string param, but returns a string for each choice. Source: AcademySoftwareFoundation/openfx#129, which proposes it for the standard.
+- Resolve's extension OfxParamTypeStrChoice (like a string param, but returns a string for each choice), standardised in OFX 1.5 (ofxParam.h; proposed in AcademySoftwareFoundation/openfx#129).
 - other constants:
 OfxImageEffectPropCudaEnabled (render arg?)
 OfxImageEffectPropOpenCLEnabled (render arg?)
@@ -193,10 +197,11 @@ suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,OfxMemorySuite,Ofx
 - images cannot be fetched at fractional times: effects that blend sub-frames, like TimeBlur, do not work correctly (TimeBlur says so in its description on Nuke).
 - string parameter values go through TCL substitution: the characters '$', '[' and ']' must be preceded by a backslash ('\$', '\[', '\]'). No openfx-misc plugin works around it; openfx-io's SeExpr and RunScript mention it in their parameter hints (kNukeWarnTcl, the source of this entry).
 - the OFX plugin cache (XML), written by old versions of HostSupport's ofxhXml.h, is corrupted by control characters (U+0001..U+001F except tab, newline and return, and U+007F..U+009F, in the label and grouping), '<' and '&' in the plugin strings. openfx-gmic strips them on hosts other than Natron (validateXMLString() in Helpers/RFX_OFX_Utils.h, comment "workaround for bugs in the OpenFX plugin cache, e.g. in Nuke"). openfx-misc does not strip them, but in debug builds the Support library warns about them (validateXMLString() in openfx/Support/Library/ofxsImageEffect.cpp).
-- (unconfirmed) Nuke 17: each setPersistentMessage() call appends a new line to the Error Console, even with the same message id. Source: https://github.com/alexandremendoncaalvaro/CorridorKey-Runtime, src/plugins/ofx/ofx_shared.hpp.
-- (unconfirmed) Nuke 14.0v1 crashed when a plug-in read kFnOfxImageEffectPropView; fixed in 14.0v2. Source: Nuke release notes (ID 532002).
-- (unconfirmed) before Nuke 16.1, OFX images were limited to 8192x8192. Source: Nuke release notes 16.1v1 and 17.0v1.
-- (unconfirmed) Nuke 16 supports OFX 1.5, with the DrawSuite. Source: Nuke release notes 16.0v1 (IDs 588795 and 587935).
+- (unconfirmed) Nuke 17: each setPersistentMessage() call appends a new line to the Error Console, even with the same message id. Source: CorridorKey-Runtime (https://github.com/alexandremendoncaalvaro/CorridorKey-Runtime), src/plugins/ofx/ofx_shared.hpp.
+- (unconfirmed) Nuke 14.0v1 crashed when a plug-in read kFnOfxImageEffectPropView; fixed in 14.0v2. Source: Nuke 14.0v2 release notes (ID 532002; no stable URL found).
+- (unconfirmed) before Nuke 16.1, OFX images were limited to 8192x8192. Source: Nuke release notes 16.1v1 and 17.0v1 (no stable URL found).
+- (unconfirmed) Nuke 16 supports OFX 1.5, with the DrawSuite. Source: Nuke release notes 16.0v1 (IDs 588795 and 587935; no stable URL found).
+- (unconfirmed) the node name is made from the plug-in label, and characters that are not allowed in node names give a warning such as: Node name "NTSC-rs1" contains the illegal character(s) "-" (seen in Nuke 11.1 and 15.1). Source: ntsc-rs/ntsc-rs#312. In openfx-misc, "G'MIC Expression" (CImgExpression.cpp) has such a character.
 
 
 
@@ -496,7 +501,7 @@ supportsCascadingChoices=0
 supportsChannelSelector=0
 suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,OfxMemorySuite,OfxMultiThreadSuite,OfxMessageSuite,OfxProgressSuite,OfxTimeLineSuite
 
-Caveats/Bugs (Fusion 9 and 16, see https://github.com/NatronGitHub/openfx-misc/issues/59, 2019):
+Caveats/Bugs (the first three from openfx-misc commit 8475347f, 2019, when the maintainer tested Fusion 9; see https://github.com/NatronGitHub/openfx-misc/issues/59, which is about Fusion 16):
 - kOfxPropAPIVersion kOfxPropVersionLabel kOfxImageEffectInstancePropSequentialRender are not set on the host
 - unconnected clips have prop kOfxImageEffectPropPixelDepth=kOfxBitDepthNone
 - when scrubbing parameters (changing values fast), the renderScale in the inArgs is 1/3. but the renderScale on images is 3.
@@ -504,7 +509,7 @@ Caveats/Bugs (Fusion 9 and 16, see https://github.com/NatronGitHub/openfx-misc/i
 - kOfxImagePropPixelAspectRatio may be missing on clips: Clip::getPixelAspectRatio() in the Support library returns 1 when the host gives none (or 0). Source: NatronGitHub/openfx commit fa7951df ("Eyeon Fusion may not define PixelAspectRatio").
 - Fusion 16 crashed at startup with the Misc and CImg bundles; fixed in 2019 by NatronGitHub/openfx commit 3effa283 and openfx-misc commit 8475347f. Source: https://github.com/NatronGitHub/openfx-misc/issues/59.
 - OpenGL overlays are drawn too small, and DenoiseSharpen's analysis rectangle could not be moved with its overlay (reported by a user). Source: https://github.com/NatronGitHub/openfx-misc/issues/46 and #59.
-- (unconfirmed) Fusion Studio 2026: "Reset" on the node copies every visible parameter, read-only ones included, and reports it as a user edit. Source: creativevideotips/cvt-ltx-alpha-gen, src/ofx/src/plugin.cpp.
+- (unconfirmed) Fusion Studio 2026: "Reset" on the node copies every visible parameter, read-only ones included, and reports it as a user edit. Source: creativevideotips/cvt-ltx-alpha-gen (https://github.com/creativevideotips/cvt-ltx-alpha-gen), src/ofx/src/plugin.cpp.
 - (unconfirmed) see also the Resolve and Fusion 2026 leads in the Resolve section (Resolve and Fusion share the same OFX host).
 
 * Autodesk Toxik
@@ -514,7 +519,7 @@ No host description was recorded.
 
 * Autodesk Flame
 
-No host description was recorded. Leads for Flame 2027 (2027.1 and 2027.2 on Rocky Linux 9.7), all from creativevideotips/cvt-ltx-alpha-gen, src/upstream-notes/ofx.md:
+No host description was recorded. Leads for Flame 2027 (2027.1 and 2027.2 on Rocky Linux 9.7), all from creativevideotips/cvt-ltx-alpha-gen (https://github.com/creativevideotips/cvt-ltx-alpha-gen), src/upstream-notes/ofx.md:
 - (unconfirmed) every OFX action, render included, runs on Flame's main UI thread.
 - (unconfirmed) a plug-in's paramSetValue comes straight back as kOfxActionInstanceChanged with kOfxChangePluginEdited; a plug-in that reacted to it by setting values again recursed until Flame crashed. Handle only kOfxChangeUserEdited, or guard against re-entrance.
 - (unconfirmed) kOfxPluginPropParamPageOrder is unknown, so the Support library's setPageParamOrder() threw (NatronGitHub/openfx#351 makes it non-throwing).
@@ -523,7 +528,8 @@ No host description was recorded. Leads for Flame 2027 (2027.1 and 2027.2 on Roc
 * FilmLight Baselight
 
 No host description was recorded.
-- (unconfirmed) CPU images always have a negative row bytes (kOfxImagePropRowBytes): rows go from top to bottom in memory. Source: ntsc-rs/ntsc-rs#600 (from Baselight's developer).
+- (unconfirmed) suspected: CPU images always have a negative row bytes (kOfxImagePropRowBytes), because Baselight stores them top-down. Source: ntsc-rs/ntsc-rs#600, where the developer of Baselight's OFX host code gives it as a suspicion ("My suspicion is that..."); the ntsc-rs author then fixed a bug in its negative row bytes handling.
+- (unconfirmed) a region of interest equal to the source RoD makes Baselight log "requests infinite ROI for Source; using expanded working format", which may cost performance. Source: the log in ntsc-rs/ntsc-rs#600.
 - (unconfirmed) see also "Several hosts" (animated choices, clips at project load).
 
 * Assimilate Scratch
