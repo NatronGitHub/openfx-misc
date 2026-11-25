@@ -682,11 +682,13 @@ CASES += [
          ("Expression", {"expr0": "x/32", "expr1": "x/32", "expr2": "x/32"}),
          ("net.sf.cimg.CImgExpression", {"expression": "x/32"}),
          input="ramp"),
-    case("Expression x/32 on an element not at 0,0",
+    # CImgExpression's x and y are buffer indices from the lower-left corner of the RoD, at the render
+    # scale; X and Y are the full-size pixel coordinates (#297).
+    case("Expression x/32 on an element not at 0,0 (CImgExpression X/32)",
          ("Expression", {"expr0": "x/32", "expr1": "y/32", "expr2": "0"}),
          ("net.sf.cimg.CImgExpression",
-          {"expression": "c==0?x/32:c==1?y/32:0"}),
-         input="element", known=297),
+          {"expression": "c==0?X/32:c==1?Y/32:0"}),
+         input="element"),
 ]
 
 # ---------------------------------------------------------------- Merge
