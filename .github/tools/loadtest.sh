@@ -7,18 +7,17 @@
 # only (any OS). OFXLOAD=<path>: a prebuilt ofxload (e.g. built with MSVC for ARM64 or Arm64EC),
 # instead of building it with $CXX (c++ by default), with GCC-style options.
 set -eo pipefail
+tools=$(dirname "$0")
+. "$tools/lib.sh"
 
-windows=
-case "$(uname -s)" in
-    Darwin) arch=MacOS; libs= ;;
-    Linux) arch=Linux-x86-64; libs=-ldl ;;
-    # MSYS2: MINGW64_NT-*, UCRT64_NT-*, CLANG64_NT-*, MSYS_NT-*... (also Git for Windows' bash)
-    *_NT-*) arch='Win*'; libs=; windows=1 ;;
-    *) echo "unsupported OS $(uname -s)"; exit 1 ;;
+arch=$(os_arch) || { echo "unsupported OS $(uname -s)"; exit 1; }
+windows= libs=
+case "$arch" in
+    Linux-*) libs=-ldl ;;
+    Win\*) windows=1 ;;
 esac
 arch=${LOADTEST_ARCHDIR:-$arch}
 
-tools=$(dirname "$0")
 if [ -n "$OFXLOAD" ]; then
     ofxload=$OFXLOAD
 else

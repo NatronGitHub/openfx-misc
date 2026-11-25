@@ -62,6 +62,7 @@
 # failure must show; a crash of an XFAIL render (e.g. a segmentation fault)
 # is expected, and its message is in the log of that render only.
 set -eo pipefail
+. "$(dirname "$0")/lib.sh"
 
 case "$(uname -s)" in
     Darwin|Linux) windows=0 ;;
@@ -465,8 +466,8 @@ print([k for k in r["renders"] if k["time"] == 0 and not k.get("view")][0]["outp
 # hostdemo LOG ARGS...: run hostDemo with its output in LOG. The subshell
 # keeps the shell's message about a crash (e.g. "Segmentation fault") in LOG.
 # On Linux and macOS, a render that takes more than RENDERTEST_TIMEOUT seconds
-# (default 300) is killed by SIGALRM (perl's alarm survives exec), so that a
-# hang fails instead of blocking the test.
+# (default 300) is killed (run_with_timeout), so that a hang fails instead of
+# blocking the test.
 RENDERTEST_TIMEOUT=${RENDERTEST_TIMEOUT:-300}
 hostdemo() {
     local log=$1 status=0
@@ -475,8 +476,8 @@ hostdemo() {
         ( "$HOSTDEMO" --no-std-paths --no-cache --quiet "$@"; exit $? ) > "$log" 2>&1
         return
     fi
-    ( exec perl -e 'alarm shift; exec @ARGV or die "$!\n"' "$RENDERTEST_TIMEOUT" \
-           "$HOSTDEMO" --no-std-paths --no-cache --quiet "$@" ) > "$log" 2>&1 || status=$?
+    ( run_with_timeout "$RENDERTEST_TIMEOUT" "$HOSTDEMO" --no-std-paths --no-cache --quiet "$@" ) \
+        > "$log" 2>&1 || status=$?
     [ "$status" != 142 ] || echo "timeout: killed after ${RENDERTEST_TIMEOUT}s" >> "$log"
     return "$status"
 }

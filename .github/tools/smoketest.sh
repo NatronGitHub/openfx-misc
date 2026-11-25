@@ -105,9 +105,9 @@
 # expected failure. With SMOKETEST_BUNDLES
 # (a partial build) or SMOKETEST_XPASS_OK=1, stale entries are only a warning.
 set -eo pipefail
+. "$(dirname "$0")/lib.sh"
 
 # ---------------------------------------------------------------------------
-# The plug-ins that are not tested: "identifier regex|reason" (the whole identifier).
 # The expected bundles: "name:minimum number of plug-ins (identifier and major version)"
 # (the counts of a release build; debug builds have more). A missing bundle, or one with
 # fewer plug-ins, fails the test (raise or lower the minimum when plug-ins are added or
@@ -202,17 +202,18 @@ esac
 SMOKETEST_TIMEOUT=${SMOKETEST_TIMEOUT:-120}
 
 # watchdog LOG BUNDLE HOSTDEMO-ARGS...: run hostDemo with only BUNDLE in OFX_PLUGIN_PATH
-# and its output in LOG, killed by SIGALRM after SMOKETEST_TIMEOUT seconds (perl's alarm
-# survives exec), and set $status to its exit status. The caller sends its stderr to LOG,
-# for the shell's message about a crash.
+# and its output in LOG, killed after SMOKETEST_TIMEOUT seconds (run_with_timeout), and set
+# $status to its exit status. The caller sends its stderr to LOG, for the shell's message about
+# a crash.
 watchdog() {
     local log=$1 bundle=$2 host=()
     shift 2
     # --ofx14 or --ofx11: an OFX 1.4 or OFX 1.1 host
     [ "${SMOKETEST_PROFILE:-default}" = default ] || host=("--$SMOKETEST_PROFILE")
     status=0
-    ( OFX_PLUGIN_PATH=$SMOKETEST_WORK/path/$bundle exec perl -e 'alarm shift; exec @ARGV or die "$!\n"' \
-          "$SMOKETEST_TIMEOUT" "$HOSTDEMO" --no-std-paths --no-cache --quiet "${host[@]}" "$@" ) > "$log" 2>&1 || status=$?
+    ( export OFX_PLUGIN_PATH=$SMOKETEST_WORK/path/$bundle
+      run_with_timeout "$SMOKETEST_TIMEOUT" "$HOSTDEMO" --no-std-paths --no-cache --quiet "${host[@]}" "$@" ) \
+        > "$log" 2>&1 || status=$?
     if [ "$status" = 142 ]; then
         echo "timeout: killed after ${SMOKETEST_TIMEOUT}s" >> "$log"
     elif [ "$status" -gt 128 ]; then
