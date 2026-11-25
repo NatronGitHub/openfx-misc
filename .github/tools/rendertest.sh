@@ -681,6 +681,14 @@ tests=(
     # ColorCorrect 3 Contrast (issue #289): a negative value is multiplied by 0.18^(1 - contrast),
     # -0.25 / 0.18 for contrast 2; the positive ones are (v / 0.18)^2 * 0.18. ColorCorrect 2 keeps -0.25
     "ColorCorrect contrast negatives|net.sf.openfx.ColorCorrectPlugin|filter|float|tol=1e-4+mean=-1.388889,1.388889,3.125,1||-i Source=solid:-0.25,0.5,0.75,1 -i Mask=none MasterContrast=2,2,2,2"
+    # Gamma alone keeps the negative values (versions 3 and 2; 0.5 squares the positive ones); with Contrast 2, Gamma 0.5 squares the
+    # factor: -0.25 / 0.18^2; Gamma 0 keeps them (the tests/nuke reference, the exponent 1 / gamma is 0);
+    # a small gamma would give -inf: it gives -FLT_MAX
+    "ColorCorrect gamma negatives|net.sf.openfx.ColorCorrectPlugin|filter|float|tol=1e-4+mean=-0.25,0.25,0.5625,1||-i Source=solid:-0.25,0.5,0.75,1 -i Mask=none MasterGamma=0.5,0.5,0.5,0.5"
+    "ColorCorrect 2 gamma negatives|net.sf.openfx.ColorCorrectPlugin|filter|float|tol=1e-4+mean=-0.25,0.25,0.5625,1||-m 2 -i Source=solid:-0.25,0.5,0.75,1 -i Mask=none MasterGamma=0.5,0.5,0.5,0.5 clampBlack=0"
+    "ColorCorrect contrast gamma negatives|net.sf.openfx.ColorCorrectPlugin|filter|float|tol=1e-3+mean=-7.716049,1.929012,9.765625,1||-i Source=solid:-0.25,0.5,0.75,1 -i Mask=none MasterContrast=2,2,2,2 MasterGamma=0.5,0.5,0.5,0.5"
+    "ColorCorrect contrast 2 gamma 0 negatives|net.sf.openfx.ColorCorrectPlugin|filter|float|mean=-2,-2,-2,1||-i Source=solid:-2,-2,-2,1 -i Mask=none MasterContrast=2,2,2,2 MasterGamma=0,0,0,0"
+    "ColorCorrect contrast 2 gamma 0.01 negatives|net.sf.openfx.ColorCorrectPlugin|filter|float|tol=1e33+mean=-3.402823e38,-3.402823e38,-3.402823e38,1||-i Source=solid:-2,-2,-2,1 -i Mask=none MasterContrast=2,2,2,2 MasterGamma=0.01,0.01,0.01,0.01 --frames 0 --window 0,0,1,1"
     "ColorCorrect 2 contrast negatives|net.sf.openfx.ColorCorrectPlugin|filter|float|tol=1e-4+mean=-0.25,1.388889,3.125,1||-m 2 -i Source=solid:-0.25,0.5,0.75,1 -i Mask=none MasterContrast=2,2,2,2 clampBlack=0"
     # ColorMatrix Invert (issue #291, off by default) applies the inverse matrix: with R' = R + G and
     # B' = 2 B, the inverse gives R = R' - G' = 0.75 - 0.5 and B = B' / 2 = 0.25 / 2 (without
@@ -792,7 +800,7 @@ tests=(
     "Roto clip to bbox|net.sf.openfx.RotoPlugin|general|*|bounds=350,0,360,4+mean=0,0,0,0.5||-i Source=rod:0,0,384,576 -i Roto=solid:1,1,1,0.5 clipType=BBox --frames 0 --window 350,0,370,4"
     "Roto clip to intersect|net.sf.openfx.RotoPlugin|general|*|bounds=350,0,360,4+mean=0,0,0,0.5||-i Source=rod:0,0,384,576 -i Roto=solid:1,1,1,0.5 clipType=4 --frames 0 --window 350,0,370,4"
     # ColorCorrect Mix Luminance 1 (issue #289): gain 2 doubles the color, and the same value is added to the
-    # sRGB-encoded R, G and B so that the Rec. 709 luminance of the encoded values is the input one (0.6926);
+    # sRGB-encoded R, G and B so that the Rec. 709 luminance of the encoded values is the input one (0.70369);
     # the decoded values are (0.197154,0.516249,0.869185) (the tests/nuke reference)
     "ColorCorrect mix luminance|net.sf.openfx.ColorCorrectPlugin|filter|float|tol=1e-4+mean=0.197154,0.516249,0.869185,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none MasterGain=2,2,2,2 mixLuminance=1"
     # Mix Luminance 0.5: half of that shift of the encoded values

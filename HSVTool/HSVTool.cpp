@@ -93,6 +93,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
+// the first major version whose Clamp Black is off by default (issue #272)
+#define kVersionClampBlackOff 2
+
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
@@ -2312,7 +2315,7 @@ HSVToolPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &des
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampBlack);
         param->setLabel(kParamClampBlackLabel);
         param->setHint(kParamClampBlackHint);
-        param->setDefault(majorVersion < 2); // off from version 2 (issue #272)
+        param->setDefault(majorVersion < kVersionClampBlackOff);
         param->setAnimates(true);
         param->setLayoutHint(eLayoutHintNoNewLine, 0);
         if (page) {

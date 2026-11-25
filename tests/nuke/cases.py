@@ -580,6 +580,13 @@ CASES += [
          (ofx_id("ColorCorrectPlugin"), {"MasterContrast": rgba(.5),
                                          "MasterGamma": rgba(.8)}),
          input="ramp", tolerance=1e-4),
+    # Gamma 0 keeps the negative values (positive values differ: #289).
+    case("ColorCorrect contrast 2, gamma 0, negative red",
+         ("ColorCorrect", {"contrast": 2., "gamma": 0.}),
+         (ofx_id("ColorCorrectPlugin"), {"MasterContrast": rgba(2.),
+                                         "MasterGamma": rgba(0.)}),
+         input="ramp", region=(0, 0, 8, HEIGHT), channels="r",
+         tolerance=1e-4),
     case("ColorCorrect 2 contrast 2, positive values",
          ("ColorCorrect", {"contrast": 2.}),
          (ofx_id("ColorCorrectPlugin"), {"MasterContrast": rgba(2.),

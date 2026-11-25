@@ -68,6 +68,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
+// the first major version whose Clamp Black is off by default (issue #272)
+#define kVersionClampBlackOff 3
+// the first major version where Contrast and Gamma scale the negative values (issue #289)
+#define kVersionNegativesScaled 3
+
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
@@ -193,25 +198,32 @@ struct ColorControlGroup
     ColorControlValues offset;
 };
 
+// what Contrast and Gamma do to the negative values
+enum class NegativesEnum
+{
+    eUnchanged, // version 2: left unchanged
+    eScaled, // version 3: multiplied by (0.18^(1 - contrast))^(1 / gamma)
+};
+
 template<bool processR, bool processG, bool processB, bool processA>
 struct RGBAPixel
 {
     double r, g, b, a;
     LuminanceMathEnum luminanceMath;
-    bool contrastNegatives; // Contrast and Gamma multiply negative values (version 3), or keep them
+    NegativesEnum negatives;
 
     RGBAPixel(double r_,
               double g_,
               double b_,
               double a_,
               LuminanceMathEnum luminanceMath_,
-              bool contrastNegatives_)
+              NegativesEnum negatives_)
         : r(r_)
         , g(g_)
         , b(b_)
         , a(a_)
         , luminanceMath(luminanceMath_)
-        , contrastNegatives(contrastNegatives_)
+        , negatives(negatives_)
     {
     }
 
@@ -299,7 +311,8 @@ private:
 
     // Contrast then Gamma: ((v / 0.18)^contrast * 0.18)^(1 / gamma) for v > 0. A negative value is
     // multiplied by (0.18^(1 - contrast))^(1 / gamma), as in the tests/nuke reference (version 3), or
-    // left unchanged (version 2)
+    // left unchanged (version 2). Gamma 0 keeps the negative values (the tests/nuke reference: the
+    // exponent 1 / gamma is 0); a result beyond the float range is -FLT_MAX, and -inf stays -inf
     double contrastGammaFunc(double v,
                              double contrast,
                              double gamma) const
@@ -311,11 +324,16 @@ private:
             // pow may underflow to 0, which Gamma keeps
             return (v > 0 && gamma != 1.) ? gammaFunc(v, gamma) : v;
         }
-        if (!contrastNegatives) {
+        if ( (negatives == NegativesEnum::eUnchanged) || !std::isfinite(v) ) {
             return v;
         }
+        if (gamma == 0.) {
+            return v;
+        }
+        // the factor is positive, maybe +inf (capped to FLT_MAX), so that the product is in [-inf, 0]
+        const double factor = (std::min)( std::pow( std::pow(0.18, 1. - contrast), 1. / gamma ), (double)FLT_MAX );
 
-        return v * gammaFunc(std::pow(0.18, 1. - contrast), gamma);
+        return (std::max)( v * factor, -(double)FLT_MAX );
     }
 
     void applyGain(const ColorControlValues &c)
@@ -412,7 +430,7 @@ public:
         , _luminanceMath(eLuminanceMathRec709)
         , _mixLuminance(0.)
         , _test(false)
-        , _contrastNegatives(true)
+        , _negatives(NegativesEnum::eScaled)
     {
     }
 
@@ -437,7 +455,7 @@ public:
                                bool processA,
                                double mixLuminance,
                                bool test,
-                               bool contrastNegatives)
+                               NegativesEnum negatives)
     {
         _masterValues = master;
         _shadowValues = shadow;
@@ -453,7 +471,7 @@ public:
         _processA = processA;
         _mixLuminance = mixLuminance;
         _test = test;
-        _contrastNegatives = contrastNegatives;
+        _negatives = negatives;
     }
 
 
@@ -482,7 +500,7 @@ protected:
     LuminanceMathEnum _luminanceMath;
     double _mixLuminance; // 0: the corrected luminance, 1: the input luminance
     bool _test; // show the tone ranges instead of the corrected colors
-    bool _contrastNegatives; // see RGBAPixel::contrastNegatives
+    NegativesEnum _negatives;
 };
 
 // floats don't clamp except if _clampBlack or _clampWhite
@@ -617,12 +635,15 @@ private:
         double h_scale = interpolate(1, l);
         double m_scale = 1.f - s_scale - h_scale;
 
-        RGBAPixel<processR, processG, processB, processA> p(*r, *g, *b, *a, _luminanceMath, _contrastNegatives);
+        RGBAPixel<processR, processG, processB, processA> p(*r, *g, *b, *a, _luminanceMath, _negatives);
         p.applySMH(_shadowValues, s_scale,
                    _midtoneValues, m_scale,
                    _highlightsValues, h_scale,
                    _masterValues);
-        if (_mixLuminance != 0.) {
+        if ( (_mixLuminance != 0.) &&
+             std::isfinite(*r) && std::isfinite(*g) && std::isfinite(*b) &&
+             std::isfinite(p.r) && std::isfinite(p.g) && std::isfinite(p.b) ) {
+            // (an infinite or NaN channel would make the shift NaN, and all the channels with it: no shift)
             // shift the sRGB-encoded r, g and b by the same value, as in the tests/nuke reference: all the
             // Luminance Math formulas of the encoded values are then shifted by that value (their weights
             // sum to 1, or the maximum), so that 1 gives the luminance of the encoded input
@@ -668,7 +689,9 @@ private:
         *g = 0.25 * m + h;
     }
 
-    // the sRGB encoding (IEC 61966-2-1), whose linear part also encodes the negative values
+    // the sRGB encoding (IEC 61966-2-1), whose linear part also encodes the negative values: SupportExt's
+    // to_func_srgb and from_func_srgb (ofxsLut.h) clamp the negative values to 0, and work in float
+    // TODO: move to SupportExt
     static double toSRGB(double v)
     {
         return v <= 0.0031308 ? 12.92 * v : 1.055 * std::pow(v, 1. / 2.4) - 0.055;
@@ -785,7 +808,7 @@ public:
                        unsigned int majorVersion)
         : ImageEffect(handle)
         , _supportsParametricParameter(supportsParametricParameter)
-        , _contrastNegatives(majorVersion >= 3)
+        , _negatives(majorVersion >= kVersionNegativesScaled ? NegativesEnum::eScaled : NegativesEnum::eUnchanged)
         , _dstClip(NULL)
         , _srcClip(NULL)
         , _maskClip(NULL)
@@ -903,7 +926,7 @@ private:
 
 private:
     bool _supportsParametricParameter;
-    const bool _contrastNegatives; // see RGBAPixel::contrastNegatives
+    const NegativesEnum _negatives;
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
     Clip *_srcClip;
@@ -1030,7 +1053,7 @@ ColorCorrectPlugin::setupAndProcess(ColorCorrecterBase &processor,
     bool test = _test->getValueAtTime(time);
 
     processor.setColorControlValues(masterValues, shadowValues, midtoneValues, highlightValues, luminanceMath, premult, premultChannel, mix,
-                                    processR, processG, processB, processA, mixLuminance, test, _contrastNegatives);
+                                    processR, processG, processB, processA, mixLuminance, test, _negatives);
     processor.process();
 } // ColorCorrectPlugin::setupAndProcess
 
@@ -1489,7 +1512,7 @@ ColorCorrectPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampBlack);
         param->setLabel(kParamClampBlackLabel);
         param->setHint(kParamClampBlackHint);
-        param->setDefault(majorVersion < 3); // off from version 3 (issue #272)
+        param->setDefault(majorVersion < kVersionClampBlackOff);
         param->setAnimates(true);
         param->setLayoutHint(eLayoutHintNoNewLine, 0);
         if (page) {

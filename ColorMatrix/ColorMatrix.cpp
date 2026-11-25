@@ -52,6 +52,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
+// the first major version whose Clamp Black is off by default (issue #272)
+#define kVersionClampBlackOff 3
+
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
@@ -108,7 +111,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamInvertHint "When checked, the inverse of the conversion is applied, so that a ColorMatrix with the same matrix and Invert checked undoes it. " \
     "The conversion is the 4x4 matrix, where the channels that are not processed (or not in the image) are left unchanged, as by the render without Invert. " \
     "If it is not invertible (or so close to singular that its inverse is meaningless), the render fails. " \
-    "Clamp Black (off by default) sets negative values to 0: a round trip through two ColorMatrix nodes gives back negative values only if it is unchecked on both."
+    "Clamp Black sets negative values to 0: a round trip through two ColorMatrix nodes gives back negative values only if it is unchecked on both."
 
 #define kParamClampBlack "clampBlack"
 #define kParamClampBlackLabel "Clamp Black"
@@ -872,7 +875,7 @@ ColorMatrixPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor 
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampBlack);
         param->setLabel(kParamClampBlackLabel);
         param->setHint(kParamClampBlackHint);
-        param->setDefault(majorVersion < 3); // off from version 3 (issue #272)
+        param->setDefault(majorVersion < kVersionClampBlackOff);
         param->setAnimates(true);
         param->setLayoutHint(eLayoutHintNoNewLine, 0);
         if (page) {
