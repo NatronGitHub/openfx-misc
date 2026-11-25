@@ -23,6 +23,8 @@
  * This can also reverse the order of the input frames so that last one is first.
  */
 
+#include <cmath> // std::floor
+
 #include "ofxsProcessing.H"
 #include "ofxsCopier.h"
 #include "ofxsMacros.h"
@@ -43,7 +45,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.0: initial version
 // version 1.1: render copies the Source at the source time (it wrote nothing): the spec says that the
 //              host should not call render after isIdentity returns true, but some hosts (e.g. hostDemo) do;
-//              a NULL Source image (disconnected input) renders black instead of crashing (SupportExt copyPixels)
+//              a NULL Source image (disconnected input) renders black instead of crashing (SupportExt copyPixels);
+//              (#306, in the same unreleased minor version) a Mode parameter: Whole Frames rounds the time
+//              down to a whole frame before offsetting it; the default, Fractional Time, is the old behaviour
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -53,6 +57,20 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kSupportsMultipleClipPARs false
 #define kSupportsMultipleClipDepths false
 #define kRenderThreadSafety eRenderFullySafe
+
+#define kParamRoundingMode "roundingMode"
+#define kParamRoundingModeLabel "Mode"
+#define kParamRoundingModeHint "How the input time is computed from the output time."
+#define kParamRoundingModeOptionWhole "Whole Frames", "Round the time down to a whole frame before offsetting it, so that the input is only asked for whole frames (e.g. for a sequence of images rendered with motion blur or retimed downstream).", "whole"
+#define kParamRoundingModeOptionFractional "Fractional Time", "Offset the exact time, which may be between two frames.", "fractional"
+
+enum RoundingModeEnum
+{
+    eRoundingModeWhole = 0,
+    eRoundingModeFractional,
+};
+
+#define kParamRoundingModeDefault eRoundingModeFractional
 
 #define kParamTimeOffset "timeOffset"
 #define kParamTimeOffsetLabel "Time Offset (Frames)"
@@ -95,6 +113,7 @@ private:
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;            /**< @brief Mandated output clips */
     Clip *_srcClip;            /**< @brief Mandated input clips */
+    ChoiceParam *_roundingMode;
     IntParam  *_time_offset;      /**< @brief only used in the filter context. */
     BooleanParam  *_reverse_input;
     BooleanParam  *_clip;
@@ -104,8 +123,10 @@ TimeOffsetPlugin::TimeOffsetPlugin(OfxImageEffectHandle handle)
     : ImageEffect(handle)
     , _dstClip(NULL)
     , _srcClip(NULL)
+    , _roundingMode(NULL)
     , _time_offset(NULL)
     , _reverse_input(NULL)
+    , _clip(NULL)
 {
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
     assert(_dstClip);
@@ -115,10 +136,11 @@ TimeOffsetPlugin::TimeOffsetPlugin(OfxImageEffectHandle handle)
                            _srcClip->getPixelComponents() == ePixelComponentRGB ||
                            _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
 
+    _roundingMode = fetchChoiceParam(kParamRoundingMode);
     _time_offset   = fetchIntParam(kParamTimeOffset);
     _reverse_input = fetchBooleanParam(kParamReverseInput);
     _clip = fetchBooleanParam(kParamClipToInputRange);
-    assert(_time_offset && _reverse_input && _clip);
+    assert(_roundingMode && _time_offset && _reverse_input && _clip);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -131,7 +153,9 @@ TimeOffsetPlugin::TimeOffsetPlugin(OfxImageEffectHandle handle)
 double
 TimeOffsetPlugin::getSourceTime(double t) const
 {
-    double sourceTime = t - _time_offset->getValueAtTime(t); // no animation
+    // Whole Frames: the time is rounded down first (the offset is a whole number of frames)
+    const bool whole = static_cast<RoundingModeEnum>( _roundingMode->getValue() ) == eRoundingModeWhole; // no animation
+    double sourceTime = (whole ? std::floor(t) : t) - _time_offset->getValueAtTime(t); // no animation
 
     if (!_srcClip || !_srcClip->isConnected()) {
         return sourceTime;
@@ -301,6 +325,22 @@ TimeOffsetPluginFactory::describeInContext(ImageEffectDescriptor &desc,
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
+
+    // roundingMode (first, as in the TimeOffset node of other compositing software)
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamRoundingMode);
+        param->setLabel(kParamRoundingModeLabel);
+        param->setHint(kParamRoundingModeHint);
+        assert(param->getNOptions() == eRoundingModeWhole);
+        param->appendOption(kParamRoundingModeOptionWhole);
+        assert(param->getNOptions() == eRoundingModeFractional);
+        param->appendOption(kParamRoundingModeOptionFractional);
+        param->setDefault( (int)kParamRoundingModeDefault );
+        param->setAnimates(false); // used in getSourceTime(), as the other params
+        if (page) {
+            page->addChild(*param);
+        }
+    }
 
     // time_offset
     {

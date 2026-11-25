@@ -73,7 +73,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              input frame range (it was the input frame range at any speed), except with the Duration
 //              parameter (hosts without parametric parameters), which still sets it. In old projects, this
 //              also changes what the nodes downstream see as their input frame range (e.g. Write,
-//              FrameRange, FrameHold, the Before/After of another Retime). The Box filter
+//              FrameRange, FrameHold, the Before/After of another Retime). The Box filter was added (the
+//              default filter is still Linear). The Nearest Rounding parameter (#309): Half Down picks frame n
+//              at n+0.5; the default, Half Up, is the old behaviour (frame n+1)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -100,8 +102,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamFilterLabel "Filter"
 #define kParamFilterHint "How input images are combined to compute the output image."
 
-#define kParamFilterOptionNone "None", "Do not interpolate, ask for images with fractional time to the input effect. Useful if the input effect can interpolate itself.", "none"
-#define kParamFilterOptionNearest "Nearest", "Pick input image with nearest integer time. Half frames are rounded up (e.g. 1.5 gives frame 2).", "nearest"
+#define kParamFilterOptionNone "None", "Do not interpolate, ask for images with fractional time to the input effect. Useful if the input effect can interpolate itself. The time is not rounded: the input decides which image it gives at a fractional time (e.g. an image sequence reader may round it).", "none"
+#define kParamFilterOptionNearest "Nearest", "Pick input image with nearest integer time. Half frames are rounded as Nearest Rounding says (by default up: 1.5 gives frame 2).", "nearest"
 #define kParamFilterOptionLinear "Linear", "Blend the two nearest images with linear interpolation.", "linear"
 #define kParamFilterOptionBox "Box", "Average the input frames covered by the output frame (from half a frame before it to half a frame after it, mapped to the input time), each weighted by the part of it that is covered (input frame n covers the times from n-0.5 to n+0.5). At speed 1, this is the input frame; faster speeds blend several frames (motion blur), at most " STRINGISE(kBoxMaxFrames) " frames plus a partial frame at each end. At the ends of the input frame range, the frames outside it are read according to Before/After, so the first and last frames fade (to black, or to what the input gives there) unless Before/After is Hold. In the Retimer context, where the host only gives the source time of the current frame, Box reads the nearest frame.", "box"
 
@@ -119,6 +121,21 @@ enum FilterEnum
 #define kBoxMaxFrames 64
 
 #define kParamFilterDefault eFilterLinear
+
+#define kParamNearestRounding "nearestRounding"
+#define kParamNearestRoundingLabel "Nearest Rounding"
+#define kParamNearestRoundingHint "How the Nearest filter rounds a source time half-way between two frames."
+#define kParamNearestRoundingOptionHalfUp "Half Up", "Half frames are rounded up: source time 1.5 gives frame 2.", "halfup"
+#define kParamNearestRoundingOptionHalfDown "Half Down", "Half frames are rounded down: source time 1.5 gives frame 1.", "halfdown"
+
+enum NearestRoundingEnum
+{
+    eNearestRoundingHalfUp = 0,
+    eNearestRoundingHalfDown,
+};
+
+// Half Up is the behaviour of the versions without this parameter
+#define kParamNearestRoundingDefault eNearestRoundingHalfUp
 
 #define kParamBeforeHint "What to read when the source frame (computed from the retiming parameters) is before the first frame of the input clip. This refers to source frames: when the input is played backwards, it applies at the end of the output."
 #define kParamAfterHint "What to read when the source frame (computed from the retiming parameters) is after the last frame of the input clip. This refers to source frames: when the input is played backwards, it applies at the start of the output."
@@ -207,6 +224,7 @@ private:
     ParametricParam  *_warp;      /**< @brief only used in the filter or general context. */
     DoubleParam  *_duration;   /**< @brief how long the output should be as a proportion of input. General context only. */
     ChoiceParam  *_filter;   /**< @brief how images are interpolated (or not). */
+    ChoiceParam  *_nearestRounding; /**< @brief how the Nearest filter rounds half frames. */
     ChoiceParam  *_before;
     ChoiceParam  *_after;
 
@@ -223,6 +241,7 @@ public:
         , _warp(NULL)
         , _duration(NULL)
         , _filter(NULL)
+        , _nearestRounding(NULL)
         , _before(NULL)
         , _after(NULL)
     {
@@ -250,9 +269,10 @@ public:
             }
         }
         _filter = fetchChoiceParam(kParamFilter);
+        _nearestRounding = fetchChoiceParam(kParamNearestRounding);
         _before = fetchChoiceParam(kParamBefore);
         _after = fetchChoiceParam(kParamAfter);
-        assert(_filter && _before && _after);
+        assert(_filter && _nearestRounding && _before && _after);
     }
 
     /* Override the render */
@@ -620,7 +640,9 @@ RetimePlugin::getSourceFrames(double time,
     } else if ( (sourceTime == (int)sourceTime) || (filter == eFilterNone) ) {
         frames->from = sourceTime;
     } else if (filter == eFilterNearest) {
-        frames->from = std::floor(sourceTime + 0.5);
+        // the nearest whole frame; at a half frame, the next one (Half Up) or the previous one (Half Down)
+        const bool halfDown = static_cast<NearestRoundingEnum>( _nearestRounding->getValueAtTime(time) ) == eNearestRoundingHalfDown;
+        frames->from = halfDown ? std::ceil(sourceTime - 0.5) : std::floor(sourceTime + 0.5);
     } else {
         assert(filter == eFilterLinear);
         frames->blended = true;
@@ -1248,6 +1270,20 @@ RetimePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         assert(param->getNOptions() == eFilterBox);
         param->appendOption(kParamFilterOptionBox);
         param->setDefault( (int)kParamFilterDefault );
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    // nearestRounding, after the filter it applies to
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamNearestRounding);
+        param->setLabel(kParamNearestRoundingLabel);
+        param->setHint(kParamNearestRoundingHint);
+        assert(param->getNOptions() == eNearestRoundingHalfUp);
+        param->appendOption(kParamNearestRoundingOptionHalfUp);
+        assert(param->getNOptions() == eNearestRoundingHalfDown);
+        param->appendOption(kParamNearestRoundingOptionHalfDown);
+        param->setDefault( (int)kParamNearestRoundingDefault );
         if (page) {
             page->addChild(*param);
         }

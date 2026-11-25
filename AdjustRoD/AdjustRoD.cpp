@@ -37,14 +37,16 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginName "AdjustRoD"
 #define kPluginGrouping "Transform"
-#define kPluginDescription "Enlarges the input image by a given amount. The added pixels are copies of the closest edge pixel (Border Conditions: Nearest, the default), or black and transparent (Border Conditions: Black)."
+#define kPluginDescription "Enlarges the input image by a given amount, or shrinks it with negative amounts. The added pixels are copies of the closest edge pixel (Border Conditions: Nearest, the default), or black and transparent (Border Conditions: Black). A negative amount removes pixels on each side: the region of definition is the input's, shrunk by that amount, and the pixels outside it are those of the shrunk image under the same border conditions. The default amount, 0, leaves the input unchanged."
 #define kPluginIdentifier "net.sf.openfx.AdjustRoDPlugin"
 // History:
 // 1.0 initial version
 // 1.1 add boundary param
 // 1.2 a NULL Source image (disconnected, or fetchImage failed) renders black instead of crashing;
 //     with Nearest border conditions, ask for the Source edge pixels even where the render window
-//     is out of the Source RoD (it got no Source image there)
+//     is out of the Source RoD (it got no Source image there);
+//     (#299, in the same unreleased minor version) negative amounts shrink the region of definition (the range
+//     started at 0); the pixels outside the shrunk region follow the border conditions, from its edge
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 2 // Increment this when you have fixed a bug or made it faster.
 
@@ -57,7 +59,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamAddPixels "addPixels"
 #define kParamAddPixelsLabel "Add Pixels"
-#define kParamAddPixelsHint "How many pixels to add on each side for both dimensions (width/height)"
+#define kParamAddPixelsHint "How many pixels to add on each side for both dimensions (width/height), in canonical coordinates. Negative values remove pixels: the region of definition shrinks (down to an empty region at its centre)."
 
 #define kParamBoundary "boundary"
 #define kParamBoundaryLabel "Border Conditions" //"Boundary Conditions"
@@ -79,6 +81,29 @@ enum BoundaryEnum
     eBoundaryNeumann,
     //eBoundaryPeriodic,
 };
+
+// The output RoD: the Source RoD enlarged by (w,h) on each side, or shrunk if they are negative. Along an axis
+// shrunk by more than half its size, the RoD is empty, at the centre of the Source RoD.
+static OfxRectD
+adjustedRoD(const OfxRectD& srcRod,
+            double w,
+            double h)
+{
+    OfxRectD rod = srcRod;
+
+    rod.x1 -= w;
+    rod.x2 += w;
+    rod.y1 -= h;
+    rod.y2 += h;
+    if (rod.x2 < rod.x1) {
+        rod.x1 = rod.x2 = (srcRod.x1 + srcRod.x2) / 2;
+    }
+    if (rod.y2 < rod.y1) {
+        rod.y1 = rod.y2 = (srcRod.y1 + srcRod.y2) / 2;
+    }
+
+    return rod;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -174,7 +199,26 @@ AdjustRoDPlugin::setupAndCopy(PixelProcessorFilterBase & processor,
 
     // set the images
     processor.setDstImg( dst.get() );
-    processor.setSrcImg( src.get(), _boundary->getValueAtTime(time) );
+    const int boundary = _boundary->getValueAtTime(time);
+    double w, h;
+    _size->getValueAtTime(time, w, h);
+    if ( (w < 0) || (h < 0) ) {
+        // shrunk: only the Source pixels in the output RoD are shown, and the border conditions apply from
+        // its edge. The host may give a larger Source image: use the part of it in the shrunk RoD.
+        const OfxRectD shownRod = adjustedRoD(_srcClip->getRegionOfDefinition(time), (std::min)(w, 0.), (std::min)(h, 0.));
+        OfxRectI shownPixel;
+        Coords::toPixelEnclosing(shownRod, args.renderScale, src->getPixelAspectRatio(), &shownPixel);
+        OfxRectI bounds;
+        if ( Coords::rectIsEmpty(shownRod) || !Coords::rectIntersection(shownPixel, src->getBounds(), &bounds) || Coords::rectIsEmpty(bounds) ) {
+            fillBlack( *this, args.renderWindow, args.renderScale, dst.get() );
+
+            return;
+        }
+        processor.setSrcImg( src->getPixelAddress(bounds.x1, bounds.y1), bounds, src->getPixelComponents(),
+                             src->getPixelComponentCount(), src->getPixelDepth(), src->getRowBytes(), boundary );
+    } else {
+        processor.setSrcImg( src.get(), boundary );
+    }
 
     // set the render window
     processor.setRenderWindow(args.renderWindow, args.renderScale);
@@ -228,22 +272,25 @@ AdjustRoDPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
     double w, h;
     _size->getValueAtTime(args.time, w, h);
 
-    OfxRectD paddedRoD = srcRod;
-    paddedRoD.x1 -= w;
-    paddedRoD.x2 += w;
-    paddedRoD.y1 -= h;
-    paddedRoD.y2 += h;
+    OfxRectD paddedRoD = adjustedRoD(srcRod, w, h);
+    // the part of the Source that the output shows: all of it, or the shrunk RoD
+    const OfxRectD shownRod = (w < 0 || h < 0) ? adjustedRoD(srcRod, (std::min)(w, 0.), (std::min)(h, 0.)) : srcRod;
+    if ( Coords::rectIsEmpty(shownRod) ) {
+        // the output RoD is empty (render fills black): keep the default RoI
+
+        return;
+    }
 
     if (_boundary->getValueAtTime(args.time) == eBoundaryNeumann) {
-        // Out of the Source RoD, the output pixels are those of the nearest Source pixel: they
-        // need the Source edge pixels even where args.regionOfInterest is out of the Source RoD.
+        // Out of the shown Source RoD, the output pixels are those of the nearest shown Source pixel: they
+        // need its edge pixels even where args.regionOfInterest is out of it.
         const double par = _srcClip->getPixelAspectRatio();
         // the size of a pixel in canonical coordinates (renderScale and the PAR are > 0 per the spec)
         const double pixelW = (args.renderScale.x > 0. && par > 0.) ? par / args.renderScale.x : 1.;
         const double pixelH = (args.renderScale.y > 0.) ? 1. / args.renderScale.y : 1.;
         OfxRectD roi;
-        nearestRoI(args.regionOfInterest.x1, args.regionOfInterest.x2, srcRod.x1, srcRod.x2, pixelW, &roi.x1, &roi.x2);
-        nearestRoI(args.regionOfInterest.y1, args.regionOfInterest.y2, srcRod.y1, srcRod.y2, pixelH, &roi.y1, &roi.y2);
+        nearestRoI(args.regionOfInterest.x1, args.regionOfInterest.x2, shownRod.x1, shownRod.x2, pixelW, &roi.x1, &roi.x2);
+        nearestRoI(args.regionOfInterest.y1, args.regionOfInterest.y2, shownRod.y1, shownRod.y2, pixelH, &roi.y1, &roi.y2);
         rois.setRegionOfInterest(*_srcClip, roi);
 
         return;
@@ -251,8 +298,8 @@ AdjustRoDPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
 
     // intersect the crop rectangle with args.regionOfInterest
     Coords::rectIntersection(paddedRoD, args.regionOfInterest, &paddedRoD);
-    // intersect the crop rectangle with srcRoD
-    Coords::rectIntersection(paddedRoD, srcRod, &paddedRoD);
+    // intersect the crop rectangle with the shown part of srcRoD
+    Coords::rectIntersection(paddedRoD, shownRod, &paddedRoD);
     rois.setRegionOfInterest(*_srcClip, paddedRoD);
 }
 
@@ -270,11 +317,7 @@ AdjustRoDPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
     double w, h;
     _size->getValueAtTime(args.time, w, h);
 
-    rod = srcRod;
-    rod.x1 -= w;
-    rod.x2 += w;
-    rod.y1 -= h;
-    rod.y2 += h;
+    rod = adjustedRoD(srcRod, w, h);
 
     return true;
 }
@@ -439,8 +482,8 @@ AdjustRoDPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setDefaultCoordinateSystem(eCoordinatesCanonical); // Nuke defaults to Normalized for XY and XYAbsolute!
         param->setDefault(0., 0.);
         param->setIncrement(1.);
-        param->setRange(0., 0., DBL_MAX, DBL_MAX);
-        param->setDisplayRange(0., 0., 1000., 1000.);
+        param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // negative values shrink the RoD (#299)
+        param->setDisplayRange(-1000., -1000., 1000., 1000.);
         param->setDimensionLabels("w", "h");
         param->setIncrement(1.);
         param->setDigits(0);

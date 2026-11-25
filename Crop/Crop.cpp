@@ -43,8 +43,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "If the 'Extent' parameter is set to 'Format', and 'Reformat' is checked, the output pixel aspect ratio is also set to this of the format.\n" \
     "This plugin does not concatenate transforms."
 #define kPluginIdentifier "net.sf.openfx.CropPlugin"
+// History:
+// version 1.0: initial version
+// version 1.1: a Softness Curve parameter (#298): Linear fades linearly over the softness distance; the default,
+//              Smooth, is the old curve
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -69,7 +73,22 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamSoftness "softness"
 #define kParamSoftnessLabel "Softness"
-#define kParamSoftnessHint "Size of the fade to black around edges to apply."
+#define kParamSoftnessHint "Size of the fade to black around edges to apply, in canonical coordinates (pixels at render scale 1, times the pixel aspect ratio in x). The fade is inside the rectangle: at a distance d < Softness from the nearest vertical edge, the image is multiplied by curve(d / Softness) (see Softness Curve), and likewise in y; in the corners, the two factors are multiplied."
+
+#define kParamSoftnessCurve "softnessCurve"
+#define kParamSoftnessCurveLabel "Softness Curve"
+#define kParamSoftnessCurveHint "The shape of the fade to black within the Softness distance, as a function of t = d / Softness (0 at the edge, 1 at the Softness distance inside it)."
+#define kParamSoftnessCurveOptionLinear "Linear", "curve(t) = t: a linear ramp.", "linear"
+#define kParamSoftnessCurveOptionSmooth "Smooth", "A smooth ramp made of two parabolas: curve(t) = 2t^2 for t < 1/2, 1 - 2(1-t)^2 above; its slope is 0 at both ends of the fade.", "smooth"
+
+enum SoftnessCurveEnum
+{
+    eSoftnessCurveLinear = 0,
+    eSoftnessCurveSmooth,
+};
+
+// Smooth is the curve of the versions without this parameter
+#define kParamSoftnessCurveDefault eSoftnessCurveSmooth
 
 static inline
 double
@@ -85,6 +104,15 @@ rampSmooth(double t)
     }
 }
 
+// the fade factor at t = d / softness in [0,1)
+static inline
+double
+softnessRamp(SoftnessCurveEnum curve,
+             double t)
+{
+    return (curve == eSoftnessCurveLinear) ? t : rampSmooth(t);
+}
+
 class CropProcessorBase
     : public ImageProcessor
 {
@@ -94,6 +122,7 @@ protected:
     OfxPointI _translation;
     bool _blackOutside;
     double _softness;
+    SoftnessCurveEnum _softnessCurve;
     OfxRectI _cropRectFullPixel;
 
 public:
@@ -102,6 +131,7 @@ public:
         , _srcImg(NULL)
         , _blackOutside(false)
         , _softness(0.)
+        , _softnessCurve(kParamSoftnessCurveDefault)
     {
         _cropRectFull.x1 = _cropRectFull.y1 = _cropRectFull.x2 = _cropRectFull.y2 = 0.;
         _cropRectFullPixel.x1 = _cropRectFullPixel.y1 = _cropRectFullPixel.x2 = _cropRectFullPixel.y2 = 0;
@@ -119,11 +149,13 @@ public:
                    double par,
                    bool blackOutside,
                    bool reformat,
-                   double softness)
+                   double softness,
+                   SoftnessCurveEnum softnessCurve)
     {
         _cropRectFull = cropRectFull;
         _blackOutside = blackOutside;
         _softness = softness;
+        _softnessCurve = softnessCurve;
         Coords::toPixelNearest(cropRectFull, renderScale, par, &_cropRectFullPixel);
         if (reformat) {
             _translation.x = -_cropRectFullPixel.x1;
@@ -196,12 +228,12 @@ private:
                             if (dx >= _softness) {
                                 tx = 1.;
                             } else {
-                                tx = rampSmooth(dx / _softness);
+                                tx = softnessRamp(_softnessCurve, dx / _softness);
                             }
                             if (dy >= _softness) {
                                 ty = 1.;
                             } else {
-                                ty = rampSmooth(dy / _softness);
+                                ty = softnessRamp(_softnessCurve, dy / _softness);
                             }
                             double t = tx * ty;
                             if (t >= 1) {
@@ -247,6 +279,7 @@ public:
         , _hiDPI(NULL)
         , _recenter(NULL)
         , _softness(NULL)
+        , _softnessCurve(NULL)
         , _reformat(NULL)
         , _intersect(NULL)
         , _blackOutside(NULL)
@@ -276,11 +309,12 @@ public:
             assert(_hiDPI);
         }
         _softness = fetchDoubleParam(kParamSoftness);
+        _softnessCurve = fetchChoiceParam(kParamSoftnessCurve);
         _reformat = fetchBooleanParam(kParamReformat);
         _intersect = fetchBooleanParam(kParamIntersect);
         _blackOutside = fetchBooleanParam(kParamBlackOutside);
 
-        assert(_rectangleInteractEnable && _btmLeft && _size && _softness && _reformat && _intersect && _blackOutside);
+        assert(_rectangleInteractEnable && _btmLeft && _size && _softness && _softnessCurve && _reformat && _intersect && _blackOutside);
 
         // finally
         syncPrivateData();
@@ -340,6 +374,7 @@ private:
     BooleanParam* _hiDPI;
     PushButtonParam *_recenter;
     DoubleParam* _softness;
+    ChoiceParam* _softnessCurve;
     BooleanParam* _reformat;
     BooleanParam* _intersect;
     BooleanParam* _blackOutside;
@@ -520,7 +555,9 @@ CropPlugin::setupAndProcess(CropProcessorBase &processor,
     double softness = _softness->getValueAtTime(args.time);
     // no need to softness *= args.renderScale.x; since softness is computed on canonical coords
 
-    processor.setValues(cropRectFullCanonical, args.renderScale, par, blackOutside, reformat, softness);
+    const SoftnessCurveEnum softnessCurve = static_cast<SoftnessCurveEnum>( _softnessCurve->getValueAtTime(args.time) );
+
+    processor.setValues(cropRectFullCanonical, args.renderScale, par, blackOutside, reformat, softness, softnessCurve);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -901,6 +938,21 @@ CropPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setDisplayRange(0., 100.);
         param->setIncrement(1.);
         param->setHint(kParamSoftnessHint);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    // softnessCurve, after the softness it shapes
+    {
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamSoftnessCurve);
+        param->setLabel(kParamSoftnessCurveLabel);
+        param->setHint(kParamSoftnessCurveHint);
+        assert(param->getNOptions() == eSoftnessCurveLinear);
+        param->appendOption(kParamSoftnessCurveOptionLinear);
+        assert(param->getNOptions() == eSoftnessCurveSmooth);
+        param->appendOption(kParamSoftnessCurveOptionSmooth);
+        param->setDefault( (int)kParamSoftnessCurveDefault );
         if (page) {
             page->addChild(*param);
         }

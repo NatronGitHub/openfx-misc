@@ -41,6 +41,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Merge"
 #define kPluginDescription "Copies a rectangle from the input A to the input B in output.\n" \
     "It can be used to limit an effect to a rectangle of the original image by plugging the original image into the input B.\n" \
+    "The default rectangle is the whole project: set Bottom Left and Size (or drag the rectangle in the viewer) to choose the area.\n" \
     "See also https://web.archive.org/web/20220807200909/http://www.opticalenquiry.com/nuke/index.php?title=CopyRectange"
 
 #define kPluginIdentifier "net.sf.openfx.CopyRectanglePlugin"
@@ -48,7 +49,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
 // version 2.1: on hosts that ignore normalised defaults (e.g. DaVinci Resolve), the default rectangle
-//              is the project's, not (1,1) pixels (#236)
+//              is the project's, not (1,1) pixels (#236);
+//              (#282, in the same unreleased minor version) a Softness Curve parameter: Smooth ramps have no
+//              kink at the inner edge of the fade; the default, Linear, is the old ramp
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -94,7 +97,46 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamSoftness "softness"
 #define kParamSoftnessLabel "Softness"
-#define kParamSoftnessHint "Size of the fade around edges of the rectangle to apply"
+#define kParamSoftnessHint "Size of the fade around edges of the rectangle to apply, in pixels at render scale 1. The fade is inside the rectangle: at d pixels from the nearest vertical edge (0 on the edge pixel), A is mixed with B by curve(d / Softness) (see Softness Curve), and likewise in y; in the corners, the two factors are multiplied."
+
+#define kParamSoftnessCurve "softnessCurve"
+#define kParamSoftnessCurveLabel "Softness Curve"
+#define kParamSoftnessCurveHint "The shape of the fade from B to A within the Softness distance, as a function of t = d / Softness (0 at the edge, 1 at the Softness distance inside it)."
+#define kParamSoftnessCurveOptionLinear "Linear", "curve(t) = t: a linear ramp, which shows a kink where the fade ends.", "linear"
+#define kParamSoftnessCurveOptionSmooth "Smooth", "A smooth ramp made of two parabolas: curve(t) = 2t^2 for t < 1/2, 1 - 2(1-t)^2 above; its slope is 0 at both ends of the fade (the curve of Crop's Smooth softness).", "smooth"
+
+enum SoftnessCurveEnum
+{
+    eSoftnessCurveLinear = 0,
+    eSoftnessCurveSmooth,
+};
+
+// Linear is the curve of the versions without this parameter
+#define kParamSoftnessCurveDefault eSoftnessCurveLinear
+
+// the Smooth fade factor at t in [0,1]: two parabolas (the same as Crop's)
+static inline
+double
+rampSmooth(double t)
+{
+    t *= 2.;
+    if (t < 1) {
+        return t * t / (2.);
+    } else {
+        t -= 1.;
+
+        return -0.5 * (t * (t - 2) - 1);
+    }
+}
+
+// the fade factor at t = d / softness in [0,1)
+static inline
+float
+softnessRamp(SoftnessCurveEnum curve,
+             double t)
+{
+    return static_cast<float>( (curve == eSoftnessCurveLinear) ? t : rampSmooth(t) );
+}
 
 class CopyRectangleProcessorBase
     : public ImageProcessor
@@ -104,6 +146,7 @@ protected:
     const Image *_srcImgB;
     const Image *_maskImg;
     double _softness;
+    SoftnessCurveEnum _softnessCurve;
     bool _process[4];
     OfxRectI _rectangle;
     bool _doMasking;
@@ -117,6 +160,7 @@ public:
         , _srcImgB(NULL)
         , _maskImg(NULL)
         , _softness(0.)
+        , _softnessCurve(kParamSoftnessCurveDefault)
         , _doMasking(false)
         , _mix(1.)
         , _maskInvert(false)
@@ -140,6 +184,7 @@ public:
 
     void setValues(const OfxRectI& rectangle,
                    double softness,
+                   SoftnessCurveEnum softnessCurve,
                    bool processR,
                    bool processG,
                    bool processB,
@@ -148,6 +193,7 @@ public:
     {
         _rectangle = rectangle;
         _softness = softness;
+        _softnessCurve = softnessCurve;
         _process[0] = processR;
         _process[1] = processG;
         _process[2] = processB;
@@ -192,7 +238,7 @@ private:
             bool yInRectangle = y >= _rectangle.y1 && y < _rectangle.y2;
             if (yInRectangle) {
                 ///apply softness only within the rectangle
-                yMultiplier = yDistance < _softness ? yDistance / (float)_softness : 1.f;
+                yMultiplier = yDistance < _softness ? softnessRamp(_softnessCurve, yDistance / _softness) : 1.f;
             } else {
                 yMultiplier = 1.f;
             }
@@ -205,7 +251,7 @@ private:
 
                 if (xInRectangle) {
                     ///apply softness only within the rectangle
-                    xMultiplier = xDistance < _softness ? xDistance / (float)_softness : 1.f;
+                    xMultiplier = xDistance < _softness ? softnessRamp(_softnessCurve, xDistance / _softness) : 1.f;
                 } else {
                     xMultiplier = 1.f;
                 }
@@ -252,6 +298,7 @@ public:
         , _btmLeft(NULL)
         , _size(NULL)
         , _softness(NULL)
+        , _softnessCurve(NULL)
         , _processR(NULL)
         , _processG(NULL)
         , _processB(NULL)
@@ -270,12 +317,13 @@ public:
         _btmLeft = fetchDouble2DParam(kParamRectangleInteractBtmLeft);
         _size = fetchDouble2DParam(kParamRectangleInteractSize);
         _softness = fetchDoubleParam(kParamSoftness);
+        _softnessCurve = fetchChoiceParam(kParamSoftnessCurve);
         _processR = fetchBooleanParam(kParamProcessR);
         _processG = fetchBooleanParam(kParamProcessG);
         _processB = fetchBooleanParam(kParamProcessB);
         _processA = fetchBooleanParam(kParamProcessA);
         assert(_processR && _processG && _processB && _processA);
-        assert(_btmLeft && _size && _softness);
+        assert(_btmLeft && _size && _softness && _softnessCurve);
         _mix = fetchDoubleParam(kParamMix);
         _maskApply = ( ofxsMaskIsAlwaysConnected( OFX::getImageEffectHostDescription() ) && paramExists(kParamMaskApply) ) ? fetchBooleanParam(kParamMaskApply) : 0;
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
@@ -317,6 +365,7 @@ private:
     Double2DParam* _btmLeft;
     Double2DParam* _size;
     DoubleParam* _softness;
+    ChoiceParam* _softnessCurve;
     BooleanParam* _processR;
     BooleanParam* _processG;
     BooleanParam* _processB;
@@ -414,6 +463,7 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor,
     double softness;
     _softness->getValueAtTime(args.time, softness);
     softness *= args.renderScale.x;
+    const SoftnessCurveEnum softnessCurve = static_cast<SoftnessCurveEnum>( _softnessCurve->getValueAtTime(args.time) );
 
     bool processR;
     bool processG;
@@ -426,7 +476,7 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor,
 
     double mix;
     _mix->getValueAtTime(args.time, mix);
-    processor.setValues(rectanglePixel, softness, processR, processG, processB, processA, mix);
+    processor.setValues(rectanglePixel, softness, softnessCurve, processR, processG, processB, processA, mix);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -752,6 +802,21 @@ CopyRectanglePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setDisplayRange(0., 100.);
         param->setIncrement(1.);
         param->setHint(kParamSoftnessHint);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    // softnessCurve, after the softness it shapes
+    {
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamSoftnessCurve);
+        param->setLabel(kParamSoftnessCurveLabel);
+        param->setHint(kParamSoftnessCurveHint);
+        assert(param->getNOptions() == eSoftnessCurveLinear);
+        param->appendOption(kParamSoftnessCurveOptionLinear);
+        assert(param->getNOptions() == eSoftnessCurveSmooth);
+        param->appendOption(kParamSoftnessCurveOptionSmooth);
+        param->setDefault( (int)kParamSoftnessCurveDefault );
         if (page) {
             page->addChild(*param);
         }
