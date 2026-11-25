@@ -86,12 +86,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // 2.0: (unreleased) the clips of inputs 10 to 15 (and 10 to 127 in Natron) are named "10", "11", ...:
 //      ContactSheet 1 wrote the digits in reverse order ("01", "11", "21", ...; issue #401). Version 1 is kept,
 //      obsolete, with the old clip names and the old layout.
-//      (unreleased, fixed in place, issue #305) the layout and the resampling match the tests/nuke reference:
-//      the cells are a whole number of pixels, (Resolution - Gap) / Columns (or Rows), rounded, from the bottom
-//      left corner, with the gap on their left and bottom sides (it was half the gap on each side, in cells that
-//      divide the output evenly); the image is at its exact (sub-pixel) place, resampled with the cubic filter
-//      (it was box-filtered into whole pixels); the output pixel aspect ratio is 1 on hosts that support
-//      multiple clip PARs (it was the one of the inputs), and the inputs may have different PARs.
+//      (unreleased, fixed in place, issue #305) new layout and resampling: the cells are a whole number of
+//      pixels, (Resolution - Gap) / Columns (or Rows), rounded, from the bottom left corner, with the gap on their
+//      left and bottom sides (it was half the gap on each side, in cells that divide the output evenly); the
+//      image is at its exact (sub-pixel) place, resampled with the cubic filter (it was box-filtered into whole
+//      pixels); the output pixel aspect ratio is 1 on hosts that support multiple clip PARs (it was the one of
+//      the inputs), and the inputs may have different PARs. The tests/nuke cases of ContactSheet match.
 // 1.1: (unreleased) the Snake column order, the Center Rows option, and the hints that say how the cells are placed;
 //      a click with Enable Selection sets Selection Frame to first + the frame index, as the overlay reads it
 //      (it was the frame index alone, so the highlighted cell was not the clicked one unless Frame Range starts at 0);
@@ -109,7 +109,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamResolution "resolution"
 #define kParamResolutionLabel "Resolution"
 #define kParamResolutionHint \
-    "Resolution of the output image, in pixels."
+    "Resolution of the output image, in pixels. They are square pixels on hosts that support clips of different pixel aspect ratios; " \
+    "on other hosts, they have the pixel aspect ratio that the host gives the output (usually the one of the project)."
 
 #define kParamRowsColumns "rowsColumns"
 #define kParamRowsColumnsLabel "Rows/Columns"
@@ -233,9 +234,14 @@ public:
     ContactSheet::Grid getGrid(double time, int count) const;
 
 private:
-    // The format of input i in its pixels at render scale 1 (its RoD if it has no format), and
+    // The format of an input in its pixels at render scale 1 (its RoD if it has no format), and
     // its pixel aspect ratio.
-    void getSourceFormat(int i, double time, OfxRectI* format, double* par) const;
+    struct SourceFormat
+    {
+        OfxRectI format;
+        double par;
+    };
+    SourceFormat getSourceFormat(int i, double time) const;
 
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
@@ -356,24 +362,25 @@ ContactSheetPlugin::getGrid(double time,
     return grid;
 }
 
-void
+ContactSheetPlugin::SourceFormat
 ContactSheetPlugin::getSourceFormat(int i,
-                                    double time,
-                                    OfxRectI* format,
-                                    double* par) const
+                                    double time) const
 {
-    _srcClip[i]->getFormat(*format);
-    *par = _srcClip[i]->getPixelAspectRatio();
-    if ( OFX::Coords::rectIsEmpty(*format) ) {
+    SourceFormat f;
+    _srcClip[i]->getFormat(f.format);
+    f.par = _srcClip[i]->getPixelAspectRatio();
+    if ( OFX::Coords::rectIsEmpty(f.format) ) {
         // no format is available, use the RoD instead
         const OfxRectD rod = _srcClip[i]->getRegionOfDefinition(time);
         const OfxPointD rs1 = {1., 1.};
-        if ( OFX::Coords::rectIsEmpty(rod) || !(*par > 0.) ) {
-            *format = OfxRectI{0, 0, 0, 0};
+        if ( OFX::Coords::rectIsEmpty(rod) || !(f.par > 0.) ) {
+            f.format = OfxRectI{0, 0, 0, 0};
         } else {
-            Coords::toPixelEnclosing(rod, rs1, *par, format);
+            Coords::toPixelEnclosing(rod, rs1, f.par, &f.format);
         }
     }
+
+    return f;
 }
 
 void
@@ -409,7 +416,7 @@ ContactSheetPlugin::render(const OFX::RenderArguments &args)
     OfxRectD rod;
     {
         int w, h;
-        _resolution->getValue(w, h);
+        _resolution->getValueAtTime(time, w, h);
         double par = _dstClip->getPixelAspectRatio();
         OfxPointD rs1 = {1., 1.};
         OfxRectI rodpixel = {0, 0, w, h};
@@ -434,14 +441,15 @@ ContactSheetPlugin::render(const OFX::RenderArguments &args)
 
         int clipCount = (std::min)(framesLeft, count); // number of frames from this clip
         if (_majorVersion >= 2) {
-            OfxRectI srcFormat;
-            double srcPar;
-            getSourceFormat(i, time, &srcFormat, &srcPar);
+            const SourceFormat sf = getSourceFormat(i, time);
             for (int frame = 0; frame < clipCount; ++frame) {
                 OfxRectD cellRoD;
-                ContactSheet::Placement placement;
-                if ( !ContactSheet::cellRoD(count * i + frame, grid, rod, &cellRoD) ||
-                     !ContactSheet::placeInCell(srcFormat, srcPar, cellRoD, gap, center, dstPar, &placement) ) {
+                if ( !ContactSheet::cellRoD(count * i + frame, grid, rod, &cellRoD) ) {
+                    continue;
+                }
+                const std::optional<ContactSheet::Placement> placement =
+                    ContactSheet::placeInCell(sf.format, sf.par, cellRoD, gap, center, dstPar);
+                if (!placement) {
                     continue;
                 }
                 OfxRectD cellClipped;
@@ -456,7 +464,7 @@ ContactSheetPlugin::render(const OFX::RenderArguments &args)
                     checkBadRenderScaleOrField(src, args);
 #                 endif
                     ContactSheet::checkImageFormat(*this, *src);
-                    ContactSheet::drawPlacedImage(src.get(), dst.get(), placement, srcFormat, args.renderWindow, args.renderScale);
+                    ContactSheet::drawPlacedImage(src.get(), dst.get(), *placement, sf.format, args.renderWindow, args.renderScale);
                 }
             }
             framesLeft -= clipCount;
@@ -534,7 +542,7 @@ ContactSheetPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &
     OfxRectD rod;
     {
         int w, h;
-        _resolution->getValue(w, h);
+        _resolution->getValueAtTime(time, w, h);
         double par = _dstClip->getPixelAspectRatio();
         OfxPointD rs1 = {1., 1.};
         OfxRectI rodpixel = {0, 0, w, h};
@@ -550,19 +558,21 @@ ContactSheetPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &
     while (framesLeft > 0 && i < (int)_srcClip.size()) {
         int clipCount = (std::min)(framesLeft, count); // number of frames from this clip
         if (_majorVersion >= 2) {
-            OfxRectI srcFormat;
-            double srcPar;
-            getSourceFormat(i, time, &srcFormat, &srcPar);
+            const SourceFormat sf = getSourceFormat(i, time);
             const double dstPar = _dstClip->getPixelAspectRatio();
             OfxRectD srcRoI = {0., 0., 0., 0.};
             for (int frame = 0; frame < clipCount; ++frame) {
                 OfxRectD cellRoD;
-                ContactSheet::Placement placement;
-                OfxRectD frameRoI;
-                if ( ContactSheet::cellRoD(count * i + frame, grid, rod, &cellRoD) &&
-                     ContactSheet::placeInCell(srcFormat, srcPar, cellRoD, gap, center, dstPar, &placement) &&
-                     ContactSheet::placedImageRoI(args.regionOfInterest, placement, srcFormat, srcPar, dstPar, &frameRoI) ) {
-                    Coords::rectBoundingBox(srcRoI, frameRoI, &srcRoI);
+                if ( !ContactSheet::cellRoD(count * i + frame, grid, rod, &cellRoD) ) {
+                    continue;
+                }
+                const std::optional<ContactSheet::Placement> placement =
+                    ContactSheet::placeInCell(sf.format, sf.par, cellRoD, gap, center, dstPar);
+                const std::optional<OfxRectD> frameRoI = placement ?
+                    ContactSheet::placedImageRoI(args.regionOfInterest, *placement, sf.format, sf.par, dstPar, args.renderScale) :
+                    std::nullopt;
+                if (frameRoI) {
+                    Coords::rectBoundingBox(srcRoI, *frameRoI, &srcRoI);
                 }
             }
             rois.setRegionOfInterest(*_srcClip[i], srcRoI);

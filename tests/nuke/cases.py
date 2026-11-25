@@ -843,8 +843,8 @@ CASES += [
     case("Colorspace linear to HSV, values outside [0, 1]",
          ("Colorspace", {"colorspace_out": "HSV"}),
          (ofx_id("RGBToHSV"), {}), input="hues", tolerance=1e-4),
-    # The reference converts the values as given when the input is sRGB
-    # (with a linear input, it encodes them with sRGB first: #296).
+    # RGBToHSV and RGBToHSL convert the values as given: they match an sRGB
+    # input (the cases with a linear input differ, #296).
     case("Colorspace sRGB to HSV, values outside [0, 1] (RGBToHSV)",
          ("Colorspace", {"colorspace_in": "sRGB", "colorspace_out": "HSV"}),
          (ofx_id("RGBToHSV"), {}), input="hues", tolerance=1e-4),
@@ -2277,17 +2277,17 @@ CASES += [
 ]
 
 # ---------------------------------------------------------- ContactSheet
-# The reference's output always has square pixels, and hostDemo gives the
-# output the PAR of the inputs (it does not support multiple clip PARs): the
-# Nuke side uses square pixels (nuke_par), so that both sides fit the same
-# pixels in the same cells. The cells are a whole number of pixels,
+# ContactSheet 2 makes square output pixels where the host supports multiple
+# clip PARs; hostDemo does not, and gives the output the PAR of the inputs:
+# the Nuke side uses square pixels (nuke_par), so that both sides fit the
+# same pixels in the same cells. The cells are a whole number of pixels,
 # (size - gap) / count rounded, with the gap on their left and bottom sides.
 def _contact_sheet(name, width, height, rows, columns, inputs, gap=0,
                    center=False, row_order="BottomTop",
                    column_order="LeftRight", **kwargs):
     """A ContactSheet case: inputs is the image of each input (or None)."""
-    clips = {("Source" if _i == 0 else str(_i)): _image
-             for _i, _image in enumerate(inputs) if _image}
+    clips = {("Source" if i == 0 else str(i)): image
+             for i, image in enumerate(inputs) if image}
     return case(
         "ContactSheet " + name,
         ("ContactSheet", {"width": width, "height": height, "rows": rows,
@@ -2309,9 +2309,8 @@ for _center in (False, True):
         row_order="TopBottom"))
 CASES += [
     # cells of 20x20 with a gap of 4: the 32x32 images are scaled by 0.5.
-    # Not compared: the right margin (x 60 to 64, outside the cells), where
-    # the reference repeats the filtered left edge of the images of the
-    # last column, 20 pixels to the right (x 63).
+    # Not compared: the right margin (x 60 to 64, outside the cells), which
+    # is black here and differs at x 63 (not reproduced, by decision).
     _contact_sheet("2x3 cells, gap 4, scale 0.5", 64, 44, 2, 3,
                    ["ramp", None, "checker", "checker", "ramp"], gap=4,
                    region=(0, 0, 60, 44)),
@@ -2330,8 +2329,8 @@ CASES += [
     _contact_sheet("1x2 cells, scale 2, center", 128, 70, 1, 2,
                    ["ramp", "checker"], center=True),
     _contact_sheet("1x1 cell, scale 29/32", 29, 29, 1, 1, ["checker"]),
-    # A magnification by 2.4 differs by about 1% of the checker contrast:
-    # the reference's filter weights are not exactly the cubic ones there.
+    # A magnification by 2.4 differs by about 1% of the checker contrast
+    # (the scales 0.5, 29/32, 1 and 2 match).
     _contact_sheet("1x1 cell, scale 2.4", 77, 77, 1, 1, ["checker"],
                    known=305),
 ]
@@ -2466,7 +2465,7 @@ KNOWN = {
         "Colorspace rec709 to YCbCr (RGBToYCbCr709)",
         "Colorspace linear to HSV, values outside [0, 1]",
         # the saturation of colours outside [0, 1] is from the colour
-        # clamped to [0, 1] (#399); the reference's is not bounded
+        # clamped to [0, 1] (#399): it differs there
         "Colorspace sRGB to HSL, values outside [0, 1] (RGBToHSL)"],
     # the reference's Undistort is not the exact inverse of its Redistort:
     # its forward map differs by 0.02 to 0.1 pixel away from the corners, and

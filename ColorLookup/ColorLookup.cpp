@@ -25,6 +25,7 @@
 #include <cfloat> // DBL_MAX
 #include <algorithm>
 #include <memory>
+#include <array>
 
 #if !( defined(_WIN32) || defined(__WIN32__) || defined(WIN32) )
 #define GL_GLEXT_PROTOTYPES
@@ -108,8 +109,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //     "Master Curve on Alpha" parameter (default off: the alpha curve is used alone, as before)
 // 2.0 (issue #290) the defaults follow the node of the same name: Master Curve Mode is Composed and Master Curve on
 //     Alpha is checked; version 1.2 is kept, obsolete, with the old defaults (Standard, off), for existing projects
-//     (2.0 and 1.2 are unreleased, fixed in place, issue #411) Luminance master curve mode: where the luminance is zero
-//     or negative, the master curve is applied to each channel, instead of a gain master(1e-8) / 1e-8 that gave huge values
+//     (2.0 and 1.2 are unreleased, fixed in place, issue #411) Luminance master curve mode: below a luminance of 1e-3,
+//     the result goes linearly to the master curve applied to each channel, reached at a luminance of 0 or less,
+//     instead of a gain master(1e-8) / 1e-8 that gave huge values. The Luminance mode was in 1.1 (Natron 2.5.0): this
+//     bug fix (minor bump, 1.2) changes Natron 2.5 projects that use it, on pixels of near-zero or negative luminance.
 #define kPluginIdentifier "net.sf.openfx.ColorLookupPlugin"
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
@@ -497,10 +500,10 @@ private:
                         }
                         case eMasterCurveModeLuminance: {
                             // see https://github.com/Beep6581/RawTherapee/blob/3ff2519302e3bc529b111462a4697ac4dfba30c4/rtengine/curves.h#L992
-                            luminanceGain(r, g, b, &tmpPix[0], &tmpPix[1], &tmpPix[2]);
-                            tmpPix[0] *= maxValue;
-                            tmpPix[1] *= maxValue;
-                            tmpPix[2] *= maxValue;
+                            const std::array<float, 3> rgb = luminanceModeColor(r, g, b);
+                            tmpPix[0] = rgb[0] * maxValue;
+                            tmpPix[1] = rgb[1] * maxValue;
+                            tmpPix[2] = rgb[2] * maxValue;
                             break;
                         }
                     }
@@ -582,7 +585,10 @@ private:
                         }
                         case eMasterCurveModeLuminance: {
                             // see https://github.com/Beep6581/RawTherapee/blob/3ff2519302e3bc529b111462a4697ac4dfba30c4/rtengine/curves.h#L992
-                            luminanceGain(r, g, b, &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                            const std::array<float, 3> rgb = luminanceModeColor(r, g, b);
+                            tmpPix[0] = rgb[0];
+                            tmpPix[1] = rgb[1];
+                            tmpPix[2] = rgb[2];
                             tmpPix[3] = interpolate(3, unpPix[3]);
                             break;
                         }
@@ -596,28 +602,46 @@ private:
         }
     }
 
-    // The Luminance master curve mode, on normalized r, g, b: the channel curves, multiplied by the
-    // gain of the master curve on the luminance, master(l) / l. Where the luminance is zero or
-    // negative (or tiny), that gain would be huge or negative: the master curve is applied to each
-    // channel instead, as in the Composed mode (issue #411); for a grey, both give master(l).
-    void luminanceGain(float r,
-                       float g,
-                       float b,
-                       float* rOut,
-                       float* gOut,
-                       float* bOut) const
+    // The colour given by the Luminance master curve mode, from normalized r, g, b: the channel
+    // curves, multiplied by the gain of the master curve on the luminance l, master(l) / l.
+    // Where l is small, that gain could be huge (or negative, for l <= 0): below the luminance
+    // kLuminanceModeEpsilon, the result goes linearly from the one with the gain at that luminance
+    // to the master curve applied to each channel curve (as in the Composed mode), reached at
+    // l <= 0 (issue #411). With identity channel curves, for a grey both give master(l).
+    std::array<float, 3> luminanceModeColor(float r,
+                                            float g,
+                                            float b) const
     {
+        constexpr double kLuminanceModeEpsilon = 1e-3;
         const double l = luminance(r, g, b, _luminanceMath);
-        if (l > 1e-8) { // false for NaN
-            const double coef = interpolate(nComponents, static_cast<float>(l)) / l;
-            *rOut = static_cast<float>( clamp<float>(coef * interpolate(0, r), 1) );
-            *gOut = static_cast<float>( clamp<float>(coef * interpolate(1, g), 1) );
-            *bOut = static_cast<float>( clamp<float>(coef * interpolate(2, b), 1) );
-        } else {
-            *rOut = clamp<float>(interpolate( nComponents, interpolate(0, r) ), 1);
-            *gOut = clamp<float>(interpolate( nComponents, interpolate(1, g) ), 1);
-            *bOut = clamp<float>(interpolate( nComponents, interpolate(2, b) ), 1);
+        const float rc = interpolate(0, r);
+        const float gc = interpolate(1, g);
+        const float bc = interpolate(2, b);
+        // the gain of the master curve at the luminance lum
+        const auto withGain = [&](double lum) {
+            const double coef = interpolate(nComponents, static_cast<float>(lum)) / lum;
+
+            return std::array<float, 3>{ static_cast<float>( clamp<float>(coef * rc, 1) ),
+                                         static_cast<float>( clamp<float>(coef * gc, 1) ),
+                                         static_cast<float>( clamp<float>(coef * bc, 1) ) };
+        };
+        if (l >= kLuminanceModeEpsilon) {
+            return withGain(l);
         }
+        const std::array<float, 3> perChannel = { clamp<float>(interpolate(nComponents, rc), 1),
+                                                  clamp<float>(interpolate(nComponents, gc), 1),
+                                                  clamp<float>(interpolate(nComponents, bc), 1) };
+        if ( !(l > 0.) ) { // also for NaN
+            return perChannel;
+        }
+        const double t = l / kLuminanceModeEpsilon;
+        const std::array<float, 3> gained = withGain(kLuminanceModeEpsilon);
+        std::array<float, 3> result;
+        for (std::size_t c = 0; c < 3; ++c) {
+            result[c] = static_cast<float>(t * gained[c] + (1. - t) * perChannel[c]);
+        }
+
+        return result;
     }
 
     // on input to interpolate, value should be normalized to the [0-1] range

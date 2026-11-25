@@ -1667,6 +1667,8 @@ tests=(
     # cubic filter). ContactSheet 1 put half the gap on each side of 32x32 cells: it starts at x = 4.
     "ContactSheet gap|net.sf.openfx.ContactSheetOFX|filter|float|mean=0,0,0,0||-i Source=solid:1,1,1,1${cs_none1} resolution=64,64 rowsColumns=2,2 gap=8 --frames 0 --window 2,12,6,16"
     "ContactSheet gap image|net.sf.openfx.ContactSheetOFX|filter|float|mean=1,1,1,1||-i Source=solid:1,1,1,1${cs_none1} resolution=64,64 rowsColumns=2,2 gap=8 --frames 0 --window 10,12,14,16"
+    # the same at render scale 0.5 (the image is x 4 to 14, y 4 to 12 there), which checks the RoI
+    "ContactSheet gap image scale 0.5|net.sf.openfx.ContactSheetOFX|filter|float|mean=1,1,1,1||-i Source=solid:1,1,1,1${cs_none1} resolution=64,64 rowsColumns=2,2 gap=8 --frames 0 --scale 0.5 --window 6,6,12,10"
     "ContactSheet 1 gap|net.sf.openfx.ContactSheetOFX|filter|float|mean=1,1,1,1||-m 1 -i Source=solid:1,1,1,1${cs1_none1} resolution=64,64 rowsColumns=2,2 gap=8 --frames 0 --window 4,12,8,16"
     # input 10 (#401): 4x4 cells of 32x32 pixels, top to bottom: input 10 is in the third row from the
     # top (y 32 to 64) and the third column (x 64 to 96). Its clip is "10" in ContactSheet 2, "01" in 1.

@@ -90,21 +90,19 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginHSIToRGBIdentifier "net.sf.openfx.HSIToRGB"
 
 // The transfer functions of the Y'CbCr, Y'PbPr and Y'UV conversions (SupportExt's ofxsLut.h):
-// the 601 ones use sRGB, not the BT.601 OETF (which is the BT.709 one).
-// The Colorspace node of the tests/nuke reference (#296) differs: its HSV and HSL are computed on
-// sRGB-encoded values (it encodes a linear input with the sRGB curve first, extended linearly
-// below 0), and so are its YCbCr and YPbPr, with the BT.709 matrix, Y' = 16/255 + 219/255 Y'709 and
-// Cb, Cr = 0.5 + 224/255 Pb, Pr (0.5, not 128/255). With an sRGB input, its HSV and HSL are those
-// of RGBToHSV and RGBToHSL; none of the Y'CbCr and Y'PbPr conversions here has its conventions.
-#define kEncodeSRGB "Linear RGB is first encoded to R'G'B' with the sRGB transfer function (IEC 61966-2-1; not the BT.601 one, which is the Rec.709 one); negative values become 0."
+// the 601 ones use sRGB, not the SMPTE ST 170M OETF (which is the BT.709 one).
+// These conversions follow the standards cited in their descriptions. In tests/nuke, RGBToHSV,
+// RGBToHSL and their inverses match the reference's Colorspace node with an sRGB input; the
+// cases with a linear input and the YCbCr cases differ (known=296).
+#define kEncodeSRGB "Linear RGB is first encoded to R'G'B' with the sRGB transfer function (IEC 61966-2-1; not the SMPTE ST 170M one, which is the Rec.709 one); negative values become 0."
 #define kDecodeSRGB "R'G'B' is then decoded to linear RGB with the sRGB transfer function (IEC 61966-2-1); negative values become 0."
 #define kEncodeRec709 "Linear RGB is first encoded to R'G'B' with the Rec.709 transfer function (the OETF of ITU-R BT.709-6, with the more precise constants of ITU-R BT.2020-2); negative values become 0."
 #define kDecodeRec709 "R'G'B' is then decoded to linear RGB with the inverse of the Rec.709 OETF; negative values become 0."
-#define kYCbCrRange "Y'CbCr is in the video (studio) range, as 8-bit code values divided by 255 (the quantization of ITU-R BT.601-7 and BT.709-6): Y' goes from 16/255 (black) to about 235/255 (white), and Cb and Cr from 16/255 to 240/255, with 128/255 for neutral colours."
+#define kYCbCrRange "Y'CbCr is in the video (studio) range, as 8-bit code values divided by 255 (the quantization of ITU-R BT.601-7 and BT.709-6): Y' goes from 16/255 (black) to 235/255 (white), and Cb and Cr from 16/255 to 240/255, with 128/255 for neutral colours."
 #define kYPbPrRange "Y' goes from 0 (black) to 1 (white), Pb and Pr from -0.5 to 0.5, with 0 for neutral colours."
 #define kYUVRange "Y' goes from 0 (black) to 1 (white), U from -0.436 to 0.436 and V from -0.615 to 0.615, with 0 for neutral colours."
 #define kMatrix601 "The matrix is the ITU-R BT.601-7 one (Kr = 0.299, Kb = 0.114)."
-#define kMatrix709 "The matrix is the ITU-R BT.709-6 one (Kr ≈ 0.2126, Kb ≈ 0.0722)."
+#define kMatrix709 "The matrix is the ITU-R BT.709-6 one (Kr = 0.2126, Kb = 0.0722)."
 
 #define kPluginRGBToYCbCr601Name "RGBToYCbCr601"
 #define kPluginRGBToYCbCr601Description "Convert from linear RGB to the Y'CbCr color model (ITU-R BT.601).\n" \
