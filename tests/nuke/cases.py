@@ -127,6 +127,11 @@ def _checker_image(x, y):
     return -.25 + 1.75 * c, 1. - 1.25 * c, .5 * c, 1.
 
 
+def _grey_checker(x, y):
+    g = .25 + .5 * _checker(x, y)
+    return g, g, g, g
+
+
 def _merge_a(x, y, alpha=1.):
     del y  # A varies along x
     return -1. + 4. * _u(x), 2. - 3. * _u(x), .5, alpha
@@ -233,6 +238,12 @@ IMAGES = {
         "nuke": ("-0.25 + 1.75 * " + CHECKER, "1 - 1.25 * " + CHECKER,
                  "0.5 * " + CHECKER, "1"),
         "py": _checker_image,
+    },
+    # 4x4 checks of 0.25 and 0.75, the same in R, G, B and A (an edge
+    # detector that writes one matte into alpha gives the same edges).
+    "greychecker": {
+        "nuke": ("0.25 + 0.5 * " + CHECKER,) * 4,
+        "py": _grey_checker,
     },
     # Merge inputs: A varies along x, B along y, so that each pixel is
     # another (A, B) pair, from -1 to 3. The "a" versions have an alpha
@@ -401,6 +412,10 @@ CASES += [
          channels="rgba", tolerance=1e-6),
 ]
 
+# EdgeDetectCImg on alpha only (R, G and B are kept).
+EDGE_ALPHA_ONLY = {"NatronOfxParamProcessR": 0, "NatronOfxParamProcessG": 0,
+                   "NatronOfxParamProcessB": 0, "NatronOfxParamProcessA": 1}
+
 # ---------------------------------------------------------------- Color
 # Saturation outputs differ by up to 5e-4 here: tolerance 1e-3.
 SATURATION_TOLERANCE = 1e-3
@@ -567,8 +582,8 @@ CASES += [
          ("ColorMatrix", {"matrix": Script("{2 0 0} {0 1 0} {0 0 1}"),
                           "invert": True}),
          (ofx_id("ColorMatrixPlugin"), {"outputRed": [2., 0., 0., 0.],
-                                        "clampBlack": 0}),
-         input="ramp", known=291),
+                                        "clampBlack": 0, "invert": 1}),
+         input="ramp"),
     case("Saturation 0.5", ("Saturation", {"saturation": 0.5}),
          (ofx_id("SaturationPlugin"), {"saturation": 0.5}), input="ramp",
          tolerance=1e-4, known=272),
@@ -607,10 +622,16 @@ CASES += [
          input="hues", tolerance=1e-4),
     case("HSVTool force saturation 0.2", ("HSVTool", {
         "setsaturation": True, "saturation": .2}),
-         (ofx_id("HSVToolPlugin"), {"saturationAdjustment": .2,
-                                    "saturationAdjustmentGain": 0.,
+         (ofx_id("HSVToolPlugin"), {"setSaturation": 1,
+                                    "saturationAdjustment": .2,
                                     "clampBlack": 0}),
-         input="hues", tolerance=1e-4, known=293),
+         input="hues", tolerance=1e-4),
+    case("HSVTool force brightness 0.5", ("HSVTool", {
+        "setbrightness": True, "brightness": .5}),
+         (ofx_id("HSVToolPlugin"), {"setBrightness": 1,
+                                    "brightnessAdjustment": .5,
+                                    "clampBlack": 0}),
+         input="hues", tolerance=1e-4),
     case("Invert defaults", ("Invert", {}), (ofx_id("Invert"), {}),
          input="Aa", channels="rgba"),
     case("Invert clamp", ("Invert", {"clamp": True}), (ofx_id("Invert"), {}),
@@ -624,8 +645,7 @@ CASES += [
     case("Unpremult zero alpha", ("Unpremult", {}),
          (ofx_id("Unpremult"), {}), input="grey05_a0", channels="rgba"),
     case("Premult invert", ("Premult", {"invert": True}),
-         (ofx_id("Premult"), {}), input="Aa",
-         known=295),
+         (ofx_id("Premult"), {"invert": 1}), input="Aa"),
     # Code values above 1023 give huge values: only up to 1.
     case("Log2Lin defaults", ("Log2Lin", {}), (ofx_id("Log2Lin"), {}),
          input="ramp", region=(0, 0, 16, 19), tolerance=1e-3),
@@ -1235,6 +1255,23 @@ CASES += [
          ("Soften", {"minimum": -10, "maximum": 10}),
          (CIMG + "CImgSoften", SHARPEN_SIZE), input="checker",
          region=INNER, tolerance=2e-3),
+    # The reference writes one edge matte into alpha and keeps RGB; on an
+    # image whose R, G, B and A are the same, EdgeDetectCImg on alpha only
+    # should give the same matte. Its scale differs (e.g. 4.5 against 0.25
+    # for Sobel next to a 0.5 step), so Threshold differs too (#314).
+    case("EdgeDetect sobel, grey checker, alpha",
+         ("EdgeDetect", {"edgedetector": "sobel"}),
+         ("eu.cimg.EdgeDetect", dict(EDGE_ALPHA_ONLY, filter="Sobel")),
+         input="greychecker", channels="rgba", tolerance=1e-3, known=314),
+    case("EdgeDetect prewitt, grey checker, alpha",
+         ("EdgeDetect", {"edgedetector": "prewitt"}),
+         ("eu.cimg.EdgeDetect", dict(EDGE_ALPHA_ONLY, filter="Prewitt")),
+         input="greychecker", channels="rgba", tolerance=1e-3, known=314),
+    case("EdgeDetect sobel, threshold 0.2, grey checker, alpha",
+         ("EdgeDetect", {"edgedetector": "sobel", "threshold": .2}),
+         ("eu.cimg.EdgeDetect", dict(EDGE_ALPHA_ONLY, filter="Sobel",
+                                     threshold=.2)),
+         input="greychecker", channels="rgba", tolerance=1e-3, known=314),
     # The reference writes its edges into alpha, EdgeDetectCImg into RGB.
     case("EdgeDetect sobel", ("EdgeDetect", {}),
          ("eu.cimg.EdgeDetect", {"filter": "Sobel"}), input="checker",
@@ -1589,7 +1626,6 @@ KNOWN = {
     288: [
         "Radial area 100,100-600,476 softness 1",
         "Radial softness 0.3, plinear", "Rectangle softness 40"],
-    295: ["Premult, alpha outside [0, 1]"],
     296: [
         "Colorspace linear to HSV (RGBToHSV)",
         "Colorspace linear to HSL (RGBToHSL)",

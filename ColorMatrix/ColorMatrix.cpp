@@ -21,11 +21,14 @@
  * OFX ColorMatrix plugin.
  */
 
+#include <array>
 #include <cmath>
 #include <cstring>
+#include <optional>
 
 #include "ofxsProcessing.H"
 #include "ofxsMaskMix.h"
+#include "ofxsMatrix2D.h"
 #include "ofxsRGBAProcessing.h"
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
@@ -42,7 +45,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
-// version 2.1: premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79)
+// version 2.1: premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79);
+//              (2.1 is unreleased, extended in place, issue #291) Invert parameter (default off): apply the inverse of the matrix
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -97,6 +101,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamOutputAlphaLabel "Output Alpha"
 #define kParamOutputAlphaHint  "values for alpha output component."
 
+#define kParamInvert "invert"
+#define kParamInvertLabel "Invert"
+#define kParamInvertHint "When checked, the inverse of the conversion is applied, so that a ColorMatrix with the same matrix and Invert checked undoes it. " \
+    "The conversion is the 4x4 matrix, where the channels that are not processed (or not in the image) are left unchanged, as by the render without Invert. " \
+    "If it is not invertible (or so close to singular that its inverse is meaningless), the render fails. " \
+    "Clamp Black, on by default, sets negative values to 0, so that a round trip through two ColorMatrix nodes does not give back negative values: uncheck it on both."
+
 #define kParamClampBlack "clampBlack"
 #define kParamClampBlackLabel "Clamp Black"
 #define kParamClampBlackHint "All colors below 0 on output are set to 0."
@@ -122,6 +133,82 @@ struct RGBAValues
     RGBAValues() : r(0), g(0), b(0), a(0) {}
 };
 
+// the rows of the colour matrix: Output Red, Green, Blue and Alpha
+using ColorMatrixRows = std::array<RGBAValues, 4>;
+
+// the channels (R, G, B, A) that the render changes: processed, and in the image
+using ColorMatrixChannels = std::array<bool, 4>;
+
+// The inverse of the 4x4 matrix whose rows are m, or nothing if it is not invertible. A matrix
+// whose determinant is tiny relative to the product of its row norms (an upper bound of the
+// determinant, Hadamard's inequality) is not invertible either: its inverse would only amplify
+// rounding errors (e.g. rows (.1,.2,.3), (.4,.5,.6), (.7,.8,.9) have a determinant of about
+// 1e-17 in double, and an inverse with entries around 1e15).
+std::optional<ColorMatrixRows>
+invertColorMatrix(const ColorMatrixRows& m)
+{
+    constexpr double kRelativeDeterminantMin = 1e-12;
+    Matrix4x4 mat;
+    double rowNormProduct = 1.;
+    for (int i = 0; i < 4; ++i) {
+        mat(i, 0) = m[i].r;
+        mat(i, 1) = m[i].g;
+        mat(i, 2) = m[i].b;
+        mat(i, 3) = m[i].a;
+        rowNormProduct *= std::sqrt(m[i].r * m[i].r + m[i].g * m[i].g + m[i].b * m[i].b + m[i].a * m[i].a);
+    }
+    const double det = mat.determinant();
+    // also false for a NaN determinant or row norm
+    if ( !( std::abs(det) > kRelativeDeterminantMin * rowNormProduct ) ) {
+        return std::nullopt;
+    }
+    Matrix4x4 inv;
+    if ( !mat.inverse(&inv) ) {
+        return std::nullopt;
+    }
+    for (double v : inv.m) {
+        if ( !std::isfinite(v) ) {
+            return std::nullopt;
+        }
+    }
+    ColorMatrixRows ret;
+    for (int i = 0; i < 4; ++i) {
+        ret[i].r = inv(i, 0);
+        ret[i].g = inv(i, 1);
+        ret[i].b = inv(i, 2);
+        ret[i].a = inv(i, 3);
+    }
+
+    return ret;
+}
+
+// The matrix that the render applies: the rows of the channels it does not change are unit
+// rows (the input value is kept), the other rows are those of m.
+ColorMatrixRows
+effectiveColorMatrix(const ColorMatrixRows& m,
+                     const ColorMatrixChannels& changed)
+{
+    ColorMatrixRows ret = m;
+    if (!changed[0]) {
+        ret[0] = RGBAValues(0.);
+        ret[0].r = 1.;
+    }
+    if (!changed[1]) {
+        ret[1] = RGBAValues(0.);
+        ret[1].g = 1.;
+    }
+    if (!changed[2]) {
+        ret[2] = RGBAValues(0.);
+        ret[2].b = 1.;
+    }
+    if (!changed[3]) {
+        ret[3] = RGBAValues(0.);
+        ret[3].a = 1.;
+    }
+
+    return ret;
+}
+
 class ColorMatrixProcessorBase
     : public ImageProcessor
 {
@@ -132,7 +219,7 @@ protected:
     bool _processG;
     bool _processB;
     bool _processA;
-    RGBAValues _matrix[4];
+    ColorMatrixRows _matrix;
     bool _clampBlack;
     bool _clampWhite;
     bool _premult;
@@ -172,10 +259,7 @@ public:
                    bool processG,
                    bool processB,
                    bool processA,
-                   const RGBAValues& outputRed,
-                   const RGBAValues& outputGreen,
-                   const RGBAValues& outputBlue,
-                   const RGBAValues& outputAlpha,
+                   const ColorMatrixRows& matrix,
                    bool clampBlack,
                    bool clampWhite,
                    bool premult,
@@ -186,10 +270,7 @@ public:
         _processG = processG;
         _processB = processB;
         _processA = processA;
-        _matrix[0] = outputRed;
-        _matrix[1] = outputGreen;
-        _matrix[2] = outputBlue;
-        _matrix[3] = outputAlpha;
+        _matrix = matrix;
         _clampBlack = clampBlack;
         _clampWhite = clampWhite;
         _premult = premult;
@@ -312,6 +393,8 @@ public:
         _outputGreen = fetchRGBAParam(kParamOutputGreenName);
         _outputBlue = fetchRGBAParam(kParamOutputBlueName);
         _outputAlpha = fetchRGBAParam(kParamOutputAlphaName);
+        _invert = fetchBooleanParam(kParamInvert);
+        assert(_invert);
         _clampBlack = fetchBooleanParam(kParamClampBlack);
         _clampWhite = fetchBooleanParam(kParamClampWhite);
         assert(_outputRed && _outputGreen && _outputBlue && _outputAlpha && _clampBlack && _clampWhite);
@@ -342,6 +425,15 @@ private:
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
     virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
+    /// The channels that the render changes at time t (processed, and in images of the
+    /// components comps).
+    ColorMatrixChannels getChangedChannels(double time, PixelComponentEnum comps) const;
+
+    /// The matrix applied at time t to the channels changed: the parameters, or with Invert, the
+    /// inverse of the conversion that the render applies without Invert (the other channels
+    /// unchanged); nothing if Invert is checked and that conversion is not invertible.
+    std::optional<ColorMatrixRows> getMatrix(double time, const ColorMatrixChannels& changed) const;
+
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
@@ -355,6 +447,7 @@ private:
     RGBAParam *_outputGreen;
     RGBAParam *_outputBlue;
     RGBAParam *_outputAlpha;
+    BooleanParam* _invert;
     BooleanParam* _clampBlack;
     BooleanParam* _clampWhite;
     BooleanParam* _premult;
@@ -428,11 +521,12 @@ ColorMatrixPlugin::setupAndProcess(ColorMatrixProcessorBase &processor,
     _processG->getValueAtTime(args.time, processG);
     _processB->getValueAtTime(args.time, processB);
     _processA->getValueAtTime(args.time, processA);
-    RGBAValues r, g, b, a;
-    _outputRed->getValueAtTime(args.time, r.r, r.g, r.b, r.a);
-    _outputGreen->getValueAtTime(args.time, g.r, g.g, g.b, g.a);
-    _outputBlue->getValueAtTime(args.time, b.r, b.g, b.b, b.a);
-    _outputAlpha->getValueAtTime(args.time, a.r, a.g, a.b, a.a);
+    const std::optional<ColorMatrixRows> matrix = getMatrix( args.time, getChangedChannels(args.time, dstComponents) );
+    if (!matrix) {
+        setPersistentMessage(Message::eMessageError, "", "Invert is checked, but the matrix is not invertible");
+        throwSuiteStatusException(kOfxStatFailed);
+    }
+    clearPersistentMessage();
     bool clampBlack, clampWhite;
     _clampBlack->getValueAtTime(args.time, clampBlack);
     _clampWhite->getValueAtTime(args.time, clampWhite);
@@ -443,7 +537,7 @@ ColorMatrixPlugin::setupAndProcess(ColorMatrixProcessorBase &processor,
     double mix;
     _mix->getValueAtTime(args.time, mix);
     processor.setValues(processR, processG, processB, processA,
-                        r, g, b, a, clampBlack, clampWhite, premult, premultChannel, mix);
+                        *matrix, clampBlack, clampWhite, premult, premultChannel, mix);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -529,12 +623,15 @@ ColorMatrixPlugin::isIdentity(const IsIdentityArguments &args,
     _processG->getValueAtTime(args.time, processG);
     _processB->getValueAtTime(args.time, processB);
     _processA->getValueAtTime(args.time, processA);
-    RGBAValues r, g, b, a;
-    _outputRed->getValueAtTime(args.time, r.r, r.g, r.b, r.a);
-    _outputGreen->getValueAtTime(args.time, g.r, g.g, g.b, g.a);
-    _outputBlue->getValueAtTime(args.time, b.r, b.g, b.b, b.a);
-    _outputAlpha->getValueAtTime(args.time, a.r, a.g, a.b, a.a);
-    if ( ( !processR || ( (r.r == 1.) && (r.g == 0.) && (r.b == 0.) && (r.a == 0.) ) ) &&
+    const std::optional<ColorMatrixRows> matrix = getMatrix( args.time, getChangedChannels( args.time, _dstClip->getPixelComponents() ) );
+    // not invertible: the render reports the error, except where the mask excludes the render window (below)
+    const ColorMatrixRows rows = matrix.value_or( ColorMatrixRows() );
+    const RGBAValues& r = rows[0];
+    const RGBAValues& g = rows[1];
+    const RGBAValues& b = rows[2];
+    const RGBAValues& a = rows[3];
+    if ( matrix &&
+         ( !processR || ( (r.r == 1.) && (r.g == 0.) && (r.b == 0.) && (r.a == 0.) ) ) &&
          ( !processG || ( ( g.r == 0.) && ( g.g == 1.) && ( g.b == 0.) && ( g.a == 0.) ) ) &&
          ( !processB || ( ( b.r == 0.) && ( b.g == 0.) && ( b.b == 1.) && ( b.a == 0.) ) ) &&
          ( !processA || ( ( a.r == 0.) && ( a.g == 0.) && ( a.b == 0.) && ( a.a == 1.) ) ) ) {
@@ -551,6 +648,40 @@ ColorMatrixPlugin::isIdentity(const IsIdentityArguments &args,
 
     return false;
 } // ColorMatrixPlugin::isIdentity
+
+ColorMatrixChannels
+ColorMatrixPlugin::getChangedChannels(double time,
+                                      PixelComponentEnum comps) const
+{
+    const bool hasRGB = (comps != ePixelComponentAlpha);
+#ifdef OFX_EXTENSIONS_NATRON
+    const bool hasB = hasRGB && (comps != ePixelComponentXY);
+#else
+    const bool hasB = hasRGB;
+#endif
+    const bool hasA = (comps == ePixelComponentRGBA) || (comps == ePixelComponentAlpha);
+
+    return ColorMatrixChannels{ { hasRGB && _processR->getValueAtTime(time),
+                                  hasRGB && _processG->getValueAtTime(time),
+                                  hasB && _processB->getValueAtTime(time),
+                                  hasA && _processA->getValueAtTime(time) } };
+}
+
+std::optional<ColorMatrixRows>
+ColorMatrixPlugin::getMatrix(double time,
+                             const ColorMatrixChannels& changed) const
+{
+    ColorMatrixRows m;
+    _outputRed->getValueAtTime(time, m[0].r, m[0].g, m[0].b, m[0].a);
+    _outputGreen->getValueAtTime(time, m[1].r, m[1].g, m[1].b, m[1].a);
+    _outputBlue->getValueAtTime(time, m[2].r, m[2].g, m[2].b, m[2].a);
+    _outputAlpha->getValueAtTime(time, m[3].r, m[3].g, m[3].b, m[3].a);
+    if ( !_invert->getValueAtTime(time) ) {
+        return m;
+    }
+
+    return invertColorMatrix( effectiveColorMatrix(m, changed) );
+}
 
 void
 ColorMatrixPlugin::changedClip(const InstanceChangedArgs &args,
@@ -716,6 +847,16 @@ ColorMatrixPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setHint(kParamOutputAlphaHint);
         param->setDefault(0.0, 0.0, 0.0, 1.0);
         param->setAnimates(true); // can animate
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamInvert);
+        param->setLabel(kParamInvertLabel);
+        param->setHint(kParamInvertHint);
+        param->setDefault(false);
+        param->setAnimates(true);
         if (page) {
             page->addChild(*param);
         }

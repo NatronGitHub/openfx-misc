@@ -70,8 +70,15 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              (R, G, B, A, 0, 1); describeInContext failed there (issue #166)
 //              New "Invert" parameter (issue #295), off by default: use 1 - alpha (or 1 minus the
 //              selected channel; the constants 0 and 1 are swapped). Existing projects render the same.
+//              Premult only: new "Clamp Alpha" parameter (issue #295), off by default: the premult channel
+//              is clamped to [0, 1] before multiplying. Existing projects render the same.
+// Premult version 3.0: Clamp Alpha is on by default (issue #295), as in the node of the same name; version 2.1 is
+//              kept, obsolete, with Clamp Alpha off by default, so that existing projects render the same.
+//              Unpremult stays at version 2.1.
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+#define kPluginPremultVersionMajor 3 // Premult only (see the history)
+#define kPluginPremultVersionMinor 0
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -132,6 +139,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamInvertLabel "Invert"
 #define kParamInvertHint "Use 1 minus the selected channel instead of the channel itself (the constants 0 and 1 are swapped)."
 
+#define kParamClampAlpha "clampAlpha"
+#define kParamClampAlphaLabel "Clamp Alpha"
+#define kParamClampAlphaHint "Clamp the premult channel (after Invert) to [0, 1] before multiplying, so that an alpha outside [0, 1] " \
+    "neither scales the colour beyond the input nor flips its sign. When unchecked, the colour is multiplied by the raw value. " \
+    "Only floating-point images can have values outside [0, 1]. On by default since version 3.0 (off in projects made with version 2)."
+
 static bool gIsMultiplanar = false;
 
 // TODO: sRGB conversions for short and byte types
@@ -152,6 +165,7 @@ protected:
     bool _processB;
     bool _processA;
     bool _invert;
+    bool _clampAlpha;
 
 public:
     /** @brief no arg ctor */
@@ -167,6 +181,7 @@ public:
         , _processB(true)
         , _processA(false)
         , _invert(false)
+        , _clampAlpha(false)
     {
     }
 
@@ -189,6 +204,9 @@ public:
     // Use maxValue minus the premult channel image (0 where it has no pixel). The constants
     // (no premult channel image) are not inverted here: setupAndProcess() swaps them.
     void setInvert(bool invert) { _invert = invert; }
+
+    // Clamp the premult channel to [0, maxValue] (after Invert) before multiplying (Premult only).
+    void setClampAlpha(bool clampAlpha) { _clampAlpha = clampAlpha; }
 };
 
 template <class PIX, int maxValue>
@@ -319,6 +337,14 @@ private:
                             // also where the premult channel image has no pixel (0 there): 1 - 0
                             alpha = (PIX)(maxValue - alpha);
                         }
+                        if (isPremult && _clampAlpha) {
+                            // only float images can be outside [0, maxValue]; NaN is left as is
+                            if (alpha < (PIX)0) {
+                                alpha = (PIX)0;
+                            } else if (alpha > (PIX)maxValue) {
+                                alpha = (PIX)maxValue;
+                            }
+                        }
                         for (int c = 0; c < nComponents; c++) {
                             PIX srcPixVal = c < _srcNComps ? srcPix[c] : 0;
                             if (isPremult) {
@@ -372,6 +398,7 @@ public:
         , _inputPlane(NULL)
         //, _premultChanged(NULL)
         , _invert(NULL)
+        , _clampAlpha(NULL)
     {
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -396,6 +423,9 @@ public:
         //assert(_premultChanged);
         _invert = fetchBooleanParam(kParamInvert);
         assert(_invert);
+        // Premult only (see describeInContext)
+        _clampAlpha = isPremult ? fetchBooleanParam(kParamClampAlpha) : NULL;
+        assert(_clampAlpha || !isPremult);
 
         if (gIsMultiplanar) {
 
@@ -449,6 +479,7 @@ private:
     ChoiceParam* _inputPlane;
     //BooleanParam* _premultChanged; // set to true the first time the user connects src
     BooleanParam* _invert;
+    BooleanParam* _clampAlpha; // Premult only
 };
 
 
@@ -706,6 +737,8 @@ PremultPlugin<isPremult>::setupAndProcess(PremultBase &processor,
         premultWith1IfNoImage = !premultWith1IfNoImage;
     }
     processor.setInvert(invert);
+    // the constants (0 and 1) are in [0, 1]: clamping only changes the premult channel image
+    processor.setClampAlpha( _clampAlpha && _clampAlpha->getValueAtTime(args.time) );
     processor.setPremultChannelImg(premultImg, premultChannelIndex, premultWith1IfNoImage);
     // set the render window
     processor.setRenderWindow(args.renderWindow, args.renderScale);
@@ -981,14 +1014,15 @@ PremultPlugin<isPremult>::changedClip(const InstanceChangedArgs & args,
 
 //mDeclarePluginFactory(PremultPluginFactory, {ofxsThreadSuiteCheck();}, {});
 
-template<bool isPremult>
+// one factory class per plug-in and major version (the entry points are per class, as in
+// mDeclarePluginFactoryVersioned)
+template<bool isPremult, unsigned int majorVersion>
 class PremultPluginFactory
-    : public PluginFactoryHelper<PremultPluginFactory<isPremult> >
+    : public PluginFactoryHelper<PremultPluginFactory<isPremult, majorVersion> >
 {
 public:
     PremultPluginFactory(const std::string& id,
-                         unsigned int verMaj,
-                         unsigned int verMin) : PluginFactoryHelper<PremultPluginFactory<isPremult> >(id, verMaj, verMin) {}
+                         unsigned int verMin) : PluginFactoryHelper<PremultPluginFactory<isPremult, majorVersion> >(id, majorVersion, verMin) {}
 
     virtual void load() OVERRIDE FINAL {ofxsThreadSuiteCheck();}
     //virtual void unload() OVERRIDE FINAL {};
@@ -998,12 +1032,14 @@ public:
 };
 
 
-template<bool isPremult>
+template<bool isPremult, unsigned int majorVersion>
 void
-PremultPluginFactory<isPremult>::describe(ImageEffectDescriptor &desc)
+PremultPluginFactory<isPremult, majorVersion>::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     if (isPremult) {
+        // version 2 (Clamp Alpha off by default) is kept for existing projects
+        desc.setIsObsolete(majorVersion < kPluginPremultVersionMajor);
         desc.setLabel(kPluginPremultName);
         desc.setPluginGrouping(kPluginPremultGrouping);
         desc.setPluginDescription(kPluginPremultDescription);
@@ -1047,9 +1083,9 @@ PremultPluginFactory<isPremult>::describe(ImageEffectDescriptor &desc)
 #endif
 }
 
-template<bool isPremult>
+template<bool isPremult, unsigned int majorVersion>
 void
-PremultPluginFactory<isPremult>::describeInContext(ImageEffectDescriptor &desc,
+PremultPluginFactory<isPremult, majorVersion>::describeInContext(ImageEffectDescriptor &desc,
                                                    ContextEnum /*context*/)
 {
     // Source clip only in the filter context
@@ -1185,19 +1221,34 @@ PremultPluginFactory<isPremult>::describeInContext(ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
+
+    // clamp alpha (Premult only; added in version 2.1, issue #295): on by default from version 3.0, as in the node
+    // of the same name; off in version 2.1, so that existing projects render the same
+    if (isPremult) {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamClampAlpha);
+        param->setLabel(kParamClampAlphaLabel);
+        param->setHint(kParamClampAlphaHint);
+        param->setDefault(majorVersion >= kPluginPremultVersionMajor);
+        param->setAnimates(true);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
 } // >::describeInContext
 
-template<bool isPremult>
+template<bool isPremult, unsigned int majorVersion>
 ImageEffect*
-PremultPluginFactory<isPremult>::createInstance(OfxImageEffectHandle handle,
+PremultPluginFactory<isPremult, majorVersion>::createInstance(OfxImageEffectHandle handle,
                                                 ContextEnum /*context*/)
 {
     return new PremultPlugin<isPremult>(handle);
 }
 
-static PremultPluginFactory<true> p1(kPluginPremultIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-static PremultPluginFactory<false> p2(kPluginUnpremultIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static PremultPluginFactory<true, kPluginPremultVersionMajor> p1(kPluginPremultIdentifier, kPluginPremultVersionMinor);
+static PremultPluginFactory<true, kPluginVersionMajor> p1v2(kPluginPremultIdentifier, kPluginVersionMinor); // obsolete
+static PremultPluginFactory<false, kPluginVersionMajor> p2(kPluginUnpremultIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p1)
+mRegisterPluginFactoryInstance(p1v2)
 mRegisterPluginFactoryInstance(p2)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

@@ -545,6 +545,16 @@ tests=(
     "Premult invert 0|net.sf.openfx.Premult|filter|*|mean=0.25,0.5,0.75,0.25||-i Source=solid:0.25,0.5,0.75,0.25 premultChannel=4 invert=1"
     "Premult invert 1|net.sf.openfx.Premult|filter|*|mean=0,0,0,0.25||-i Source=solid:0.25,0.5,0.75,0.25 premultChannel=5 invert=1"
     "Unpremult invert 0|net.sf.openfx.Unpremult|filter|*|identity+mean=0.25,0.5,0.75,0.25||-i Source=solid:0.25,0.5,0.75,0.25 premultChannel=4 invert=1"
+    # Clamp Alpha (issue #295) clamps alpha to [0, 1] before multiplying: 2 gives 1 and -0.5 gives 0;
+    # with Invert, 1 - 2 = -1 is clamped to 0. It is on by default in Premult 3 (the highest
+    # version, which hostDemo picks); Premult 2 (-m 2, obsolete) and Clamp Alpha off multiply
+    # by the raw alpha (alpha 2 doubles the colour).
+    "Premult alpha above 1|net.sf.openfx.Premult|filter|float|mean=0.25,0.5,0.75,2||-i Source=solid:0.25,0.5,0.75,2"
+    "Premult 2 alpha above 1|net.sf.openfx.Premult|filter|float|mean=0.5,1,1.5,2||-m 2 -i Source=solid:0.25,0.5,0.75,2"
+    "Premult no clamp alpha above 1|net.sf.openfx.Premult|filter|float|mean=0.5,1,1.5,2||-i Source=solid:0.25,0.5,0.75,2 clampAlpha=0"
+    "Premult clamp alpha above 1|net.sf.openfx.Premult|filter|float|mean=0.25,0.5,0.75,2||-i Source=solid:0.25,0.5,0.75,2 clampAlpha=1"
+    "Premult clamp alpha below 0|net.sf.openfx.Premult|filter|float|mean=0,0,0,-0.5||-i Source=solid:0.25,0.5,0.75,-0.5 clampAlpha=1"
+    "Premult clamp alpha invert|net.sf.openfx.Premult|filter|float|mean=0,0,0,2||-i Source=solid:0.25,0.5,0.75,2 invert=1 clampAlpha=1"
     "CImgBlur|net.sf.cimg.CImgBlur|filter|float|nonconst+changed:Source||-i Source=checker:8 -i Mask=none size=5,5 expandRoD=0"
     "CImgBlur expandRoD|net.sf.cimg.CImgBlur|filter|float|nonconst+changed:Source||-i Source=checker:8 -i Mask=none size=5,5"
     "Transform|net.sf.openfx.TransformPlugin|filter|*|nonconst+changed:Source||-i Source=checker:32 rotate=30 scale=0.8,0.8"
@@ -558,6 +568,17 @@ tests=(
     "Crop out of Source|net.sf.openfx.CropPlugin|filter|*|mean=0,0,0,0||-i Source=ramp bottomLeft=-100,-100 size=920,776 --frames 0 --window -90,-90,-10,-10"
     # saturation 0: the Rec.709 luminance
     "ColorCorrect|net.sf.openfx.ColorCorrectPlugin|filter|*|mean=0.465,0.465,0.465,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none MasterSaturation=0,0,0,0"
+    # ColorMatrix Invert (issue #291, off by default) applies the inverse matrix: with R' = R + G and
+    # B' = 2 B, the inverse gives R = R' - G' = 0.75 - 0.5 and B = B' / 2 = 0.25 / 2 (without
+    # Invert: 1.25 and 0.5). The inverse of the identity is an identity.
+    "ColorMatrix invert|net.sf.openfx.ColorMatrixPlugin|filter|*|notidentity+mean=0.25,0.5,0.125,1||-i Source=solid:0.75,0.5,0.25,1 -i Mask=none outputRed=1,1,0,0 outputBlue=0,0,2,0 invert=1"
+    "ColorMatrix invert identity|net.sf.openfx.ColorMatrixPlugin|filter|*|identity+mean=0.75,0.5,0.25,1||-i Source=solid:0.75,0.5,0.25,1 -i Mask=none clampBlack=0 invert=1"
+    # B unchecked: the render keeps B, so the conversion is R' = R + B, B' = B, and its inverse
+    # R = R' - B' = 0.75 - 0.25 (the inverse of the matrix with its B row 2 B would give R' - B' / 2)
+    "ColorMatrix invert unprocessed|net.sf.openfx.ColorMatrixPlugin|filter|*|notidentity+mean=0.5,0.5,0.25,1||-i Source=solid:0.75,0.5,0.25,1 -i Mask=none outputRed=1,0,1,0 outputBlue=0,0,2,0 NatronOfxParamProcessB=0 invert=1"
+    # a matrix so close to singular (determinant about 1e-17 in double) that its inverse is
+    # meaningless: the render fails with an error (an expected error, not a bug)
+    "ColorMatrix invert near-singular|net.sf.openfx.ColorMatrixPlugin|filter|float|mean=0,0,0,1|expected error: near-singular matrix~not invertible|-i Source=solid:0.75,0.5,0.25,1 -i Mask=none outputRed=0.1,0.2,0.3,0 outputGreen=0.4,0.5,0.6,0 outputBlue=0.7,0.8,0.9,0 invert=1"
     # Saturation -1 (issue #292): a check of the formula, 2 * luma - colour, luma (Rec. 709) 0.4649.
     # It does not test the new minimum: hostDemo does not clamp parameters to their range
     "Saturation negative formula|net.sf.openfx.SaturationPlugin|filter|*|notidentity+mean=0.6798,0.4298,0.1798,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none saturation=-1"
@@ -946,6 +967,12 @@ tests=(
     "HSVTool clamp white premult|net.sf.openfx.HSVToolPlugin|filter|byte|notidentity+mean=0.25,0.25,0.25,0.25||-i Source=solid:0.5,0.25,0.25,0.25 -i Mask=none outputAlpha=0 clampBlack=0 clampWhite=1 premult=1"
     "HSVTool source alpha|net.sf.openfx.HSVToolPlugin|filter|*|mean=0.75,0.25,0.5,0.5||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none outputAlpha=0 clampBlack=0 hueRotation=120"
     "HSVTool premult|net.sf.openfx.HSVToolPlugin|filter|*|mean=0.375,0.125,0.25,0.5||-i Source=solid:0.125,0.25,0.375,0.5 -i Mask=none outputAlpha=0 clampBlack=0 premult=1 hueRotation=120"
+    # Set Saturation and Set Brightness (issue #293, off by default): (0.25, 0.5, 0.75) is HSV (210, 2/3,
+    # 0.75); saturation set to 0.2 gives min = 0.75 * (1 - 0.2) = 0.6, and G halfway at hue 210 (an
+    # offset of 0.2 would give a saturation of 0.867); brightness set to 0.5 gives max 0.5, min
+    # 0.5 / 3 (an offset would give 1.25)
+    "HSVTool set saturation|net.sf.openfx.HSVToolPlugin|filter|*|notidentity+mean=0.6,0.675,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none outputAlpha=0 clampBlack=0 setSaturation=1 saturationAdjustment=0.2"
+    "HSVTool set brightness|net.sf.openfx.HSVToolPlugin|filter|*|notidentity+mean=0.16667,0.33333,0.5,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none outputAlpha=0 clampBlack=0 setBrightness=1 brightnessAdjustment=0.5"
     # DenoiseSharpen, RGB color model, R unchecked: B is denoised (issue #323)
     "DenoiseSharpen B, not R|net.sf.openfx.DenoiseSharpen|filter|float|notidentity+changed:Source||--frames 0 -i Source=file:convsrc.pfm -i Mask=none analysisLock=1 colorModel=3 NatronOfxParamProcessR=0 crbbNoiseLevelHigh=0.02"
     # ImageStatistics: the analysis buttons (pressed with -s, instanceChanged with
@@ -1127,6 +1154,17 @@ tests=(
     "CImgSmooth ramp|net.sf.cimg.CImgSmooth|filter|float|mean=0.5,0.5,0.5,0.5+nonconst||-i Source=ramp -i Mask=none"
     "CImgSharpenShock flat|net.sf.cimg.CImgSharpenShock|filter|float|mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none"
     "CImgSharpenShock ramp|net.sf.cimg.CImgSharpenShock|filter|float|nonconst||-i Source=ramp -i Mask=none"
+    # EdgeDetectCImg on a white pixel at (32,24), Separate channels: Sobel (1-2-1 kernels / 8) gives 2/8
+    # next to it and sqrt(2)/8 on the diagonal; Prewitt (1-1-1 kernels / 6, issue #314, appended
+    # as filter 8) gives 1/6 and sqrt(2)/6. Threshold (issue #314, 0 by default) sets the edges
+    # below it to 0.
+    "EdgeDetectCImg Sobel impulse|eu.cimg.EdgeDetect|filter|float|tol=1e-4+mean=0.25,0.25,0.25,1||-i Source=file:impulse.pfm -i Mask=none filter=1 multiChannel=0 --frames 0 --window 33,24,34,25"
+    "EdgeDetectCImg Prewitt impulse|eu.cimg.EdgeDetect|filter|float|tol=1e-4+mean=0.166667,0.166667,0.166667,1||-i Source=file:impulse.pfm -i Mask=none filter=8 multiChannel=0 --frames 0 --window 33,24,34,25"
+    "EdgeDetectCImg Prewitt impulse diagonal|eu.cimg.EdgeDetect|filter|float|tol=1e-4+mean=0.235702,0.235702,0.235702,1||-i Source=file:impulse.pfm -i Mask=none filter=8 multiChannel=0 --frames 0 --window 33,25,34,26"
+    "EdgeDetectCImg Sobel threshold|eu.cimg.EdgeDetect|filter|float|tol=1e-4+mean=0,0,0,1||-i Source=file:impulse.pfm -i Mask=none filter=1 multiChannel=0 threshold=0.3 --frames 0 --window 33,24,34,25"
+    # threshold 0.2 on the two pixels (33,24) and (33,25): 1/6 is removed, sqrt(2)/6 is kept, so the
+    # mean is sqrt(2)/12 (without the threshold, (1/6 + sqrt(2)/6) / 2 = 0.2012)
+    "EdgeDetectCImg Prewitt threshold|eu.cimg.EdgeDetect|filter|float|tol=1e-4+mean=0.117851,0.117851,0.117851,1||-i Source=file:impulse.pfm -i Mask=none filter=8 multiChannel=0 threshold=0.2 --frames 0 --window 33,24,34,26"
     # FFT convolution of a 720x576 image (not a power of two: with FFTW or pocketfft, the FFT is
     # not padded to 1024x1024) by a 7x5 kernel: the exact linear convolution, without a CImg
     # "non 2^N dimension" error, whatever the FFT library (CImgFFTConvolve.h)

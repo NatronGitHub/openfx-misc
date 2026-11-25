@@ -193,7 +193,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginNameEdgeDetect          "EdgeDetectCImg"
 #define kPluginDescriptionEdgeDetect \
-"Perform edge detection by computing the image gradient magnitude. Optionally, edge detection can be preceded by blurring, and followed by erosion (or dilation, with a negative Erode Size) and non-maxima suppression. There is no threshold: in most cases, EdgeDetect is followed by a Grade node to extract the proper edges and generate a mask from these.\n" \
+"Perform edge detection by computing the image gradient magnitude. Optionally, edge detection can be preceded by blurring, and followed by erosion (or dilation, with a negative Erode Size) and non-maxima suppression. Edges weaker than the Threshold are set to 0; in most cases, EdgeDetect is followed by a Grade node to extract the proper edges and generate a mask from these.\n" \
 "\n" \
 "For color or multi-channel images, several edge detection algorithms are proposed to combine the gradients computed in each channel:\n" \
 "- Separate: the gradient magnitude is computed in each channel separately, and the output is a color edge image.\n" \
@@ -230,7 +230,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // EdgeExtend version 4.1: not an identity (pass-through) with a small size (below about 0.24 with the Gaussian filters, 1 with Box, Triangle
 //              and Quadratic, at full resolution, more at proxy scales), since the render merges the image over itself (issue #337);
 // EdgeDetect version 5.0: fix the gradient direction in RMS multichannel mode (only EdgeDetect has version 5);
-//              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79)
+//              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79);
+//              (5.0 is unreleased, extended in place, issue #314) Prewitt filter (appended to the Filter menu) and
+//              Threshold parameter (default 0: no edge is removed)
 #define kPluginVersionMajorEdgeDetect 5
 #define kPluginVersionMinorOld 1 // version 3, kept for backward compatibility
 #define kPluginVersionMinorEdgeExtend 1
@@ -372,7 +374,7 @@ enum FilterEnum
 
 #define kParamEdgeDetectFilter "filter"
 #define kParamEdgeDetectFilterLabel "Filter"
-#define kParamEdgeDetectFilterHint "Edge detection filter. If the blur size is not zero, it is used as the kernel size for quasi-Gaussian, Gaussian, box, triangle and quadratic filters. For the simple, rotation-invariant and Sobel filters, the image is pre-blurred with a Gaussian filter."
+#define kParamEdgeDetectFilterHint "Edge detection filter. If the blur size is not zero, it is used as the kernel size for quasi-Gaussian, Gaussian, box, triangle and quadratic filters. For the simple, rotation-invariant, Sobel and Prewitt filters, the image is pre-blurred with a Gaussian filter."
 #define kParamEdgeDetectFilterOptionSimple "Simple", "Gradient is estimated by centered finite differences.", "simple"
 #define kParamEdgeDetectFilterOptionSobel "Sobel", "Compute gradient using the Sobel 3x3 filter.", "sobel"
 #define kParamEdgeDetectFilterOptionRotationInvariant "Rotation Invariant", "Compute gradient using a 3x3 rotation-invariant filter.", "rotinvariant"
@@ -381,6 +383,7 @@ enum FilterEnum
 #define kParamEdgeDetectFilterOptionBox "Box", "Box filter - FIR (finite support / impulsional response).", "box"
 #define kParamEdgeDetectFilterOptionTriangle "Triangle", "Triangle/tent filter - FIR (finite support / impulsional response).", "triangle"
 #define kParamEdgeDetectFilterOptionQuadratic "Quadratic", "Quadratic filter - FIR (finite support / impulsional response).", "quadratic"
+#define kParamEdgeDetectFilterOptionPrewitt "Prewitt", "Compute gradient using the Prewitt 3x3 filter.", "prewitt"
 #define kParamEdgeDetectFilterDefault eEdgeDetectFilterGaussian
 enum EdgeDetectFilterEnum
 {
@@ -392,6 +395,7 @@ enum EdgeDetectFilterEnum
     eEdgeDetectFilterBox,
     eEdgeDetectFilterTriangle,
     eEdgeDetectFilterQuadratic,
+    eEdgeDetectFilterPrewitt, // last: added in 5.0 (issue #314)
 };
 
 #define kParamEdgeDetectMultiChannel "multiChannel"
@@ -413,6 +417,11 @@ enum EdgeDetectMultiChannelEnum
 #define kParamEdgeDetectNMS "nms"
 #define kParamEdgeDetectNMSLabel "Non-Maxima Suppression"
 #define kParamEdgeDetectNMSHint "Perform non-maxima suppression (after edge detection and erosion): only values that are maximal in the direction orthogonal to the contour are kept. For multi-channel images, the contour direction estimation depends on the multi-channel operation."
+
+#define kParamEdgeDetectThreshold "threshold"
+#define kParamEdgeDetectThresholdLabel "Threshold"
+#define kParamEdgeDetectThresholdHint "Edge magnitudes below this value are set to 0 (after the erosion and the non-maxima suppression). With 0, no edge is removed. " \
+    "The threshold applies to the gradient computed at the render scale, which is not rescaled: at a proxy scale, the gradients are different, so different edges may be kept."
 
 #define kParamEdgeDetectErode "erodeSize"
 #define kParamEdgeDetectErodeLabel "Erode Size"
@@ -1045,6 +1054,7 @@ struct CImgBlurParams
     EdgeDetectFilterEnum edgeDetectFilter;
     EdgeDetectMultiChannelEnum edgeDetectMultiChannel;
     bool edgeDetectNMS;
+    double edgeDetectThreshold;
     bool expandRoD;
     bool cropToFormat;
     double alphaThreshold;
@@ -1196,6 +1206,7 @@ public:
         , _edgeDetectBlur(NULL)
         , _edgeDetectErode(NULL)
         , _edgeDetectNMS(NULL)
+        , _edgeDetectThreshold(NULL)
         , _expandRoD(NULL)
         , _cropToFormat(NULL)
         , _alphaThreshold(NULL)
@@ -1268,10 +1279,11 @@ public:
             _edgeDetectBlur = fetchDoubleParam(kParamEdgeDetectBlur);
             _edgeDetectErode = fetchDoubleParam(kParamEdgeDetectErode);
             _edgeDetectNMS = fetchBooleanParam(kParamEdgeDetectNMS);
-            assert(_edgeDetectFilter && _edgeDetectMultiChannel && _edgeDetectBlur && _edgeDetectErode && _edgeDetectNMS);
+            _edgeDetectThreshold = fetchDoubleParam(kParamEdgeDetectThreshold);
+            assert(_edgeDetectFilter && _edgeDetectMultiChannel && _edgeDetectBlur && _edgeDetectErode && _edgeDetectNMS && _edgeDetectThreshold);
         } else {
             // kParamFilter and kParamEdgeDetectFilter have the same value
-            assert( /*!paramExists(kParamEdgeDetectFilter) &&*/ !paramExists(kParamEdgeDetectMultiChannel) && !paramExists(kParamEdgeDetectBlur) && !paramExists(kParamEdgeDetectErode) && !paramExists(kParamEdgeDetectNMS) );
+            assert( /*!paramExists(kParamEdgeDetectFilter) &&*/ !paramExists(kParamEdgeDetectMultiChannel) && !paramExists(kParamEdgeDetectBlur) && !paramExists(kParamEdgeDetectErode) && !paramExists(kParamEdgeDetectNMS) && !paramExists(kParamEdgeDetectThreshold) );
         }
         if (_blurPlugin == eBlurPluginBlur ||
             _blurPlugin == eBlurPluginLaplacian ||
@@ -1495,6 +1507,7 @@ public:
                 case eEdgeDetectFilterSimple:
                 case eEdgeDetectFilterSobel:
                 case eEdgeDetectFilterRotationInvariant:
+                case eEdgeDetectFilterPrewitt:
                     params.filter = eFilterGaussian;
                     break;
                 case eEdgeDetectFilterQuasiGaussian:
@@ -1550,6 +1563,7 @@ public:
             // _edgeDetectErode already used as params.erodeSize
             // _edgeDetectBlur already used for params.sizex/y
             params.edgeDetectNMS = _edgeDetectNMS->getValueAtTime(time);
+            params.edgeDetectThreshold = _edgeDetectThreshold->getValueAtTime(time);
         } else {
             assert(_blurPlugin == eBlurPluginBlur ||
                    _blurPlugin == eBlurPluginLaplacian ||
@@ -1561,6 +1575,7 @@ public:
                    _blurPlugin == eBlurPluginEdgeExtend);
             params.edgeDetectMultiChannel = eEdgeDetectMultiChannelSeparate;
             params.edgeDetectNMS = false;
+            params.edgeDetectThreshold = 0.;
         }
 
         params.cropToFormat = _cropToFormat ? _cropToFormat->getValueAtTime(time) : false;
@@ -2194,7 +2209,8 @@ public:
 
         if (params.edgeDetectFilter == eEdgeDetectFilterSimple ||
             params.edgeDetectFilter == eEdgeDetectFilterSobel ||
-            params.edgeDetectFilter == eEdgeDetectFilterRotationInvariant) {
+            params.edgeDetectFilter == eEdgeDetectFilterRotationInvariant ||
+            params.edgeDetectFilter == eEdgeDetectFilterPrewitt) {
             /*
             - -1 = Backward finite differences
             - 0 = Centered finite differences
@@ -2217,7 +2233,11 @@ public:
                  sy, 0,
                  1., (bool)params.boundary_i,
                  cimg);
-            grad = cimg.get_gradient(0, scheme);
+            if (params.edgeDetectFilter == eEdgeDetectFilterPrewitt) {
+                grad = prewittGradient(cimg);
+            } else {
+                grad = cimg.get_gradient(0, scheme);
+            }
             if (params.edgeDetectFilter == eEdgeDetectFilterSobel) {
                 grad[0] /= 8;
                 grad[1] /= 8;
@@ -2419,6 +2439,35 @@ public:
         if (params.edgeDetectNMS) {
             nms(cimg, grad[0], grad[1], separate);
         }
+        if (params.edgeDetectThreshold > 0.) {
+            const T threshold = static_cast<T>(params.edgeDetectThreshold);
+            cimg_for(cimg, p, T) {
+                if (*p < threshold) {
+                    *p = 0; // NaN is left as is
+                }
+            }
+        }
+    }
+
+    // The Prewitt gradient (3x3 kernels), normalized like the other filters: a ramp of slope 1
+    // gives 1. Neumann boundary conditions, as CImg's get_gradient().
+    static CImgList<T> prewittGradient(const CImg<T>& img)
+    {
+        CImgList<T> grad(2, img.width(), img.height(), img.depth(), img.spectrum(), (T)0);
+        const int w = img.width();
+        const int h = img.height();
+        cimg_forXYZC(img, x, y, z, c) {
+            const int xp = (std::max)(x - 1, 0);
+            const int xn = (std::min)(x + 1, w - 1);
+            const int yp = (std::max)(y - 1, 0);
+            const int yn = (std::min)(y + 1, h - 1);
+            grad[0](x, y, z, c) = ( ( img(xn, yp, z, c) + img(xn, y, z, c) + img(xn, yn, z, c) ) -
+                                    ( img(xp, yp, z, c) + img(xp, y, z, c) + img(xp, yn, z, c) ) ) / 6;
+            grad[1](x, y, z, c) = ( ( img(xp, yn, z, c) + img(x, yn, z, c) + img(xn, yn, z, c) ) -
+                                    ( img(xp, yp, z, c) + img(x, yp, z, c) + img(xn, yp, z, c) ) ) / 6;
+        }
+
+        return grad;
     }
 
     static double parabola(double Ip, double Ic, double In, double alpha)
@@ -2569,6 +2618,7 @@ private:
     DoubleParam *_edgeDetectBlur;
     DoubleParam *_edgeDetectErode;
     BooleanParam *_edgeDetectNMS;
+    DoubleParam *_edgeDetectThreshold;
     BooleanParam *_expandRoD;
     BooleanParam *_cropToFormat;
     DoubleParam *_alphaThreshold;
@@ -2699,6 +2749,8 @@ CImgBlurPlugin::describeInContext(ImageEffectDescriptor& desc,
         param->appendOption(kParamEdgeDetectFilterOptionTriangle);
         assert(param->getNOptions() == eEdgeDetectFilterQuadratic);
         param->appendOption(kParamEdgeDetectFilterOptionQuadratic);
+        assert(param->getNOptions() == eEdgeDetectFilterPrewitt);
+        param->appendOption(kParamEdgeDetectFilterOptionPrewitt);
         param->setDefault( (int)kParamEdgeDetectFilterDefault );
         if (page) {
             page->addChild(*param);
@@ -2706,6 +2758,18 @@ CImgBlurPlugin::describeInContext(ImageEffectDescriptor& desc,
     }
     CImgBlurPlugin::describeProcessParams(desc, page, processRGB, processAlpha,
                                           /*processIsSecret=*/ (blurPlugin == eBlurPluginEdgeExtend));
+    // EdgeDetect: the threshold comes after the channels, as in the node of the same name (issue #314)
+    if (blurPlugin == eBlurPluginEdgeDetect) {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEdgeDetectThreshold);
+        param->setLabel(kParamEdgeDetectThresholdLabel);
+        param->setHint(kParamEdgeDetectThresholdHint);
+        param->setRange(0., DBL_MAX);
+        param->setDisplayRange(0., 1.);
+        param->setDefault(0.);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
     if (blurPlugin == eBlurPluginSharpen ||
         blurPlugin == eBlurPluginSoften) {
         {
