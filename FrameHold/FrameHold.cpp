@@ -238,7 +238,9 @@ FrameHoldPlugin::hostSkipsChangedClipOnLoad()
 {
     const ImageEffectHostDescription& host = *getImageEffectHostDescription();
 
-    return host.hostName == "fr.inria.Natron" &&
+    // isNatron (kNatronOfxHostIsNatron) is also set when Natron gives another host name to the
+    // plug-in, and the host version is then still Natron's
+    return host.isNatron &&
            ( (host.versionMajor > 2) || ( (host.versionMajor == 2) && (host.versionMinor >= 6) ) );
 }
 

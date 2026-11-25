@@ -37,6 +37,7 @@
 
 #include "ofxsPixelProcessor.h"
 #include "ofxsMaskMix.h"
+#include "ofxsRGBAProcessing.h"
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
 #include "ofxsMerging.h"
@@ -1142,23 +1143,10 @@ FrameBlendPlugin::isIdentity(const IsIdentityArguments &args,
         }
     }
 
-    if (doMasking) {
-        bool maskInvert;
-        _maskInvert->getValueAtTime(args.time, maskInvert);
-        if (!maskInvert) {
-            OfxRectI maskRoD;
-            if (getImageEffectHostDescription()->supportsMultiResolution) {
-                // In Sony Catalyst Edit, clipGetRegionOfDefinition returns the RoD in pixels instead of canonical coordinates.
-                // In hosts that do not support multiResolution (e.g. Sony Catalyst Edit), all inputs have the same RoD anyway.
-                Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
-                // effect is identity if the renderWindow doesn't intersect the mask RoD
-                if ( !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
-                    identityClip = _srcClip;
+    if ( ofxsMaskRoDExcludesRenderWindow(args, _maskClip, _maskApply, _maskInvert) ) {
+        identityClip = _srcClip;
 
-                    return true;
-                }
-            }
-        }
+        return true;
     }
 
     return false;

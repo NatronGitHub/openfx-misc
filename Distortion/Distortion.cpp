@@ -75,6 +75,7 @@
 #include "ofxsCoords.h"
 #include "ofxsNormalisedDefaults.h"
 #include "ofxsMaskMix.h"
+#include "ofxsRGBAProcessing.h"
 #include "ofxsFilter.h"
 #include "ofxsMatrix2D.h"
 #include "ofxsCopier.h"
@@ -3798,24 +3799,10 @@ DistortionPlugin::isIdentity(const IsIdentityArguments &args,
         }
     }
 
-    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
-    if (doMasking) {
-        bool maskInvert;
-        _maskInvert->getValueAtTime(time, maskInvert);
-        if (!maskInvert) {
-            OfxRectI maskRoD;
-            if (getImageEffectHostDescription()->supportsMultiResolution) {
-                // In Sony Catalyst Edit, clipGetRegionOfDefinition returns the RoD in pixels instead of canonical coordinates.
-                // In hosts that do not support multiResolution (e.g. Sony Catalyst Edit), all inputs have the same RoD anyway.
-                Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
-                // effect is identity if the renderWindow doesn't intersect the mask RoD
-                if ( !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
-                    identityClip = _srcClip;
+    if ( ofxsMaskRoDExcludesRenderWindow(args, _maskClip, _maskApply, _maskInvert) ) {
+        identityClip = _srcClip;
 
-                    return true;
-                }
-            }
-        }
+        return true;
     }
 
     return false;

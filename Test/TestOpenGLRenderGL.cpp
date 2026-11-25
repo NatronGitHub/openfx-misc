@@ -24,4 +24,36 @@
 #ifdef OFX_SUPPORTS_OPENGLRENDER
 #define USE_OPENGL
 #include "TestOpenGLRender.h"
+
+#if defined(__APPLE__)
+#  include <OpenGL/OpenGL.h> // CGLGetCurrentContext
+#elif defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+#  include <windows.h> // wglGetCurrentContext
+#else
+#  include <GL/glx.h> // glXGetCurrentContext
+#  include <dlfcn.h> // dlsym
+#endif
+
+// Same check as Shadertoy::ShadertoyPlugin::openGLContextIsCurrent() (ShadertoyRenderGL.cpp):
+// DaVinci Resolve calls the CPU render action, and we render with whatever OpenGL context is
+// current, but the Fusion page has none, and GL calls without one crash.
+bool
+TestOpenGLPlugin::openGLContextIsCurrent()
+{
+#if defined(__APPLE__)
+    return CGLGetCurrentContext() != NULL;
+#elif defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+    return wglGetCurrentContext() != NULL;
+#else
+    if (glXGetCurrentContext() != NULL) {
+        return true;
+    }
+    // The host may use EGL instead of GLX: look eglGetCurrentContext up at runtime,
+    // so that the plugin does not depend on libEGL (it is only found if the host loaded it).
+    typedef void* (*EGLGetCurrentContextFunc)(void);
+    EGLGetCurrentContextFunc eglGetCurrentContextPtr = (EGLGetCurrentContextFunc)dlsym(RTLD_DEFAULT, "eglGetCurrentContext");
+
+    return eglGetCurrentContextPtr && eglGetCurrentContextPtr() != NULL;
+#endif
+}
 #endif
