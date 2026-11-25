@@ -1231,6 +1231,10 @@ RetimePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         }
     }
 
+    // Original (the default) asks the input for frames outside its range, as before these params existed
+    defineBeforeAfterParam(desc, page, kParamBefore, kParamBeforeLabel, kParamBeforeHint, eBeforeAfterOriginal);
+    defineBeforeAfterParam(desc, page, kParamAfter, kParamAfterLabel, kParamAfterHint, eBeforeAfterOriginal);
+    // the filter comes after Before and After (#390)
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamFilter);
         param->setLabel(kParamFilterLabel);
@@ -1248,9 +1252,6 @@ RetimePluginFactory::describeInContext(ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
-    // Original (the default) asks the input for frames outside its range, as before these params existed
-    defineBeforeAfterParam(desc, page, kParamBefore, kParamBeforeLabel, kParamBeforeHint, eBeforeAfterOriginal);
-    defineBeforeAfterParam(desc, page, kParamAfter, kParamAfterLabel, kParamAfterHint, eBeforeAfterOriginal);
 } // RetimePluginFactory::describeInContext
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref ImageEffect class */

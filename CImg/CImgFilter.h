@@ -203,6 +203,22 @@ public:
                                                             bool processRGB /* = true*/,
                                                             bool processAlpha /* = false*/,
                                                             bool processIsSecret /* = false*/);
+    // describeInContextBegin() is describeInContextClips() (the clips and the Controls page) then
+    // describeProcessParams() (the R, G, B and A checkboxes); a plug-in whose first params come
+    // before the channels (EdgeDetect) calls them separately.
+    static OFX::PageParamDescriptor* describeInContextClips(bool sourceIsOptional,
+                                                            OFX::ImageEffectDescriptor &desc,
+                                                            OFX::ContextEnum context,
+                                                            bool supportsRGBA,
+                                                            bool supportsRGB,
+                                                            bool supportsXY,
+                                                            bool supportsAlpha,
+                                                            bool supportsTiles);
+    static void describeProcessParams(OFX::ImageEffectDescriptor &desc,
+                                      OFX::PageParamDescriptor* page,
+                                      bool processRGB,
+                                      bool processAlpha,
+                                      bool processIsSecret);
     static void describeInContextEnd(OFX::ImageEffectDescriptor &desc,
                                      OFX::ContextEnum context,
                                      OFX::PageParamDescriptor* page,
@@ -402,6 +418,24 @@ public:
                                                                   processRGB,
                                                                   processAlpha,
                                                                   processIsSecret);
+    }
+
+    static OFX::PageParamDescriptor* describeInContextClips(OFX::ImageEffectDescriptor &desc,
+                                                            OFX::ContextEnum context,
+                                                            bool supportsRGBA,
+                                                            bool supportsRGB,
+                                                            bool supportsXY,
+                                                            bool supportsAlpha,
+                                                            bool supportsTiles)
+    {
+        return CImgFilterPluginHelperBase::describeInContextClips(sourceIsOptional,
+                                                                  desc,
+                                                                  context,
+                                                                  supportsRGBA,
+                                                                  supportsRGB,
+                                                                  supportsXY,
+                                                                  supportsAlpha,
+                                                                  supportsTiles);
     }
 };
 
