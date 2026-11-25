@@ -111,6 +111,16 @@ def _impulse(x, y):
     return 0., 0., 0., 1.
 
 
+# Pseudo-random values in [0, 1), a different pattern in each channel:
+# (a x^2 + b y + c x y) mod m / m, exact in floats on both sides.
+_HASH = ((7, 13, 3, 31), (5, 11, 2, 29), (3, 17, 5, 23))
+
+
+def _hash(x, y):
+    return tuple(((a * x * x + b * y + c * x * y) % m) / float(m)
+                 for a, b, c, m in _HASH) + (1.,)
+
+
 def _hue_wheel(x, y, radius):
     dx, dy = x - 15.5, y - 15.5
     return (.5 + dx / radius,
@@ -237,6 +247,13 @@ IMAGES = {
         "nuke": ("(x == %d && y == %d) ? 1 : 0" % (WIDTH // 2, HEIGHT // 2),)
         * 3 + ("1",),
         "py": _impulse,
+    },
+    # Pseudo-random values (a difference from the blur that is never 0);
+    # opaque.
+    "hash": {
+        "nuke": tuple("fmod(%d * x * x + %d * y + %d * x * y, %d) / %d"
+                      % (a, b, c, m, m) for a, b, c, m in _HASH) + ("1",),
+        "py": _hash,
     },
     # All hues around the centre, the saturation growing with the radius,
     # going outside [0, 1] in the corners; r + g + b = 1.5; opaque.
@@ -1460,8 +1477,6 @@ for _steps in (1, 2, 3, 5):
         clips={"Source": "ramp", "Mask": "white"}))
 
 # ---------------------------------------------------------------- Filter
-# Sharpen and Soften size 3, with x in pixels (the size is canonical).
-SHARPEN_SIZE = {"size": [cx(3), 3], "uniform": 0}
 CIMG = "net.sf.cimg."
 CASES += [
     case("Blur defaults (size 0)", ("Blur", {}), (CIMG + "CImgBlur", {}),
@@ -1470,44 +1485,71 @@ CASES += [
     case("Blur size 10, impulse (BlurCImg size 10)",
          ("Blur", {"size": 10}), (CIMG + "CImgBlur", {"size": [10, 10]}),
          input="impulse", tolerance=1e-4),
-    case("Blur size 10, impulse (BlurCImg size x times PAR)",
-         ("Blur", {"size": 10}),
-         (CIMG + "CImgBlur", {"size": [cx(10), 10], "uniform": 0}),
-         input="impulse", tolerance=1e-4),
+    case("Blur size 3, impulse (BlurCImg size 3)",
+         ("Blur", {"size": 3}), (CIMG + "CImgBlur", {"size": [3, 3]}),
+         input="impulse", tolerance=1e-5),
+    case("Blur size 1, impulse (BlurCImg size 1)",
+         ("Blur", {"size": 1}), (CIMG + "CImgBlur", {"size": [1, 1]}),
+         input="impulse", tolerance=1e-5),
+    # Both sizes are canonical: the x size in pixels is the size / PAR.
     case("Blur size 4 on the ramp (edges)", ("Blur", {"size": 4}),
-         (CIMG + "CImgBlur", {"size": [cx(4), 4], "uniform": 0}),
+         (CIMG + "CImgBlur", {"size": [4, 4]}),
          input="ramp", channels="rgba", tolerance=2e-3),
     case("Blur size 4 on the ramp, BlurCImg boundary Nearest",
          ("Blur", {"size": 4}),
-         (CIMG + "CImgBlur", {"size": [cx(4), 4], "uniform": 0,
-                              "boundary": "Nearest"}),
+         (CIMG + "CImgBlur", {"size": [4, 4], "boundary": "Nearest"}),
          input="ramp", channels="rgba", tolerance=2e-3),
-    case("Laplacian size 3", ("Laplacian", {"size": 3}),
-         (CIMG + "CImgLaplacian", {"size": [cx(3), 3], "uniform": 0}),
-         input="impulse", tolerance=0.03),
-    case("Laplacian size 3, tail (IIR Gaussian)", ("Laplacian", {"size": 3}),
-         (CIMG + "CImgLaplacian", {"size": [cx(3), 3], "uniform": 0}),
-         input="impulse", tolerance=1e-3,
-         known=312),
-    # Sharpen and Soften: RGB away from the edges (SharpenCImg and
-    # SoftenCImg leave alpha alone by default; the edges are #318).
+    case("Laplacian size 3, tail", ("Laplacian", {"size": 3}),
+         (CIMG + "CImgLaplacian", {"size": [3, 3]}),
+         input="impulse", tolerance=1e-5),
+    case("Laplacian defaults on the checker", ("Laplacian", {}),
+         (CIMG + "CImgLaplacian", {}), input="checker", channels="rgb",
+         tolerance=1e-5),
+    # Sharpen and Soften: RGB (SharpenCImg and SoftenCImg leave alpha
+    # alone by default); the edges are repeated on both sides.
     case("Sharpen defaults on the checker", ("Sharpen", {}),
-         (CIMG + "CImgSharpen", SHARPEN_SIZE), input="checker",
-         region=INNER, tolerance=2e-3, known=313),
+         (CIMG + "CImgSharpen", {}), input="checker", channels="rgb",
+         tolerance=1e-5),
     case("Sharpen defaults, values in [0, 1]", ("Sharpen", {}),
-         (CIMG + "CImgSharpen", SHARPEN_SIZE), input="mask",
-         region=INNER, tolerance=2e-3, known=312),
+         (CIMG + "CImgSharpen", {}), input="mask", channels="rgb",
+         tolerance=1e-5),
+    # The difference is 0 away from the impulse: with a negative Minimum,
+    # a flat area whose difference rounds to +-1e-8 would get +-10.
     case("Sharpen minimum -10, maximum 10",
          ("Sharpen", {"minimum": -10, "maximum": 10}),
-         (CIMG + "CImgSharpen", SHARPEN_SIZE), input="checker",
-         region=INNER, tolerance=2e-3),
+         (CIMG + "CImgSharpen", {"minimum": -10, "maximum": 10}),
+         input="impulse", channels="rgb", tolerance=1e-5),
+    case("Sharpen minimum 0.2, maximum 0.7",
+         ("Sharpen", {"minimum": .2, "maximum": .7}),
+         (CIMG + "CImgSharpen", {"minimum": .2, "maximum": .7}),
+         input="checker", channels="rgb", tolerance=1e-5),
+    # A negative Maximum gives a change of -Maximum against the sign of the
+    # difference; a negative Minimum adds -Minimum to its magnitude.
+    case("Sharpen maximum -0.2", ("Sharpen", {"maximum": -.2}),
+         (CIMG + "CImgSharpen", {"maximum": -.2}), input="hash",
+         channels="rgb", tolerance=1e-5),
+    case("Sharpen minimum -0.1, maximum 0.3",
+         ("Sharpen", {"minimum": -.1, "maximum": .3}),
+         (CIMG + "CImgSharpen", {"minimum": -.1, "maximum": .3}),
+         input="hash", channels="rgb", tolerance=1e-5),
+    case("Sharpen maximum 0", ("Sharpen", {"maximum": 0}),
+         (CIMG + "CImgSharpen", {"maximum": 0}), input="hash",
+         channels="rgb", tolerance=1e-5),
+    case("Sharpen amount 2, size 6",
+         ("Sharpen", {"amount": 2, "size": 6}),
+         (CIMG + "CImgSharpen", {"amount": 2, "size": [6, 6]}),
+         input="checker", channels="rgb", tolerance=1e-5),
     case("Soften defaults on the checker", ("Soften", {}),
-         (CIMG + "CImgSoften", SHARPEN_SIZE), input="checker",
-         region=INNER, tolerance=2e-3, known=313),
+         (CIMG + "CImgSoften", {}), input="checker", channels="rgb",
+         tolerance=1e-5),
     case("Soften minimum -10, maximum 10",
          ("Soften", {"minimum": -10, "maximum": 10}),
-         (CIMG + "CImgSoften", SHARPEN_SIZE), input="checker",
-         region=INNER, tolerance=2e-3),
+         (CIMG + "CImgSoften", {"minimum": -10, "maximum": 10}),
+         input="impulse", channels="rgb", tolerance=1e-5),
+    case("Soften minimum 0.2, maximum 0.7",
+         ("Soften", {"minimum": .2, "maximum": .7}),
+         (CIMG + "CImgSoften", {"minimum": .2, "maximum": .7}),
+         input="checker", channels="rgb", tolerance=1e-5),
     # The reference writes one edge matte into alpha and keeps RGB; on an
     # image whose R, G, B and A are the same, EdgeDetectCImg on alpha only
     # should give the same matte. Its scale differs (e.g. 4.5 against 0.25
@@ -1536,12 +1578,22 @@ CASES += [
     case("Dilate size -1 (ErodeCImg 1)", ("Dilate", {"size": -1}),
          (CIMG + "CImgErode", {"size": [1, 1]}), input="checker",
          channels="rgba"),
-    case("Dilate size 1.5 (DilateCImg 2)", ("Dilate", {"size": 1.5}),
-         (CIMG + "CImgDilate", {"size": [2, 2]}), input="impulse",
-         channels="rgba", known=315),
+    # A fractional size s is round(s / PAR) in x and round(s) in y.
+    case("Dilate size 1.5 (DilateCImg 1, 2)", ("Dilate", {"size": 1.5}),
+         (CIMG + "CImgDilate", {"size": [1, 2]}), input="impulse",
+         channels="rgba"),
+    case("Dilate size 2.5 (DilateCImg 2, 3)", ("Dilate", {"size": 2.5}),
+         (CIMG + "CImgDilate", {"size": [2, 3]}), input="impulse",
+         channels="rgba"),
+    case("Dilate size -1.5 (ErodeCImg 1, 2)", ("Dilate", {"size": -1.5}),
+         (CIMG + "CImgErode", {"size": [1, 2]}), input="checker",
+         channels="rgba"),
     case("Dilate defaults (DilateCImg defaults)", ("Dilate", {}),
-         (CIMG + "CImgDilate", {}), input="impulse", channels="rgba",
-         known=315),
+         (CIMG + "CImgDilate", {}), input="impulse", channels="rgba"),
+    # The reference's "Erode (fast)" menu entry creates a Dilate with its
+    # defaults (size 0): ErodeCImg's default is 0 too.
+    case("ErodeCImg defaults (Erode (fast): Dilate defaults)", ("Dilate", {}),
+         (CIMG + "CImgErode", {}), input="checker", channels="rgba"),
     case("Erode (blur) defaults (ErodeBlur)", ("Erode", {}),
          ("eu.cimg.ErodeBlur", {}), input="mask", channels="rgba",
          tolerance=1e-3),
@@ -1950,12 +2002,6 @@ KNOWN = {
     305: [
         "ContactSheet 2 inputs, 2x2 cells of 32x32, center off"],
     309: ["Retime speed 0.5, filter none"],
-    312: [
-        "Blur size 10, impulse (BlurCImg size 10)",
-        "Blur size 10, impulse (BlurCImg size x times PAR)",
-        "Blur size 4 on the ramp, BlurCImg boundary Nearest"],
-    313: [
-        "Sharpen minimum -10, maximum 10", "Soften minimum -10, maximum 10"],
     315: [
         "Erode (blur) defaults (ErodeBlur)",
         "Erode (blur) size -3, blur 0.5 (ErodeBlur -3)",
@@ -2026,8 +2072,6 @@ ISSUES = {
     309: 'Retime: output range ignores the speed; no Box filter; No...',
     310: 'FrameBlend: blends 6 frames by default',
     311: 'Anaglyph, MixViews, SideBySide, JoinViews: limited to the...',
-    312: "BlurCImg family: the IIR Gaussian's shape (peak and tail)",
-    313: 'SharpenCImg, SoftenCImg: no minimum/maximum controls',
     314: 'EdgeDetectCImg: no Prewitt, no threshold, no single alpha...',
     315: 'ErodeCImg/DilateCImg, ErodeBlurCImg, ErodeSmoothCImg, Med...',
     316: 'ConvolveCImg: per-channel kernels by default',

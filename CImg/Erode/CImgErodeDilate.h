@@ -78,8 +78,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 2.0: use kNatronOfxParamProcess* parameters
 // version 2.1: add expand rod parameter
 // version 2.2: premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79)
-#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 2 // Increment this when you have fixed a bug or made it faster.
+// version 3.0: the default size is 0 (no change), as in the reference; version 2 (default size 1) is kept for
+//              backward compatibility
+#define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMajorOld 2 // version 2, kept for backward compatibility
+#define kPluginVersionMinorOld 2
 
 #define kSupportsComponentRemapping 1
 #define kSupportsTiles 1
@@ -100,8 +104,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamSize "size"
 #define kParamSizeLabel "Size"
-#define kParamSizeHint "Width/height of the rectangular structuring element is 2*size+1, in pixel units (>=0)."
-#define kParamSizeDefault 1
+#define kParamSizeHint "Width/height of the rectangular structuring element is 2*size+1, in pixel units (>=0). " \
+    "For a single fractional size s in canonical units (canonical x is pixel x times the pixel aspect ratio PAR), use " \
+    "round(s/PAR) for x and round(s) for y: e.g. s = 1.5 with PAR = 1.0667 is (1, 2)."
+#define kParamSizeDefault 0
+#define kParamSizeDefaultOld 1 // version 2
 
 #define kParamExpandRoD "expandRoD"
 #define kParamExpandRoDLabel "Expand RoD"
@@ -221,15 +228,15 @@ private:
 };
 
 
-template <bool dilate>
+// one factory class per version: the Support library allows one instance of each factory class
+template <bool dilate, unsigned int majorVersion>
 class CImgErodeDilatePluginFactory
-    : public OFX::PluginFactoryHelper<CImgErodeDilatePluginFactory<dilate> >
+    : public OFX::PluginFactoryHelper<CImgErodeDilatePluginFactory<dilate, majorVersion> >
 {
 public:
     CImgErodeDilatePluginFactory(const std::string & id,
-                                 unsigned int verMaj,
                                  unsigned int verMin)
-        : OFX::PluginFactoryHelper<CImgErodeDilatePluginFactory<dilate> >(id, verMaj, verMin)
+        : OFX::PluginFactoryHelper<CImgErodeDilatePluginFactory<dilate, majorVersion> >(id, majorVersion, verMin)
     {
     }
 
@@ -240,10 +247,13 @@ public:
     virtual OFX::ImageEffect* createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context) OVERRIDE FINAL;
 };
 
-template <bool dilate>
+template <bool dilate, unsigned int majorVersion>
 void
-CImgErodeDilatePluginFactory<dilate>::describe(OFX::ImageEffectDescriptor& desc)
+CImgErodeDilatePluginFactory<dilate, majorVersion>::describe(OFX::ImageEffectDescriptor& desc)
 {
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsObsolete(true);
+    }
     // basic labels
     desc.setLabel(dilate ? kDilatePluginName : kErodePluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -277,9 +287,9 @@ CImgErodeDilatePluginFactory<dilate>::describe(OFX::ImageEffectDescriptor& desc)
 #endif
 }
 
-template <bool dilate>
+template <bool dilate, unsigned int majorVersion>
 void
-CImgErodeDilatePluginFactory<dilate>::describeInContext(OFX::ImageEffectDescriptor& desc,
+CImgErodeDilatePluginFactory<dilate, majorVersion>::describeInContext(OFX::ImageEffectDescriptor& desc,
                                                         OFX::ContextEnum context)
 {
     // create the clips and params
@@ -299,7 +309,8 @@ CImgErodeDilatePluginFactory<dilate>::describeInContext(OFX::ImageEffectDescript
         param->setHint(kParamSizeHint);
         param->setRange(-1000, -1000, 1000, 1000);
         param->setDisplayRange(-100, -100, 100, 100);
-        param->setDefault(kParamSizeDefault, kParamSizeDefault);
+        const int sizeDefault = (majorVersion < kPluginVersionMajor) ? kParamSizeDefaultOld : kParamSizeDefault;
+        param->setDefault(sizeDefault, sizeDefault);
         if (page) {
             page->addChild(*param);
         }
@@ -317,9 +328,9 @@ CImgErodeDilatePluginFactory<dilate>::describeInContext(OFX::ImageEffectDescript
     CImgErodeDilatePlugin<dilate>::describeInContextEnd(desc, context, page);
 }
 
-template <bool dilate>
+template <bool dilate, unsigned int majorVersion>
 OFX::ImageEffect*
-CImgErodeDilatePluginFactory<dilate>::createInstance(OfxImageEffectHandle handle,
+CImgErodeDilatePluginFactory<dilate, majorVersion>::createInstance(OfxImageEffectHandle handle,
                                                      OFX::ContextEnum /*context*/)
 {
     return new CImgErodeDilatePlugin<dilate>(handle);
