@@ -69,7 +69,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              mask mix; a position whose score overflowed (inf or NaN, never chosen) is not scored (kScoreNone),
 //              and an NCC/ZNCC score that overflowed to -inf is -DBL_MAX, so the correlation is finite (issue #220);
 //              on hosts that ignore normalised defaults (e.g. DaVinci Resolve), the default center is the
-//              middle of the project, not the pixel (0.5, 0.5) (issue #263)
+//              middle of the project, not the pixel (0.5, 0.5) (issue #263);
+//              any render scale is accepted (SupportExt#218, issue #66: OFX has no way to refuse one, and
+//              e.g. VEGAS previews at 0.25): at render scale != 1 the image goes through (it used to
+//              throw), and a track button pressed there refuses with an error message (Natron presses
+//              buttons at scale 1, so this never happens there). Natron now renders TrackerPM at the
+//              viewer's scale, as a pass-through.
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 

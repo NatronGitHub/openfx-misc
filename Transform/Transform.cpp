@@ -72,6 +72,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //                shutter offset +-1000 (they were limited to 2 and +-1, SupportExt#205; part of
 //                openfx-misc#273), and a longer, infinite or NaN shutter gives an infinite region
 //                of definition (SupportExt#207).
+// #66, also in the current minor versions: on hosts that ignore normalised defaults (OFX 1.1 hosts
+//              such as VEGAS, and DaVinci Resolve), the default center is the project centre, not the
+//              bottom left corner. In existing projects on those hosts, an untouched center moves to
+//              the image centre, which changes the output.
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 // 1.1 (Transform, TransformMasked, DirBlur) (unreleased, fixed in place): the Lanczos4, Lanczos6 and Sinc4 filters (appended options) and the
@@ -134,6 +138,17 @@ public:
              !_scaleUniform->getValue() &&
              ( _scaleUniform->getNumKeys() == 0) ) {
             _scaleUniform->setIsSecretAndDisabled(true);
+        }
+        // Hosts that ignore normalised defaults (OFX 1.1 hosts such as VEGAS, and DaVinci Resolve)
+        // give the default center (0.5, 0.5) as is: move it to the project centre (#66). The host
+        // may send instanceChanged for that setValue(), which changedParam() would take as a center
+        // edit and stop the re-centring on a new source: keep Center Changed as it was (this works
+        // only if the host sends instanceChanged synchronously, from setValue()). Last, since
+        // setValue() may call changedParam().
+        const bool centerChanged = _centerChanged->getValue();
+        ofxsTransformDenormaliseDefaults(*this, /*oldParams=*/true);
+        if (_centerChanged->getValue() != centerChanged) {
+            _centerChanged->setValue(centerChanged);
         }
     }
 
