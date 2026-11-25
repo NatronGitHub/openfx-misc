@@ -504,7 +504,7 @@ tests=(
     # Constant 1.1, Infinite (#284): an infinite RoD, so a window out of the format (as in
     # "AdjustRoD out of Source") is filled too; without Infinite it is out of the RoD
     "Constant infinite|net.sf.openfx.ConstantPlugin|general|*|mean=1,0,1,0.5||-i Source=none color=1,0,1,0.5 infinite=1 --frames 0 --window -90,-90,-10,-10"
-    # CheckerBoard 1.1, Grid Origin Bottom Left (#285): the bottom-left 32x32 pixels are in box (0,0),
+    # CheckerBoard 2, Grid Origin Bottom Left (#285): the bottom-left 32x32 pixels are in box (0,0),
     # Color 0 (with Center, boxes of 60x64 pixels from (360,288), they are in box (-6,-5): Color 3)
     "CheckerBoard grid origin bottom left|net.sf.openfx.CheckerBoardPlugin|general|*|mean=1,0,0,1||-i Source=none gridOrigin=1 lineWidth=0 color0=1,0,0,1 color1=0,1,0,1 color2=0,0,1,1 color3=1,1,0,1 --frames 0 --window 0,0,32,32"
     # at render scale 0.5 (boxes of 30x32 pixels): the bottom-left 16x16 pixels are Color 0
@@ -516,9 +516,13 @@ tests=(
     # this window is box (-4,-2), Color 0 (centred on the Source RoD, it would be Color 3)
     "CheckerBoard grid origin center, Source RoD|net.sf.openfx.CheckerBoardPlugin|general|*|mean=1,0,0,1||-i Source=rod:100,100,400,300 lineWidth=0 centerlineWidth=0 color0=1,0,0,1 color1=0,1,0,1 color2=0,0,1,1 color3=1,1,0,1 --frames 0 --window 124,164,156,196"
     "CheckerBoard grid origin bottom left, Source RoD|net.sf.openfx.CheckerBoardPlugin|general|*|mean=1,0,0,1||-i Source=rod:100,100,400,300 gridOrigin=1 lineWidth=0 color0=1,0,0,1 color1=0,1,0,1 color2=0,0,1,1 color3=1,1,0,1 --frames 0 --window 96,102,128,134"
-    # ColorBars 1.1, PAL (#286): the eight EBU bars, each 90 pixels wide; each of R, G, B is 100 IRE
-    # in one bar, 75 IRE in three and 0 in four (mean 40.625 IRE), in video range: 0.41
-    "ColorBars PAL|net.sf.openfx.ColorBars|general|*|mean=0.41,0.41,0.41,1||-i Source=none PAL=1"
+    # ColorBars 2, PAL (#286): the seven bars at intensity 0.5 fill the image, 103 or 102 pixels wide
+    # (hostDemo has no RGB output, so it is RGBA, with alpha 0): each of R, G, B is 0.5 in four bars
+    # (412 or 411 pixels of 720)
+    "ColorBars PAL|net.sf.openfx.ColorBars|general|float|comps=RGBA+mean=0.286,0.286,0.285,0||-i Source=none PAL=1"
+    # the obsolete version 1 (Natron 2.5.0)
+    "CheckerBoard 1|net.sf.openfx.CheckerBoardPlugin|general|*|nonconst||-m 1 -i Source=none"
+    "ColorBars 1|net.sf.openfx.ColorBars|general|*|nonconst+comps=RGBA||-m 1 -i Source=none"
     "ColorWheel|net.sf.openfx.ColorWheel|general|*|nonconst||-i Source=none"
     "Rand|net.sf.openfx.Noise|general|*|nonconst||-i Source=none"
     "Rectangle|net.sf.openfx.Rectangle|general|*|nonconst||-i Source=none -i Mask=none bottomLeft=100,100 size=300,200"
