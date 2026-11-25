@@ -41,6 +41,10 @@ Cases: CASES is a list of dicts with
   is not enough);
 - "nuke_edges": compare Nuke's pixels outside its bounding box as sample()
   gives them (the edge pixels repeated), not as 0;
+- "nuke_par": the pixel aspect ratio of the Nuke formats (default PAR),
+  e.g. 1 for a node whose output always has square pixels, so that the
+  images have the same pixels on both sides (hostDemo gives all the clips
+  the PAR of the project);
 - "region": the compared pixels, (x1, y1, x2, y2[, step]) or "project"
   (the PAL project, one pixel in 8x8); default the WIDTH x HEIGHT image;
   generators, "project" regions and "project_format" cases use the PAL
@@ -839,6 +843,27 @@ CASES += [
     case("Colorspace linear to HSV, values outside [0, 1]",
          ("Colorspace", {"colorspace_out": "HSV"}),
          (ofx_id("RGBToHSV"), {}), input="hues", tolerance=1e-4),
+    # The reference converts the values as given when the input is sRGB
+    # (with a linear input, it encodes them with sRGB first: #296).
+    case("Colorspace sRGB to HSV, values outside [0, 1] (RGBToHSV)",
+         ("Colorspace", {"colorspace_in": "sRGB", "colorspace_out": "HSV"}),
+         (ofx_id("RGBToHSV"), {}), input="hues", tolerance=1e-4),
+    case("Colorspace sRGB to HSL, values outside [0, 1] (RGBToHSL)",
+         ("Colorspace", {"colorspace_in": "sRGB", "colorspace_out": "HSL"}),
+         (ofx_id("RGBToHSL"), {}), input="hues", tolerance=1e-4),
+    case("Colorspace HSV to sRGB (HSVToRGB)",
+         ("Colorspace", {"colorspace_in": "HSV", "colorspace_out": "sRGB"}),
+         (ofx_id("HSVToRGB"), {}), input="hues01", tolerance=1e-4),
+    case("Colorspace HSL to sRGB (HSLToRGB)",
+         ("Colorspace", {"colorspace_in": "HSL", "colorspace_out": "sRGB"}),
+         (ofx_id("HSLToRGB"), {}), input="hues01", tolerance=1e-4),
+    # the Mask input and Mix (#296)
+    case("Colorspace sRGB to HSV on a mask, mix 0.5 (RGBToHSV)",
+         ("Colorspace", dict(MASKED, colorspace_in="sRGB",
+                             colorspace_out="HSV", mix=.5)),
+         (ofx_id("RGBToHSV"), {"mix": .5}),
+         nuke_inputs=["hues01", "mask"],
+         clips={"Source": "hues01", "Mask": "mask"}, tolerance=1e-4),
     case("Colorspace linear to CIE-XYZ (RGB709ToXYZ)",
          ("Colorspace", {"colorspace_out": "CIE-XYZ"}),
          (ofx_id("RGB709ToXYZ"), {}), input="hues", tolerance=5e-4),
@@ -2252,21 +2277,64 @@ CASES += [
 ]
 
 # ---------------------------------------------------------- ContactSheet
+# The reference's output always has square pixels, and hostDemo gives the
+# output the PAR of the inputs (it does not support multiple clip PARs): the
+# Nuke side uses square pixels (nuke_par), so that both sides fit the same
+# pixels in the same cells. The cells are a whole number of pixels,
+# (size - gap) / count rounded, with the gap on their left and bottom sides.
+def _contact_sheet(name, width, height, rows, columns, inputs, gap=0,
+                   center=False, row_order="BottomTop",
+                   column_order="LeftRight", **kwargs):
+    """A ContactSheet case: inputs is the image of each input (or None)."""
+    clips = {("Source" if _i == 0 else str(_i)): _image
+             for _i, _image in enumerate(inputs) if _image}
+    return case(
+        "ContactSheet " + name,
+        ("ContactSheet", {"width": width, "height": height, "rows": rows,
+                          "columns": columns, "gap": gap, "center": center,
+                          "roworder": row_order, "colorder": column_order}),
+        (ofx_id("ContactSheetOFX"), {
+            "resolution": [width, height], "rowsColumns": [rows, columns],
+            "gap": gap, "center": int(center), "rowOrder": row_order,
+            "colOrder": column_order}),
+        nuke_inputs=list(inputs), clips=clips,
+        channels="rgba", tolerance=1e-4, nuke_par=1.,
+        **dict({"region": (0, 0, width, height)}, **kwargs))
+
+
 for _center in (False, True):
-    CASES.append(case(
-        "ContactSheet 2 inputs, 2x2 cells of 32x32, center %s"
-        % ("on" if _center else "off"),
-        ("ContactSheet", {"width": 64, "height": 64, "rows": 2,
-                          "columns": 2, "center": _center,
-                          "roworder": "TopBottom"}),
-        (ofx_id("ContactSheetOFX"), {"resolution": [64, 64],
-                                     "rowsColumns": [2, 2],
-                                     "center": int(_center),
-                                     "rowOrder": "TopBottom"}),
-        nuke_inputs=["ramp", "checker"],
-        clips={"Source": "ramp", "1": "checker"}, region=(0, 0, 64, 64),
-        channels="rgba", tolerance=1e-3,
-        known=305 if _center else None))
+    CASES.append(_contact_sheet(
+        "2 inputs, 2x2 cells of 32x32, center %s" % ("on" if _center else "off"),
+        64, 64, 2, 2, ["ramp", "checker"], center=_center,
+        row_order="TopBottom"))
+CASES += [
+    # cells of 20x20 with a gap of 4: the 32x32 images are scaled by 0.5.
+    # Not compared: the right margin (x 60 to 64, outside the cells), where
+    # the reference repeats the filtered left edge of the images of the
+    # last column, 20 pixels to the right (x 63).
+    _contact_sheet("2x3 cells, gap 4, scale 0.5", 64, 44, 2, 3,
+                   ["ramp", None, "checker", "checker", "ramp"], gap=4,
+                   region=(0, 0, 60, 44)),
+    _contact_sheet("2x3 cells, gap 4, Snake, top to bottom", 64, 44, 2, 3,
+                   ["ramp", "checker", None, "ramp", "checker"], gap=4,
+                   row_order="TopBottom", column_order="Snake",
+                   region=(0, 0, 60, 44)),
+    # cells of 23x20 (69 / 3 rounded): with Center, the images are 4.5
+    # pixels from the left of the area after the gap
+    _contact_sheet("2x3 cells of 23x20, gap 4, center", 73, 44, 2, 3,
+                   ["ramp", "checker", "ramp"], gap=4, center=True),
+    # magnification: the 32x32 images fill cells of 64x64, scaled by 2
+    _contact_sheet("1x2 cells, scale 2", 128, 64, 1, 2,
+                   ["checker", "ramp"]),
+    # cells of 64x70: centred vertically, 3 pixels from the bottom
+    _contact_sheet("1x2 cells, scale 2, center", 128, 70, 1, 2,
+                   ["ramp", "checker"], center=True),
+    _contact_sheet("1x1 cell, scale 29/32", 29, 29, 1, 1, ["checker"]),
+    # A magnification by 2.4 differs by about 1% of the checker contrast:
+    # the reference's filter weights are not exactly the cubic ones there.
+    _contact_sheet("1x1 cell, scale 2.4", 77, 77, 1, 1, ["checker"],
+                   known=305),
+]
 
 # ------------------------------------------------------------ ReConverge
 # The cases cover the convergence modes (shift right, left, both), the
@@ -2396,7 +2464,10 @@ KNOWN = {
         "Colorspace linear to YCbCr (RGBToYCbCr709)",
         "Colorspace sRGB to YCbCr (RGBToYCbCr709)",
         "Colorspace rec709 to YCbCr (RGBToYCbCr709)",
-        "Colorspace linear to HSV, values outside [0, 1]"],
+        "Colorspace linear to HSV, values outside [0, 1]",
+        # the saturation of colours outside [0, 1] is from the colour
+        # clamped to [0, 1] (#399); the reference's is not bounded
+        "Colorspace sRGB to HSL, values outside [0, 1] (RGBToHSL)"],
     # the reference's Undistort is not the exact inverse of its Redistort:
     # its forward map differs by 0.02 to 0.1 pixel away from the corners, and
     # by pixels near them (see the STMap case)
@@ -2418,8 +2489,6 @@ KNOWN = {
         "IDistort uv = rgb, blur = blue",
         "IDistort uv = rgb, blur = blue, blur scale 4",
         "STMap uv = rgb, blur = blue (1), blur scale 3"],
-    305: [
-        "ContactSheet 2 inputs, 2x2 cells of 32x32, center off"],
     315: [
         "Erode (blur) defaults (ErodeBlur)",
         "Erode (blur) size -3, blur 0.5 (ErodeBlur -3)",

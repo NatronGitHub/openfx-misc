@@ -108,6 +108,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //     "Master Curve on Alpha" parameter (default off: the alpha curve is used alone, as before)
 // 2.0 (issue #290) the defaults follow the node of the same name: Master Curve Mode is Composed and Master Curve on
 //     Alpha is checked; version 1.2 is kept, obsolete, with the old defaults (Standard, off), for existing projects
+//     (2.0 and 1.2 are unreleased, fixed in place, issue #411) Luminance master curve mode: where the luminance is zero
+//     or negative, the master curve is applied to each channel, instead of a gain master(1e-8) / 1e-8 that gave huge values
 #define kPluginIdentifier "net.sf.openfx.ColorLookupPlugin"
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
@@ -495,12 +497,10 @@ private:
                         }
                         case eMasterCurveModeLuminance: {
                             // see https://github.com/Beep6581/RawTherapee/blob/3ff2519302e3bc529b111462a4697ac4dfba30c4/rtengine/curves.h#L992
-                            double l = (std::max)(luminance(r, g, b, _luminanceMath), 1.e-8f); // avoid division by zero
-                            // apply the master curve to the luminance, and
-                            double coef = interpolate(nComponents, l) / l;
-                            tmpPix[0] = clamp<float>(coef * interpolate(0, r), 1) * maxValue;
-                            tmpPix[1] = clamp<float>(coef * interpolate(1, g), 1) * maxValue;
-                            tmpPix[2] = clamp<float>(coef * interpolate(2, b), 1) * maxValue;
+                            luminanceGain(r, g, b, &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                            tmpPix[0] *= maxValue;
+                            tmpPix[1] *= maxValue;
+                            tmpPix[2] *= maxValue;
                             break;
                         }
                     }
@@ -582,12 +582,7 @@ private:
                         }
                         case eMasterCurveModeLuminance: {
                             // see https://github.com/Beep6581/RawTherapee/blob/3ff2519302e3bc529b111462a4697ac4dfba30c4/rtengine/curves.h#L992
-                            double l = (std::max)(luminance(r, g, b, _luminanceMath), 1.e-8f); // avoid division by zero
-                            // apply the master curve to the luminance, and
-                            double coef = interpolate(nComponents, l) / l;
-                            tmpPix[0] = static_cast<float>( clamp<float>(coef * interpolate(0, r), 1) );
-                            tmpPix[1] = static_cast<float>( clamp<float>(coef * interpolate(1, g), 1) );
-                            tmpPix[2] = static_cast<float>( clamp<float>(coef * interpolate(2, b), 1) );
+                            luminanceGain(r, g, b, &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                             tmpPix[3] = interpolate(3, unpPix[3]);
                             break;
                         }
@@ -598,6 +593,30 @@ private:
                 // increment the dst pixel
                 dstPix += nComponents;
             }
+        }
+    }
+
+    // The Luminance master curve mode, on normalized r, g, b: the channel curves, multiplied by the
+    // gain of the master curve on the luminance, master(l) / l. Where the luminance is zero or
+    // negative (or tiny), that gain would be huge or negative: the master curve is applied to each
+    // channel instead, as in the Composed mode (issue #411); for a grey, both give master(l).
+    void luminanceGain(float r,
+                       float g,
+                       float b,
+                       float* rOut,
+                       float* gOut,
+                       float* bOut) const
+    {
+        const double l = luminance(r, g, b, _luminanceMath);
+        if (l > 1e-8) { // false for NaN
+            const double coef = interpolate(nComponents, static_cast<float>(l)) / l;
+            *rOut = static_cast<float>( clamp<float>(coef * interpolate(0, r), 1) );
+            *gOut = static_cast<float>( clamp<float>(coef * interpolate(1, g), 1) );
+            *bOut = static_cast<float>( clamp<float>(coef * interpolate(2, b), 1) );
+        } else {
+            *rOut = clamp<float>(interpolate( nComponents, interpolate(0, r) ), 1);
+            *gOut = clamp<float>(interpolate( nComponents, interpolate(1, g) ), 1);
+            *bOut = clamp<float>(interpolate( nComponents, interpolate(2, b) ), 1);
         }
     }
 

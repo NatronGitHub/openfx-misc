@@ -187,13 +187,14 @@ def nuke_script(case, result_path):
     project = (case.get("region") == "project" or not any(nuke_inputs)
                or case.get("project_format"))
     multiview = case_multiview(case)
+    par = case.get("nuke_par", cases.PAR)
     lines = [
         "import json",
         "import nuke",
         "nuke.addFormat('%d %d %r nukecompare')"
-        % (cases.WIDTH, cases.HEIGHT, cases.PAR),
+        % (cases.WIDTH, cases.HEIGHT, par),
         "nuke.addFormat('%d %d %r nukecompare_project')"
-        % (cases.PROJECT[0], cases.PROJECT[1], cases.PAR),
+        % (cases.PROJECT[0], cases.PROJECT[1], par),
         "fmt = %r" % ("nukecompare_project" if project else "nukecompare"),
         "root = nuke.root()",
         "root['format'].setValue(fmt)",

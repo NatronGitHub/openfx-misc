@@ -25,6 +25,7 @@
 
 #include "ofxsProcessing.H"
 #include "ofxsMaskMix.h"
+#include "ofxsRGBAProcessing.h" // ofxsMaskRoDExcludesRenderWindow
 #include "ofxsMacros.h"
 #include "ofxsLut.h"
 
@@ -90,15 +91,20 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 // The transfer functions of the Y'CbCr, Y'PbPr and Y'UV conversions (SupportExt's ofxsLut.h):
 // the 601 ones use sRGB, not the BT.601 OETF (which is the BT.709 one).
-#define kEncodeSRGB "Linear RGB is first encoded to R'G'B' with the sRGB transfer function (not the BT.601 one, which is the Rec.709 one); negative values become 0."
-#define kDecodeSRGB "R'G'B' is then decoded to linear RGB with the sRGB transfer function; negative values become 0."
-#define kEncodeRec709 "Linear RGB is first encoded to R'G'B' with the Rec.709 transfer function (OETF, with the more precise constants of Rec.2020); negative values become 0."
+// The Colorspace node of the tests/nuke reference (#296) differs: its HSV and HSL are computed on
+// sRGB-encoded values (it encodes a linear input with the sRGB curve first, extended linearly
+// below 0), and so are its YCbCr and YPbPr, with the BT.709 matrix, Y' = 16/255 + 219/255 Y'709 and
+// Cb, Cr = 0.5 + 224/255 Pb, Pr (0.5, not 128/255). With an sRGB input, its HSV and HSL are those
+// of RGBToHSV and RGBToHSL; none of the Y'CbCr and Y'PbPr conversions here has its conventions.
+#define kEncodeSRGB "Linear RGB is first encoded to R'G'B' with the sRGB transfer function (IEC 61966-2-1; not the BT.601 one, which is the Rec.709 one); negative values become 0."
+#define kDecodeSRGB "R'G'B' is then decoded to linear RGB with the sRGB transfer function (IEC 61966-2-1); negative values become 0."
+#define kEncodeRec709 "Linear RGB is first encoded to R'G'B' with the Rec.709 transfer function (the OETF of ITU-R BT.709-6, with the more precise constants of ITU-R BT.2020-2); negative values become 0."
 #define kDecodeRec709 "R'G'B' is then decoded to linear RGB with the inverse of the Rec.709 OETF; negative values become 0."
-#define kYCbCrRange "Y'CbCr is in the video (studio) range, as 8-bit code values divided by 255: Y' goes from 16/255 (black) to about 235/255 (white), and Cb and Cr from 16/255 to 240/255, with 128/255 for neutral colours."
+#define kYCbCrRange "Y'CbCr is in the video (studio) range, as 8-bit code values divided by 255 (the quantization of ITU-R BT.601-7 and BT.709-6): Y' goes from 16/255 (black) to about 235/255 (white), and Cb and Cr from 16/255 to 240/255, with 128/255 for neutral colours."
 #define kYPbPrRange "Y' goes from 0 (black) to 1 (white), Pb and Pr from -0.5 to 0.5, with 0 for neutral colours."
 #define kYUVRange "Y' goes from 0 (black) to 1 (white), U from -0.436 to 0.436 and V from -0.615 to 0.615, with 0 for neutral colours."
-#define kMatrix601 "The matrix is the ITU-R BT.601 one (Kr = 0.299, Kb = 0.114)."
-#define kMatrix709 "The matrix is the ITU-R BT.709 one (Kr ≈ 0.2126, Kb ≈ 0.0722)."
+#define kMatrix601 "The matrix is the ITU-R BT.601-7 one (Kr = 0.299, Kb = 0.114)."
+#define kMatrix709 "The matrix is the ITU-R BT.709-6 one (Kr ≈ 0.2126, Kb ≈ 0.0722)."
 
 #define kPluginRGBToYCbCr601Name "RGBToYCbCr601"
 #define kPluginRGBToYCbCr601Description "Convert from linear RGB to the Y'CbCr color model (ITU-R BT.601).\n" \
@@ -220,11 +226,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //     clamped to [0,1] (bug fix #399: (2, 0.5, 0) gave H 0.917, not 0.042, and the grey (2, 2, 2) gave S 1);
 //     all conversions released as 1.0, including version 1 of the signedOutput() conversions
 //     (kept for backward compatibility): premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79)
-// 1.0 RGBToYIQ, YIQToRGB, RGBToYDbDr, YDbDrToRGB: initial version
+//     (1.1 is unreleased, extended in place, issue #296) all conversions have a Mask input and the Mask and
+//     Mix parameters (the defaults keep the output)
+// 1.0 RGBToYIQ, YIQToRGB, RGBToYDbDr, YDbDrToRGB: initial version (with the Mask input and Mix, see 1.1)
 // 2.0 RGBToYPbPr601, RGBToYPbPr709, RGBToYUV601, RGBToYUV709, RGB709ToLab, XYZToLab only:
 //     only support float images, because their output may be negative (version 1 clamps negative
 //     values to 0 on 8-bit and 16-bit images); premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79).
-//     The other conversions are still version 1.
+//     The other conversions are still version 1. (2.0 is unreleased: it has the Mask input and Mix of 1.1.)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 #define kPluginNewVersionMinor 0 // minor version of the conversions added after version 1.0 was released (YIQ, YDbDr)
@@ -363,6 +371,9 @@ class ColorTransformProcessorBase
 {
 protected:
     const Image *_srcImg;
+    const Image *_maskImg;
+    bool _doMasking;
+    bool _maskInvert;
     bool _premult;
     int _premultChannel;
     double _mix;
@@ -372,6 +383,9 @@ public:
     ColorTransformProcessorBase(ImageEffect &instance)
         : ImageProcessor(instance)
         , _srcImg(NULL)
+        , _maskImg(NULL)
+        , _doMasking(false)
+        , _maskInvert(false)
         , _premult(false)
         , _premultChannel(3)
         , _mix(1.)
@@ -380,11 +394,21 @@ public:
 
     void setSrcImg(const Image *v) {_srcImg = v; }
 
+    void setMaskImg(const Image *v,
+                    bool maskInvert)
+    {
+        _maskImg = v;
+        _maskInvert = maskInvert;
+        _doMasking = true;
+    }
+
     void setValues(bool premult,
-                   int premultChannel)
+                   int premultChannel,
+                   double mix)
     {
         _premult = premult;
         _premultChannel = premultChannel;
+        _mix = mix;
     }
 
 private:
@@ -634,7 +658,7 @@ public:
                 }
                 } // switch
                 tmpPix[3] = unpPix[3];
-                ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, dopremult, _premultChannel, x, y, srcPix, /*doMasking=*/ false, /*maskImg=*/ NULL, /*mix=*/ 1.f, /*maskInvert=*/ false, dstPix);
+                ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, dopremult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, static_cast<float>(_mix), _maskInvert, dstPix);
                 // increment the dst pixel
                 dstPix += nComponents;
             }
@@ -655,9 +679,13 @@ public:
         : ImageEffect(handle)
         , _dstClip(NULL)
         , _srcClip(NULL)
+        , _maskClip(NULL)
         , _premult(NULL)
         , _premultChannel(NULL)
         , _premultChanged(NULL)
+        , _mix(NULL)
+        , _maskApply(NULL)
+        , _maskInvert(NULL)
     {
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -674,11 +702,19 @@ public:
             _premultChanged = fetchBooleanParam(kParamPremultChanged);
             assert(_premultChanged);
         }
+        _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
+        assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
+        _mix = fetchDoubleParam(kParamMix);
+        _maskApply = ( ofxsMaskIsAlwaysConnected( OFX::getImageEffectHostDescription() ) && paramExists(kParamMaskApply) ) ? fetchBooleanParam(kParamMaskApply) : 0;
+        _maskInvert = fetchBooleanParam(kParamMaskInvert);
+        assert(_mix && _maskInvert);
     }
 
 private:
     /* Override the render */
     virtual void render(const RenderArguments &args) OVERRIDE FINAL;
+
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
 
     /* set up and run a processor */
     void setupAndProcess(ColorTransformProcessorBase &, const RenderArguments &args);
@@ -694,9 +730,13 @@ private:
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
     Clip *_srcClip;
+    Clip *_maskClip;
     BooleanParam* _premult;
     ChoiceParam* _premultChannel;
     BooleanParam* _premultChanged; // set to true the first time the user connects src
+    DoubleParam* _mix;
+    BooleanParam* _maskApply;
+    BooleanParam* _maskInvert;
 };
 
 
@@ -740,6 +780,13 @@ ColorTransformPlugin<transform>::setupAndProcess(ColorTransformProcessorBase &pr
         }
     }
 
+    const bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
+    auto_ptr<const Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
+    if ( mask.get() ) {
+        checkBadRenderScaleOrField(mask, args);
+        processor.setMaskImg( mask.get(), _maskInvert->getValueAtTime(args.time) );
+    }
+
     processor.setDstImg( dst.get() );
     processor.setSrcImg( src.get() );
     processor.setRenderWindow(args.renderWindow, args.renderScale);
@@ -753,9 +800,34 @@ ColorTransformPlugin<transform>::setupAndProcess(ColorTransformProcessorBase &pr
         _premultChannel->getValueAtTime(args.time, premultChannel);
     }
 
-    processor.setValues(premult, premultChannel);
+    processor.setValues( premult, premultChannel, _mix->getValueAtTime(args.time) );
     processor.process();
 } // >::setupAndProcess
+
+template <ColorTransformEnum transform>
+bool
+ColorTransformPlugin<transform>::isIdentity(const IsIdentityArguments &args,
+                                            Clip * &identityClip,
+                                            double & /*identityTime*/
+                                            , int& /*view*/, std::string& /*plane*/)
+{
+    if ( !_srcClip || !_srcClip->isConnected() ) {
+        return false;
+    }
+    if (_mix->getValueAtTime(args.time) == 0.) {
+        identityClip = _srcClip;
+
+        return true;
+    }
+    // the shared helper also skips this test on hosts without multi-resolution (#240)
+    if ( ofxsMaskRoDExcludesRenderWindow(args, _maskClip, _maskApply, _maskInvert) ) {
+        identityClip = _srcClip;
+
+        return true;
+    }
+
+    return false;
+}
 
 // the overridden render function
 template <ColorTransformEnum transform>
@@ -1081,7 +1153,7 @@ ColorTransformPluginFactory<transform, majorVersion>::describe(ImageEffectDescri
 template <ColorTransformEnum transform, unsigned int majorVersion>
 void
 ColorTransformPluginFactory<transform, majorVersion>::describeInContext(ImageEffectDescriptor &desc,
-                                                          ContextEnum /*context*/)
+                                                          ContextEnum context)
 {
     // Source clip only in the filter context
     // create the mandated source clip
@@ -1099,9 +1171,18 @@ ColorTransformPluginFactory<transform, majorVersion>::describeInContext(ImageEff
     dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->setSupportsTiles(kSupportsTiles);
 
+    ClipDescriptor *maskClip = (context == eContextPaint) ? desc.defineClip("Brush") : desc.defineClip("Mask");
+    maskClip->addSupportedComponent(ePixelComponentAlpha);
+    maskClip->setTemporalClipAccess(false);
+    if (context != eContextPaint) {
+        maskClip->setOptional(true);
+    }
+    maskClip->setSupportsTiles(kSupportsTiles);
+    maskClip->setIsMask(true);
+
     // make some pages and to things in
+    PageParamDescriptor *page = desc.definePageParam("Controls");
     if ( fromRGB(transform) || toRGB(transform) ) {
-        PageParamDescriptor *page = desc.definePageParam("Controls");
         {
             BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremult);
             if ( fromRGB(transform) ) {
@@ -1145,6 +1226,8 @@ ColorTransformPluginFactory<transform, majorVersion>::describeInContext(ImageEff
             }
         }
     }
+    // the mask and mix, as in the Colorspace node of the tests/nuke reference (issue #296)
+    ofxsMaskMixDescribeParams(desc, page);
 } // >::describeInContext
 
 template <ColorTransformEnum transform, unsigned int majorVersion>

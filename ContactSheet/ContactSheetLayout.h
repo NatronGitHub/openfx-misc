@@ -28,6 +28,7 @@
 #include <cstddef>
 #include <algorithm>
 #include <cmath>
+#include <vector>
 
 #include "ofxsImageEffect.h"
 #include "ofxsCoords.h"
@@ -56,7 +57,38 @@ struct Grid
     // vertical shift of all the cells, in rows (up if positive): non-zero to center the populated
     // rows vertically (see rowShiftToCenter())
     double rowShift = 0.;
+    // Cells of a whole number of output pixels (ContactSheet 2, see setWholePixelCells()): the
+    // width and height of a cell in pixels at render scale 1, or 0 for cells that divide the
+    // RoD evenly (ContactSheet 1, LayerContactSheet)
+    int cellWidth = 0;
+    int cellHeight = 0;
+    double par = 1.; // the pixel aspect ratio of the output, with whole-pixel cells
 };
+
+// The size of a cell of n cells over size pixels, with a gap on their left (or bottom) side and on
+// the right (or top) side of the sheet: (size - gap) / n, rounded to a whole number of pixels
+// (as in the tests/nuke reference, where the cells start at the bottom left of the sheet).
+inline int
+wholePixelCellSize(int size,
+                   int gap,
+                   int n)
+{
+    return (n <= 0) ? 0 : static_cast<int>( std::floor( static_cast<double>(size - gap) / n + 0.5 ) );
+}
+
+// Make the cells of grid a whole number of pixels, for an output of width x height pixels at
+// render scale 1, with the given gap (in pixels) and pixel aspect ratio.
+inline void
+setWholePixelCells(Grid* grid,
+                   int width,
+                   int height,
+                   int gap,
+                   double par)
+{
+    grid->cellWidth = wholePixelCellSize(width, gap, grid->columns);
+    grid->cellHeight = wholePixelCellSize(height, gap, grid->rows);
+    grid->par = par;
+}
 
 // The shift that centers the rows that hold the first filledCells cells vertically in the grid:
 // half the number of empty rows, towards the empty rows.
@@ -110,6 +142,15 @@ cellRoD(Index cell,
     }
     const double y = displayRow(grid, r) + grid.rowShift;
     const int x = displayColumn(grid, r, c);
+    if (grid.cellWidth > 0) {
+        // whole-pixel cells, from the bottom left corner of rod
+        cellRect->x1 = rod.x1 + x * grid.cellWidth * grid.par;
+        cellRect->y1 = rod.y1 + y * grid.cellHeight;
+        cellRect->x2 = cellRect->x1 + grid.cellWidth * grid.par;
+        cellRect->y2 = cellRect->y1 + grid.cellHeight;
+
+        return true;
+    }
     // now compute the four corners of the cell in the rod
     cellRect->x1 = rod.x1 + x * (rod.x2 - rod.x1) / grid.columns;
     cellRect->y1 = rod.y1 + y * (rod.y2 - rod.y1) / grid.rows;
@@ -151,8 +192,11 @@ cellAt(const Grid& grid,
     if ( (p.x < rod.x1) || (p.x >= rod.x2) || (p.y < rod.y1) || (p.y >= rod.y2) ) {
         return false;
     }
-    const double cellw = (rod.x2 - rod.x1) / grid.columns;
-    const double cellh = (rod.y2 - rod.y1) / grid.rows;
+    const double cellw = (grid.cellWidth > 0) ? (grid.cellWidth * grid.par) : ( (rod.x2 - rod.x1) / grid.columns );
+    const double cellh = (grid.cellHeight > 0) ? grid.cellHeight : ( (rod.y2 - rod.y1) / grid.rows );
+    if ( (cellw <= 0.) || (cellh <= 0.) ) {
+        return false;
+    }
     const int x = static_cast<int>( std::floor( (p.x - rod.x1) / cellw ) );
     const int y = static_cast<int>( std::floor( (p.y - rod.y1) / cellh - grid.rowShift ) );
     if ( (x < 0) || (grid.columns <= x) || (y < 0) || (grid.rows <= y) ) {
@@ -275,6 +319,240 @@ drawImage(const Image* src,
                        b, bwidth, bheight, bxstride, bystride,
                        to);
 }
+
+// ContactSheet 2: where the image of an input goes in a whole-pixel cell (see setWholePixelCells()).
+// The positions are in output pixels at render scale 1.
+struct Placement
+{
+    OfxRectD cell = {0., 0., 0., 0.}; // the cell, which clips the image and its filtered edges
+    double x0 = 0.; // the bottom left corner of the image (not a whole pixel with Center)
+    double y0 = 0.;
+    double scaleX = 1.; // output pixels per input pixel
+    double scaleY = 1.;
+};
+
+// The placement of an input whose format is srcFormat (in its pixels, of aspect ratio srcPar) in
+// the cell cellCanonical of a grid with whole-pixel cells, for an output of aspect ratio dstPar:
+// the image is scaled to fit the cell minus the gap on its left and bottom sides, keeping its
+// aspect ratio, and it is at the bottom left of that area, or centred in it.
+// Return false if nothing is drawn (an empty format, or a gap that fills the cell).
+inline bool
+placeInCell(const OfxRectI& srcFormat,
+            double srcPar,
+            const OfxRectD& cellCanonical,
+            int gap,
+            bool center,
+            double dstPar,
+            Placement* p)
+{
+    if ( !(srcPar > 0.) || !(dstPar > 0.) ) {
+        return false;
+    }
+    const double sw = srcFormat.x2 - srcFormat.x1; // in input pixels
+    const double sh = srcFormat.y2 - srcFormat.y1;
+    // the cell is a whole number of pixels: remove the rounding errors of the canonical coordinates
+    p->cell.x1 = std::floor(cellCanonical.x1 / dstPar + 0.5);
+    p->cell.x2 = std::floor(cellCanonical.x2 / dstPar + 0.5);
+    p->cell.y1 = std::floor(cellCanonical.y1 + 0.5);
+    p->cell.y2 = std::floor(cellCanonical.y2 + 0.5);
+    const double aw = p->cell.x2 - p->cell.x1 - gap; // the area of the image, in output pixels
+    const double ah = p->cell.y2 - p->cell.y1 - gap;
+    if ( (sw <= 0.) || (sh <= 0.) || (aw <= 0.) || (ah <= 0.) ) {
+        return false;
+    }
+    // the scale of the canonical coordinates
+    const double f = (std::min)( (aw * dstPar) / (sw * srcPar), ah / sh );
+    const double w = sw * srcPar * f / dstPar; // the size of the image, in output pixels
+    const double h = sh * f;
+    p->x0 = p->cell.x1 + gap + (center ? (aw - w) / 2 : 0.);
+    p->y0 = p->cell.y1 + gap + (center ? (ah - h) / 2 : 0.);
+    p->scaleX = w / sw;
+    p->scaleY = h / sh;
+
+    return true;
+}
+
+// The resampling filter of ContactSheet 2, as in the tests/nuke reference: the cubic BC-spline
+// with B = 0 and C = 0 (2|x|^3 - 3|x|^2 + 1 on [-1, 1]), widened by the minification.
+inline double
+cubicFilter(double x)
+{
+    x = std::fabs(x);
+
+    return (x < 1.) ? ( (2. * x - 3.) * x * x + 1. ) : 0.;
+}
+
+// The filter support, in input pixels on each side, for scale output pixels per input pixel.
+inline double
+filterRadius(double scale)
+{
+    return (std::max)(1., 1. / scale);
+}
+
+// The filter taps for the output pixel whose centre is at u, in input pixel coordinates (input
+// pixel j covers [j, j + 1)), for scale output pixels per input pixel: *first is the first input
+// pixel, in [lo, hi), and weights holds the weights of the input pixels from *first, up to hi.
+// The weights are divided by the sum of the weights of all the taps, also those outside
+// [lo, hi): the input is black outside.
+inline void
+filterTaps(double u,
+           double scale,
+           int lo,
+           int hi,
+           int* first,
+           std::vector<float>* weights)
+{
+    weights->clear();
+    *first = lo;
+    const double r = filterRadius(scale);
+    if ( !(std::fabs(u) < 1e9) ) {
+        return; // too far (or NaN): no input pixel
+    }
+    const int j1 = static_cast<int>( std::floor(u - r - 0.5) );
+    const int j2 = static_cast<int>( std::ceil(u + r - 0.5) );
+    double total = 0.;
+    for (int j = j1; j <= j2; ++j) {
+        total += cubicFilter( (u - (j + 0.5)) / r );
+    }
+    if (total <= 0.) {
+        return;
+    }
+    *first = (std::max)(j1, lo);
+    for (int j = *first; j <= j2 && j < hi; ++j) {
+        weights->push_back( static_cast<float>( cubicFilter( (u - (j + 0.5)) / r ) / total ) );
+    }
+}
+
+// The region of the input that drawPlacedImage() reads for the output area outputCanonical (both
+// in canonical coordinates), for an input of format srcFormat (in its pixels, of aspect ratio
+// srcPar) placed by p in an output of aspect ratio dstPar. Return false if it reads nothing.
+inline bool
+placedImageRoI(const OfxRectD& outputCanonical,
+               const Placement& p,
+               const OfxRectI& srcFormat,
+               double srcPar,
+               double dstPar,
+               OfxRectD* roi)
+{
+    // the output pixels of the cell in the output area
+    OfxRectD area = { outputCanonical.x1 / dstPar, outputCanonical.y1, outputCanonical.x2 / dstPar, outputCanonical.y2 };
+    if ( !Coords::rectIntersection(area, p.cell, &area) ) {
+        return false;
+    }
+    // in input pixels, with the filter support
+    const double rx = filterRadius(p.scaleX) + 1.;
+    const double ry = filterRadius(p.scaleY) + 1.;
+    const double u1 = srcFormat.x1 + (area.x1 - p.x0) / p.scaleX - rx;
+    const double u2 = srcFormat.x1 + (area.x2 - p.x0) / p.scaleX + rx;
+    const double v1 = srcFormat.y1 + (area.y1 - p.y0) / p.scaleY - ry;
+    const double v2 = srcFormat.y1 + (area.y2 - p.y0) / p.scaleY + ry;
+    roi->x1 = u1 * srcPar;
+    roi->x2 = u2 * srcPar;
+    roi->y1 = v1;
+    roi->y2 = v2;
+
+    return true;
+}
+
+// Draw the (float) src image, placed by p, in the (float) dst image, inside the cell of p and the
+// renderWindow (in dst pixels). srcFormat is the format of the input, in its pixels at render
+// scale 1. Both images are at renderScale; src is black outside its bounds.
+// The caller must check both images with checkImageFormat().
+inline void
+drawPlacedImage(const Image* src,
+                Image* dst,
+                const Placement& p,
+                const OfxRectI& srcFormat,
+                const OfxRectI& renderWindow,
+                const OfxPointD& renderScale)
+{
+    assert(dst->getPixelDepth() == eBitDepthFloat && src->getPixelDepth() == eBitDepthFloat);
+    // the cell, in dst pixels at renderScale
+    OfxRectI win;
+    win.x1 = static_cast<int>( std::floor(p.cell.x1 * renderScale.x + 0.5) );
+    win.x2 = static_cast<int>( std::floor(p.cell.x2 * renderScale.x + 0.5) );
+    win.y1 = static_cast<int>( std::floor(p.cell.y1 * renderScale.y + 0.5) );
+    win.y2 = static_cast<int>( std::floor(p.cell.y2 * renderScale.y + 0.5) );
+    if ( !Coords::rectIntersection(win, renderWindow, &win) ||
+         !Coords::rectIntersection(win, dst->getBounds(), &win) ) {
+        return;
+    }
+    const OfxRectI& sb = src->getBounds();
+    if ( (sb.x2 <= sb.x1) || (sb.y2 <= sb.y1) ) {
+        return;
+    }
+    const int depth = (std::min)( src->getPixelComponentCount(), dst->getPixelComponentCount() );
+    // the input pixel coordinates of the output pixel centres: the bottom left corner of the image
+    // is at the bottom left corner of the input format
+    const double x0 = p.x0 * renderScale.x;
+    const double y0 = p.y0 * renderScale.y;
+    const double sx1 = srcFormat.x1 * renderScale.x;
+    const double sy1 = srcFormat.y1 * renderScale.y;
+
+    // horizontal taps of each output column
+    const int width = win.x2 - win.x1;
+    std::vector<int> xFirst(width);
+    std::vector<std::vector<float> > xWeights(width);
+    for (int i = 0; i < width; ++i) {
+        filterTaps(sx1 + (win.x1 + i + 0.5 - x0) / p.scaleX, p.scaleX, sb.x1, sb.x2, &xFirst[i], &xWeights[i]);
+    }
+    // vertical taps of each output row, and the input rows they read
+    const int height = win.y2 - win.y1;
+    std::vector<int> yFirst(height);
+    std::vector<std::vector<float> > yWeights(height);
+    int rowMin = sb.y2;
+    int rowMax = sb.y1 - 1;
+    for (int k = 0; k < height; ++k) {
+        filterTaps(sy1 + (win.y1 + k + 0.5 - y0) / p.scaleY, p.scaleY, sb.y1, sb.y2, &yFirst[k], &yWeights[k]);
+        if ( !yWeights[k].empty() ) {
+            rowMin = (std::min)(rowMin, yFirst[k]);
+            rowMax = (std::max)( rowMax, yFirst[k] + static_cast<int>( yWeights[k].size() ) - 1 );
+        }
+    }
+    if (rowMax < rowMin) {
+        return;
+    }
+    // first pass: each input row that is read, resampled horizontally
+    const std::size_t rowSize = static_cast<std::size_t>(width) * depth;
+    std::vector<float> rows(static_cast<std::size_t>(rowMax - rowMin + 1) * rowSize, 0.f);
+    for (int j = rowMin; j <= rowMax; ++j) {
+        float* out = &rows[static_cast<std::size_t>(j - rowMin) * rowSize];
+        for (int i = 0; i < width; ++i, out += depth) {
+            const std::vector<float>& w = xWeights[i];
+            for (std::size_t t = 0; t < w.size(); ++t) {
+                const float* pix = static_cast<const float*>( src->getPixelAddress(xFirst[i] + static_cast<int>(t), j) );
+                if (!pix) {
+                    continue;
+                }
+                for (int c = 0; c < depth; ++c) {
+                    out[c] += w[t] * pix[c];
+                }
+            }
+        }
+    }
+    // second pass: the vertical resampling, into dst
+    const int dstComponents = dst->getPixelComponentCount();
+    std::vector<float> acc(depth);
+    for (int k = 0; k < height; ++k) {
+        const std::vector<float>& w = yWeights[k];
+        float* dpix = static_cast<float*>( dst->getPixelAddress(win.x1, win.y1 + k) );
+        if (!dpix) {
+            continue;
+        }
+        for (int i = 0; i < width; ++i, dpix += dstComponents) {
+            std::fill(acc.begin(), acc.end(), 0.f);
+            for (std::size_t t = 0; t < w.size(); ++t) {
+                const float* in = &rows[static_cast<std::size_t>(yFirst[k] + static_cast<int>(t) - rowMin) * rowSize + static_cast<std::size_t>(i) * depth];
+                for (int c = 0; c < depth; ++c) {
+                    acc[c] += w[t] * in[c];
+                }
+            }
+            for (int c = 0; c < depth; ++c) {
+                dpix[c] = acc[c];
+            }
+        }
+    }
+} // drawPlacedImage
 
 } // namespace ContactSheet
 } // namespace OFX
