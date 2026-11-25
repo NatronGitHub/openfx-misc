@@ -4904,29 +4904,6 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
                 page->addChild(*param);
             }
         }
-        // added in version 2.1 (#303): no blur by default
-        if (gIsMultiPlaneV2) {
-            ChoiceParamDescriptor* param = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clipsForChannels, kParamChannelBlur, kParamChannelBlurLabel);
-            param->setDefault(eInputChannel0);
-        } else {
-            ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamChannelBlur);
-            param->setLabelAndHint(kParamChannelBlurLabel);
-            MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true /*addConstants*/, !gIsMultiPlaneV1 /*addOnlyColorPlane*/);
-            param->setDefault(eInputChannel0);
-            if (page) {
-                page->addChild(*param);
-            }
-        }
-        {
-            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamBlurScale);
-            param->setLabelAndHint(kParamBlurScaleLabel);
-            param->setDefault(1.);
-            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
-            param->setDisplayRange(0., 10.);
-            if (page) {
-                page->addChild(*param);
-            }
-        }
         {
             Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamUVOffset);
             param->setLabelAndHint(kParamUVOffsetLabel);
@@ -4949,6 +4926,30 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
             param->setDisplayRange(0., 0., 100., 100.);
             param->setDimensionLabels("U", "V");
             param->setUseHostNativeOverlayHandle(false);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+
+        // added in version 2.1 (#303): no blur by default; after the UV offset and scale (#386)
+        if (gIsMultiPlaneV2) {
+            ChoiceParamDescriptor* param = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clipsForChannels, kParamChannelBlur, kParamChannelBlurLabel);
+            param->setDefault(eInputChannel0);
+        } else {
+            ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamChannelBlur);
+            param->setLabelAndHint(kParamChannelBlurLabel);
+            MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true /*addConstants*/, !gIsMultiPlaneV1 /*addOnlyColorPlane*/);
+            param->setDefault(eInputChannel0);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamBlurScale);
+            param->setLabelAndHint(kParamBlurScaleLabel);
+            param->setDefault(1.);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(0., 10.);
             if (page) {
                 page->addChild(*param);
             }
@@ -4978,157 +4979,6 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
     }
 
     if (plugin == eDistortionPluginLensDistortion) {
-        { // Frame format
-            // extent
-            {
-                ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamFormat);
-                param->setLabelAndHint(kParamFormatLabel);
-                assert(param->getNOptions() == eGeneratorExtentFormat);
-                param->appendOption(kParamGeneratorExtentOptionFormat);
-                assert(param->getNOptions() == eGeneratorExtentSize);
-                param->appendOption(kParamGeneratorExtentOptionSize);
-                assert(param->getNOptions() == eGeneratorExtentProject);
-                param->appendOption(kParamGeneratorExtentOptionProject);
-                assert(param->getNOptions() == eGeneratorExtentDefault);
-                param->appendOption(kParamGeneratorExtentOptionDefault);
-                param->setDefault(eGeneratorExtentDefault);
-                param->setLayoutHint(eLayoutHintNoNewLine, 1);
-                param->setAnimates(false);
-                desc.addClipPreferencesSlaveParam(*param);
-                if (page) {
-                    page->addChild(*param);
-                }
-            }
-
-            // recenter
-            {
-                PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamGeneratorCenter);
-                param->setLabel(kParamGeneratorCenterLabel);
-                param->setHint(kParamGeneratorCenterHint);
-                param->setLayoutHint(eLayoutHintNoNewLine, 1);
-                if (page) {
-                    page->addChild(*param);
-                }
-            }
-
-            // format
-            {
-                ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamGeneratorFormat);
-                param->setLabel(kParamGeneratorFormatLabel);
-                assert(param->getNOptions() == eParamFormatPCVideo);
-                param->appendOption(kParamFormatPCVideoLabel, "", kParamFormatPCVideo);
-                assert(param->getNOptions() == eParamFormatNTSC);
-                param->appendOption(kParamFormatNTSCLabel, "", kParamFormatNTSC);
-                assert(param->getNOptions() == eParamFormatPAL);
-                param->appendOption(kParamFormatPALLabel, "", kParamFormatPAL);
-                assert(param->getNOptions() == eParamFormatNTSC169);
-                param->appendOption(kParamFormatNTSC169Label, "", kParamFormatNTSC169);
-                assert(param->getNOptions() == eParamFormatPAL169);
-                param->appendOption(kParamFormatPAL169Label, "", kParamFormatPAL169);
-                assert(param->getNOptions() == eParamFormatHD720);
-                param->appendOption(kParamFormatHD720Label, "", kParamFormatHD720);
-                assert(param->getNOptions() == eParamFormatHD);
-                param->appendOption(kParamFormatHDLabel, "", kParamFormatHD);
-                assert(param->getNOptions() == eParamFormatUHD4K);
-                param->appendOption(kParamFormatUHD4KLabel, "", kParamFormatUHD4K);
-                assert(param->getNOptions() == eParamFormat1kSuper35);
-                param->appendOption(kParamFormat1kSuper35Label, "", kParamFormat1kSuper35);
-                assert(param->getNOptions() == eParamFormat1kCinemascope);
-                param->appendOption(kParamFormat1kCinemascopeLabel, "", kParamFormat1kCinemascope);
-                assert(param->getNOptions() == eParamFormat2kSuper35);
-                param->appendOption(kParamFormat2kSuper35Label, "", kParamFormat2kSuper35);
-                assert(param->getNOptions() == eParamFormat2kCinemascope);
-                param->appendOption(kParamFormat2kCinemascopeLabel, "", kParamFormat2kCinemascope);
-                assert(param->getNOptions() == eParamFormat2kDCP);
-                param->appendOption(kParamFormat2kDCPLabel, "", kParamFormat2kDCP);
-                assert(param->getNOptions() == eParamFormat4kSuper35);
-                param->appendOption(kParamFormat4kSuper35Label, "", kParamFormat4kSuper35);
-                assert(param->getNOptions() == eParamFormat4kCinemascope);
-                param->appendOption(kParamFormat4kCinemascopeLabel, "", kParamFormat4kCinemascope);
-                assert(param->getNOptions() == eParamFormat4kDCP);
-                param->appendOption(kParamFormat4kDCPLabel, "", kParamFormat4kDCP);
-                assert(param->getNOptions() == eParamFormatSquare256);
-                param->appendOption(kParamFormatSquare256Label, "", kParamFormatSquare256);
-                assert(param->getNOptions() == eParamFormatSquare512);
-                param->appendOption(kParamFormatSquare512Label, "", kParamFormatSquare512);
-                assert(param->getNOptions() == eParamFormatSquare1k);
-                param->appendOption(kParamFormatSquare1kLabel, "", kParamFormatSquare1k);
-                assert(param->getNOptions() == eParamFormatSquare2k);
-                param->appendOption(kParamFormatSquare2kLabel, "", kParamFormatSquare2k);
-                param->setDefault(eParamFormatPCVideo);
-                param->setHint(kParamGeneratorFormatHint);
-                param->setAnimates(false);
-                desc.addClipPreferencesSlaveParam(*param);
-                if (page) {
-                    page->addChild(*param);
-                }
-            }
-
-            {
-                int w = 0, h = 0;
-                double par = -1.;
-                getFormatResolution(eParamFormatPCVideo, &w, &h, &par);
-                assert(par != -1);
-                {
-                    Int2DParamDescriptor* param = desc.defineInt2DParam(kParamGeneratorSize);
-                    param->setLabelAndHint(kParamGeneratorSizeLabel, kParamGeneratorSizeHint);
-                    param->setIsSecretAndDisabled(true);
-                    param->setDefault(w, h);
-                    if (page) {
-                        page->addChild(*param);
-                    }
-                }
-
-                {
-                    DoubleParamDescriptor* param = desc.defineDoubleParam(kParamGeneratorPAR);
-                    param->setLabelAndHint(kParamGeneratorPARLabel, kParamGeneratorPARHint);
-                    param->setIsSecretAndDisabled(true);
-                    param->setRange(0., DBL_MAX);
-                    param->setDisplayRange(0.5, 2.);
-                    param->setDefault(par);
-                    if (page) {
-                        page->addChild(*param);
-                    }
-                }
-            }
-
-            // btmLeft
-            {
-                Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractBtmLeft);
-                param->setLabelAndHint(kParamRectangleInteractBtmLeftLabel, "Coordinates of the bottom left corner of the size rectangle.");
-                param->setDoubleType(eDoubleTypeXYAbsolute);
-                ofxsSetDefaultCoordinateSystemNormalised(*param); // see ofxsNormalisedDefaults.h (#236)
-                param->setDefault(0., 0.);
-                param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
-                param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
-                param->setIncrement(1.);
-                param->setLayoutHint(eLayoutHintNoNewLine, 1);
-                param->setDigits(0);
-                if (page) {
-                    page->addChild(*param);
-                }
-            }
-
-            // size
-            {
-                Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractSize);
-                param->setLabelAndHint(kParamRectangleInteractSizeLabel, "Width and height of the size rectangle.");
-                param->setDoubleType(eDoubleTypeXY);
-                ofxsSetDefaultCoordinateSystemNormalised(*param); // see ofxsNormalisedDefaults.h (#236)
-                param->setDefault(1., 1.);
-                param->setRange(0., 0., DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
-                param->setDisplayRange(0, 0, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
-                param->setIncrement(1.);
-                param->setDimensionLabels(kParamRectangleInteractSizeDim1, kParamRectangleInteractSizeDim2);
-                param->setIncrement(1.);
-                param->setDigits(0);
-                if (page) {
-                    page->addChild(*param);
-                }
-            }
-
-        }
-
         {
             ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamDistortionModel);
             param->setLabelAndHint(kParamDistortionModelLabel);
@@ -5839,6 +5689,11 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
 
     }
 
+    if (plugin != eDistortionPluginLensDistortion) {
+        // IDistort, STMap: the mask controls and (Un)premult come before the filter (#386)
+        ofxsMaskDescribeParams(desc, page);
+        ofxsPremultDescribeParams(desc, page);
+    }
     ofxsFilterDescribeParamsInterpolate2D( desc, page, (plugin == eDistortionPluginSTMap) );
 #ifdef OFX_EXTENSIONS_NATRON
     if (plugin == eDistortionPluginLensDistortion && majorVersion >= 4 && getImageEffectHostDescription()->isNatron) {
@@ -5863,8 +5718,163 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
         }
     }
 #endif
-    ofxsPremultDescribeParams(desc, page);
-    ofxsMaskMixDescribeParams(desc, page);
+    if (plugin == eDistortionPluginLensDistortion) {
+        // the output extent and format come after the filter (#387)
+        { // Frame format
+            // extent
+            {
+                ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamFormat);
+                param->setLabelAndHint(kParamFormatLabel);
+                assert(param->getNOptions() == eGeneratorExtentFormat);
+                param->appendOption(kParamGeneratorExtentOptionFormat);
+                assert(param->getNOptions() == eGeneratorExtentSize);
+                param->appendOption(kParamGeneratorExtentOptionSize);
+                assert(param->getNOptions() == eGeneratorExtentProject);
+                param->appendOption(kParamGeneratorExtentOptionProject);
+                assert(param->getNOptions() == eGeneratorExtentDefault);
+                param->appendOption(kParamGeneratorExtentOptionDefault);
+                param->setDefault(eGeneratorExtentDefault);
+                param->setLayoutHint(eLayoutHintNoNewLine, 1);
+                param->setAnimates(false);
+                desc.addClipPreferencesSlaveParam(*param);
+                if (page) {
+                    page->addChild(*param);
+                }
+            }
+
+            // recenter
+            {
+                PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamGeneratorCenter);
+                param->setLabel(kParamGeneratorCenterLabel);
+                param->setHint(kParamGeneratorCenterHint);
+                param->setLayoutHint(eLayoutHintNoNewLine, 1);
+                if (page) {
+                    page->addChild(*param);
+                }
+            }
+
+            // format
+            {
+                ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamGeneratorFormat);
+                param->setLabel(kParamGeneratorFormatLabel);
+                assert(param->getNOptions() == eParamFormatPCVideo);
+                param->appendOption(kParamFormatPCVideoLabel, "", kParamFormatPCVideo);
+                assert(param->getNOptions() == eParamFormatNTSC);
+                param->appendOption(kParamFormatNTSCLabel, "", kParamFormatNTSC);
+                assert(param->getNOptions() == eParamFormatPAL);
+                param->appendOption(kParamFormatPALLabel, "", kParamFormatPAL);
+                assert(param->getNOptions() == eParamFormatNTSC169);
+                param->appendOption(kParamFormatNTSC169Label, "", kParamFormatNTSC169);
+                assert(param->getNOptions() == eParamFormatPAL169);
+                param->appendOption(kParamFormatPAL169Label, "", kParamFormatPAL169);
+                assert(param->getNOptions() == eParamFormatHD720);
+                param->appendOption(kParamFormatHD720Label, "", kParamFormatHD720);
+                assert(param->getNOptions() == eParamFormatHD);
+                param->appendOption(kParamFormatHDLabel, "", kParamFormatHD);
+                assert(param->getNOptions() == eParamFormatUHD4K);
+                param->appendOption(kParamFormatUHD4KLabel, "", kParamFormatUHD4K);
+                assert(param->getNOptions() == eParamFormat1kSuper35);
+                param->appendOption(kParamFormat1kSuper35Label, "", kParamFormat1kSuper35);
+                assert(param->getNOptions() == eParamFormat1kCinemascope);
+                param->appendOption(kParamFormat1kCinemascopeLabel, "", kParamFormat1kCinemascope);
+                assert(param->getNOptions() == eParamFormat2kSuper35);
+                param->appendOption(kParamFormat2kSuper35Label, "", kParamFormat2kSuper35);
+                assert(param->getNOptions() == eParamFormat2kCinemascope);
+                param->appendOption(kParamFormat2kCinemascopeLabel, "", kParamFormat2kCinemascope);
+                assert(param->getNOptions() == eParamFormat2kDCP);
+                param->appendOption(kParamFormat2kDCPLabel, "", kParamFormat2kDCP);
+                assert(param->getNOptions() == eParamFormat4kSuper35);
+                param->appendOption(kParamFormat4kSuper35Label, "", kParamFormat4kSuper35);
+                assert(param->getNOptions() == eParamFormat4kCinemascope);
+                param->appendOption(kParamFormat4kCinemascopeLabel, "", kParamFormat4kCinemascope);
+                assert(param->getNOptions() == eParamFormat4kDCP);
+                param->appendOption(kParamFormat4kDCPLabel, "", kParamFormat4kDCP);
+                assert(param->getNOptions() == eParamFormatSquare256);
+                param->appendOption(kParamFormatSquare256Label, "", kParamFormatSquare256);
+                assert(param->getNOptions() == eParamFormatSquare512);
+                param->appendOption(kParamFormatSquare512Label, "", kParamFormatSquare512);
+                assert(param->getNOptions() == eParamFormatSquare1k);
+                param->appendOption(kParamFormatSquare1kLabel, "", kParamFormatSquare1k);
+                assert(param->getNOptions() == eParamFormatSquare2k);
+                param->appendOption(kParamFormatSquare2kLabel, "", kParamFormatSquare2k);
+                param->setDefault(eParamFormatPCVideo);
+                param->setHint(kParamGeneratorFormatHint);
+                param->setAnimates(false);
+                desc.addClipPreferencesSlaveParam(*param);
+                if (page) {
+                    page->addChild(*param);
+                }
+            }
+
+            {
+                int w = 0, h = 0;
+                double par = -1.;
+                getFormatResolution(eParamFormatPCVideo, &w, &h, &par);
+                assert(par != -1);
+                {
+                    Int2DParamDescriptor* param = desc.defineInt2DParam(kParamGeneratorSize);
+                    param->setLabelAndHint(kParamGeneratorSizeLabel, kParamGeneratorSizeHint);
+                    param->setIsSecretAndDisabled(true);
+                    param->setDefault(w, h);
+                    if (page) {
+                        page->addChild(*param);
+                    }
+                }
+
+                {
+                    DoubleParamDescriptor* param = desc.defineDoubleParam(kParamGeneratorPAR);
+                    param->setLabelAndHint(kParamGeneratorPARLabel, kParamGeneratorPARHint);
+                    param->setIsSecretAndDisabled(true);
+                    param->setRange(0., DBL_MAX);
+                    param->setDisplayRange(0.5, 2.);
+                    param->setDefault(par);
+                    if (page) {
+                        page->addChild(*param);
+                    }
+                }
+            }
+
+            // btmLeft
+            {
+                Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractBtmLeft);
+                param->setLabelAndHint(kParamRectangleInteractBtmLeftLabel, "Coordinates of the bottom left corner of the size rectangle.");
+                param->setDoubleType(eDoubleTypeXYAbsolute);
+                ofxsSetDefaultCoordinateSystemNormalised(*param); // see ofxsNormalisedDefaults.h (#236)
+                param->setDefault(0., 0.);
+                param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+                param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
+                param->setIncrement(1.);
+                param->setLayoutHint(eLayoutHintNoNewLine, 1);
+                param->setDigits(0);
+                if (page) {
+                    page->addChild(*param);
+                }
+            }
+
+            // size
+            {
+                Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractSize);
+                param->setLabelAndHint(kParamRectangleInteractSizeLabel, "Width and height of the size rectangle.");
+                param->setDoubleType(eDoubleTypeXY);
+                ofxsSetDefaultCoordinateSystemNormalised(*param); // see ofxsNormalisedDefaults.h (#236)
+                param->setDefault(1., 1.);
+                param->setRange(0., 0., DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+                param->setDisplayRange(0, 0, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
+                param->setIncrement(1.);
+                param->setDimensionLabels(kParamRectangleInteractSizeDim1, kParamRectangleInteractSizeDim2);
+                param->setIncrement(1.);
+                param->setDigits(0);
+                if (page) {
+                    page->addChild(*param);
+                }
+            }
+
+        }
+
+        ofxsMaskDescribeParams(desc, page);
+        ofxsPremultDescribeParams(desc, page);
+    }
+    ofxsMixDescribeParams(desc, page);
 } // >::describeInContext
 
 template<DistortionPluginEnum plugin, int majorVersion>

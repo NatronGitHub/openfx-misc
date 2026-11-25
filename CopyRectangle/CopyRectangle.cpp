@@ -689,6 +689,12 @@ CopyRectanglePluginFactory::describeInContext(ImageEffectDescriptor &desc,
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
+    // the channels come before the rectangle (#379)
+    defineComponentParam(desc, page, kParamProcessR, kParamProcessRLabel, false);
+    defineComponentParam(desc, page, kParamProcessG, kParamProcessGLabel, false);
+    defineComponentParam(desc, page, kParamProcessB, kParamProcessBLabel, false);
+    defineComponentParam(desc, page, kParamProcessA, kParamProcessALabel, true);
+
     // btmLeft
     {
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractBtmLeft);
@@ -736,11 +742,6 @@ CopyRectanglePluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
 
     hiDPIDescribeParams(desc, NULL, page);
-    
-    defineComponentParam(desc, page, kParamProcessR, kParamProcessRLabel, false);
-    defineComponentParam(desc, page, kParamProcessG, kParamProcessGLabel, false);
-    defineComponentParam(desc, page, kParamProcessB, kParamProcessBLabel, false);
-    defineComponentParam(desc, page, kParamProcessA, kParamProcessALabel, true);
 
     // softness
     {

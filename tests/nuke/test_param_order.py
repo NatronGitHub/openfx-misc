@@ -162,51 +162,19 @@ NAMES = {
 # test is an expected failure only while the common params keep exactly this
 # order, so a new misorder fails; a fixed order passes (a strict XPASS).
 KNOWN = {
-    "net.sf.openfx.MergePlugin": (
-        378,
-        "operation bbox screen_alpha Achannels Bchannels output "
-        "invert_mask mix"),
-    "net.sf.openfx.CopyRectanglePlugin": (379, "area channels softness mix"),
-    "net.sf.openfx.KeyerPlugin": (380, "operation range invert"),
     "net.sf.openfx.ConstantPlugin": (381, "format first channels color"),
     "net.sf.openfx.ColorWheel": (
         382,
         "format area channels centerSaturation edgeSaturation "
         "centerValue edgeValue gamma rotate"),
     "net.sf.openfx.Ramp": (383, "output type p0 p1 color invert_mask"),
-    "net.sf.openfx.CornerPinPlugin": (
-        385,
-        "to1 enable1 to2 enable2 to3 enable3 to4 enable4 copy_from "
-        "from1 from2 from3 from4 set_to_input copy_to "
-        "transform_matrix invert filter clamp black_outside "
-        "motionblur shutter shutteroffset shuttercustomoffset"),
-    "net.sf.openfx.IDistort": (
-        386,
-        "channels uv uv_offset uv_scale filter invert_mask"),
-    "net.sf.openfx.STMap": (386, "channels uv filter invert_mask"),
-    "net.sf.openfx.LensDistortion": (387, "format anamorphicSqueeze filter"),
-    "eu.cimg.EdgeDetect": (388, "channels edgedetector"),
-    "net.sf.cimg.CImgZDefocus": (
-        389,
-        "z_channel math focal_point center dof size max_size layers "
-        "shape blur_dof"),
-    "net.sf.openfx.Retime": (390, "reverse speed filter before after"),
 }
 
 # The short titles of the issues (xfail reasons).
 ISSUES = {
-    378: "Merge: Bounding Box comes before Screen Alpha",
-    379: "CopyRectangle: the rectangle comes before the channels",
-    380: "Keyer: Invert comes last",
     381: "Constant: format and frame range come before the colour",
     382: "ColorWheel: the area comes before the wheel controls",
     383: "Ramp: Type comes before the points, mask controls last",
-    385: "CornerPin: the From points come before the filter controls",
-    386: "IDistort, STMap: Filter comes before the mask controls",
-    387: "LensDistortion: the output format comes first",
-    388: "EdgeDetect: the channels come before the edge detector",
-    389: "ZDefocusCImg: focus controls order",
-    390: "Retime: Filter comes before Before and After",
 }
 
 

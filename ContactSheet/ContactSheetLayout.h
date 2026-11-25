@@ -27,6 +27,7 @@
 #include <cassert>
 #include <cstddef>
 #include <algorithm>
+#include <cmath>
 
 #include "ofxsImageEffect.h"
 #include "ofxsCoords.h"
@@ -35,8 +36,91 @@
 namespace OFX {
 namespace ContactSheet {
 
-// Compute the RoD of cell number "cell" in the rows x columns grid that covers rod.
+// The order in which the cells of the grid are populated.
+enum class ColumnOrder
+{
+    eLeftRight, // every row from left to right
+    eRightLeft, // every row from right to left
+    eSnake,     // alternate directions, starting from left to right
+};
+
+// The grid of cells that covers the output RoD, and the order of its cells. Cell number n is in
+// the populated row n / columns (row 0 is populated first: the bottom row, or the top row if
+// topBottom), at column n % columns of that row in the order given by columnOrder.
+struct Grid
+{
+    int rows = 1;
+    int columns = 1;
+    bool topBottom = false; // rows are populated from the top downward (else from the bottom upward)
+    ColumnOrder columnOrder = ColumnOrder::eLeftRight;
+    // vertical shift of all the cells, in rows (up if positive): non-zero to center the populated
+    // rows vertically (see rowShiftToCenter())
+    double rowShift = 0.;
+};
+
+// The shift that centers the rows that hold the first filledCells cells vertically in the grid:
+// half the number of empty rows, towards the empty rows.
+inline double
+rowShiftToCenter(const Grid& grid,
+                 long long filledCells)
+{
+    if ( (grid.rows <= 0) || (grid.columns <= 0) || (filledCells <= 0) ) {
+        return 0.;
+    }
+    const long long filledRows = (std::min)( static_cast<long long>(grid.rows), (filledCells + grid.columns - 1) / grid.columns );
+    const double shift = (grid.rows - filledRows) / 2.;
+
+    // the rows populated first are at the top with topBottom: move them down
+    return grid.topBottom ? -shift : shift;
+}
+
+// The column of the cell at index c (in population order) in populated row r, from the left.
+inline int
+displayColumn(const Grid& grid,
+              int r,
+              int c)
+{
+    const bool rightLeft = (grid.columnOrder == ColumnOrder::eRightLeft) ||
+                           ( (grid.columnOrder == ColumnOrder::eSnake) && (r % 2 == 1) );
+
+    return rightLeft ? (grid.columns - 1 - c) : c;
+}
+
+// The row of populated row r, from the bottom (without the row shift).
+inline int
+displayRow(const Grid& grid,
+           int r)
+{
+    return grid.topBottom ? (grid.rows - 1 - r) : r;
+}
+
+// Compute the RoD of cell number "cell" in the grid that covers rod.
 // Return false if the cell is beyond the last row.
+template<class Index>
+inline bool
+cellRoD(Index cell,
+        const Grid& grid,
+        const OfxRectD& rod,
+        OfxRectD* cellRect)
+{
+    const int r = static_cast<int>(cell / grid.columns);
+    const int c = static_cast<int>(cell % grid.columns);
+    if (r >= grid.rows) {
+        return false;
+    }
+    const double y = displayRow(grid, r) + grid.rowShift;
+    const int x = displayColumn(grid, r, c);
+    // now compute the four corners of the cell in the rod
+    cellRect->x1 = rod.x1 + x * (rod.x2 - rod.x1) / grid.columns;
+    cellRect->y1 = rod.y1 + y * (rod.y2 - rod.y1) / grid.rows;
+    cellRect->x2 = rod.x1 + (x + 1) * (rod.x2 - rod.x1) / grid.columns;
+    cellRect->y2 = rod.y1 + (y + 1) * (rod.y2 - rod.y1) / grid.rows;
+
+    return true;
+}
+
+// The same, for a grid with no row shift and with the rows populated from left to right
+// (leftright) or from right to left.
 template<class Index>
 inline bool
 cellRoD(Index cell,
@@ -47,22 +131,36 @@ cellRoD(Index cell,
         const OfxRectD& rod,
         OfxRectD* cellRect)
 {
-    int r = cell / columns;
-    int c = cell % columns;
-    if (r >= rows) {
+    Grid grid;
+    grid.rows = rows;
+    grid.columns = columns;
+    grid.topBottom = topbottom;
+    grid.columnOrder = leftright ? ColumnOrder::eLeftRight : ColumnOrder::eRightLeft;
+
+    return cellRoD(cell, grid, rod, cellRect);
+}
+
+// The number of the cell at point p of the grid that covers rod (the inverse of cellRoD()).
+// Return false if p is outside rod or outside the cells.
+inline bool
+cellAt(const Grid& grid,
+       const OfxRectD& rod,
+       const OfxPointD& p,
+       long long* cell)
+{
+    if ( (p.x < rod.x1) || (p.x >= rod.x2) || (p.y < rod.y1) || (p.y >= rod.y2) ) {
         return false;
     }
-    if (topbottom) {
-        r = rows - 1 - r;
+    const double cellw = (rod.x2 - rod.x1) / grid.columns;
+    const double cellh = (rod.y2 - rod.y1) / grid.rows;
+    const int x = static_cast<int>( std::floor( (p.x - rod.x1) / cellw ) );
+    const int y = static_cast<int>( std::floor( (p.y - rod.y1) / cellh - grid.rowShift ) );
+    if ( (x < 0) || (grid.columns <= x) || (y < 0) || (grid.rows <= y) ) {
+        return false;
     }
-    if (!leftright) {
-        c = columns - 1 - c;
-    }
-    // now compute the four corners of the cell in the rod
-    cellRect->x1 = rod.x1 + c * (rod.x2 - rod.x1) / columns;
-    cellRect->y1 = rod.y1 + r * (rod.y2 - rod.y1) / rows;
-    cellRect->x2 = rod.x1 + (c + 1) * (rod.x2 - rod.x1) / columns;
-    cellRect->y2 = rod.y1 + (r + 1) * (rod.y2 - rod.y1) / rows;
+    const int r = displayRow(grid, y); // displayRow() is its own inverse
+    const int c = displayColumn(grid, r, x); // so is displayColumn(), for a given row
+    *cell = static_cast<long long>(r) * grid.columns + c;
 
     return true;
 }

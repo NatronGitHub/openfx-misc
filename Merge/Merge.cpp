@@ -1804,6 +1804,22 @@ MergePluginFactory<majorVersion,plugin>::describeInContext(ImageEffectDescriptor
         }
     }
 
+    // alphaMasking, on the same row as the operation, before the bounding box (#378)
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAlphaMasking);
+        param->setLabel(kParamAlphaMaskingLabel);
+        param->setAnimates(true);
+        param->setDefault(false);
+        param->setEnabled( MergeImages2D::isMaskable(eMergeOver) );
+        param->setHint(kParamAlphaMaskingHint);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    // the last param before the channels has a divider
+    const bool hasRangeFrom = (context == eContextGeneral) && (majorVersion >= kRangeFromMinMajor);
+
     // boundingBox
     {
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamBBox);
@@ -1819,13 +1835,16 @@ MergePluginFactory<majorVersion,plugin>::describeInContext(ImageEffectDescriptor
         param->appendOption(kParamBBoxOptionB);
         param->setAnimates(true);
         param->setDefault( (int)eBBoxUnion );
+        if (!hasRangeFrom) {
+            param->setLayoutHint(eLayoutHintDivider);
+        }
         if (page) {
             page->addChild(*param);
         }
     }
 
     // rangeFrom (issue #277): the time domain, only called in the general context
-    if ( (context == eContextGeneral) && (majorVersion >= kRangeFromMinMajor) ) {
+    if (hasRangeFrom) {
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamRangeFrom);
         param->setLabel(kParamRangeFromLabel);
         param->setHint(kParamRangeFromHint);
@@ -1835,19 +1854,6 @@ MergePluginFactory<majorVersion,plugin>::describeInContext(ImageEffectDescriptor
         param->appendOption(kParamRangeFromOptionA);
         param->setDefault( static_cast<int>(eRangeFromB) );
         param->setAnimates(false); // used in getTimeDomain()
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-
-    // alphaMasking
-    {
-        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAlphaMasking);
-        param->setLabel(kParamAlphaMaskingLabel);
-        param->setAnimates(true);
-        param->setDefault(false);
-        param->setEnabled( MergeImages2D::isMaskable(eMergeOver) );
-        param->setHint(kParamAlphaMaskingHint);
         param->setLayoutHint(eLayoutHintDivider);
         if (page) {
             page->addChild(*param);

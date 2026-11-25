@@ -22,8 +22,10 @@
  */
 
 #include <memory>
+#include <cctype>
 #include <cmath>
 #include <cstring>
+#include <string>
 #include <stdio.h> // for snprintf & _snprintf
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #  include <windows.h>
@@ -50,7 +52,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDescription \
     "Quickly generate or process image from mathematical formula evaluated for each pixel.\n" \
     "Full documentation for G'MIC/CImg expressions can be found at http://gmic.eu/reference.shtml#section9\n" \
-    "The only difference is the predefined variables 'T' (current time) and 'K' (render scale).\n" \
+    "The only difference is the predefined variables 'T' (current time), 'K' (render scale), and 'X' and 'Y' (pixel coordinates in the full-size image).\n" \
+    "'x' and 'y' are the column and row of the processed buffer: they start at 0 at the lower-left corner of the processed region (the render window within the region of definition), and are at the render scale. 'X' and 'Y' are the coordinates of the same pixel in the full-size image, the same at any render scale and wherever the processed region starts: X=(x+x1+0.5)/K-0.5, where x1 is the left of the buffer, in pixels at the render scale (pixel centres map to pixel centres). An expression that assigns X or Y (X=..., const X=...) keeps its own.\n" \
     "\n" \
     "Sample expressions:\n" \
     "\n" \
@@ -71,7 +74,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDescriptionMarkdown "\n" \
     "Quickly generate or process image from mathematical formula evaluated for each pixel.\n" \
     "Full documentation for [G'MIC](http://gmic.eu/)/[CImg](http://cimg.eu/) expressions is reproduced below and available online from the [G'MIC help](http://gmic.eu/reference.shtml#section9).\n" \
-    "The only additions of this plugin are the predefined variables `T` (current time) and `K` (render scale).\n" \
+    "The only additions of this plugin are the predefined variables `T` (current time), `K` (render scale), and `X` and `Y` (pixel coordinates in the full-size image).\n" \
+    "`x` and `y` are the column and row of the processed buffer: they start at 0 at the lower-left corner of the processed region (the render window within the region of definition), and are at the render scale. Use `X` and `Y` for an expression that gives the same image at any render scale (e.g. in proxy mode) and wherever the processed region starts.\n" \
     "\n" \
     "Uses the 'fill' function from the CImg library.\n" \
     "CImg is a free, open-source library distributed under the CeCILL-C (close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. It can be used in commercial applications (see http://cimg.eu).\n" \
@@ -120,13 +124,14 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "        * '`R`','`G`','`B`' and '`A`' are equivalent to '`i0`', '`i1`', '`i2`' and '`i3`' respectively.\n" \
     "        * '`I`': current vector-valued processed pixel in the associated image, if any (__0__ otherwise). The number of vector components is equal to the number of image channels (e.g. __I = \\[ R,G,B \\]__ for a __RGB__ image).\n" \
     "        * You may add '`#ind`' to any of the variable name above to retrieve the information for any numbered image __\\[ind\\]__ of the list (when this makes sense). For instance '`ia#0`' denotes the average value of the first image of the list).\n" \
-    "        * '`x`': current processed column of the associated image, if any (__0__ otherwise).\n" \
-    "        * '`y`': current processed row of the associated image, if any (__0__ otherwise).\n" \
+    "        * '`x`': current processed column of the associated image, if any (__0__ otherwise). In this plugin, the column in the processed buffer at the render scale, from the left of the processed region (the render window within the region of definition).\n" \
+    "        * '`y`': current processed row of the associated image, if any (__0__ otherwise). In this plugin, the row in the processed buffer at the render scale, from the bottom of the processed region.\n" \
     "        * '`z`': current processed slice of the associated image, if any (__0__ otherwise).\n" \
     "        * '`c`': current processed channel of the associated image, if any (__0__ otherwise).\n" \
     "        * '`t`': thread id when an expression is evaluated with multiple threads (__0__ means 'master thread').\n" \
     "        * '`T`': current time \\[OpenFX-only\\].\n" \
     "        * '`K`': render scale (1 means full scale, 0.5 means half scale) \\[OpenFX-only\\].\n" \
+    "        * '`X`', '`Y`': column and row of the current pixel in the full-size image, i.e. pixel coordinates at render scale 1 (__X=(x+x1+0.5)/K-0.5__, where __x1__ is the left of the processed buffer, in pixels at the render scale: pixel centres map to pixel centres); they do not depend on the render scale or on where the processed region starts. An expression that assigns `X` or `Y` (`X=...`, `const X=...`) keeps its own \\[OpenFX-only\\].\n" \
     "        * '`e`': value of e, i.e. __2.71828...__\n" \
     "        * '`pi`': value of pi, i.e. __3.1415926...__\n" \
     "        * '`u`': a random value between __\\[0,1\\]__, following a uniform distribution.\n" \
@@ -207,7 +212,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
-// version 2.2: premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79)
+// version 2.2: premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79);
+//              X and Y: pixel coordinates in the full-size image (x and y are buffer indices at the render scale, #297); the '*' and ':' expression prefixes work;
+//              T keeps all its digits (%.17g)
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 2 // Increment this when you have fixed a bug or made it faster.
 
@@ -274,8 +281,8 @@ public:
 
     virtual void render(const RenderArguments &args,
                         const CImgExpressionParams& params,
-                        int /*x1*/,
-                        int /*y1*/,
+                        int x1,
+                        int y1,
                         cimg_library::CImg<cimgpix_t>& /*mask*/,
                         cimg_library::CImg<cimgpix_t>& cimg,
                         int /*alphaChannel*/) OVERRIDE FINAL
@@ -285,10 +292,11 @@ public:
         if ( params.expr.empty() ) {
             throwSuiteStatusException(kOfxStatFailed);
         }
-        char vars[256];
-        snprintf(vars, sizeof(vars), "T=%g;K=%g;", args.time, args.renderScale.x);
+        // The predefined variables are assignments prepended to the expression.
+        const std::string vars = predefinedVariables(args.time, args.renderScale, x1, y1, params.expr);
         std::string expr;
-        if ( (params.expr[0] == '<') || (params.expr[0] == '>') ) {
+        if ( hasEvaluationPrefix(params.expr) ) {
+            // the prefix must stay the first character
             expr = params.expr.substr(0, 1) + vars + params.expr.substr(1);
         } else {
             expr = vars + params.expr;
@@ -329,6 +337,88 @@ public:
     }
 
 private:
+
+    // The CImg fill() prefixes that select the evaluation mode: '<' and '>' (in-place, backward or forward
+    // order), '*' (parallel evaluation) and ':' (parallel evaluation without an input copy).
+    // '+' is not one of them here: "T=...;+expr" was always a unary plus.
+    static bool hasEvaluationPrefix(const std::string& expr)
+    {
+        if ( expr.empty() ) {
+            return false;
+        }
+        const char c = expr[0];
+
+        return c == '<' || c == '>' || c == '*' || c == ':';
+    }
+
+    // A character of a CImg math parser identifier.
+    static bool isIdentifierChar(char c)
+    {
+        return std::isalnum( static_cast<unsigned char>(c) ) || c == '_';
+    }
+
+    // Whether expr uses the one-letter variable name as a whole identifier, and never assigns it
+    // ("name=", but not "name==", or "const name"): an expression that defines its own X or Y, e.g. as a
+    // constant or a vector, keeps it.
+    static bool usesUnassignedVariable(const std::string& expr,
+                                       char name)
+    {
+        const std::size_t n = expr.size();
+        bool used = false;
+
+        for (std::size_t i = 0; i < n; ++i) {
+            if ( (expr[i] != name) ||
+                 ( (i > 0) && isIdentifierChar(expr[i - 1]) ) ||
+                 ( (i + 1 < n) && isIdentifierChar(expr[i + 1]) ) ) {
+                continue;
+            }
+            std::size_t next = i + 1;
+            while ( (next < n) && std::isspace( static_cast<unsigned char>(expr[next]) ) ) {
+                ++next;
+            }
+            if ( (next < n) && (expr[next] == '=') && ( (next + 1 >= n) || (expr[next + 1] != '=') ) ) {
+                return false; // name=...
+            }
+            std::size_t prev = i;
+            while ( (prev > 0) && std::isspace( static_cast<unsigned char>(expr[prev - 1]) ) ) {
+                --prev;
+            }
+            if ( (prev >= 5) && (expr.compare(prev - 5, 5, "const") == 0) &&
+                 ( (prev == 5) || !isIdentifierChar(expr[prev - 6]) ) ) {
+                return false; // const name
+            }
+            used = true;
+        }
+
+        return used;
+    }
+
+    // T (time), K (render scale), and X and Y, the pixel coordinates in the full-size image, if the expression
+    // uses them without defining them. x and y are the column and row in the processed buffer, at the render
+    // scale, from its lower-left corner (x1, y1) in pixel coordinates at the render scale (#297). X and Y map
+    // pixel centres: X=(x+x1+0.5)/K-0.5, so that they are x+x1 at scale 1, and a render at scale K samples the
+    // full-size image as a box downscale does. Expressions that do not use X or Y are evaluated as before.
+    static std::string predefinedVariables(double time,
+                                           const OfxPointD& renderScale,
+                                           int x1,
+                                           int y1,
+                                           const std::string& userExpr)
+    {
+        char buf[256];
+        // K: %g, as before (CImgExpression 2.1)
+        snprintf(buf, sizeof(buf), "T=%.17g;K=%g;", time, renderScale.x);
+        std::string vars(buf);
+        if ( usesUnassignedVariable(userExpr, 'X') ) {
+            snprintf(buf, sizeof(buf), "X=(x+%.1f)/%.17g-0.5;", x1 + 0.5, renderScale.x);
+            vars += buf;
+        }
+        if ( usesUnassignedVariable(userExpr, 'Y') ) {
+            snprintf(buf, sizeof(buf), "Y=(y+%.1f)/%.17g-0.5;", y1 + 0.5, renderScale.y);
+            vars += buf;
+        }
+
+        return vars;
+    }
 
     // params
     StringParam *_expr;

@@ -21,9 +21,10 @@
 # hostDemo renders the frames t=0 and t=1 (or --frames), both views of a stereo
 # frame (hostDemo is built with the OFX_EXTENSIONS_* of the plugins), of a PAL SD project
 # (720x576), at render scale 1 (or --scale), in the whole RoD (or --window), on
-# synthetic inputs (-i Clip=solid:r,g,b,a|ramp|checker:N|none), with the
-# depth and components that the clip preferences of the plugin map each
-# clip to. A render fails if:
+# synthetic inputs (-i Clip=solid:r,g,b,a|ramp|checker:N|none, RGBA unless #rgb or #alpha
+# follows), with the depth and components that the clip preferences of the plugin map each
+# clip to. With --multiplane (in the arguments of a render), hostDemo is a multiplane host, and
+# -i Clip@Plane=spec gives an input an extra plane (openfx#331). A render fails if:
 # - hostDemo fails (exit status not 0): an action failed, an image fetch
 #   failed, a float output pixel was not written (hostDemo fills the float
 #   output images with NaN), or the plugin crashed;
@@ -485,6 +486,14 @@ hostdemo() {
 # fails otherwise, it is a FAIL; if it passes (XPASS), the test fails too, so
 # that the entry is updated when the bug is fixed. A "debug:" known bug (a
 # failed assertion) is only expected in debug builds.
+# ContactSheet (filter context): hostDemo connects every clip that has no -i, so the inputs
+# after the last one of a test are disconnected with -i N=none (Center Rows depends on the last
+# connected input). The clips of inputs 10 to 15 are named 01, 11, 21, 31, 41 and 51: the
+# plug-in's unsignedToString() writes the digits in reverse order (a bug, to be fixed separately,
+# which will rename them here)
+cs_none10="01 11 21 31 41 51"
+cs_none2=$(for i in $(seq 2 9) $cs_none10; do printf -- ' -i %s=none' "$i"; done)
+cs_none3=$(for i in $(seq 3 9) $cs_none10; do printf -- ' -i %s=none' "$i"; done)
 tests=(
     # generators. The byte and short outputs of Constant are sRGB and Rec.709:
     # 1 and 0 are the same in all three.
@@ -600,6 +609,11 @@ tests=(
     "HSLToRGB l=0|net.sf.openfx.HSLToRGB|filter|*|mean=0,0,0,1||-i Source=solid:0.3,0.5,0,1"
     "RGBToHSI subnormal|net.sf.openfx.RGBToHSI|filter|float|mean=0,1,0,1||-i Source=solid:1e-40,0,0,1"
     "RGBToHSL near white|net.sf.openfx.RGBToHSL|filter|float|mean=0.1667,1,1,1||-i Source=solid:1,1,0.99999994,1"
+    # RGBToHSL outside [0,1] (#399, openfx-supportext#215): the hue comes from the unclamped channels,
+    # the saturation from the colour clamped to [0,1]. (2, 0.5, 0): H = (0.5 / 2) / 6 (it was 0.917),
+    # S 1, L 1; the grey (2, 2, 2): H 0, S 0 (it was 1), L 2
+    "RGBToHSL out of range|net.sf.openfx.RGBToHSL|filter|float|tol=1e-5+mean=0.0416667,1,1,1||-i Source=solid:2,0.5,0,1"
+    "RGBToHSL grey above 1|net.sf.openfx.RGBToHSL|filter|float|tol=1e-5+mean=0,0,2,1||-i Source=solid:2,2,2,1"
     # the conventions in the ColorTransform descriptions (#296): HSV of the values as given (no
     # transfer function), hue in [0,1): (0.25,0.5,0.125) -> H = (2 - 1/3)/6, S = 0.375/0.5, V = 0.5;
     # Y'CbCr in the video range: white -> Y' = 235/255 (with the rounded coefficients: 0.921745),
@@ -877,6 +891,22 @@ tests=(
     "Shuffle 3 filter|net.sf.openfx.ShufflePlugin|filter|float|mean=0.75,0.5,0.25,1||-m 3 -i Source=solid:0.25,0.5,0.75,1 outputR=8 outputB=6"
     "Shuffle 2 filter|net.sf.openfx.ShufflePlugin|filter|float|mean=0.75,0.5,0.25,1||-m 2 -i Source=solid:0.25,0.5,0.75,1 outputR=2 outputB=0"
     "Shuffle filter comps|net.sf.openfx.ShufflePlugin|filter|*|comps=RGBA+mean=0.75,0.5,0.25,1||-i Source=solid:0.25,0.5,0.75,1 outputComponents=1 outputR=8 outputB=6"
+    # a multiplane host (hostDemo --multiplane, openfx#331; the menus list the channels by label).
+    # hostDemo is a multiplane host without Natron's extension (kFnOfxImageEffectPropMultiPlanar
+    # only): the channel menus list all the planes of A, then of B, so the default indices of R, G
+    # and B are not B.Color.R, G, B (6 is A.DisparityRight.X) and the tests set them by label.
+    # R, G, B from B's color plane and A from another plane (B's backward motion vectors, whose U
+    # is the first value of the solid) is not an identity of B: the alpha is that channel (#268)
+    "Shuffle multiplane A from another plane|net.sf.openfx.ShufflePlugin|general|float|notidentity+mean=0.1,0.2,0.3,0.25||--multiplane -i A=solid:0.5,0.6,0.7,0.8 -i B=solid:0.1,0.2,0.3,0.4 -i B@BackMotionVector=solid:0.25,0.75,0,0 -s outputR=B.Color.R -s outputG=B.Color.G -s outputB=B.Color.B -s outputA=B.Backward.U"
+    # R, G, B from an RGB input (B, #rgb: openfx#330) and A from an Alpha-only input (A, #alpha:
+    # hostDemo makes all four channels the solid's alpha, 0.4, so the distinct R, G, B values must
+    # not show): the output alpha is that of A. Regression guards for the #375 scenario only: the
+    # #375 bug (the alpha was 1) shows on Natron (NatronRenderer results in #375), not in hostDemo,
+    # which has no dynamic choices: its output plane is SupportExt's hard-coded RGBA plane, which
+    # the old test already handled. The second case (no multiplane suites, outputA=3 is A.a) never
+    # used that code path.
+    "Shuffle multiplane alpha-only A|net.sf.openfx.ShufflePlugin|general|float|notidentity+comps=RGBA+mean=0.1,0.2,0.3,0.4||--multiplane -i A=solid:0.9,0.8,0.7,0.4#alpha -i B=solid:0.1,0.2,0.3,1#rgb -s outputR=B.Color.R -s outputG=B.Color.G -s outputB=B.Color.B -s outputA=A.Color.A"
+    "Shuffle alpha-only A|net.sf.openfx.ShufflePlugin|general|*|notidentity+comps=RGBA+mean=0.1,0.2,0.3,0.4||-i A=solid:0.9,0.8,0.7,0.4#alpha -i B=solid:0.1,0.2,0.3,1#rgb outputA=3"
     # isIdentity is false where the render does not copy the input (a host would pass the input
     # through instead of rendering). KeyMix: out of A, but in the mask, the output is
     # B * (1 - mask * mix), here 0, not B (issue #321).
@@ -1023,6 +1053,17 @@ tests=(
     "Retime Box speed 1|net.sf.openfx.Retime|general|float|identity+tol=0.05+mean=10,0,0,1||filter=3 --frames 10"
     "Retime Box speed 10|net.sf.openfx.Retime|general|float|mean=1.25,0,0,0.55||filter=3 speed=10 before=2 --frames 0"
     "Retime Box speed 0.5|net.sf.openfx.Retime|general|float|tol=0.05+mean=10.5,0,0,1||filter=3 speed=0.5 --frames 21"
+    # FrameHold Set to Current Frame (#307), on the same default input: pressed at t=7, First Frame is 7
+    # and every frame shows frame 7; with First Frame animated (keys at 0 and 20), it adds a key at 7.
+    # Pressed at t=40, the value is clamped to the last input frame, 25. (Setting First Frame when the Source
+    # is connected is only done on Natron >= 2.6, and hostDemo connects no clip.)
+    "FrameHold Set to Current Frame|net.sf.openfx.FrameHold|general|float|identity+tol=0.05+mean=7,0,0,1+value:firstFrame=7+keys:firstFrame=0+value:firstFrameInitialised=1||-s setToCurrentFrame@7"
+    "FrameHold Set to Current Frame key|net.sf.openfx.FrameHold|general|float|identity+tol=0.05+mean=7,0,0,1+value:firstFrame=3+keys:firstFrame=3+keyrange:firstFrame=0,20||-s firstFrame@0=3 -s firstFrame@20=3 -s setToCurrentFrame@7 --frames 7"
+    "FrameHold Set to Current Frame clamped|net.sf.openfx.FrameHold|general|float|identity+value:firstFrame=25||-s setToCurrentFrame@40"
+    # animated and clamped: keys at 0 and 50 (value 3), pressed at t=40: a key at 40 (not at 25) with value
+    # 25, so the render at t=40 is frame 25 (a key at 25 would give about 11.8 at t=40); the time drawn in
+    # black makes the mean of frame 25 24.949
+    "FrameHold Set to Current Frame key clamped|net.sf.openfx.FrameHold|general|float|identity+tol=0.005+mean=24.949,0,0,1+keys:firstFrame=3+keyrange:firstFrame=0,50||-s firstFrame@0=3 -s firstFrame@50=3 -s setToCurrentFrame@40 --frames 40"
     # GodRays with gamma 0 computed pow(x, 1/0) of x = 1 up to rounding: the colors were 1 (or
     # infinite); they are now interpolated geometrically from fromColor to toColor
     "GodRays gamma 0|net.sf.openfx.GodRays|filter|float|mean=0.209,0.264,0.310,0.351||-i Source=checker:16 scale=0.7,0.7 fromColor=1,1,1,1 toColor=0.2,0.3,0.4,0.5 gamma=0,0,0,0"
@@ -1064,6 +1105,21 @@ tests=(
     "CImgExpression J periodic|net.sf.cimg.CImgExpression|filter|float|mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=J(0,-500,0,1,2)"
     "CImgExpression J Neumann|net.sf.cimg.CImgExpression|filter|float|mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=J(0,-500,0,2,1)"
     "CImgExpression J Dirichlet|net.sf.cimg.CImgExpression|filter|float|mean=0.033,0.066,0.099,0.132||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=J(0.5,-500,0,2,0)"
+    # #297: X and Y are the pixel coordinates in the full-size image, at any render scale and wherever the
+    # processed region starts (x and y are buffer indices at the render scale). Pixel centres map to pixel
+    # centres: at scale 0.5, X=2x+0.5, so the mean of X/720 on the 360 columns is 359.5/720, and of Y/576
+    # on the 288 rows 287.5/576, as at scale 1 (x/720 would give 179.5/720). The expression also gives
+    # alpha (c=3: Y).
+    "CImgExpression X Y scale 0.5|net.sf.cimg.CImgExpression|filter|float|mean=0.499306,0.499132,0.499306,0.499132+tol=0.0001||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=if(c%2,Y/576,X/720) --scale 0.5"
+    "CImgExpression X Y|net.sf.cimg.CImgExpression|filter|float|mean=0.499306,0.499132,0.499306,0.499132+tol=0.0001||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=if(c%2,Y/576,X/720)"
+    # an input whose RoD starts at 100,50 (the 64x48 autocrop.pfm, opaque): X=x+100, Y=y+50, so the means
+    # of X/1000 and Y/1000 are 131.5/1000 and 73.5/1000 (x/1000 would give 31.5/1000)
+    "CImgExpression X Y offset|net.sf.cimg.CImgExpression|filter|float|mean=0.1315,0.0735,0.1315,0.0735+tol=0.0001||-i Source=file:autocrop.pfm@100,50 -i Mask=none expression=if(c%2,Y/1000,X/1000)"
+    # an expression that defines its own X keeps it: no scalar X in front of a vector X (the
+    # arguments are split on spaces, so "const X" cannot be given here)
+    "CImgExpression vector X|net.sf.cimg.CImgExpression|filter|float|mean=0.5,0.5,0.5,0.5||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=X=[0.5,0.25];X[0]"
+    # the '*' (parallel evaluation) prefix stays the first character of the expression
+    "CImgExpression * prefix|net.sf.cimg.CImgExpression|filter|float|mean=0.5,0.5,0.5,0.5||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=*0.5"
     # symmetric_eigen() on the rank-deficient structure tensors of flat images and ramps
     # (GreycLab/gmic#221: NaN eigenvectors when the compiler contracts to FMAs): no NaN
     # output pixels (the float outputs are checked for NaN)
@@ -1132,6 +1188,20 @@ tests=(
     # clip 1 (its frame 22, then 25) is weighted by 0.8 at frame 23 and 0.2 at frame 26
     "AppendClip dissolve 4 first|net.sf.openfx.AppendClip|general|float|mean=17.665,0.1,0.1,1||-i 1=default -i 2=solid:0.5,0.5,0.5,1 crossDissolve=4 --frames 23"
     "AppendClip dissolve 4 last|net.sf.openfx.AppendClip|general|float|mean=5.390,0.4,0.4,1||-i 1=default -i 2=solid:0.5,0.5,0.5,1 crossDissolve=4 --frames 26"
+    # ContactSheet, 2x2 cells of 32x32 pixels (#305). The 720x576 inputs fit the width of a cell,
+    # at its bottom left: the 8x8 windows are inside the image of a cell. Two inputs, top to
+    # bottom: they fill the top row, and the bottom row is empty; with Center Rows, the row of
+    # images is in the middle (y 16 to 48)
+    "ContactSheet top row|net.sf.openfx.ContactSheetOFX|filter|float|mean=0.5,0.5,0.5,1||-i Source=solid:1,1,1,1 -i 1=solid:0.5,0.5,0.5,1${cs_none2} resolution=64,64 rowsColumns=2,2 rowOrder=0 --frames 0 --window 36,36,44,44"
+    "ContactSheet bottom row empty|net.sf.openfx.ContactSheetOFX|filter|float|mean=0,0,0,0||-i Source=solid:1,1,1,1 -i 1=solid:0.5,0.5,0.5,1${cs_none2} resolution=64,64 rowsColumns=2,2 rowOrder=0 --frames 0 --window 4,4,12,12"
+    "ContactSheet Center Rows|net.sf.openfx.ContactSheetOFX|filter|float|mean=1,1,1,1||-i Source=solid:1,1,1,1 -i 1=solid:0.5,0.5,0.5,1${cs_none2} resolution=64,64 rowsColumns=2,2 rowOrder=0 centerRows=1 --frames 0 --window 4,20,12,28"
+    "ContactSheet Center Rows right|net.sf.openfx.ContactSheetOFX|filter|float|mean=0.5,0.5,0.5,1||-i Source=solid:1,1,1,1 -i 1=solid:0.5,0.5,0.5,1${cs_none2} resolution=64,64 rowsColumns=2,2 rowOrder=0 centerRows=1 --frames 0 --window 36,20,44,28"
+    # Snake, bottom to top: inputs 0 and 1 in the bottom row from left to right, input 2 at the
+    # right of the second row
+    "ContactSheet Snake|net.sf.openfx.ContactSheetOFX|filter|float|mean=0.25,0.25,0.25,1||-i Source=solid:1,1,1,1 -i 1=solid:0.5,0.5,0.5,1 -i 2=solid:0.25,0.25,0.25,1${cs_none3} resolution=64,64 rowsColumns=2,2 colOrder=2 --frames 0 --window 36,36,44,44"
+    # the first row goes from left to right (RightLeft would put input 1, 0.5, at the bottom left)
+    "ContactSheet Snake first row|net.sf.openfx.ContactSheetOFX|filter|float|mean=1,1,1,1||-i Source=solid:1,1,1,1 -i 1=solid:0.5,0.5,0.5,1 -i 2=solid:0.25,0.25,0.25,1${cs_none3} resolution=64,64 rowsColumns=2,2 colOrder=2 --frames 0 --window 4,4,12,12"
+    "ContactSheet Snake empty|net.sf.openfx.ContactSheetOFX|filter|float|mean=0,0,0,0||-i Source=solid:1,1,1,1 -i 1=solid:0.5,0.5,0.5,1 -i 2=solid:0.25,0.25,0.25,1${cs_none3} resolution=64,64 rowsColumns=2,2 colOrder=2 --frames 0 --window 4,36,12,44"
     "AppendClip dissolve 4 after|net.sf.openfx.AppendClip|general|*|identity+mean=0.5,0.5,0.5,1||-i 1=default -i 2=solid:0.5,0.5,0.5,1 crossDissolve=4 --frames 27"
 )
 

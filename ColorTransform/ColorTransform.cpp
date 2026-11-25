@@ -216,6 +216,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //     (later, plugins were named more consistently and a few conversions were added, without changing the version)
 // 1.1 HSVToRGB, HSLToRGB, HSIToRGB wrap the hue into the hue circle (bug fix: HSV and HSL gave
 //     magenta for hues in [-1, -5/6) mod 1, and HSI was not periodic for out-of-range hues);
+//     RGBToHSL takes the hue from the unclamped channels and the saturation from the colour
+//     clamped to [0,1] (bug fix #399: (2, 0.5, 0) gave H 0.917, not 0.042, and the grey (2, 2, 2) gave S 1);
 //     all conversions released as 1.0, including version 1 of the signedOutput() conversions
 //     (kept for backward compatibility): premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79)
 // 1.0 RGBToYIQ, YIQToRGB, RGBToYDbDr, YDbDrToRGB: initial version
@@ -440,7 +442,9 @@ public:
 
                 case eColorTransformRGBToHSL:
                     // values as given, see the comment above
-                    Color::rgb_to_hsl(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    // fixedOutOfRange: the hue comes from the unclamped channels, the saturation
+                    // from the colour clamped to [0,1] (#399)
+                    Color::rgb_to_hsl(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2], /*fixedOutOfRange*/ true);
                     break;
 
                 case eColorTransformHSLToRGB:

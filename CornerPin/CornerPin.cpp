@@ -1607,63 +1607,6 @@ CornerPinPluginDescribeInContext(ImageEffectDescriptor &desc,
         }
     }
 
-    // fromPoints
-    {
-        GroupParamDescriptor* group = desc.defineGroupParam(kGroupFrom);
-        if (group) {
-            group->setLabel(kGroupFrom);
-            group->setAsTab();
-            if (page) {
-                page->addChild(*group);
-            }
-        }
-
-        defineCornerPinFromsDouble2DParam(desc, page, group, 0, 0, 0);
-        defineCornerPinFromsDouble2DParam(desc, page, group, 1, 1, 0);
-        defineCornerPinFromsDouble2DParam(desc, page, group, 2, 1, 1);
-        defineCornerPinFromsDouble2DParam(desc, page, group, 3, 0, 1);
-
-        // setToInput
-        {
-            PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamCopyInputRoD);
-            param->setLabel(kParamCopyInputRoDLabel);
-            param->setHint(kParamCopyInputRoDHint);
-            param->setLayoutHint(eLayoutHintNoNewLine, 1);
-            if (group) {
-                param->setParent(*group);
-            }
-            if (page) {
-                page->addChild(*param);
-            }
-        }
-
-        // copyTo
-        {
-            PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamCopyTo);
-            param->setLabel(kParamCopyToLabel);
-            param->setHint(kParamCopyToHint);
-            param->setLayoutHint(eLayoutHintNoNewLine, 1);
-            if (group) {
-                param->setParent(*group);
-            }
-            if (page) {
-                page->addChild(*param);
-            }
-        }
-        // copyToSingle
-        {
-            PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamCopyToSingle);
-            param->setLabel(kParamCopyToSingleLabel);
-            param->setHint(kParamCopyToSingleHint);
-            if (group) {
-                param->setParent(*group);
-            }
-            if (page) {
-                page->addChild(*param);
-            }
-        }
-    }
-
     // amount
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamTransformAmount);
@@ -1760,20 +1703,79 @@ CornerPinPluginDescribeInContext(ImageEffectDescriptor &desc,
     }
 } // CornerPinPluginDescribeInContext
 
-// "Set to input format", appended after all the other parameters (issue #270), in the "from" group
+// The "from" group (a tab), after the motion blur params, as in the
+// CornerPin2D node, whose From tab comes last; "Set to input format" (issue
+// #270) is the last param of that group.
 static void
 CornerPinPluginDescribeInContextAppended(ImageEffectDescriptor &desc,
                                          PageParamDescriptor *page)
 {
-    PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamCopyInputFormat);
-    param->setLabel(kParamCopyInputFormatLabel);
-    param->setHint(kParamCopyInputFormatHint);
-    GroupParamDescriptor* group = dynamic_cast<GroupParamDescriptor*>( desc.getParamDescriptor(kGroupFrom) );
+    // fromPoints
+    GroupParamDescriptor* group = desc.defineGroupParam(kGroupFrom);
     if (group) {
-        param->setParent(*group);
+        group->setLabel(kGroupFrom);
+        group->setAsTab();
+        if (page) {
+            page->addChild(*group);
+        }
     }
-    if (page) {
-        page->addChild(*param);
+
+    defineCornerPinFromsDouble2DParam(desc, page, group, 0, 0, 0);
+    defineCornerPinFromsDouble2DParam(desc, page, group, 1, 1, 0);
+    defineCornerPinFromsDouble2DParam(desc, page, group, 2, 1, 1);
+    defineCornerPinFromsDouble2DParam(desc, page, group, 3, 0, 1);
+
+    // setToInput
+    {
+        PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamCopyInputRoD);
+        param->setLabel(kParamCopyInputRoDLabel);
+        param->setHint(kParamCopyInputRoDHint);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
+        if (group) {
+            param->setParent(*group);
+        }
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    // copyTo
+    {
+        PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamCopyTo);
+        param->setLabel(kParamCopyToLabel);
+        param->setHint(kParamCopyToHint);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
+        if (group) {
+            param->setParent(*group);
+        }
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    // copyToSingle
+    {
+        PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamCopyToSingle);
+        param->setLabel(kParamCopyToSingleLabel);
+        param->setHint(kParamCopyToSingleHint);
+        if (group) {
+            param->setParent(*group);
+        }
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    // setToInputFormat
+    {
+        PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamCopyInputFormat);
+        param->setLabel(kParamCopyInputFormatLabel);
+        param->setHint(kParamCopyInputFormatHint);
+        if (group) {
+            param->setParent(*group);
+        }
+        if (page) {
+            page->addChild(*param);
+        }
     }
 }
 

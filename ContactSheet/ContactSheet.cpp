@@ -67,11 +67,21 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "ContactSheetOFX"
 #define kPluginGrouping "Merge"
 #define kPluginDescription \
-    "Make a contact sheet from several inputs or frames."
+    "Make a contact sheet from several inputs or frames.\n" \
+    "The output is a grid of Rows x Columns cells that covers the Resolution. " \
+    "Each input takes as many consecutive cells as there are frames in Frame Range (one by default), in the order of the inputs; " \
+    "a disconnected input keeps its cells, which stay black. Images beyond the last cell of the grid are not drawn.\n" \
+    "The cells are populated row by row, in the order given by Row Order (the first row is the bottom one by default) " \
+    "and Column Order. A sheet with fewer images than cells keeps the size and place of every cell: " \
+    "its images fill the first rows, and the other rows are empty, unless Center Rows is checked.\n" \
+    "Each image is scaled to fit its cell, minus the gap, keeping its aspect ratio."
 #define kPluginIdentifier "net.sf.openfx.ContactSheetOFX"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
-// 1.1: an empty source format (e.g. a disconnected input) no longer gives a NaN image area (NaN audit);
+// 1.1: (unreleased) the Snake column order, the Center Rows option, and the hints that say how the cells are placed;
+//      a click with Enable Selection sets Selection Frame to first + the frame index, as the overlay reads it
+//      (it was the frame index alone, so the highlighted cell was not the clicked one unless Frame Range starts at 0);
+//      an empty source format (e.g. a disconnected input) no longer gives a NaN image area (NaN audit);
 //      in the filter context, Source is RGBA, so that the RGBA Output has the components of Source, as the
 //      OpenFX spec mandates (issue #190); images with padded rows or negative row bytes
 //      (kOfxImagePropRowBytes) are drawn correctly instead of skewed or out of bounds (issue #232)
@@ -101,12 +111,21 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamCenter "center"
 #define kParamCenterLabel "Center"
 #define kParamCenterHint \
-"Center each input/frame within its cell."
+"Center the image of each input or frame in its cell. The image is scaled to fit its cell, minus the gap, keeping its aspect ratio: " \
+"if its aspect ratio is not the one of the cell, it is at the bottom left of the cell when this is not checked. " \
+"This does not move the cells: see Center Rows."
+
+#define kParamCenterRows "centerRows"
+#define kParamCenterRowsLabel "Center Rows"
+#define kParamCenterRowsHint \
+"Center the rows that hold images vertically within the Resolution bounds, when the images do not fill all the rows: " \
+"the rows after the cells of the last connected input are split evenly above and below them. " \
+"For example, with 2 inputs in a 2x2 grid, the row of the two images is in the middle of the output."
 
 #define kParamRowOrder "rowOrder"
 #define kParamRowOrderLabel "Row Order"
 #define kParamRowOrderHint \
-"How image rows are populated."
+"The order in which the rows are populated (the first input is in the first row)."
 #define kParamRowOrderOptionTopBottom "TopBottom", "From top to bottom row.", "topbottom"
 #define kParamRowOrderOptionBottomTop "BottomTop", "From bottom to top row.", "bottomtop"
 enum RowOrderEnum {
@@ -117,13 +136,29 @@ enum RowOrderEnum {
 #define kParamColumnOrder "colOrder"
 #define kParamColumnOrderLabel "Column Order"
 #define kParamColumnOrderHint \
-"How image columns are populated."
+"The order in which the cells of each row are populated."
 #define kParamColumnOrderOptionLeftRight "LeftRight", "From left to right column."
 #define kParamColumnOrderOptionRightLeft "RightLeft", "From right to left column."
+#define kParamColumnOrderOptionSnake "Snake", "In alternate directions, starting from left to right: the first row from left to right, the second one from right to left, and so on.", "snake"
 enum ColumnOrderEnum {
     eColumnOrderLeftRight = 0,
     eColumnOrderRightLeft,
+    eColumnOrderSnake, // appended in version 1.1
 };
+
+ContactSheet::ColumnOrder
+toColumnOrder(int option)
+{
+    switch (option) {
+    case eColumnOrderRightLeft:
+        return ContactSheet::ColumnOrder::eRightLeft;
+    case eColumnOrderSnake:
+        return ContactSheet::ColumnOrder::eSnake;
+    case eColumnOrderLeftRight:
+    default:
+        return ContactSheet::ColumnOrder::eLeftRight;
+    }
+}
 
 #define kParamFrameRange "frameRange"
 #define kParamFrameRangeLabel "Frame Range"
@@ -180,6 +215,9 @@ public:
     /** @brief ctor */
     ContactSheetPlugin(OfxImageEffectHandle handle, bool numerousInputs);
 
+    // The grid of cells at time "time", with "count" frames per input (also used by the overlay).
+    ContactSheet::Grid getGrid(double time, int count) const;
+
 private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
@@ -212,6 +250,7 @@ private:
     Int2DParam* _rowsColumns;
     IntParam* _gap;
     BooleanParam* _center;
+    BooleanParam* _centerRows;
     ChoiceParam* _rowOrder;
     ChoiceParam* _colOrder;
     Int2DParam* _frameRange;
@@ -230,6 +269,7 @@ ContactSheetPlugin::ContactSheetPlugin(OfxImageEffectHandle handle,
     , _rowsColumns(NULL)
     , _gap(NULL)
     , _center(NULL)
+    , _centerRows(NULL)
     , _rowOrder(NULL)
     , _colOrder(NULL)
     , _frameRange(NULL)
@@ -253,6 +293,7 @@ ContactSheetPlugin::ContactSheetPlugin(OfxImageEffectHandle handle,
     assert(_resolution && _rowsColumns);
     _gap = fetchIntParam(kParamGap);
     _center = fetchBooleanParam(kParamCenter);
+    _centerRows = fetchBooleanParam(kParamCenterRows);
     _rowOrder = fetchChoiceParam(kParamRowOrder);
     _colOrder = fetchChoiceParam(kParamColumnOrder);
     _frameRange = fetchInt2DParam(kParamFrameRange);
@@ -265,6 +306,28 @@ ContactSheetPlugin::ContactSheetPlugin(OfxImageEffectHandle handle,
 
     // finally
     syncPrivateData();
+}
+
+ContactSheet::Grid
+ContactSheetPlugin::getGrid(double time,
+                            int count) const
+{
+    ContactSheet::Grid grid;
+    _rowsColumns->getValueAtTime(time, grid.rows, grid.columns);
+    grid.topBottom = (_rowOrder->getValueAtTime(time) == eRowOrderTopBottom);
+    grid.columnOrder = toColumnOrder( _colOrder->getValueAtTime(time) );
+    if ( _centerRows->getValueAtTime(time) ) {
+        // the images fill the cells up to the last one of the last connected input
+        int lastConnected = -1;
+        for (int i = 0; i < (int)_srcClip.size(); ++i) {
+            if ( _srcClip[i] && _srcClip[i]->isConnected() ) {
+                lastConnected = i;
+            }
+        }
+        grid.rowShift = ContactSheet::rowShiftToCenter(grid, static_cast<long long>(lastConnected + 1) * count);
+    }
+
+    return grid;
 }
 
 void
@@ -306,8 +369,7 @@ ContactSheetPlugin::render(const OFX::RenderArguments &args)
         OfxRectI rodpixel = {0, 0, w, h};
         Coords::toCanonical(rodpixel, rs1, par, &rod);
     }
-    bool topbottom = (_rowOrder->getValueAtTime(time) == eRowOrderTopBottom);
-    bool leftright = (_colOrder->getValueAtTime(time) == eColumnOrderLeftRight);
+    const ContactSheet::Grid grid = getGrid(time, count);
     int gap = _gap->getValueAtTime(time);
     bool center = _center->getValueAtTime(time);
     bool absolute = _frameRangeAbsolute->getValueAtTime(time); // render only
@@ -316,9 +378,7 @@ ContactSheetPlugin::render(const OFX::RenderArguments &args)
     Coords::toCanonical(args.renderWindow, args.renderScale, dstPar, &renderWindowCanonical);
 
     // now, for each clip, compute the required region of interest, which is the union of the intersection of each cell with the renderWindow
-    int rows, columns;
-    _rowsColumns->getValueAtTime(time, rows, columns);
-    int framesLeft = rows * columns;
+    int framesLeft = grid.rows * grid.columns;
     int i = 0;
     while (framesLeft > 0 && i < (int)_srcClip.size()) {
         Clip *srcClip = _srcClip[i];
@@ -343,7 +403,7 @@ ContactSheetPlugin::render(const OFX::RenderArguments &args)
         for (int frame = 0; frame < clipCount; ++frame) {
             int cell = count * i + frame; // cell number
             OfxRectD cellRoD;
-            if ( !ContactSheet::cellRoD(cell, rows, columns, topbottom, leftright, rod, &cellRoD) ) {
+            if ( !ContactSheet::cellRoD(cell, grid, rod, &cellRoD) ) {
                 continue;
             }
 
@@ -403,15 +463,12 @@ ContactSheetPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &
         OfxRectI rodpixel = {0, 0, w, h};
         Coords::toCanonical(rodpixel, rs1, par, &rod);
     }
-    bool topbottom = (_rowOrder->getValueAtTime(time) == eRowOrderTopBottom);
-    bool leftright = (_colOrder->getValueAtTime(time) == eColumnOrderLeftRight);
+    const ContactSheet::Grid grid = getGrid(time, count);
     int gap = _gap->getValueAtTime(time);
     bool center = _center->getValueAtTime(time);
 
     // now, for each clip, compute the required region of interest, which is the union of the intersection of each cell with the renderWindow
-    int rows, columns;
-    _rowsColumns->getValueAtTime(time, rows, columns);
-    int framesLeft = rows * columns;
+    int framesLeft = grid.rows * grid.columns;
     int i = 0;
     while (framesLeft > 0 && i < (int)_srcClip.size()) {
         int clipCount = (std::min)(framesLeft, count); // number of frames from this clip
@@ -433,7 +490,7 @@ ContactSheetPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &
         for (int frame = 0; frame < clipCount; ++frame) {
             int cell = count * i + frame; // cell number
             OfxRectD cellRoD;
-            if ( !ContactSheet::cellRoD(cell, rows, columns, topbottom, leftright, rod, &cellRoD) ) {
+            if ( !ContactSheet::cellRoD(cell, grid, rod, &cellRoD) ) {
                 continue;
             }
 
@@ -586,13 +643,11 @@ class ContactSheetInteract : public OverlayInteract {
 public:
     ContactSheetInteract(OfxInteractHandle handle, ImageEffect* effect)
     : OverlayInteract(handle)
+    , _plugin( dynamic_cast<const ContactSheetPlugin*>(effect) )
     , _dstClip(NULL)
     , _resolution(NULL)
-    , _rowsColumns(NULL)
     , _gap(NULL)
     , _center(NULL)
-    , _rowOrder(NULL)
-    , _colOrder(NULL)
     , _frameRange(NULL)
     , _frameRangeAbsolute(NULL)
     , _selection(NULL)
@@ -601,15 +656,13 @@ public:
     , _hiDPI(NULL)
     , _drawMode( OFX::ofxsOverlayDrawModeForNewInteract() )
     {
+        assert(_plugin);
         _dstClip = effect->fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA) );
         _resolution  = effect->fetchInt2DParam(kParamResolution);
-        _rowsColumns = effect->fetchInt2DParam(kParamRowsColumns);
-        assert(_resolution && _rowsColumns);
+        assert(_resolution);
         _gap = effect->fetchIntParam(kParamGap);
         _center = effect->fetchBooleanParam(kParamCenter);
-        _rowOrder = effect->fetchChoiceParam(kParamRowOrder);
-        _colOrder = effect->fetchChoiceParam(kParamColumnOrder);
         _frameRange = effect->fetchInt2DParam(kParamFrameRange);
         _frameRangeAbsolute = effect->fetchBooleanParam(kParamFrameRangeAbsolute);
         _selection = effect->fetchBooleanParam(kParamSelection);
@@ -632,13 +685,11 @@ private:
     bool cellAt(const OFX::PenArgs &args, int* selectionInput, int* selectionFrame) const;
 
 private:
+    const ContactSheetPlugin* _plugin; // the effect of this overlay, which owns it
     Clip* _dstClip;
     Int2DParam *_resolution;
-    Int2DParam* _rowsColumns;
     IntParam* _gap;
     BooleanParam* _center;
-    ChoiceParam* _rowOrder;
-    ChoiceParam* _colOrder;
     Int2DParam* _frameRange;
     BooleanParam* _frameRangeAbsolute;
     BooleanParam* _selection;
@@ -666,29 +717,19 @@ ContactSheetInteract::draw(const OFX::DrawArgs &args)
         std::swap(first, last);
     }
     int count = last - first + 1;
-    bool topbottom = (_rowOrder->getValueAtTime(time) == eRowOrderTopBottom);
-    bool leftright = (_colOrder->getValueAtTime(time) == eColumnOrderLeftRight);
-
-    int rows, columns;
-    _rowsColumns->getValueAtTime(time, rows, columns);
+    if (!_plugin) {
+        return false;
+    }
+    const ContactSheet::Grid grid = _plugin->getGrid(time, count);
 
     int selectionInput = _selectionInput->getValueAtTime(time);
     int selectionFrame = _selectionFrame->getValueAtTime(time);
 
-    int c = selectionInput * count + (selectionFrame - first);
-    int r = c / columns;
-    if (r >= rows) {
+    const long long cell = static_cast<long long>(selectionInput) * count + (selectionFrame - first);
+    OfxRectD cellRect;
+    if ( (cell < 0) || !ContactSheet::cellRoD(cell, grid, rod, &cellRect) ) {
         return false;
     }
-    c = c % columns;
-    if (topbottom) {
-        r = rows - 1 - r;
-    }
-    if (!leftright) {
-        c = columns - 1 - c;
-    }
-    double cellw = (rod.x2 - rod.x1) / columns;
-    double cellh = (rod.y2 - rod.y1) / rows;
 
     // all drawing goes through d: OpenGL in V1 draws, the DrawSuite in V2 draws
     OverlayDraw d(args, _drawMode);
@@ -730,10 +771,10 @@ ContactSheetInteract::draw(const OFX::DrawArgs &args)
     d.glLineWidth(3.f * (float)screenPixelRatio);
     d.glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    double x1 = rod.x1 + cellw * c;
-    double x2 = rod.x1 + cellw * (c + 1);
-    double y1 = rod.y1 + cellh * r;
-    double y2 = rod.y1 + cellh * (r + 1);
+    const double x1 = cellRect.x1;
+    const double x2 = cellRect.x2;
+    const double y1 = cellRect.y1;
+    const double y2 = cellRect.y2;
 
     // Draw everything twice
     // l = 0: shadow
@@ -775,46 +816,22 @@ ContactSheetInteract::cellAt(const OFX::PenArgs &args, int* selectionInput, int*
 
     OfxRectD rod = _dstClip->getRegionOfDefinition(time);
 
-    double x = args.penPosition.x;
-    double y = args.penPosition.y;
-
-    if (x < rod.x1 || x >= rod.x2 || y < rod.y1 || y >= rod.y2) {
-        return false;
-    }
     int first, last;
-
-    int rows, columns;
-    _rowsColumns->getValueAtTime(time, rows, columns);
-
-    double cellw = (rod.x2 - rod.x1) / columns;
-    double cellh = (rod.y2 - rod.y1) / rows;
-
-    int c = std::floor((x - rod.x1) / cellw);
-    if (c < 0 || columns <= c) {
-        return false;
-    }
-    int r = std::floor((y - rod.y1) / cellh);
-    if (r < 0 || rows <= r) {
-        return false;
-    }
-    bool topbottom = (_rowOrder->getValueAtTime(time) == eRowOrderTopBottom);
-    bool leftright = (_colOrder->getValueAtTime(time) == eColumnOrderLeftRight);
-    if (topbottom) {
-        r = rows - 1 - r;
-    }
-    if (!leftright) {
-        c = columns - 1 - c;
-    }
     _frameRange->getValueAtTime(time, first, last);
     if (first > last) {
         std::swap(first, last);
     }
-    int count = last - first + 1;
+    const int count = last - first + 1;
+    if (!_plugin) {
+        return false;
+    }
+    long long c = 0;
+    if ( !ContactSheet::cellAt(_plugin->getGrid(time, count), rod, args.penPosition, &c) ) {
+        return false;
+    }
 
-    c = c + r * columns;
-
-    *selectionFrame = c % count;
-    *selectionInput = c / count;
+    *selectionFrame = first + static_cast<int>(c % count); // the frame that draw() reads
+    *selectionInput = static_cast<int>(c / count);
 
     return true;
 }
@@ -1034,6 +1051,18 @@ ContactSheetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamCenterLabel);
         param->setHint(kParamCenterHint);
         param->setAnimates(false);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    // centerRows
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamCenterRows);
+        param->setLabel(kParamCenterRowsLabel);
+        param->setHint(kParamCenterRowsHint);
+        param->setAnimates(false);
         if (page) {
             page->addChild(*param);
         }
@@ -1065,6 +1094,8 @@ ContactSheetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->appendOption(kParamColumnOrderOptionLeftRight);
         assert(param->getNOptions() == (int)eColumnOrderRightLeft);
         param->appendOption(kParamColumnOrderOptionRightLeft);
+        assert(param->getNOptions() == (int)eColumnOrderSnake);
+        param->appendOption(kParamColumnOrderOptionSnake);
         if (page) {
             page->addChild(*param);
         }
