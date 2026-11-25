@@ -649,7 +649,7 @@ ShadertoyPlugin::initMesa()
 void
 ShadertoyPlugin::exitMesa()
 {
-    AutoMutex lock( _osmesaMutex.get() );
+    std::lock_guard<std::mutex> lock(_osmesaMutex);
 
     for (std::list<OSMesaPrivate *>::iterator it = _osmesa.begin(); it != _osmesa.end(); ++it) {
         delete *it;
@@ -1253,7 +1253,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     /* Allocate the image buffer */
     OSMesaPrivate *osmesa;
     {
-        AutoMutex lock( _osmesaMutex.get() );
+        std::lock_guard<std::mutex> lock(_osmesaMutex);
         if ( _osmesa.empty() ) {
             osmesa = new OSMesaPrivate(this);
         } else {
@@ -1267,7 +1267,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     {
         OSMesaReleaser(OSMesaPrivate* o,
                        std::list<OSMesaPrivate *>& l,
-                       Mutex* m)
+                       std::mutex& m)
             : osmesa(o)
             , list(l)
             , mutex(m)
@@ -1291,7 +1291,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
             // We're finished with this osmesa, make it available for other renders
             {
-                AutoMutex lock(mutex);
+                std::lock_guard<std::mutex> lock(mutex);
                 list.push_back(osmesa);
             }
             osmesa = NULL;
@@ -1299,9 +1299,9 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
         OSMesaPrivate* osmesa;
         std::list<OSMesaPrivate *>& list;
-        Mutex* mutex;
+        std::mutex& mutex;
     };
-    OSMesaReleaser osmesaReleaser( osmesa, _osmesa, _osmesaMutex.get() );
+    OSMesaReleaser osmesaReleaser(osmesa, _osmesa, _osmesaMutex);
     if (OSMesaGetCurrentContext() != NULL) {
         DPRINT( ("render error: %s\n", "Mesa context still attached") );
         glFlush(); // waits until commands are submitted but does not wait for the commands to finish executing
@@ -1344,7 +1344,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 #endif
 
     {
-        AutoMutex lock( _rendererInfoMutex.get() );
+        std::lock_guard<std::mutex> lock(_rendererInfoMutex);
         std::string &message = _rendererInfo;
         if ( message.empty() ) {
             const char* glRenderer = (const char*)glGetString(GL_RENDERER);
@@ -1376,7 +1376,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     std::string compileError; // set on failure; "" if there is no compiler log to show
     bool compileFailed = false;
     do {
-        AutoMutex lock( _imageShaderMutex.get() );
+        std::lock_guard<std::mutex> lock(_imageShaderMutex);
         bool must_recompile = false;
         bool uniforms_changed = false;
         shadertoy = (ShadertoyShader *)contextData->imageShader;
@@ -2391,7 +2391,7 @@ ShadertoyPlugin::contextAttached(bool createContextData)
 #endif
 
     {
-        AutoMutex lock( _rendererInfoMutex.get() );
+        std::lock_guard<std::mutex> lock(_rendererInfoMutex);
         std::string &message = _rendererInfo;
         if ( message.empty() ) {
             const char* glRenderer = (const char*)glGetString(GL_RENDERER);

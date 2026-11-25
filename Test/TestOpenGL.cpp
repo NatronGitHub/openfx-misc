@@ -146,17 +146,6 @@ TestOpenGLPlugin::TestOpenGLPlugin(OfxImageEffectHandle handle)
     , _openGLContextData()
     , _openGLContextAttached(false)
 {
-    try {
-        _rendererInfoMutex.reset(new Mutex);
-#if defined(HAVE_OSMESA)
-        _osmesaMutex.reset(new Mutex);
-#endif
-    } catch (const std::exception& e) {
-#      ifdef DEBUG
-        std::cout << "ERROR in createInstance(): Multithread::Mutex creation returned " << e.what() << std::endl;
-#      endif
-    }
-
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
     assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGBA ||
                          _dstClip->getPixelComponents() == ePixelComponentAlpha) );
@@ -315,7 +304,7 @@ TestOpenGLPlugin::changedParam(const InstanceChangedArgs &args,
     if (paramName == kParamRendererInfo) {
         std::string message;
         {
-            AutoMutex lock( _rendererInfoMutex.get() );
+            std::lock_guard<std::mutex> lock(_rendererInfoMutex);
             message = _rendererInfo;
         }
         if ( message.empty() ) {
@@ -328,12 +317,12 @@ TestOpenGLPlugin::changedParam(const InstanceChangedArgs &args,
     } else if (paramName == kParamEnableGPU) {
         setSupportsOpenGLRender( _enableGPU->getValueAtTime(args.time) );
         {
-            AutoMutex lock( _rendererInfoMutex.get() );
+            std::lock_guard<std::mutex> lock(_rendererInfoMutex);
             _rendererInfo.clear();
         }
     } else if (paramName == kParamCPUDriver) {
         {
-            AutoMutex lock( _rendererInfoMutex.get() );
+            std::lock_guard<std::mutex> lock(_rendererInfoMutex);
             _rendererInfo.clear();
         }
 #endif

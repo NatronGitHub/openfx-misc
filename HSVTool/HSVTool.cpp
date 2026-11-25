@@ -36,19 +36,7 @@
 #include "ofxsMultiThread.h"
 #include "ofxsNonFinite.h" // finiteSample
 #include "ofxsAnalysisScope.h" // InAnalysisScope
-#ifdef OFX_USE_MULTITHREAD_MUTEX
-namespace {
-typedef OFX::MultiThread::Mutex Mutex;
-typedef OFX::MultiThread::AutoMutex AutoMutex;
-}
-#else
-// some OFX hosts do not have mutex handling in the MT-Suite (e.g. Sony Catalyst Edit)
 #include <mutex>
-namespace {
-typedef std::mutex Mutex;
-typedef OFX::MultiThread::AutoMutexT<std::mutex> AutoMutex;
-}
-#endif
 
 using namespace OFX;
 
@@ -790,7 +778,7 @@ class HueMeanProcessorBase
     : public ImageProcessor
 {
 protected:
-    Mutex _mutex; //< this is used so we can multi-thread the analysis and protect the shared results
+    std::mutex _mutex; //< this is used so we can multi-thread the analysis and protect the shared results
     unsigned long _count;
     double _sumsinh, _sumcosh;
 
@@ -827,11 +815,10 @@ protected:
                     double sumcosh,
                     unsigned long count)
     {
-        _mutex.lock();
+        std::lock_guard<std::mutex> l(_mutex);
         _sumsinh += sumsinh;
         _sumcosh += sumcosh;
         _count += count;
-        _mutex.unlock();
     }
 };
 
@@ -910,7 +897,7 @@ class HSVRangeProcessorBase
     : public ImageProcessor
 {
 protected:
-    Mutex _mutex; //< this is used so we can multi-thread the analysis and protect the shared results
+    std::mutex _mutex; //< this is used so we can multi-thread the analysis and protect the shared results
     float _hmean;
 
 private:
@@ -969,14 +956,13 @@ protected:
                     const float vmin,
                     const float vmax)
     {
-        _mutex.lock();
+        std::lock_guard<std::mutex> l(_mutex);
         if (dhmin < _dhmin) { _dhmin = dhmin; }
         if (dhmax > _dhmax) { _dhmax = dhmax; }
         if (smin < _smin) { _smin = smin; }
         if (smax > _smax) { _smax = smax; }
         if (vmin < _vmin) { _vmin = vmin; }
         if (vmax > _vmax) { _vmax = vmax; }
-        _mutex.unlock();
     }
 };
 

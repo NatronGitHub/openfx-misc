@@ -33,19 +33,7 @@
 #include "ofxsMacros.h"
 #include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
-#ifdef OFX_USE_MULTITHREAD_MUTEX
-namespace {
-    typedef OFX::MultiThread::Mutex Mutex;
-    typedef OFX::MultiThread::AutoMutex AutoMutex;
-}
-#else
-// some OFX hosts do not have mutex handling in the MT-Suite (e.g. Sony Catalyst Edit)
 #include <mutex>
-namespace {
-    typedef std::mutex Mutex;
-    typedef OFX::MultiThread::AutoMutexT<std::mutex> AutoMutex;
-}
-#endif
 
 using namespace OFX;
 
@@ -210,7 +198,7 @@ class ImageStatisticsProcessorBase
 : public ImageProcessor
 {
 protected:
-    Mutex _mutex; //< this is used so we can multi-thread the analysis and protect the shared results
+    std::mutex _mutex; //< this is used so we can multi-thread the analysis and protect the shared results
     unsigned long _count;
 
 public:
@@ -302,7 +290,7 @@ private:
                     double max[nComponents],
                     unsigned long count)
     {
-        AutoMutex l (&_mutex);
+        std::lock_guard<std::mutex> l(_mutex);
         for (int c = 0; c < nComponents; ++c) {
             _min[c] = (std::min)(_min[c], min[c]);
             _max[c] = (std::max)(_max[c], max[c]);

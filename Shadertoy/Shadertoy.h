@@ -32,10 +32,7 @@
 #include "ofxsMacros.h"
 #include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
-#ifndef OFX_USE_MULTITHREAD_MUTEX
-// some OFX hosts do not have mutex handling in the MT-Suite (e.g. Sony Catalyst Edit)
 #include <mutex>
-#endif
 
 #define SHADERTOY_NBINPUTS 4 // number of input channels (the standard shadertoy has 4 inputs)
 #define SHADERTOY_NBUNIFORMS 20 // number of additional uniforms (if more than 7, Nuke 7's parameter page goes blank when unfolding the Extra Parameters group)
@@ -325,14 +322,6 @@ public:
         std::string filename;
     };
 
-#ifdef OFX_USE_MULTITHREAD_MUTEX
-    typedef OFX::MultiThread::Mutex Mutex;
-    typedef OFX::MultiThread::AutoMutex AutoMutex;
-#else
-    typedef std::mutex Mutex;
-    typedef OFX::MultiThread::AutoMutexT<std::mutex> AutoMutex;
-#endif
-
 public:
     /** @brief ctor */
     ShadertoyPlugin(OfxImageEffectHandle handle);
@@ -471,7 +460,7 @@ private:
     std::vector<OFX::Double2DParam *> _paramMaxVec2;
     OFX::BooleanParam *_enableGPU;
     OFX::ChoiceParam *_cpuDriver;
-    OFX::auto_ptr<Mutex> _imageShaderMutex;
+    std::mutex _imageShaderMutex;
     unsigned int _imageShaderID; // an ID that changes each time the shadertoy changes and needs to be recompiled
     unsigned int _imageShaderUniformsID; // an ID that changes each time the uniform names or count changed
     bool _imageShaderUpdateParams; // ask to extract parameters from the shader on next compilation
@@ -504,7 +493,7 @@ private:
 
     OpenGLContextData _openGLContextData; // (OpenGL-only) - the single openGL context, in case the host does not support kNatronOfxImageEffectPropOpenGLContextData
     bool _openGLContextAttached; // (OpenGL-only) - set to true when the contextAttached function is executed - used for checking non-conformant hosts such as Sony Catalyst
-    OFX::auto_ptr<Mutex> _rendererInfoMutex;
+    std::mutex _rendererInfoMutex;
     std::string _rendererInfo;
     bool _rendererInfoIsMesa; // which render path filled _rendererInfo
 
@@ -516,7 +505,7 @@ private:
     // A new context is created if the list is empty.
     // That way, we can have multithreaded OSMesa rendering without having to create a context at each render
     std::list<OSMesaPrivate *> _osmesa;
-    OFX::auto_ptr<Mutex> _osmesaMutex;
+    std::mutex _osmesaMutex;
 #endif
 };
 

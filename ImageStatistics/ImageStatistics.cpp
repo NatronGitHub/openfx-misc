@@ -37,19 +37,7 @@
 #include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
 #include "ofxsAnalysisScope.h" // InAnalysisScope, ProgressScope
-#ifdef OFX_USE_MULTITHREAD_MUTEX
-namespace {
-typedef OFX::MultiThread::Mutex Mutex;
-typedef OFX::MultiThread::AutoMutex AutoMutex;
-}
-#else
-// some OFX hosts do not have mutex handling in the MT-Suite (e.g. Sony Catalyst Edit)
 #include <mutex>
-namespace {
-typedef std::mutex Mutex;
-typedef OFX::MultiThread::AutoMutexT<std::mutex> AutoMutex;
-}
-#endif
 
 #ifdef __APPLE__
 #ifndef GL_SILENCE_DEPRECATION
@@ -404,7 +392,7 @@ class ImageStatisticsProcessorBase
     : public ImageProcessor
 {
 protected:
-    Mutex _mutex; //< this is used so we can multi-thread the analysis and protect the shared results
+    std::mutex _mutex; //< this is used so we can multi-thread the analysis and protect the shared results
     unsigned long _count;
 
 public:
@@ -560,7 +548,7 @@ private:
                     double sum[nValues],
                     unsigned long count)
     {
-        AutoMutex l (&_mutex);
+        std::lock_guard<std::mutex> l(_mutex);
         for (int c = 0; c < nValues; ++c) {
             _min[c] = (std::min)(_min[c], min[c]);
             _max[c] = (std::max)(_max[c], max[c]);
@@ -654,7 +642,7 @@ private:
     void addResults(double sum_p2[nValues],
                     unsigned long count)
     {
-        AutoMutex l (&_mutex);
+        std::lock_guard<std::mutex> l(_mutex);
         for (int c = 0; c < nValues; ++c) {
             _sum_p2[c] += sum_p2[c];
         }
@@ -764,7 +752,7 @@ private:
                     double sum_p4[nValues],
                     unsigned long count)
     {
-        AutoMutex l (&_mutex);
+        std::lock_guard<std::mutex> l(_mutex);
         for (int c = 0; c < nValues; ++c) {
             _sum_p3[c] += sum_p3[c];
             _sum_p4[c] += sum_p4[c];
@@ -938,7 +926,7 @@ private:
                     double minVal[nComponents],
                     double minLuma)
     {
-        AutoMutex l (&_mutex);
+        std::lock_guard<std::mutex> l(_mutex);
         if (maxLuma > _maxLuma) {
             _maxPos = maxPos;
             for (int c = 0; c < nComponents; ++c) {
@@ -1099,7 +1087,7 @@ private:
         if ( (box.x1 >= box.x2) || (box.y1 >= box.y2) ) {
             return;
         }
-        AutoMutex l (&_mutex);
+        std::lock_guard<std::mutex> l(_mutex);
         _box.x1 = (std::min)(_box.x1, box.x1);
         _box.x2 = (std::max)(_box.x2, box.x2);
         _box.y1 = (std::min)(_box.y1, box.y1);

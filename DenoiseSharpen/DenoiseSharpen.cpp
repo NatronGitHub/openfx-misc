@@ -86,19 +86,7 @@
 #include "ofxsAnalysisScope.h" // InAnalysisScope, ProgressScope
 #include "ofxOld.h"
 
-#ifdef OFX_USE_MULTITHREAD_MUTEX
-namespace {
-typedef OFX::MultiThread::Mutex Mutex;
-typedef OFX::MultiThread::AutoMutex AutoMutex;
-}
-#else
-// some OFX hosts do not have mutex handling in the MT-Suite (e.g. Sony Catalyst Edit)
 #include <mutex>
-namespace {
-typedef std::mutex Mutex;
-typedef OFX::MultiThread::AutoMutexT<std::mutex> AutoMutex;
-}
-#endif
 
 using namespace OFX;
 #ifdef DEBUG_STDOUT
@@ -477,7 +465,7 @@ static const float noise_b3[] = { 0.8908f,   0.2007f,   0.0855f,    0.0412f,    
 #define abort_test_loop() abort_test()
 #endif
 
-static Color::LutManager<Mutex>* gLutManager;
+static Color::LutManager<std::mutex>* gLutManager;
 
 template<typename T>
 static inline void
@@ -1446,13 +1434,13 @@ private:
                 sumsqrow += _fimg_hpass[i] * _fimg_hpass[i];
             }
             {
-                AutoMutex l(&_sumsq_mutex);
+                std::lock_guard<std::mutex> l(_sumsq_mutex);
                 *_sumsq += sumsqrow;
             }
         }
     }
 
-    Mutex _sumsq_mutex;
+    std::mutex _sumsq_mutex;
     double *_sumsq;
 };
 
@@ -3553,7 +3541,7 @@ class DenoiseSharpenOverlayDescriptor
 {
 };
 
-mDeclarePluginFactory(DenoiseSharpenPluginFactory, { gLutManager = new Color::LutManager<Mutex>; ofxsThreadSuiteCheck(); }, { delete gLutManager; });
+mDeclarePluginFactory(DenoiseSharpenPluginFactory, { gLutManager = new Color::LutManager<std::mutex>; ofxsThreadSuiteCheck(); }, { delete gLutManager; });
 
 void
 DenoiseSharpenPluginFactory::describe(ImageEffectDescriptor &desc)

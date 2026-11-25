@@ -1108,18 +1108,6 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     , _rendererInfoIsMesa(false)
     , _presets(gPresetsDefault)
 {
-    try {
-        _imageShaderMutex.reset(new Mutex);
-        _rendererInfoMutex.reset(new Mutex);
-#if defined(HAVE_OSMESA)
-        _osmesaMutex.reset(new Mutex);
-#endif
-    } catch (const std::exception& e) {
-#      ifdef DEBUG
-        std::cout << "ERROR in createInstance(): Multithread::Mutex creation returned " << e.what() << std::endl;
-#      endif
-    }
-
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
     assert( _dstClip && (!_dstClip->isConnected() || _dstClip->getPixelComponents() == ePixelComponentRGBA ||
                          _dstClip->getPixelComponents() == ePixelComponentAlpha) );
@@ -1323,7 +1311,7 @@ ShadertoyPlugin::render(const RenderArguments &args)
     {
         // _rendererInfo is filled by whichever path renders first: refill it when the path
         // changes (on Resolve, GL on the Edit/Color pages, OSMesa on the Fusion page)
-        AutoMutex lock( _rendererInfoMutex.get() );
+        std::lock_guard<std::mutex> lock(_rendererInfoMutex);
         if (_rendererInfoIsMesa == openGLRender) {
             _rendererInfo.clear();
             _rendererInfoIsMesa = !openGLRender;
@@ -1651,7 +1639,7 @@ ShadertoyPlugin::updateExtra()
     std::vector<WrapEnum> inputWrap;
     BBoxEnum bbox = BBoxEnum();
     {
-        AutoMutex lock( _imageShaderMutex.get() );
+        std::lock_guard<std::mutex> lock(_imageShaderMutex);
         // only do this if parameters were updated!
         updateParams = _imageShaderUpdateParams;
         if (updateParams) {
@@ -1935,7 +1923,7 @@ ShadertoyPlugin::updateExtra()
             resetParamsValues();
             if (uniformsChanged) {
                 // mark that image shader must be recompiled on next render
-                AutoMutex lock( _imageShaderMutex.get() );
+                std::lock_guard<std::mutex> lock(_imageShaderMutex);
                 ++_imageShaderUniformsID;
             }
         } // if (updateParams)
@@ -2208,7 +2196,7 @@ ShadertoyPlugin::changedParam(const InstanceChangedArgs &args,
             }
             // same as kParamImageShaderCompile below, except ask for param update
             {
-                AutoMutex lock( _imageShaderMutex.get() );
+                std::lock_guard<std::mutex> lock(_imageShaderMutex);
                 // mark that image shader must be recompiled on next render
                 ++_imageShaderID;
                 _imageShaderUpdateParams = true;
@@ -2222,7 +2210,7 @@ ShadertoyPlugin::changedParam(const InstanceChangedArgs &args,
 
     } else if (paramName == kParamImageShaderCompile) {
         {
-            AutoMutex lock( _imageShaderMutex.get() );
+            std::lock_guard<std::mutex> lock(_imageShaderMutex);
             // mark that image shader must be recompiled on next render
             ++_imageShaderID;
             _imageShaderUpdateParams = false;
@@ -2235,7 +2223,7 @@ ShadertoyPlugin::changedParam(const InstanceChangedArgs &args,
     } else if ( (paramName == kParamAuto) || (paramName == kParamImageShaderParamsUpdated) ) {
         bool recompile = true;
         {
-            AutoMutex lock( _imageShaderMutex.get() );
+            std::lock_guard<std::mutex> lock(_imageShaderMutex);
             if (_imageShaderUpdateParams && _imageShaderCompiled) {
                 _imageShaderCompiled = false; //_imageShaderUpdateParams is reset by updateExtra()
                 recompile = false; // parameters were updated (second click in a host that doesn't support setValue() from render(), probably), we just need to update the Gui
@@ -2272,7 +2260,7 @@ ShadertoyPlugin::changedParam(const InstanceChangedArgs &args,
     } else if ( ( (paramName == kParamCount) ||
                   starts_with(paramName, kParamName) ) && (args.reason == eChangeUserEdit) ) {
         {
-            AutoMutex lock( _imageShaderMutex.get() );
+            std::lock_guard<std::mutex> lock(_imageShaderMutex);
             // mark that image shader must be recompiled on next render
             ++_imageShaderUniformsID;
         }
@@ -2282,7 +2270,7 @@ ShadertoyPlugin::changedParam(const InstanceChangedArgs &args,
         updateVisibility();
     } else if ( starts_with(paramName, kParamType) && (args.reason == eChangeUserEdit) ) {
         {
-            AutoMutex lock( _imageShaderMutex.get() );
+            std::lock_guard<std::mutex> lock(_imageShaderMutex);
             // mark that image shader must be recompiled on next render
             ++_imageShaderUniformsID;
         }
@@ -2306,7 +2294,7 @@ ShadertoyPlugin::changedParam(const InstanceChangedArgs &args,
     } else if (paramName == kParamRendererInfo) {
         string message;
         {
-            AutoMutex lock( _rendererInfoMutex.get() );
+            std::lock_guard<std::mutex> lock(_rendererInfoMutex);
             message = _rendererInfo;
         }
         if ( message.empty() ) {
@@ -2321,12 +2309,12 @@ ShadertoyPlugin::changedParam(const InstanceChangedArgs &args,
     } else if (paramName == kParamEnableGPU) {
         setSupportsOpenGLRender( _enableGPU->getValueAtTime(args.time) );
         {
-            AutoMutex lock( _rendererInfoMutex.get() );
+            std::lock_guard<std::mutex> lock(_rendererInfoMutex);
             _rendererInfo.clear();
         }
     } else if (paramName == kParamCPUDriver) {
         {
-            AutoMutex lock( _rendererInfoMutex.get() );
+            std::lock_guard<std::mutex> lock(_rendererInfoMutex);
             _rendererInfo.clear();
         }
 #endif
@@ -2417,16 +2405,7 @@ ShadertoyPluginFactory::describe(ImageEffectDescriptor &desc)
     desc.setChannelSelector(ePixelComponentNone);
 #endif
 
-    // some hosts may have the multithread suite, but no mutex capability (e.g. Sony Catalyst)
-    try {
-        ShadertoyPlugin::Mutex m;
-        desc.setRenderThreadSafety(eRenderFullySafe);
-    } catch (const std::exception &e) {
-#      ifdef DEBUG
-        std::cout << "ERROR in describe(): Mutex creation returned " << e.what() << std::endl;
-#      endif
-        desc.setRenderThreadSafety(eRenderInstanceSafe);
-    }
+    desc.setRenderThreadSafety(eRenderFullySafe);
 } // ShadertoyPluginFactory::describe
 
 static void

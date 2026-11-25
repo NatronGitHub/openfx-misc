@@ -31,19 +31,7 @@
 #include "ofxsNonFinite.h" // clampToFloatRange, clampToUnit, finiteSample
 #include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
-#ifdef OFX_USE_MULTITHREAD_MUTEX
-namespace {
-typedef OFX::MultiThread::Mutex Mutex;
-typedef OFX::MultiThread::AutoMutex AutoMutex;
-}
-#else
-// some OFX hosts do not have mutex handling in the MT-Suite (e.g. Sony Catalyst Edit)
 #include <mutex>
-namespace {
-typedef std::mutex Mutex;
-typedef OFX::MultiThread::AutoMutexT<std::mutex> AutoMutex;
-}
-#endif
 
 using namespace OFX;
 
@@ -186,7 +174,7 @@ enum SourceAlphaEnum
     eSourceAlphaNormal,
 };
 
-static Color::LutManager<Mutex>* gLutManager;
+static Color::LutManager<std::mutex>* gLutManager;
 
 class ChromaKeyerProcessorBase
     : public ImageProcessor
@@ -904,7 +892,7 @@ ChromaKeyerPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     }
 }
 
-mDeclarePluginFactory(ChromaKeyerPluginFactory, { gLutManager = new Color::LutManager<Mutex>; ofxsThreadSuiteCheck(); }, { delete gLutManager; });
+mDeclarePluginFactory(ChromaKeyerPluginFactory, { gLutManager = new Color::LutManager<std::mutex>; ofxsThreadSuiteCheck(); }, { delete gLutManager; });
 void
 ChromaKeyerPluginFactory::describe(ImageEffectDescriptor &desc)
 {
