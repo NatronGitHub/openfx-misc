@@ -39,20 +39,22 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Keyer"
 #define kPluginDescriptionHead \
     "A collection of simple keyers. These work by computing a foreground key from the RGB values of the input image (see the keyerMode parameter).\n" \
-    "This foreground key is a scalar from 0 to 1. From the foreground key, a background key (or transparency) is computed.\n" \
-    "The function that maps the foreground key to the background key is piecewise linear:\n" \
+    "This foreground key is a scalar from 0 to 1. From the foreground key, a key (from 0 to 1) is computed, which gives the output alpha (see below).\n" \
+    "The function that maps the foreground key to the key is piecewise linear:\n" \
     "- it is 0 below A = (center+toleranceLower+softnessLower)\n" \
     "- it is linear between A = (center+toleranceLower+softnessLower) and B = (center+toleranceLower)\n" \
     "- it is 1 between B = (center+toleranceLower) and C = (center+toleranceUpper)\n" \
     "- it is linear between C = (center+toleranceUpper) and D = (center+toleranceUpper+softnessUpper)\n" \
     "- it is 0 above D = (center+toleranceUpper+softnessUpper)\n" \
-    "Two special cases: if B <= 0, the background key is 1 for every foreground key <= 0, even below A; if C >= 1, it is 1 for every foreground key above C, even above D.\n"
+    "Two special cases: if B <= 0, the key is 1 for every foreground key <= 0, even below A; if C >= 1, it is 1 for every foreground key above C, even above D.\n"
 #define kPluginDescriptionPolarityV1 \
-    "The output alpha is 1 minus the background key: it is 0 (transparent) between B and C, and 1 (opaque) below A and above D.\n"
+    "The key is the background key (transparency): the output alpha is 1 minus the key, 0 (transparent) between B and C, and 1 (opaque) below A and above D. " \
+    "Setting the key color sets A, B, C, D around it, so that it is transparent. Invert inverts the matte.\n"
 #define kPluginDescriptionPolarity \
-    "In the Luminance, Color, Saturation, Min and Max modes, the output alpha is the background key: it is 1 (opaque) between B and C, and 0 (transparent) below A and above D, as in Foundry's Keyer node, where \"any pixel with a luminance value between B and C becomes opaque\". " \
-    "In the Screen mode, the output alpha is 1 minus the background key: the pixels of the key color are transparent. Invert inverts the matte.\n" \
-    "With the default A, B, C, D (0, 1, 1, 1), the alpha is the foreground key, clamped to [0, 1].\n"
+    "In the Luminance, Color, Saturation, Min and Max modes, the output alpha is the key: it is 1 (opaque) between B and C, and 0 (transparent) below A and above D, as in Foundry's Keyer node, where \"any pixel with a luminance value between B and C becomes opaque\". " \
+    "In the Screen mode, the output alpha is 1 minus the key: the pixels of the key color are transparent. Invert inverts the matte.\n" \
+    "With the default A, B, C, D (0, 1, 1, 1), the alpha is the foreground key, clamped to [0, 1].\n" \
+    "Setting the key color sets A, B, C, D so that it is transparent: in the Screen mode, the key is 1 around it; in the other modes, the alpha goes from 0 at the key color to 1 at 1 (A is the foreground key of the key color, in [0, 1], and B = C = D = 1).\n"
 #define kPluginDescriptionTail \
     "\n" \
     "Keyer can pull mattes that correspond to the RGB channels, the luminance and the red, green and blue colors. " \
@@ -95,7 +97,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //     foreground key, before the inside and outside masks are applied, so that the pixels whose
 //     foreground key is between B and C become opaque, as with Foundry's Keyer node. The despill
 //     amount uses the key without Invert. Existing projects render the same.
-// 2.0 the matte follows the tests/nuke reference (issue #280): in the Luminance and Color modes, the
+// 2.0 the matte follows Foundry's documentation of the Keyer node (issue #280): in the Luminance and Color modes, the
 //     output alpha is the background key (opaque between B and C), and the default A, B, C, D are
 //     0, 1, 1, 1 (softnessLower -1, softnessUpper 0), so that the default alpha is the luminance,
 //     clamped to [0, 1]. The Screen mode keeps the polarity of version 1 (the key color is
@@ -119,7 +121,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamKeyColor "keyColor"
 #define kParamKeyColorLabel "Key Color"
 #define kParamKeyColorHint \
-    "Foreground key color. foreground areas containing the key color are replaced with the background image."
+    "Foreground key color: foreground areas containing the key color are replaced with the background image. Setting it sets the softness, tolerance and center parameters so that the key color is transparent (see the description)."
 
 #define kParamKeyerMode "mode"
 #define kParamKeyerModeLabel "Keyer Mode"
@@ -127,11 +129,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "The operation used to compute the foreground key."
 #define kParamKeyerModeOptionLuminance "Luminance", "Use the luminance for keying. The foreground key value is in luminance.", "luminance"
 #define kParamKeyerModeOptionColor "Color", "Use the color for keying. If the key color is pure green, this corresponds a green keyer, etc.", "color"
-#define kParamKeyerModeOptionScreen "Screen", "Use the color minus the other components for keying. If the key color is pure green, this corresponds a greenscreen, etc. When in screen mode, the upper tolerance should be set to 1.", "screen"
+#define kParamKeyerModeOptionScreen "Screen", "Use the color minus the other components for keying. If the key color is pure green, this corresponds a greenscreen, etc. The output alpha is 1 minus the key, so that the key color is transparent, and the upper tolerance and softness are ignored (the key is 1 above C).", "screen"
 #define kParamKeyerModeOptionNone "None", "No keying, just despill color values. You can control despill areas using either set the inside mask, or use with 'Source Alpha' set to 'Add to Inside Mask'. If 'Output Mode' is set to 'Unpremultiplied', this despills the image even if no mask is present.", "none"
-#define kParamKeyerModeOptionSaturation "Saturation", "Use the saturation for keying: (max - min) / max of R, G and B (0 if max is zero or negative). Version 2 only.", "saturation"
-#define kParamKeyerModeOptionMin "Min", "Use the minimum of R, G and B for keying. Version 2 only.", "min"
-#define kParamKeyerModeOptionMax "Max", "Use the maximum of R, G and B for keying. Version 2 only.", "max"
+#define kParamKeyerModeOptionSaturation "Saturation", "Use the saturation for keying: (max - min) / max of R, G and B (0 if max is zero or negative).", "saturation"
+#define kParamKeyerModeOptionMin "Min", "Use the minimum of R, G and B for keying.", "min"
+#define kParamKeyerModeOptionMax "Max", "Use the maximum of R, G and B for keying.", "max"
 #define kParamKeyerModeDefault eKeyerModeLuminance
 #define kParamKeyerModeDefaultString "Luminance"
 enum KeyerModeEnum
@@ -147,7 +149,7 @@ enum KeyerModeEnum
 };
 
 // the foreground key of the Saturation, Min and Max modes
-static double
+double
 rgbKeyValue(KeyerModeEnum keyerMode,
             double r,
             double g,
@@ -176,23 +178,23 @@ rgbKeyValue(KeyerModeEnum keyerMode,
 
 #define kParamSoftnessLower "softnessLower"
 #define kParamSoftnessLowerLabel "Softness (lower)"
-#define kParamSoftnessLowerHint "Width of the lower softness range [key-tolerance-softness,key-tolerance]. Background key value goes from 0 to 1 when foreground key is  over this range."
+#define kParamSoftnessLowerHint "Width of the lower softness range [A, B] = [center+toleranceLower+softnessLower, center+toleranceLower] (softnessLower is negative). The key goes from 0 to 1 when the foreground key is over this range."
 
 #define kParamToleranceLower "toleranceLower"
 #define kParamToleranceLowerLabel "Tolerance (lower)"
-#define kParamToleranceLowerHint "Width of the lower tolerance range [key-tolerance,key]. Background key value is 1 when foreground key is  over this range."
+#define kParamToleranceLowerHint "Width of the lower tolerance range [B, center] = [center+toleranceLower, center] (toleranceLower is negative). The key is 1 when the foreground key is over this range."
 
 #define kParamCenter "center"
 #define kParamCenterLabel "Center"
-#define kParamCenterHint "Foreground key value forresponding to the key color, where the background key should be 1."
+#define kParamCenterHint "Foreground key value at the center of the range [B, C] where the key is 1."
 
 #define kParamToleranceUpper "toleranceUpper"
 #define kParamToleranceUpperLabel "Tolerance (upper)"
-#define kParamToleranceUpperHint "Width of the upper tolerance range [key,key+tolerance]. Background key value is 1 when foreground key is over this range. Ignored in Screen keyer mode."
+#define kParamToleranceUpperHint "Width of the upper tolerance range [center, C] = [center, center+toleranceUpper]. The key is 1 when the foreground key is over this range. Ignored in Screen keyer mode."
 
 #define kParamSoftnessUpper "softnessUpper"
 #define kParamSoftnessUpperLabel "Softness (upper)"
-#define kParamSoftnessUpperHint "Width of the upper softness range [key+tolerance,key+tolerance+softness]. Background key value goes from 1 to 0 when foreground key is  over this range. Ignored in Screen keyer mode."
+#define kParamSoftnessUpperHint "Width of the upper softness range [C, D] = [center+toleranceUpper, center+toleranceUpper+softnessUpper]. The key goes from 1 to 0 when the foreground key is over this range. Ignored in Screen keyer mode."
 
 #define kParamDespill "despill"
 #define kParamDespillLabel "Despill"
@@ -270,7 +272,7 @@ protected:
     OutputModeEnum _outputMode;
     SourceAlphaEnum _sourceAlpha;
     bool _invert;
-    bool _opaqueInRange; // version 2: opaque between B and C, except in Screen mode
+    bool _opaqueInRange = false; // version 2: opaque between B and C, except in Screen mode
 
 public:
 
@@ -292,7 +294,6 @@ public:
         , _outputMode(eOutputModeComposite)
         , _sourceAlpha(eSourceAlphaIgnore)
         , _invert(false)
-        , _opaqueInRange(false)
     {
         _keyColor.r = _keyColor.g = _keyColor.b = 0.;
     }
@@ -950,19 +951,19 @@ KeyerPlugin::setThresholdsFromKeyColor(double r,
                                        KeyerModeEnum keyerMode,
                                        LuminanceMathEnum luminanceMath)
 {
+    // l: the foreground key of the key color
+    double l = 0.;
     switch (keyerMode) {
+    case eKeyerModeNone:
+        return;
     case eKeyerModeLuminance:
+        l = luminance(r, g, b, luminanceMath);
+        break;
     case eKeyerModeSaturation:
     case eKeyerModeMin:
-    case eKeyerModeMax: {
-        const double l = (keyerMode == eKeyerModeLuminance) ? luminance(r, g, b, luminanceMath) : rgbKeyValue(keyerMode, r, g, b);
-        _softnessLower->setValue(-l);
-        _toleranceLower->setValue(0.);
-        _center->setValue(l);
-        _toleranceUpper->setValue(0.);
-        _softnessUpper->setValue(1. - l);
+    case eKeyerModeMax:
+        l = rgbKeyValue(keyerMode, r, g, b);
         break;
-    }
     case eKeyerModeColor:
     case eKeyerModeScreen: {
         // for Color and Screen modes, how much the scalar product between RGB and the keyColor must be
@@ -971,16 +972,36 @@ KeyerPlugin::setThresholdsFromKeyColor(double r,
         // Kfg = 1 = colorKeyFactor * (1,1,1)._keyColor (where "." is the scalar product)
         const double keyColor111 = r + g + b;
         const double keyColorNorm2 = (r * r) + (g * g) + (b * b);
-        const double l = keyColor111 == 0. ? 0. : (keyColorNorm2 / keyColor111);
+        l = keyColor111 == 0. ? 0. : (keyColorNorm2 / keyColor111);
+        break;
+    }
+    }
+    if (_majorVersion < 2) {
+        // version 1: the key is 1 at the key color (transparent), 0 at 0 and 1
         _softnessLower->setValue(-l);
         _toleranceLower->setValue(0.);
         _center->setValue(l);
         _toleranceUpper->setValue(0.);
         _softnessUpper->setValue(1. - l);
-        break;
+
+        return;
     }
-    case eKeyerModeNone:
-        break;
+    // version 2: in [0, 1], so that the parameters stay in their ranges (HDR or negative key colors)
+    l = (std::min)( (std::max)(l, 0.), 1. );
+    if (keyerMode == eKeyerModeScreen) {
+        // alpha is 1 minus the key: the key is 1 at the key color (transparent), as in version 1
+        _softnessLower->setValue(-l);
+        _toleranceLower->setValue(0.);
+        _center->setValue(l);
+        _toleranceUpper->setValue(0.);
+        _softnessUpper->setValue(1. - l);
+    } else {
+        // alpha is the key: A = l (transparent at the key color), B = C = D = 1
+        _softnessLower->setValue(l - 1.);
+        _toleranceLower->setValue(0.);
+        _center->setValue(1.);
+        _toleranceUpper->setValue(0.);
+        _softnessUpper->setValue(0.);
     }
 }
 
@@ -1002,7 +1023,7 @@ KeyerPlugin::changedParam(const InstanceChangedArgs &args,
 
         KeyerModeEnum keyerMode = (KeyerModeEnum)_keyerMode->getValueAtTime(time);
         // version 1 sets A, B, C, D from the key color when the mode changes; version 2 keeps them, as the
-        // tests/nuke reference does (only an edit of the key color sets them)
+        // Keyer node does (issue #280; only an edit of the key color sets them)
         if (_majorVersion < 2) {
             OfxRGBColourD keyColor;
             _keyColor->getValueAtTime(time, keyColor.r, keyColor.g, keyColor.b);
@@ -1202,7 +1223,7 @@ KeyerPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
         param->setRange(-1., 0.);
         param->setDisplayRange(-1., 0.);
         param->setDigits(5);
-        // A = 0 in version 2 (A, B, C, D = 0, 1, 1, 1, as in the tests/nuke reference), 0.5 in version 1
+        // A = 0 in version 2 (A, B, C, D = 0, 1, 1, 1, as in Foundry's Keyer node, issue #280), 0.5 in version 1
         param->setDefault(majorVersion < 2 ? -0.5 : -1.);
         param->setAnimates(true);
         if (page) {

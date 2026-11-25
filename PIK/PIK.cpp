@@ -102,6 +102,7 @@
    http://vfxio.com/PDFs/Screaming_at_the_Greenscreen.pdf
  */
 
+#include <array>
 #include <cmath>
 #include <cfloat> // DBL_MAX, FLT_MAX
 #include <limits>
@@ -847,7 +848,8 @@ protected:
     // Autolevels: in the color used for the matte, the larger of the two non-screen channels is lowered
     // to the smaller one, unless an override keeps it (Magenta keeps red and Cyan green on a blue screen,
     // up to blue; on a green screen, Cyan keeps blue up to green, and Yellow keeps red, with the part
-    // above green halved), as in the tests/nuke reference.
+    // above green halved). See Foundry's documentation of the IBKGizmo node and issue #281
+    // (https://learn.foundry.com/nuke/content/reference_guide/keyer_nodes/ibkgizmo.html).
     void autolevels(float p[3]) const
     {
         if (_screenType == eScreenTypeBlue) {
@@ -867,20 +869,22 @@ protected:
     }
 
     // Luminance Match: the color used for the matte divided by the Screen Range, and scaled down to the
-    // luminance of the screen color where it is brighter (in the float range).
-    void luminanceMatch(const float p[3],
-                        const float c[3],
-                        float matched[3]) const
+    // luminance of the screen color where it is brighter (in the float range). With a Screen Range of 0
+    // or less, 1 / Screen Range is infinite: the color is scaled to the luminance of the screen color
+    // (the limit), and kept if its luminance is not positive.
+    std::array<float, 3> luminanceMatch(const float p[3],
+                                        const float c[3]) const
     {
         const double pY = luminanceFinite(_colorspace, _toXYZAbs, p);
         const double cY = luminanceFinite(_colorspace, _toXYZAbs, c);
         double scale = (_level > 0.) ? 1. / _level : 1.;
-        if ( (pY > 0.) && (cY / pY < scale) ) {
+        if ( (pY > 0.) && ( (_level <= 0.) || (cY / pY < scale) ) ) {
             scale = cY / pY;
         }
-        for (int i = 0; i < 3; ++i) {
-            matched[i] = clampToFloatRange(p[i] * scale);
-        }
+
+        return { static_cast<float>( clampToFloatRange(p[0] * scale) ),
+                 static_cast<float>( clampToFloatRange(p[1] * scale) ),
+                 static_cast<float>( clampToFloatRange(p[2] * scale) ) };
     }
 
 private:
@@ -1296,12 +1300,11 @@ private:
                     }
                     alpha = alphaKey = keyAlpha(key, c);
                     if (_lmEnable) {
-                        float matched[3];
-                        luminanceMatch(key, c, matched);
-                        alpha = keyAlpha(matched, c);
+                        alpha = keyAlpha(luminanceMatch(key, c).data(), c);
                     }
                 } // if (!_noKey)
-                // screen subtraction / despill, with the matte without Luminance Match
+                // screen subtraction / despill, with the matte without Luminance Match. It is also
+                // computed without screen subtraction (Screen Subtraction off), since RGBA Legal uses it
                 float despilled[3] = {fg[0], fg[1], fg[2]};
                 if (alphaKey < 1) {
                     for (int i = 0; i < 3; ++i) {

@@ -43,6 +43,8 @@
 #   domain (the getTimeDomain action, general context) other than the expected one
 #   (timedomain=min,max, or timedomain=default if the plugin lets the host use its default),
 #   has values outside [lo, hi] at the first time (range=lo,hi, normalized like mean=),
+#   does not have the expected output bounds at the first time (bounds=x1,y1,x2,y2: the rendered
+#   pixels, the render window clipped to the RoD),
 #   takes more than N seconds (maxsec=N: the whole hostDemo run),
 #   does not have the expected maximum value (max=r,g,b,a, as mean=), e.g. the peak
 #   of a blurred impulse, which gives the blur size, has values outside [lo, hi]
@@ -302,6 +304,12 @@ if out0:
                 if rng is None or len(rng) != 2 or any(abs(a - b) > 1e-9 for a, b in zip(rng, want)):
                     errors.append("time domain %s (%s), expected %s" % (rng, td.get("status"), expect[11:]))
             desc += " timeDomain=%s" % (",".join("%g" % v for v in rng) if rng else "default")
+        elif expect.startswith("bounds="):
+            # the output bounds (pixels) at the first time: the render window clipped to the RoD
+            want = [int(v) for v in expect[7:].split(",")]
+            if list(out0["bounds"]) != want:
+                errors.append("output bounds %s, expected %s" % (out0["bounds"], want))
+            desc += " bounds=%s" % ",".join(str(v) for v in out0["bounds"])
         elif expect.startswith("range="):
             # every channel of the output at the first time is within [lo, hi]
             lo, hi = (float(v) for v in expect[6:].split(","))
@@ -722,13 +730,15 @@ tests=(
     # Premultiply the RGB: not a pass-through
     "Roto replace outside RoD|net.sf.openfx.RotoPlugin|general|*|notidentity+mean=0.5,0.5,0.5,0||-i Source=solid:0.5,0.5,0.5,1 -i Roto=rod:100,100,200,200 replace=1 --frames 0 --window 0,0,4,4"
     "Roto premultiply outside RoD|net.sf.openfx.RotoPlugin|general|*|notidentity+mean=0,0,0,1||-i Source=solid:0.5,0.5,0.5,1 -i Roto=rod:100,100,200,200 premultiply=1 --frames 0 --window 0,0,4,4"
-    # Clip To (default Format, 0: No Clip, 1: BBox, 4: Intersect BBox+Format) on a Source in the left
-    # half of the project (transparent black): the shape alpha (0.5) is drawn where the output is
-    # rendered, across the Source edge (x = 360) or only on its left with BBox and Intersect
-    "Roto clip to format|net.sf.openfx.RotoPlugin|general|*|mean=0,0,0,0.5||-i Source=rod:0,0,384,576 -i Roto=solid:1,1,1,0.5 --frames 0 --window 350,0,370,4"
-    "Roto no clip|net.sf.openfx.RotoPlugin|general|*|mean=0,0,0,0.5||-i Source=rod:0,0,384,576 -i Roto=solid:1,1,1,0.5 clipType=0 --frames 0 --window 350,0,370,4"
-    "Roto clip to bbox|net.sf.openfx.RotoPlugin|general|*|mean=0,0,0,0.5||-i Source=rod:0,0,384,576 -i Roto=solid:1,1,1,0.5 clipType=1 --frames 0 --window 350,0,370,4"
-    "Roto clip to intersect|net.sf.openfx.RotoPlugin|general|*|mean=0,0,0,0.5||-i Source=rod:0,0,384,576 -i Roto=solid:1,1,1,0.5 clipType=4 --frames 0 --window 350,0,370,4"
+    # Clip To (default No Clip, as Roto 1.0) on a Source in the left half of the project (pixels 0 to 360,
+    # transparent black) and a shape on the whole project (alpha 0.5), rendered across the Source edge:
+    # the output bounds are the whole window with No Clip, Format and Union BBox+Format (3), and stop at the
+    # Source edge with BBox and Intersect BBox+Format (4; the option names with a space are given by index)
+    "Roto default no clip|net.sf.openfx.RotoPlugin|general|*|bounds=350,0,370,4+mean=0,0,0,0.5||-i Source=rod:0,0,384,576 -i Roto=solid:1,1,1,0.5 --frames 0 --window 350,0,370,4"
+    "Roto clip to format|net.sf.openfx.RotoPlugin|general|*|bounds=350,0,370,4+mean=0,0,0,0.5||-i Source=rod:0,0,384,576 -i Roto=solid:1,1,1,0.5 clipType=Format --frames 0 --window 350,0,370,4"
+    "Roto clip to union|net.sf.openfx.RotoPlugin|general|*|bounds=350,0,370,4+mean=0,0,0,0.5||-i Source=rod:0,0,384,576 -i Roto=solid:1,1,1,0.5 clipType=3 --frames 0 --window 350,0,370,4"
+    "Roto clip to bbox|net.sf.openfx.RotoPlugin|general|*|bounds=350,0,360,4+mean=0,0,0,0.5||-i Source=rod:0,0,384,576 -i Roto=solid:1,1,1,0.5 clipType=BBox --frames 0 --window 350,0,370,4"
+    "Roto clip to intersect|net.sf.openfx.RotoPlugin|general|*|bounds=350,0,360,4+mean=0,0,0,0.5||-i Source=rod:0,0,384,576 -i Roto=solid:1,1,1,0.5 clipType=4 --frames 0 --window 350,0,370,4"
     # ColorCorrect Mix Luminance 1: gain 2 doubles the color, and the same value is added to R, G and B so that
     # the Rec. 709 luminance is the input one (0.4648756): 2 * (0.25,0.5,0.75) - 0.4648756
     "ColorCorrect mix luminance|net.sf.openfx.ColorCorrectPlugin|filter|float|tol=1e-4+mean=0.0351244,0.5351244,1.0351244,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none MasterGain=2,2,2,2 mixLuminance=1"
