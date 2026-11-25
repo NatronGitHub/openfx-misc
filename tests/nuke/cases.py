@@ -849,7 +849,14 @@ CASES += [
          ("Constant", {"color": [.25, -.5, 1.5, .75]}),
          (ofx_id("ConstantPlugin"), {"color": [.25, -.5, 1.5, .75]}), **GEN),
     case("ColorBars defaults", ("ColorBars", {}), (ofx_id("ColorBars"), {}),
-         **dict(GEN, known=286)),
+         **GEN),
+    case("ColorBars PAL", ("ColorBars", {"PAL": True}),
+         (ofx_id("ColorBars"), {"PAL": 1}), **GEN),
+    case("ColorBars intensity 1", ("ColorBars", {"barintensity": 1.}),
+         (ofx_id("ColorBars"), {"barIntensity": 1.}), **GEN),
+    case("ColorBars PAL, intensity 0.75",
+         ("ColorBars", {"PAL": True, "barintensity": .75}),
+         (ofx_id("ColorBars"), {"PAL": 1, "barIntensity": .75}), **GEN),
     case("ColorWheel defaults", ("ColorWheel", {}),
          (ofx_id("ColorWheel"), {}), **GEN),
     # Inside the disc (its anti-aliased edge differs).
@@ -870,14 +877,12 @@ CASES += [
 CHECKER_REGIONS = {"centre": (328, 256, 392, 320), "corner": (0, 0, 64, 64)}
 for _where, _region in sorted(CHECKER_REGIONS.items()):
     CASES += [
-        # Only the centre lines differ (centerline width 3 vs 1).
         case("CheckerBoard defaults, %s" % _where, ("CheckerBoard2", {}),
              (ofx_id("CheckerBoardPlugin"), {}), region=_region,
-             channels="rgba",
-             known=285 if _where == "centre" else None),
-        case("CheckerBoard centerline 3, %s" % _where,
-             ("CheckerBoard2", {}),
-             (ofx_id("CheckerBoardPlugin"), {"centerlineWidth": 3}),
+             channels="rgba"),
+        case("CheckerBoard centerline 1, %s" % _where,
+             ("CheckerBoard2", {"centerlinewidth": 1}),
+             (ofx_id("CheckerBoardPlugin"), {"centerlineWidth": 1}),
              region=_region, channels="rgba"),
         case("CheckerBoard box 10, no centerline, four colours, %s" % _where,
              ("CheckerBoard2", {"boxsize": 10, "centerlinewidth": 0,
@@ -888,8 +893,25 @@ for _where, _region in sorted(CHECKER_REGIONS.items()):
                  "boxSize": [10, 10], "centerlineWidth": 0,
                  "color0": [1, 0, 0, 1], "color1": [0, 1, 0, 1],
                  "color2": [0, 0, 1, 1], "color3": [1, 1, 0, 1]}),
-             region=_region, channels="rgba",
-             known=285),
+             region=_region, channels="rgba"),
+    ]
+    CASES += [
+        # The boxes (45x48 pixels) tile each half of the frame an even
+        # number of times, so a grid from the bottom-left corner is the same
+        # as from the centre.
+        case("CheckerBoard box 48, four colours, grid origin %s, %s"
+             % (_origin_name, _where),
+             ("CheckerBoard2", {"boxsize": 48, "centerlinewidth": 0,
+                                "color0": [1, 0, 0, 1], "color1": [0, 1, 0, 1],
+                                "color2": [0, 0, 1, 1],
+                                "color3": [1, 1, 0, 1]}),
+             (ofx_id("CheckerBoardPlugin"), {
+                 "boxSize": [48, 48], "centerlineWidth": 0,
+                 "gridOrigin": _origin,
+                 "color0": [1, 0, 0, 1], "color1": [0, 1, 0, 1],
+                 "color2": [0, 0, 1, 1], "color3": [1, 1, 0, 1]}),
+             region=_region, channels="rgba")
+        for _origin, _origin_name in ((0, "centre"), (1, "bottom left"))
     ]
 for _nuke_type, _ofx_type in (("linear", "Linear"), ("plinear", "PLinear"),
                               ("smooth0", "Ease-in"), ("smooth1", "Ease-out"),
@@ -1665,8 +1687,6 @@ ISSUES = {
     282: 'CopyRectangle: softness ramp shape; whole-image default area',
     283: 'Roto: nothing is drawn by default (Process A off); no pre...',
     284: 'Constant: finite region of definition',
-    285: 'CheckerBoard: centerline width default 1, and the four-co...',
-    286: 'ColorBars: SMPTE HD bars with an IRE intensity; no PAL op...',
     287: 'ColorWheel: gamma default 0.45; no area control',
     288: 'Radial and Rectangle: softness falloff curve; missing Dra...',
     289: 'ColorCorrect: tonal range weighting, negative values unde...',

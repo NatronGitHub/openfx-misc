@@ -39,13 +39,20 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "ConstantOFX"
 #define kPluginGrouping "Image"
 #define kPluginDescription "Generate an image with a constant color.\n" \
+    "Unless Infinite is checked, the image covers only the Extent (the project format by default, or the Source extent if Source is connected): it is black and transparent outside, e.g. after a Transform or in a Merge with a larger input.\n" \
     "See also: https://web.archive.org/web/20220807183203/http://www.opticalenquiry.com/nuke/index.php?title=Constant,_CheckerBoard,_ColorBars,_ColorWheel"
 #define kPluginIdentifier "net.sf.openfx.ConstantPlugin"
 #define kPluginSolidName "SolidOFX"
-#define kPluginSolidDescription "Generate an image with a constant opaque color."
+#define kPluginSolidDescription "Generate an image with a constant opaque color.\n" \
+    "Unless Infinite is checked, the image covers only the Extent (the project format by default, or the Source extent if Source is connected): it is black and transparent outside."
 #define kPluginSolidIdentifier "net.sf.openfx.Solid"
+// history:
+// 1.0 initial version
+// 1.1 (Constant and Solid) the Infinite param (off by default: the output is unchanged) gives an
+//     infinite region of definition (#284); the params follow the Constant parameter order: channels,
+//     color, format, frame range (#381). Params are identified by name, so saved projects are unchanged.
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsByte true
 #define kSupportsUShort true
@@ -64,6 +71,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamColor "color"
 #define kParamColorLabel "Color"
 #define kParamColorHint "Color to fill the image with."
+
+#define kParamInfinite "infinite"
+#define kParamInfiniteLabel "Infinite"
+#define kParamInfiniteHint "Fill the whole plane (an infinite region of definition), not only the Extent, which then only sets the output format. Off by default, because many hosts handle infinite images poorly."
 
 /** @brief  Base class used to blend two images together */
 class ConstantProcessorBase
@@ -189,14 +200,16 @@ public:
         : GeneratorPlugin(handle, true, kSupportsByte, kSupportsUShort, kSupportsHalf, kSupportsFloat)
         , _color(NULL)
         , _colorRGB(NULL)
+        , _infinite(NULL)
     {
+        _infinite = fetchBooleanParam(kParamInfinite);
 
         if (solid) {
             _colorRGB   = fetchRGBParam(kParamColor);
         } else {
             _color   = fetchRGBAParam(kParamColor);
         }
-        assert(_color || _colorRGB);
+        assert( (_color || _colorRGB) && _infinite );
     }
 
 private:
@@ -211,9 +224,14 @@ private:
 
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
+    // No using GeneratorPlugin::getRegionOfDefinition (C.138): its RegionOfDefinitionArguments overload is
+    // private there, which makes the using-declaration ill-formed; the (time, rod) one is called qualified.
+    virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+
 private:
     RGBAParam  *_color;
     RGBParam *_colorRGB;
+    BooleanParam *_infinite;
 };
 
 
@@ -331,6 +349,20 @@ ConstantPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     clipPreferences.setOutputPremultiplication(_colorRGB ? eImageOpaque : eImagePreMultiplied);
 }
 
+bool
+ConstantPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
+                                      OfxRectD &rod)
+{
+    if ( _infinite->getValueAtTime(args.time) ) {
+        rod.x1 = rod.y1 = kOfxFlagInfiniteMin;
+        rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
+
+        return true;
+    }
+
+    return GeneratorPlugin::getRegionOfDefinition(args.time, rod);
+}
+
 template<bool solid>
 class ConstantPluginFactory
     : public PluginFactoryHelper<ConstantPluginFactory<solid> >
@@ -415,7 +447,8 @@ ConstantPluginFactory<solid>::describeInContext(ImageEffectDescriptor &desc,
 
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
-    generatorDescribeInContext(page, desc, *dstClip, eGeneratorExtentDefault, solid ? ePixelComponentRGB : ePixelComponentRGBA, true, context);
+    // the Constant parameter order: channels, color, format, frame range (#381)
+    generatorDescribeOutputComponents(page, desc, *dstClip, solid ? ePixelComponentRGB : ePixelComponentRGBA);
 
     // color
     if (solid) {
@@ -441,6 +474,21 @@ ConstantPluginFactory<solid>::describeInContext(ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
+
+    generatorDescribeFormat(page, desc, eGeneratorExtentDefault);
+    generatorDescribeArea(page, desc);
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamInfinite);
+        param->setLabel(kParamInfiniteLabel);
+        param->setHint(kParamInfiniteHint);
+        param->setDefault(false);
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    generatorDescribeFrameRange(page, desc, context);
+    generatorDescribeEnd(page, desc);
 }
 
 template<bool solid>

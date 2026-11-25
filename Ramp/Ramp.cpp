@@ -69,6 +69,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 2.1: with Process A and an opaque Source, Source is mapped to RGBA like the output, so that
 //              an RGB Source is not read as RGBA (out of bounds) (#254)
 // version 3.0: isIdentity also tests the RGB of the colors (version 2 is kept); includes the 2.1 fix
+//     (no version change) the params follow the Ramp parameter order: mask controls, points, type, colors
+//     (#383). Params are identified by name, so saved projects are unchanged.
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -902,9 +904,15 @@ RampPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
         }
     }
 
-    ofxsRampDescribeParams(desc, page, NULL, eRampTypeLinear, /*isOpen=*/ true, /*oldParams=*/ true);
-
     ofxsMaskMixDescribeParams(desc, page);
+
+    // the Ramp parameter order: channels and mask controls, point 0, point 1, type, then the colors (#383)
+    ofxsRampDescribeParamPoint0(desc, page, NULL, /*oldParams=*/ true);
+    ofxsRampDescribeParamPoint1(desc, page, NULL, /*oldParams=*/ true);
+    ofxsRampDescribeParamType(desc, page, NULL, eRampTypeLinear, /*oldParams=*/ true);
+    ofxsRampDescribeParamColor0(desc, page, NULL, /*oldParams=*/ true);
+    ofxsRampDescribeParamColor1(desc, page, NULL, /*oldParams=*/ true);
+    ofxsRampDescribeParamsInteract(desc, page, NULL, /*isOpen=*/ true, /*oldParams=*/ true);
 } // RampPluginFactory::describeInContext
 
 // Each major version needs its own factory class: FactoryMainEntryHelper stores

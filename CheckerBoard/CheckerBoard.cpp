@@ -43,8 +43,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Image"
 #define kPluginDescription \
     "Generate an image with a checkerboard.\n" \
+    "The boxes start from the Grid Origin: the center of the image (the default), or its bottom-left corner. Counting boxes from there, Color 0 fills box (0,0) and every other box and row, Color 1 box (1,0), Color 2 box (1,1) and Color 3 box (0,1). The box size is rounded to the nearest pixel (at full size). The center lines always go through the center of the image.\n" \
     "A frame range may be specified for operators that need it.\n" \
-    "See also: https://web.archive.org/web/20220807183203/http://www.opticalenquiry.com/nuke/index.php?title=Constant,_CheckerBoard,_ColorBars,_ColorWheel"
+    "See also: https://learn.foundry.com/nuke/content/reference_guide/image_nodes/checkerboard.html"
+#define kPluginDescriptionV1 \
+    "Generate an image with a checkerboard (version 1, obsolete: version 2 rounds the box size to the nearest pixel, and its center lines are 3 pixels wide by default).\n" \
+    "The boxes start from the center of the image: Color 0 fills the box on the top-right of the center and every other box and row, Color 1 the box on its left, Color 2 the box below that and Color 3 the box below Color 0. The center lines are 1 pixel wide by default.\n" \
+    "A frame range may be specified for operators that need it."
 
 #define kPluginIdentifier "net.sf.openfx.CheckerBoardPlugin"
 // history:
@@ -52,7 +57,14 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //     (no version change) removed the XY render branch: Output never declares XY, so the generator
 //     never offers it and a conforming host never gives it; other components give kOfxStatErrFormat
 //     (issue #226). Output is unchanged.
-#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+// 2.0 the box size is rounded to the nearest pixel (at full size, after the pixel aspect ratio,
+//     then scaled by the render scale), and the center lines are 3 pixels wide by default, as in the CheckerBoard node of the
+//     same name. The Grid Origin param: the boxes may start from the bottom-left corner instead of
+//     the center (the default). With Extent Default and Source connected, Bottom Left starts from
+//     the Source RoD (the output RoD); Center uses the project, as in 1.0 (#285).
+//     Version 1.0 is kept (obsolete), with its defaults and output; the unreleased 1.1 (Grid
+//     Origin) is now 2.0.
+#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsByte true
@@ -75,19 +87,41 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamColor0 "color0"
 #define kParamColor0Label "Color 0"
-#define kParamColor0Hint "Color to fill the box on top-right of image center and every other row and column."
+#define kParamColor0Hint "Color to fill box (0,0) from the Grid Origin (with Center, the box on the top-right of the image center) and every other box and row."
+#define kParamColor0HintV1 "Color to fill the box on the top-right of the image center and every other box and row."
 
 #define kParamColor1 "color1"
 #define kParamColor1Label "Color 1"
-#define kParamColor1Hint "Color to fill the box on top-left of image center and every other row and column."
+#define kParamColor1Hint "Color to fill box (1,0) from the Grid Origin (with Center, the box on the top-left of the image center) and every other box and row."
+#define kParamColor1HintV1 "Color to fill the box on the top-left of the image center and every other box and row."
 
 #define kParamColor2 "color2"
 #define kParamColor2Label "Color 2"
-#define kParamColor2Hint "Color to fill the box on bottom-left of image center and every other row and column."
+#define kParamColor2Hint "Color to fill box (1,1) from the Grid Origin (with Center, the box on the bottom-left of the image center) and every other box and row."
+#define kParamColor2HintV1 "Color to fill the box on the bottom-left of the image center and every other box and row."
 
 #define kParamColor3 "color3"
 #define kParamColor3Label "Color 3"
-#define kParamColor3Hint "Color to fill the box on bottom-right of image center and every other row and column."
+#define kParamColor3Hint "Color to fill box (0,1) from the Grid Origin (with Center, the box on the bottom-right of the image center) and every other box and row."
+#define kParamColor3HintV1 "Color to fill the box on the bottom-right of the image center and every other box and row."
+
+#define kParamGridOrigin "gridOrigin"
+#define kParamGridOriginLabel "Grid Origin"
+#define kParamGridOriginHint "Where the boxes start."
+#define kParamGridOriginOptionCenter "Center", "The boxes start from the center of the image.", "center"
+#define kParamGridOriginOptionBottomLeft "Bottom Left", "The boxes start from the bottom-left corner of the image.", "bottomleft"
+enum GridOriginEnum
+{
+    eGridOriginCenter = 0,
+    eGridOriginBottomLeft,
+};
+
+// The box size in pixels: exact (version 1), or rounded to the nearest pixel (version 2).
+enum class BoxSizeEnum
+{
+    eExact,
+    eRounded,
+};
 
 #define kParamLineColor "lineColor"
 #define kParamLineColorLabel "Line Color"
@@ -122,6 +156,7 @@ protected:
     double _centerlineInfX, _centerlineSupX;
     double _centerlineInfY, _centerlineSupY;
     OfxRectD _rod;
+    GridOriginEnum _gridOrigin;
 
 public:
     /** @brief no arg ctor */
@@ -135,6 +170,7 @@ public:
         , _centerlineSupX(0.)
         , _centerlineInfY(0.)
         , _centerlineSupY(0.)
+        , _gridOrigin(eGridOriginCenter)
     {
         _boxSize.x = _boxSize.y = 0.;
         _color0.r = _color0.g = _color0.b = _color0.a = 0.;
@@ -158,13 +194,21 @@ public:
                    double lineWidth,
                    const OfxRGBAColourD &centerlineColor,
                    double centerlineWidth,
-                   const OfxRectD &rod)
+                   const OfxRectD &rod,
+                   GridOriginEnum gridOrigin,
+                   BoxSizeEnum boxSizeRounding)
     {
         if (pixelAspectRatio == 0) {
             pixelAspectRatio = 1.;
         }
-        _boxSize.x = (std::max)(1., boxSize.x * renderScale.x / pixelAspectRatio);
-        _boxSize.y = (std::max)(1., boxSize.y * renderScale.y);
+        if (boxSizeRounding == BoxSizeEnum::eRounded) {
+            // whole pixels at full size, then scaled, so that the grid is the same at any render scale
+            _boxSize.x = (std::max)( 1., std::round(boxSize.x / pixelAspectRatio) ) * renderScale.x;
+            _boxSize.y = (std::max)( 1., std::round(boxSize.y) ) * renderScale.y;
+        } else {
+            _boxSize.x = (std::max)(1., boxSize.x * renderScale.x / pixelAspectRatio);
+            _boxSize.y = (std::max)(1., boxSize.y * renderScale.y);
+        }
         _color0 = color0;
         _color1 = color1;
         _color2 = color2;
@@ -184,6 +228,7 @@ public:
         _rod.x2 = rod.x2 * renderScale.x / pixelAspectRatio;
         _rod.y1 = rod.y1 * renderScale.y;
         _rod.y2 = rod.y2 * renderScale.y;
+        _gridOrigin = gridOrigin;
     }
 };
 
@@ -271,6 +316,12 @@ private:
         OfxPointD center;
         center.x = (_rod.x1 + _rod.x2) / 2;
         center.y = (_rod.y1 + _rod.y2) / 2;
+        // the boxes and the lines between them start from the origin; the center lines go through the center
+        OfxPointD origin = center;
+        if (_gridOrigin == eGridOriginBottomLeft) {
+            origin.x = _rod.x1;
+            origin.y = _rod.y1;
+        }
 
         // push pixels
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
@@ -290,7 +341,7 @@ private:
                 }
             } else {
                 // the closest line between boxes
-                double yline = center.y + _boxSize.y * std::floor( (y - center.y) / _boxSize.y + 0.5 );
+                double yline = origin.y + _boxSize.y * std::floor( (y - origin.y) / _boxSize.y + 0.5 );
                 // check if we are on a line
                 if ( ( (yline - _lineInfY) <= y ) && ( y < (yline + _lineSupY) ) ) {
                     for (int x = procWindow.x1; x < procWindow.x2; x++) {
@@ -301,7 +352,7 @@ private:
                     }
                 } else {
                     // draw boxes and vertical lines
-                  int ybox = (int)std::floor( (y - center.y) / _boxSize.y );
+                  int ybox = (int)std::floor( (y - origin.y) / _boxSize.y );
                     PIX *c0 = (ybox & 1) ? color3 : color0;
                     PIX *c1 = (ybox & 1) ? color2 : color1;
 
@@ -313,7 +364,7 @@ private:
                             }
                         } else {
                             // the closest line between boxes
-                            double xline = center.x + _boxSize.x * std::floor( (x - center.x) / _boxSize.x + 0.5 );
+                            double xline = origin.x + _boxSize.x * std::floor( (x - origin.x) / _boxSize.x + 0.5 );
                             // check if we are on a line
                             if ( ( (xline - _lineInfX) <= x ) && ( x < (xline + _lineSupX) ) ) {
                                 for (int c = 0; c < nComponents; ++c) {
@@ -321,7 +372,7 @@ private:
                                 }
                             } else {
                                 // draw box
-                                int xbox = static_cast<int>( std::floor( (x - center.x) / _boxSize.x ) );
+                                int xbox = static_cast<int>( std::floor( (x - origin.x) / _boxSize.x ) );
                                 if (xbox & 1) {
                                     for (int c = 0; c < nComponents; ++c) {
                                         dstPix[c] = c1[c];
@@ -348,9 +399,12 @@ class CheckerBoardPlugin
 {
 public:
     /** @brief ctor */
-    CheckerBoardPlugin(OfxImageEffectHandle handle)
+    CheckerBoardPlugin(OfxImageEffectHandle handle,
+                       unsigned int majorVersion)
         : GeneratorPlugin(handle, true, kSupportsByte, kSupportsUShort, kSupportsHalf, kSupportsFloat)
+        , _majorVersion(majorVersion)
         , _boxSize(NULL)
+        , _gridOrigin(NULL)
         , _color0(NULL)
         , _color1(NULL)
         , _color2(NULL)
@@ -359,9 +413,14 @@ public:
         , _lineWidth(NULL)
         , _centerlineColor(NULL)
         , _centerlineWidth(NULL)
+        , _srcClip(NULL)
     {
+        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
 
         _boxSize = fetchDouble2DParam(kParamBoxSize);
+        if (_majorVersion >= 2) {
+            _gridOrigin = fetchChoiceParam(kParamGridOrigin);
+        }
         _color0 = fetchRGBAParam(kParamColor0);
         _color1 = fetchRGBAParam(kParamColor1);
         _color2 = fetchRGBAParam(kParamColor2);
@@ -370,7 +429,7 @@ public:
         _lineWidth = fetchDoubleParam(kParamLineWidth);
         _centerlineColor = fetchRGBAParam(kParamCenterLineColor);
         _centerlineWidth = fetchDoubleParam(kParamCenterLineWidth);
-        assert(_size && _color0 && _color1 && _color2 && _color3 && _lineColor && _lineWidth && _centerlineColor && _centerlineWidth);
+        assert(_size && _boxSize && (_gridOrigin || _majorVersion < 2) && _color0 && _color1 && _color2 && _color3 && _lineColor && _lineWidth && _centerlineColor && _centerlineWidth);
     }
 
 private:
@@ -386,7 +445,9 @@ private:
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
 private:
+    const unsigned int _majorVersion;
     Double2DParam *_boxSize;
+    ChoiceParam *_gridOrigin; // version 2 only
     RGBAParam  *_color0;
     RGBAParam  *_color1;
     RGBAParam  *_color2;
@@ -395,6 +456,7 @@ private:
     DoubleParam *_lineWidth;
     RGBAParam  *_centerlineColor;
     DoubleParam *_centerlineWidth;
+    Clip *_srcClip;
 };
 
 
@@ -453,16 +515,24 @@ CheckerBoardPlugin::setupAndProcess(CheckerBoardProcessorBase &processor,
     _centerlineColor->getValueAtTime(time, centerlineColor.r, centerlineColor.g, centerlineColor.b, centerlineColor.a);
     double centerlineWidth;
     _centerlineWidth->getValueAtTime(time, centerlineWidth);
+    const GridOriginEnum gridOrigin = _gridOrigin ? static_cast<GridOriginEnum>( _gridOrigin->getValueAtTime(time) ) : eGridOriginCenter;
+    const BoxSizeEnum boxSizeRounding = (_majorVersion >= 2) ? BoxSizeEnum::eRounded : BoxSizeEnum::eExact;
     OfxRectD rod = {0, 0, 0, 0};
     if ( !getRegionOfDefinition(time, rod) ) {
-        OfxPointD siz = getProjectSize();
-        OfxPointD off = getProjectOffset();
-        rod.x1 = off.x;
-        rod.x2 = off.x + siz.x;
-        rod.y1 = off.y;
-        rod.y2 = off.y + siz.y;
+        // Extent Default. Bottom Left: the host's default RoD, the Source RoD if Source is connected.
+        // Center: the project rectangle, even with Source connected, as in version 1.
+        if ( (gridOrigin == eGridOriginBottomLeft) && _srcClip && _srcClip->isConnected() ) {
+            rod = _srcClip->getRegionOfDefinition(time);
+        } else {
+            OfxPointD siz = getProjectSize();
+            OfxPointD off = getProjectOffset();
+            rod.x1 = off.x;
+            rod.x2 = off.x + siz.x;
+            rod.y1 = off.y;
+            rod.y2 = off.y + siz.y;
+        }
     }
-    processor.setValues(args.renderScale, dst->getPixelAspectRatio(), boxSize, color0, color1, color2, color3, lineColor, lineWidth, centerlineColor, centerlineWidth, rod);
+    processor.setValues(args.renderScale, dst->getPixelAspectRatio(), boxSize, color0, color1, color2, color3, lineColor, lineWidth, centerlineColor, centerlineWidth, rod, gridOrigin, boxSizeRounding);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -527,13 +597,17 @@ CheckerBoardPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     //clipPreferences.setOutputPremultiplication(eImagePreMultiplied);
 }
 
-mDeclarePluginFactory(CheckerBoardPluginFactory, {ofxsThreadSuiteCheck();}, {});
+mDeclarePluginFactoryVersioned(CheckerBoardPluginFactory, {ofxsThreadSuiteCheck();}, {});
+template<unsigned int majorVersion>
 void
-CheckerBoardPluginFactory::describe(ImageEffectDescriptor &desc)
+CheckerBoardPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
-    desc.setPluginDescription(kPluginDescription);
+    desc.setPluginDescription(majorVersion >= 2 ? kPluginDescription : kPluginDescriptionV1);
+    if (majorVersion < 2) {
+        desc.setIsObsolete(true);
+    }
 
     desc.addSupportedContext(eContextGenerator);
     desc.addSupportedContext(eContextGeneral);
@@ -565,9 +639,10 @@ CheckerBoardPluginFactory::describe(ImageEffectDescriptor &desc)
 #endif
 }
 
+template<unsigned int majorVersion>
 void
-CheckerBoardPluginFactory::describeInContext(ImageEffectDescriptor &desc,
-                                             ContextEnum context)
+CheckerBoardPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
+                                                           ContextEnum context)
 {
     // there has to be an input clip, even for generators
     ClipDescriptor* srcClip = desc.defineClip( kOfxImageEffectSimpleSourceClipName );
@@ -608,11 +683,27 @@ CheckerBoardPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         }
     }
 
+    // gridOrigin
+    if (majorVersion >= 2) {
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamGridOrigin);
+        param->setLabel(kParamGridOriginLabel);
+        param->setHint(kParamGridOriginHint);
+        assert(param->getNOptions() == eGridOriginCenter);
+        param->appendOption(kParamGridOriginOptionCenter);
+        assert(param->getNOptions() == eGridOriginBottomLeft);
+        param->appendOption(kParamGridOriginOptionBottomLeft);
+        param->setDefault( (int)eGridOriginCenter );
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
     // color0
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor0);
         param->setLabel(kParamColor0Label);
-        param->setHint(kParamColor0Hint);
+        param->setHint(majorVersion >= 2 ? kParamColor0Hint : kParamColor0HintV1);
         param->setDefault(0.1, 0.1, 0.1, 1.0);
         param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
         param->setDisplayRange(0, 0, 0, 0, 1, 1, 1, 1);
@@ -626,7 +717,7 @@ CheckerBoardPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor1);
         param->setLabel(kParamColor1Label);
-        param->setHint(kParamColor1Hint);
+        param->setHint(majorVersion >= 2 ? kParamColor1Hint : kParamColor1HintV1);
         param->setDefault(0.5, 0.5, 0.5, 1.0);
         param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
         param->setDisplayRange(0, 0, 0, 0, 1, 1, 1, 1);
@@ -640,7 +731,7 @@ CheckerBoardPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor2);
         param->setLabel(kParamColor2Label);
-        param->setHint(kParamColor2Hint);
+        param->setHint(majorVersion >= 2 ? kParamColor2Hint : kParamColor2HintV1);
         param->setDefault(0.1, 0.1, 0.1, 1.0);
         param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
         param->setDisplayRange(0, 0, 0, 0, 1, 1, 1, 1);
@@ -654,7 +745,7 @@ CheckerBoardPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor3);
         param->setLabel(kParamColor3Label);
-        param->setHint(kParamColor3Hint);
+        param->setHint(majorVersion >= 2 ? kParamColor3Hint : kParamColor3HintV1);
         param->setDefault(0.5, 0.5, 0.5, 1.0);
         param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
         param->setDisplayRange(0, 0, 0, 0, 1, 1, 1, 1);
@@ -713,7 +804,7 @@ CheckerBoardPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamCenterLineWidth);
         param->setLabel(kParamCenterLineWidthLabel);
         param->setHint(kParamCenterLineWidthHint);
-        param->setDefault(1);
+        param->setDefault(majorVersion >= 2 ? 3 : 1);
         param->setRange(0., DBL_MAX);
         param->setDisplayRange(0, 10);
         param->setAnimates(true); // can animate
@@ -723,14 +814,19 @@ CheckerBoardPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
 } // CheckerBoardPluginFactory::describeInContext
 
+template<unsigned int majorVersion>
 ImageEffect*
-CheckerBoardPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                          ContextEnum /*context*/)
+CheckerBoardPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
+                                                        ContextEnum /*context*/)
 {
-    return new CheckerBoardPlugin(handle);
+    return new CheckerBoardPlugin(handle, majorVersion);
 }
 
-static CheckerBoardPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+// Each major version has its own factory class (FactoryMainEntryHelper stores the plugin UID in a
+// static shared by all the objects of a class).
+static CheckerBoardPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
+static CheckerBoardPluginFactory<1> p1(kPluginIdentifier, 0); // 1.0, obsolete (Natron 2.5.0)
 mRegisterPluginFactoryInstance(p)
+mRegisterPluginFactoryInstance(p1)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

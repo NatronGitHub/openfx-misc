@@ -162,19 +162,10 @@ NAMES = {
 # test is an expected failure only while the common params keep exactly this
 # order, so a new misorder fails; a fixed order passes (a strict XPASS).
 KNOWN = {
-    "net.sf.openfx.ConstantPlugin": (381, "format first channels color"),
-    "net.sf.openfx.ColorWheel": (
-        382,
-        "format area channels centerSaturation edgeSaturation "
-        "centerValue edgeValue gamma rotate"),
-    "net.sf.openfx.Ramp": (383, "output type p0 p1 color invert_mask"),
 }
 
 # The short titles of the issues (xfail reasons).
 ISSUES = {
-    381: "Constant: format and frame range come before the colour",
-    382: "ColorWheel: the area comes before the wheel controls",
-    383: "Ramp: Type comes before the points, mask controls last",
 }
 
 
