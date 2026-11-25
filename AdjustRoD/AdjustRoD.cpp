@@ -37,7 +37,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginName "AdjustRoD"
 #define kPluginGrouping "Transform"
-#define kPluginDescription "Enlarges the input image by a given amount, or shrinks it with negative amounts. The added pixels are copies of the closest edge pixel (Border Conditions: Nearest, the default), or black and transparent (Border Conditions: Black). A negative amount removes pixels on each side: the region of definition is the input's, shrunk by that amount, and the pixels outside it are those of the shrunk image under the same border conditions. The default amount, 0, leaves the input unchanged."
+#define kPluginDescription "Enlarges the input image by a given amount, or shrinks it with negative amounts. The added pixels are copies of the closest edge pixel (Border Conditions: Nearest, the default), or black and transparent (Border Conditions: Black). A negative amount removes pixels on each side: the region of definition is the input's, shrunk by that amount, and the pixels outside it are those of the shrunk image under the same border conditions. The default amount is 25."
 #define kPluginIdentifier "net.sf.openfx.AdjustRoDPlugin"
 // History:
 // 1.0 initial version
@@ -47,8 +47,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //     is out of the Source RoD (it got no Source image there);
 //     (#299, in the same unreleased minor version) negative amounts shrink the region of definition (the range
 //     started at 0); the pixels outside the shrunk region follow the border conditions, from its edge
-#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 2 // Increment this when you have fixed a bug or made it faster.
+// 2.0 the default amount is 25 (it was 0, a no-op); the amounts are whole pixels, truncated toward zero (in x,
+//     Add Pixels divided by the pixel aspect ratio) (#299). Version 1 is kept, obsolete, for old projects.
+#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinorV1 2 // the minor version of the obsolete version 1
+#define kParamAddPixelsDefault 25. // version 2
+#define kParamAddPixelsDefaultV1 0.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -59,7 +64,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamAddPixels "addPixels"
 #define kParamAddPixelsLabel "Add Pixels"
-#define kParamAddPixelsHint "How many pixels to add on each side for both dimensions (width/height), in canonical coordinates. Negative values remove pixels: the region of definition shrinks (down to an empty region at its centre)."
+#define kParamAddPixelsHintV1 "How many pixels to add on each side for both dimensions (width/height), in canonical coordinates. Negative values remove pixels: the region of definition shrinks (down to an empty region at its centre)."
+#define kParamAddPixelsHint "How many pixels to add on each side for both dimensions (width/height), in canonical coordinates, truncated toward zero to whole pixels (in x, the amount is divided by the pixel aspect ratio). Negative values remove pixels: the region of definition shrinks (down to an empty region at its centre)."
 
 #define kParamBoundary "boundary"
 #define kParamBoundaryLabel "Border Conditions" //"Boundary Conditions"
@@ -112,8 +118,10 @@ class AdjustRoDPlugin
 {
 public:
     /** @brief ctor */
-    AdjustRoDPlugin(OfxImageEffectHandle handle)
+    AdjustRoDPlugin(OfxImageEffectHandle handle,
+                    bool wholePixels)
         : ImageEffect(handle)
+        , _wholePixels(wholePixels)
         , _dstClip(NULL)
         , _srcClip(NULL)
         , _size(NULL)
@@ -150,7 +158,11 @@ private:
     /* set up and run a processor */
     void setupAndCopy(PixelProcessorFilterBase &, const RenderArguments &args);
 
+    // the amounts added on each side (canonical, negative to shrink)
+    void getAmounts(double time, double* w, double* h) const;
+
 private:
+    const bool _wholePixels; // version 2: the amounts are whole pixels, truncated toward zero
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
     Clip *_srcClip;
@@ -201,7 +213,7 @@ AdjustRoDPlugin::setupAndCopy(PixelProcessorFilterBase & processor,
     processor.setDstImg( dst.get() );
     const int boundary = _boundary->getValueAtTime(time);
     double w = 0., h = 0.;
-    _size->getValueAtTime(time, w, h);
+    getAmounts(time, &w, &h);
     if ( (w < 0) || (h < 0) ) {
         // shrunk: only the Source pixels in the output RoD are shown, and the border conditions apply from
         // its edge. The host may give a larger Source image: use the part of it in the shrunk RoD.
@@ -225,6 +237,25 @@ AdjustRoDPlugin::setupAndCopy(PixelProcessorFilterBase & processor,
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
+}
+
+// Version 2: whole pixels at render scale 1, truncated toward zero: Add Pixels is in canonical coordinates, so
+// the x amount is divided by the pixel aspect ratio (as a float: e.g. 16 at PAR 768/720 gives 14 pixels, not 15).
+void
+AdjustRoDPlugin::getAmounts(double time,
+                            double* w,
+                            double* h) const
+{
+    _size->getValueAtTime(time, *w, *h);
+    if (!_wholePixels) {
+        return;
+    }
+    const double par = ( _srcClip && _srcClip->isConnected() ) ? _srcClip->getPixelAspectRatio() : 1.;
+    if (par > 0.) {
+        const double parf = static_cast<float>(par);
+        *w = std::trunc(*w / parf) * par;
+    }
+    *h = std::trunc(*h);
 }
 
 // Along one axis: the part of the Source range [s1,s2) that Nearest border conditions need to
@@ -270,7 +301,7 @@ AdjustRoDPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
         return;
     }
     double w = 0., h = 0.;
-    _size->getValueAtTime(args.time, w, h);
+    getAmounts(args.time, &w, &h);
 
     OfxRectD paddedRoD = adjustedRoD(srcRod, w, h);
     // the part of the Source that the output shows: all of it, or the shrunk RoD
@@ -315,7 +346,7 @@ AdjustRoDPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         return false;
     }
     double w = 0., h = 0.;
-    _size->getValueAtTime(args.time, w, h);
+    getAmounts(args.time, &w, &h);
 
     rod = adjustedRoD(srcRod, w, h);
 
@@ -382,7 +413,7 @@ AdjustRoDPlugin::isIdentity(const IsIdentityArguments &args,
 {
     double w = 0., h = 0.;
 
-    _size->getValueAtTime(args.time, w, h);
+    getAmounts(args.time, &w, &h);
     if ( (w == 0) && (h == 0) ) {
         identityClip = _srcClip;
 
@@ -392,10 +423,13 @@ AdjustRoDPlugin::isIdentity(const IsIdentityArguments &args,
     return false;
 }
 
-mDeclarePluginFactory(AdjustRoDPluginFactory, {ofxsThreadSuiteCheck();}, {});
+mDeclarePluginFactoryVersioned(AdjustRoDPluginFactory, {ofxsThreadSuiteCheck();}, {});
+template<unsigned int majorVersion>
 void
-AdjustRoDPluginFactory::describe(ImageEffectDescriptor &desc)
+AdjustRoDPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
+    // version 1 (Natron 2.5 and earlier) is kept for old projects
+    desc.setIsObsolete(majorVersion < kPluginVersionMajor);
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -432,15 +466,17 @@ AdjustRoDPluginFactory::describe(ImageEffectDescriptor &desc)
 #endif
 }
 
+template<unsigned int majorVersion>
 ImageEffect*
-AdjustRoDPluginFactory::createInstance(OfxImageEffectHandle handle,
+AdjustRoDPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                        ContextEnum /*context*/)
 {
-    return new AdjustRoDPlugin(handle);
+    return new AdjustRoDPlugin(handle, /*wholePixels=*/ majorVersion >= 2);
 }
 
+template<unsigned int majorVersion>
 void
-AdjustRoDPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+AdjustRoDPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
                                           ContextEnum /*context*/)
 {
     // Source clip only in the filter context
@@ -477,10 +513,11 @@ AdjustRoDPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     {
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamAddPixels);
         param->setLabel(kParamAddPixelsLabel);
-        param->setHint(kParamAddPixelsHint);
+        param->setHint( (majorVersion >= 2) ? kParamAddPixelsHint : kParamAddPixelsHintV1 );
         param->setDoubleType(eDoubleTypeXY);
         param->setDefaultCoordinateSystem(eCoordinatesCanonical); // Nuke defaults to Normalized for XY and XYAbsolute!
-        param->setDefault(0., 0.);
+        const double amount = (majorVersion >= 2) ? kParamAddPixelsDefault : kParamAddPixelsDefaultV1;
+        param->setDefault(amount, amount);
         param->setIncrement(1.);
         param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // negative values shrink the RoD (#299)
         param->setDisplayRange(-1000., -1000., 1000., 1000.);
@@ -509,7 +546,9 @@ AdjustRoDPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
 } // AdjustRoDPluginFactory::describeInContext
 
-static AdjustRoDPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static AdjustRoDPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+static AdjustRoDPluginFactory<1> p_v1(kPluginIdentifier, kPluginVersionMinorV1);
+mRegisterPluginFactoryInstance(p_v1)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

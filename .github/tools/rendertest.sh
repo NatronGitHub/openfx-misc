@@ -556,27 +556,28 @@ tests=(
     "AdjustRoD Nearest out|net.sf.openfx.AdjustRoDPlugin|filter|*|nonconst+mean=0.52,0.52,0.52,0.52||-i Source=checker:16 addPixels=100,100 boundary=1 --frames 0 --window 100,590,300,670"
     "AdjustRoD Nearest corner|net.sf.openfx.AdjustRoDPlugin|filter|*|mean=1,1,1,1||-i Source=checker:16 addPixels=100,100 boundary=1 --frames 0 --window 730,590,810,670"
     "Crop out of Source|net.sf.openfx.CropPlugin|filter|*|mean=0,0,0,0||-i Source=ramp bottomLeft=-100,-100 size=920,776 --frames 0 --window -90,-90,-10,-10"
-    # AdjustRoD with negative amounts shrinks the RoD (#299): -100 canonical is 93.75 pixels in x, so the RoD
-    # starts at pixel 93 (enclosing), and the window 0-100 of the ramp ((x + 0.5) / 720) renders the pixels 93
+    # AdjustRoD with negative amounts shrinks the RoD (#299): -100 canonical is 93.75 pixels in x, truncated to
+    # 93 in version 2 (version 1: the RoD starts at 93.75, pixel 93 enclosing), and the window 0-100 of the ramp ((x + 0.5) / 720) renders the pixels 93
     # to 99, whose mean is 96.5 / 720 = 0.134 (pixels 0 to 99 without shrinking: 0.069)
     "AdjustRoD shrink|net.sf.openfx.AdjustRoDPlugin|filter|*|mean=0.134,0.134,0.134,0.134||-i Source=ramp addPixels=-100,-100 boundary=0 --frames 0 --window 0,288,100,289"
     # mixed signs, shrunk in x and enlarged by 100 in y: in the added rows (out of the Source), Nearest repeats
     # the edge row of the shrunk image (the same mean), Black is transparent black
     "AdjustRoD shrink Nearest added rows|net.sf.openfx.AdjustRoDPlugin|filter|*|mean=0.134,0.134,0.134,0.134||-i Source=ramp addPixels=-100,100 boundary=1 --frames 0 --window 0,-50,100,-49"
     "AdjustRoD shrink Black added rows|net.sf.openfx.AdjustRoDPlugin|filter|*|mean=0,0,0,0||-i Source=ramp addPixels=-100,100 boundary=0 --frames 0 --window 0,-50,100,-49"
-    # Crop Softness Curve (#298), softness 4 at the row 102 of a crop from y = 100: the pixel centre is at
-    # d = 2.5, t = d / 4 = 0.625; Smooth (the default): 1 - 2 (1 - t)^2 = 0.71875; Linear: t = 0.625
-    "Crop softness Smooth|net.sf.openfx.CropPlugin|filter|*|mean=0.719,0.719,0.719,0.719||-i Source=solid:1,1,1,1 bottomLeft=100,100 size=400,300 softness=4 --frames 0 --window 300,102,301,103"
-    "Crop softness Linear|net.sf.openfx.CropPlugin|filter|*|mean=0.625,0.625,0.625,0.625||-i Source=solid:1,1,1,1 bottomLeft=100,100 size=400,300 softness=4 softnessCurve=0 --frames 0 --window 300,102,301,103"
-    # a fractional edge, y = 100.99, without Black Outside: the row 100 is in the RoD (enclosing), but its centre
-    # is outside the crop rectangle (d = -0.49, t = -0.49 with softness 1): black. Smooth gave 2 t^2 = 0.48,
-    # Linear a negative value (undefined in byte and short)
+    # Crop softness (#298), 4 at the row 102 of a crop from y = 100 (pixel centre at d = 2.5): version 2,
+    # smoothstep((d + 0.5) / (4 + 1)) = smoothstep(0.6) = 0.648; version 1, 1 - 2 (1 - d/4)^2 = 0.71875
+    "Crop softness|net.sf.openfx.CropPlugin|filter|*|mean=0.648,0.648,0.648,0.648||-i Source=solid:1,1,1,1 bottomLeft=100,100 size=400,300 softness=4 --frames 0 --window 300,102,301,103"
+    "Crop v1 softness|net.sf.openfx.CropPlugin|filter|*|mean=0.719,0.719,0.719,0.719||-m 1 -i Source=solid:1,1,1,1 bottomLeft=100,100 size=400,300 softness=4 --frames 0 --window 300,102,301,103"
+    # a fractional edge, y = 100.99, softness 1: the row 100 is in the RoD (enclosing), but its centre is outside
+    # the crop rectangle (d = -0.49). Version 2: smoothstep(0.01 / 2), about 0; version 1 without Black Outside:
+    # black (it gave 2 (d/1)^2 = 0.48 before 1.1)
     "Crop softness fractional edge|net.sf.openfx.CropPlugin|filter|*|mean=0,0,0,0||-i Source=solid:1,1,1,1 bottomLeft=100,100.99 size=400,300 softness=1 --frames 0 --window 300,100,301,101"
-    "Crop softness fractional edge Linear|net.sf.openfx.CropPlugin|filter|*|mean=0,0,0,0||-i Source=solid:1,1,1,1 bottomLeft=100,100.99 size=400,300 softness=1 softnessCurve=0 --frames 0 --window 300,100,301,101"
-    # CopyRectangle Softness Curve (#282), white A over transparent B, softness 4, at the row 101 of a
-    # rectangle from y = 100: d = 1 pixel, t = 0.25; Linear (the default): 0.25; Smooth: 2 t^2 = 0.125
-    "CopyRectangle softness Linear|net.sf.openfx.CopyRectanglePlugin|general|*|mean=0.25,0.25,0.25,0.25||-i A=solid:1,1,1,1 -i B=solid:0,0,0,0 -i Mask=none bottomLeft=100,100 size=400,300 softness=4 --frames 0 --window 300,101,301,102"
-    "CopyRectangle softness Smooth|net.sf.openfx.CopyRectanglePlugin|general|*|mean=0.125,0.125,0.125,0.125||-i A=solid:1,1,1,1 -i B=solid:0,0,0,0 -i Mask=none bottomLeft=100,100 size=400,300 softness=4 softnessCurve=1 --frames 0 --window 300,101,301,102"
+    "Crop v1 softness fractional edge|net.sf.openfx.CropPlugin|filter|*|mean=0,0,0,0||-m 1 -i Source=solid:1,1,1,1 bottomLeft=100,100.99 size=400,300 softness=1 --frames 0 --window 300,100,301,101"
+    # CopyRectangle softness (#282), white A over transparent B, softness 4, at the row 101 of a rectangle from
+    # y = 100 (d = 1.5): version 3, smoothstep((1.5 + 0.5) / 5) = smoothstep(0.4) = 0.352; version 2, 1 pixel
+    # from the edge pixel: 1/4
+    "CopyRectangle softness|net.sf.openfx.CopyRectanglePlugin|general|*|mean=0.352,0.352,0.352,0.352||-i A=solid:1,1,1,1 -i B=solid:0,0,0,0 -i Mask=none bottomLeft=100,100 size=400,300 softness=4 --frames 0 --window 300,101,301,102"
+    "CopyRectangle v2 softness|net.sf.openfx.CopyRectanglePlugin|general|*|mean=0.25,0.25,0.25,0.25||-m 2 -i A=solid:1,1,1,1 -i B=solid:0,0,0,0 -i Mask=none bottomLeft=100,100 size=400,300 softness=4 --frames 0 --window 300,101,301,102"
     # saturation 0: the Rec.709 luminance
     "ColorCorrect|net.sf.openfx.ColorCorrectPlugin|filter|*|mean=0.465,0.465,0.465,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none MasterSaturation=0,0,0,0"
     # Saturation -1 (issue #292): a check of the formula, 2 * luma - colour, luma (Rec. 709) 0.4649.
@@ -1065,8 +1066,9 @@ tests=(
     # view 0, with the time drawn in black: tol=0.05). hostDemo has no parametric parameters, so the
     # time domain is set by Duration (the speed is used on hosts with a Warp curve, e.g. Natron).
     "Retime speed 1|net.sf.openfx.Retime|general|float|identity+timedomain=0,25+tol=0.05+mean=10,0,0,1||--frames 10"
-    "Retime speed 2|net.sf.openfx.Retime|general|float|identity+timedomain=0,25+tol=0.05+mean=20,0,0,1||speed=2 --frames 10"
-    "Retime duration 2|net.sf.openfx.Retime|general|float|identity+timedomain=0,50+tol=0.05+mean=5,0,0,1||speed=0.5 duration=2 --frames 10"
+    # (version 2's default filter is Box, which blends frames at speed 2: Linear here)
+    "Retime speed 2|net.sf.openfx.Retime|general|float|identity+timedomain=0,25+tol=0.05+mean=20,0,0,1||filter=2 speed=2 --frames 10"
+    "Retime duration 2|net.sf.openfx.Retime|general|float|identity+timedomain=0,50+tol=0.05+mean=5,0,0,1||filter=2 speed=0.5 duration=2 --frames 10"
     # Box filter (filter=3): at speed 1, the input frame; at speed 10, t=0 covers the source frames
     # -5 to 5 (weights 0.05, 0.1 x 9, 0.05), and -5 to -1 are transparent black (Before = Black): the
     # mean is 0.1 x (1+2+3+4) + 0.05 x 5 = 1.25, alpha 0.55 (Linear gives frame 0: 0, alpha 1);
@@ -1092,14 +1094,15 @@ tests=(
     # (hostDemo never sends the clip changed action, so the update on connect is not exercised here: the range
     # stays at its default, not marked as set)
     "FrameRange default|net.sf.openfx.FrameRange|general|float|value:frameRange=1,1+value:frameRangeInitialised=0||--frames 1"
-    # TimeOffset Mode (#306), on the same default input, offset 5 at t = 10.5: Fractional Time (the default)
-    # shows the input at 5.5; Whole Frames rounds 10.5 down to 10, and shows frame 5
-    "TimeOffset Fractional Time|net.sf.openfx.timeOffset|general|float|identity+tol=0.05+mean=5.5,0,0,1||timeOffset=5 --frames 10.5"
-    "TimeOffset Whole Frames|net.sf.openfx.timeOffset|general|float|identity+tol=0.05+mean=5,0,0,1||timeOffset=5 roundingMode=0 --frames 10.5"
-    # Retime Nearest Rounding (#309), speed 0.5 at t = 21: source time 10.5; Half Up (the default) gives
-    # frame 11, Half Down frame 10
-    "Retime Nearest Half Up|net.sf.openfx.Retime|general|float|identity+tol=0.05+mean=11,0,0,1||filter=1 speed=0.5 --frames 21"
-    "Retime Nearest Half Down|net.sf.openfx.Retime|general|float|identity+tol=0.05+mean=10,0,0,1||filter=1 nearestRounding=1 speed=0.5 --frames 21"
+    # TimeOffset (#306), version 2, offset 5.5 at t = 10: Whole Frames (the default) truncates it to 5, frame 5;
+    # Fractional Time gives 4.5. Version 1 (an integer offset): 5 gives frame 5
+    "TimeOffset Whole Frames|net.sf.openfx.timeOffset|general|float|identity+tol=0.05+mean=5,0,0,1||timeOffset=5.5 --frames 10"
+    "TimeOffset Fractional Time|net.sf.openfx.timeOffset|general|float|identity+tol=0.05+mean=4.5,0,0,1||timeOffset=5.5 roundingMode=1 --frames 10"
+    "TimeOffset v1|net.sf.openfx.timeOffset|general|float|identity+tol=0.05+mean=5,0,0,1||-m 1 timeOffset=5 --frames 10"
+    # Retime Nearest (#309), speed 0.5 at t = 21: source time 10.5; version 2 rounds half frames down (frame 10),
+    # version 1 up (frame 11)
+    "Retime Nearest|net.sf.openfx.Retime|general|float|identity+tol=0.05+mean=10,0,0,1||filter=1 speed=0.5 --frames 21"
+    "Retime v1 Nearest|net.sf.openfx.Retime|general|float|identity+tol=0.05+mean=11,0,0,1||-m 1 filter=1 speed=0.5 --frames 21"
     # GodRays with gamma 0 computed pow(x, 1/0) of x = 1 up to rounding: the colors were 1 (or
     # infinite); they are now interpolated geometrically from fromColor to toColor
     "GodRays gamma 0|net.sf.openfx.GodRays|filter|float|mean=0.209,0.264,0.310,0.351||-i Source=checker:16 scale=0.7,0.7 fromColor=1,1,1,1 toColor=0.2,0.3,0.4,0.5 gamma=0,0,0,0"
