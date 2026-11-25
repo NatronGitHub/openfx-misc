@@ -96,9 +96,15 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              RGB Source is not read as RGBA (out of bounds) (#254).
 // version 2.2 (unreleased, fixed in place): not a pass-through when Process A is checked and Source is Opaque,
 //              since the Output is then UnPremultiplied (issue #328);
-//              add the Premultiply, Replace and Invert parameters (default off: the output is unchanged) (#288)
-#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 2 // Increment this when you have fixed a bug or made it faster.
+//              add the Premultiply, Replace and Invert parameters (default off: the output is unchanged) (#288);
+//              add the Falloff parameter, the curve of the Softness (default Quadratic: the output is unchanged) (#288)
+// version 3.0 (unreleased): the Softness spans one more pixel, from the pixel center (it antialiases the edge), and
+//              Falloff is Smooth by default (it was Quadratic): the soft edge matches the tests/nuke reference (#288).
+//              With a Softness, rounded corners (Corner Radius) use the same curve and pixel-center distance, to the
+//              corner ellipse, continuous with the straight edges (whose Softness does not change with the radius);
+//              without one, the shape is drawn as in version 2. Version 2 is kept, obsolete, with its output.
+#define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsByte true
 #define kSupportsUShort true
@@ -175,20 +181,6 @@ struct RGBAValues
 
     RGBAValues() : r(0), g(0), b(0), a(0) {}
 };
-
-static inline
-double
-rampSmooth(double t)
-{
-    t *= 2.;
-    if (t < 1) {
-        return t * t / (2.);
-    } else {
-        t -= 1.;
-
-        return -0.5 * (t * (t - 2) - 1);
-    }
-}
 
 class RectangleProcessorBase
     : public ImageProcessor
@@ -446,6 +438,20 @@ private:
                 double dx = (std::min)(x - btmLeft.x, topRight.x - x);
                 double dy = (std::min)(y - btmLeft.y, topRight.y - y);
 
+                if ( _drawOptions.pixelCenterSoftness && (_softness > 0.) ) {
+                    // version 3: the Softness from the pixel center (dx and dy are taken there), over the
+                    // Softness plus one pixel, so that it also antialiases the edge
+                    float w = ShapeDraw::softWeight(_drawOptions.falloff, (dx + 0.5) / (softness.x + 1.), false) *
+                              ShapeDraw::softWeight(_drawOptions.falloff, (dy + 0.5) / (softness.y + 1.), false);
+                    if ( (r.x > 0) && (r.y > 0) && (dx < r.x) && (dy < r.y) ) {
+                        // in a rounded corner: also the weight of the distance to the corner ellipse
+                        w = (std::min)( w, cornerSoftWeight( (r.x - dx) / r.x, (r.y - dy) / r.y, r, softness, OfxPointD{0.5, 0.5} ) );
+                    }
+                    setSoftPixel(w, tmpPix);
+                    writePixel<processR, processG, processB, processA>(tmpPix, srcPix, x, y, dstPix);
+                    continue;
+                }
+
                 if ( (dx <= -0.5) || (dy <= -0.5) ) {
                     // outside of the rectangle
                     tmpPix[0] = (float)_color0.r;
@@ -535,12 +541,12 @@ private:
                                     if (dx >= softness.x) {
                                         tx = 1.f;
                                     } else {
-                                        tx = (float)rampSmooth(dx / softness.x);
+                                        tx = (float)ShapeDraw::falloff(_drawOptions.falloff, dx / softness.x);
                                     }
                                     if (dy >= softness.y) {
                                         ty = 1.f;
                                     } else {
-                                        ty = (float)rampSmooth(dy / softness.y);
+                                        ty = (float)ShapeDraw::falloff(_drawOptions.falloff, dy / softness.y);
                                     }
 
                                     // then the corner coeff.
@@ -554,7 +560,7 @@ private:
                                         dellipse = (std::min)(_cornerRadius.x, _cornerRadius.y);
                                     } else {
                                         double radius = std::sqrt(dsq_closer);
-                                        // distance must be measured at full scale in canonical coords
+                                        // distance must be computed at full scale in canonical coords
                                         double vx = (p_closer.x - c.x) * (1 / radius - 1) * par / rs.x;
                                         double vy = (p_closer.y - c.y) * (1 / radius - 1) / rs.y;
                                         dellipse = std::sqrt(vx * vx + vy * vy);
@@ -562,7 +568,7 @@ private:
                                     assert(dellipse >= 0.);
                                     float t = dellipse / _softness;
                                     if (t < 1) {
-                                        t = (float)rampSmooth(t);
+                                        t = (float)ShapeDraw::falloff(_drawOptions.falloff, t);
                                     }
 
                                     // take the min of the rectangle softness and the corner softness
@@ -625,12 +631,12 @@ private:
                             if (dx >= softness.x) {
                                 tx = 1.f;
                             } else {
-                                tx = (float)rampSmooth(dx / softness.x);
+                                tx = (float)ShapeDraw::falloff(_drawOptions.falloff, dx / softness.x);
                             }
                             if (dy >= softness.y) {
                                 ty = 1.f;
                             } else {
-                                ty = (float)rampSmooth(dy / softness.y);
+                                ty = (float)ShapeDraw::falloff(_drawOptions.falloff, dy / softness.y);
                             }
                             float t = tx * ty;
                             if (t >= 1) {
@@ -667,6 +673,44 @@ private:
             }
         }
     } // process
+
+    // Version 3, in a rounded corner: the weight of the distance from the pixel center to the corner ellipse (u and v:
+    // the pixel center relative to the ellipse center, normalized by its radii r), over the Softness s plus one pixel
+    // (e: half a pixel), as on the straight edges. r, s and e are in the same units (pixels or canonical). The weight
+    // of the pixel is the minimum of this one and that of the straight edges, which is smaller at the edges of the
+    // corner square (the distance to the ellipse is then the distance to the edge), so that the weight is continuous
+    // there, also when the corner radius goes to 0.
+    float cornerSoftWeight(double u,
+                           double v,
+                           const OfxPointD& r,
+                           const OfxPointD& s,
+                           const OfxPointD& e) const
+    {
+        const double d = std::sqrt(u * u + v * v);
+        const double au = std::abs(u) * r.x;
+        const double av = std::abs(v) * r.y;
+        if (d <= 0.) {
+            return ShapeDraw::softWeight( _drawOptions.falloff, ( (std::min)(r.x, r.y) + e.y ) / (s.y + 2. * e.y), false );
+        }
+        // distance to the ellipse along its radius through the pixel center (positive inside), and the Softness
+        // and half pixel along that direction (those of x at the side edge, of y at the bottom or top edge)
+        const double dist = std::sqrt(au * au + av * av) * (1. - d) / d;
+        const double sd = (au * s.x + av * s.y) / (au + av);
+        const double ed = (au * e.x + av * e.y) / (au + av);
+
+        return ShapeDraw::softWeight( _drawOptions.falloff, (dist + ed) / (sd + 2. * ed), false );
+    }
+
+    // tmpPix (RGBA and the shape weight) for the shape weight w: Color 0 (w = 0) to Color 1 (w = 1)
+    void setSoftPixel(float w,
+                      float tmpPix[5]) const
+    {
+        tmpPix[0] = (float)_color0.r * (1.f - w) + (float)_color1.r * w;
+        tmpPix[1] = (float)_color0.g * (1.f - w) + (float)_color1.g * w;
+        tmpPix[2] = (float)_color0.b * (1.f - w) + (float)_color1.b * w;
+        tmpPix[3] = (float)_color0.a * (1.f - w) + (float)_color1.a * w;
+        tmpPix[4] = w;
+    }
 
     // Render a rotated rectangle. The rectangle is rotated by _angle around its center, in canonical coordinates.
     // All distances are computed in canonical coordinates, in the frame of the rectangle.
@@ -713,6 +757,19 @@ private:
                 // distance to the closest edge (positive inside)
                 double dx = hs.x - std::abs(lx);
                 double dy = hs.y - std::abs(ly);
+
+                if ( _drawOptions.pixelCenterSoftness && (_softness > 0.) ) {
+                    // version 3: as in process(), in canonical coordinates (e: half a pixel)
+                    float w = ShapeDraw::softWeight(_drawOptions.falloff, (dx + e.x) / (_softness + 2. * e.x), false) *
+                              ShapeDraw::softWeight(_drawOptions.falloff, (dy + e.y) / (_softness + 2. * e.y), false);
+                    if ( (r.x > 0) && (r.y > 0) && (dx < r.x) && (dy < r.y) ) {
+                        const OfxPointD s = {_softness, _softness};
+                        w = (std::min)( w, cornerSoftWeight( (r.x - dx) / r.x, (r.y - dy) / r.y, r, s, e ) );
+                    }
+                    setSoftPixel(w, tmpPix);
+                    writePixel<processR, processG, processB, processA>(tmpPix, srcPix, x, y, dstPix);
+                    continue;
+                }
 
                 if ( (dx <= -e.x) || (dy <= -e.y) ) {
                     // outside of the rectangle
@@ -762,8 +819,8 @@ private:
                                 tmpPix[4] = 1.f;
                             } else {
                                 // compute the non-round rect coeff (tx*ty) first.
-                                float tx = (dx >= _softness) ? 1.f : (float)rampSmooth( (std::max)(dx, 0.) / _softness );
-                                float ty = (dy >= _softness) ? 1.f : (float)rampSmooth( (std::max)(dy, 0.) / _softness );
+                                float tx = (dx >= _softness) ? 1.f : (float)ShapeDraw::falloff(_drawOptions.falloff,  (std::max)(dx, 0.) / _softness );
+                                float ty = (dy >= _softness) ? 1.f : (float)ShapeDraw::falloff(_drawOptions.falloff,  (std::max)(dy, 0.) / _softness );
 
                                 // then the corner coeff: distance to the ellipse along the radius
                                 double dellipse;
@@ -776,7 +833,7 @@ private:
                                 assert(dellipse >= 0.);
                                 float t = (float)(dellipse / _softness);
                                 if (t < 1) {
-                                    t = (float)rampSmooth(t);
+                                    t = (float)ShapeDraw::falloff(_drawOptions.falloff, t);
                                 }
 
                                 // take the min of the rectangle softness and the corner softness
@@ -825,8 +882,8 @@ private:
                             tmpPix[3] = (float)_color1.a;
                             tmpPix[4] = 1.f;
                         } else {
-                            float tx = (dx >= _softness) ? 1.f : (float)rampSmooth(dx / _softness);
-                            float ty = (dy >= _softness) ? 1.f : (float)rampSmooth(dy / _softness);
+                            float tx = (dx >= _softness) ? 1.f : (float)ShapeDraw::falloff(_drawOptions.falloff, dx / _softness);
+                            float ty = (dy >= _softness) ? 1.f : (float)ShapeDraw::falloff(_drawOptions.falloff, dy / _softness);
                             float t = tx * ty;
                             if (t >= 1) {
                                 tmpPix[0] = (float)_color1.r;
@@ -868,8 +925,10 @@ class RectanglePlugin
 {
 public:
     /** @brief ctor */
-    RectanglePlugin(OfxImageEffectHandle handle)
+    RectanglePlugin(OfxImageEffectHandle handle,
+                    unsigned int majorVersion)
         : GeneratorPlugin(handle, false, kSupportsByte, kSupportsUShort, kSupportsHalf, kSupportsFloat)
+        , _majorVersion(majorVersion)
         , _srcClip(NULL)
         , _maskClip(NULL)
         , _processR(NULL)
@@ -914,6 +973,15 @@ private:
     /* override is identity */
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
 
+    /** @brief the Draw options at time, and how the Softness is computed (from the pixel center since version 3) */
+    ShapeDraw::Options drawOptions(double time) const
+    {
+        ShapeDraw::Options options = _draw.options(time);
+        options.pixelCenterSoftness = (_majorVersion >= 3);
+
+        return options;
+    }
+
     /** @brief true if Process A is checked and the Source is Opaque (the Output is then UnPremultiplied) */
     bool outputIsUnpremultipliedFromOpaque() const;
 
@@ -937,6 +1005,7 @@ private:
     }
 
 private:
+    const unsigned int _majorVersion;
 
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_srcClip;
@@ -1082,7 +1151,7 @@ RectanglePlugin::setupAndProcess(RectangleProcessorBase &processor,
                         color0, color1,
                         mix,
                         processR, processG, processB, processA,
-                        _draw.options(time));
+                        drawOptions(time));
     // Call the base class process member, this will call the derived templated process code
     processor.process();
 } // RectanglePlugin::setupAndProcess
@@ -1335,9 +1404,10 @@ RectanglePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
     return true;
 } // RectanglePlugin::getRegionOfDefinition
 
-mDeclarePluginFactory(RectanglePluginFactory, {ofxsThreadSuiteCheck();}, {});
+mDeclarePluginFactoryVersioned(RectanglePluginFactory, {ofxsThreadSuiteCheck();}, {});
+template<unsigned int majorVersion>
 void
-RectanglePluginFactory::describe(ImageEffectDescriptor &desc)
+RectanglePluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
 #ifdef DEBUG_HOSTDESCRIPTION
     {
@@ -1473,6 +1543,9 @@ RectanglePluginFactory::describe(ImageEffectDescriptor &desc)
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsObsolete(true);
+    }
 
     desc.addSupportedContext(eContextGeneral);
     desc.addSupportedContext(eContextGenerator);
@@ -1507,15 +1580,17 @@ RectanglePluginFactory::describe(ImageEffectDescriptor &desc)
 #endif
 } // RectanglePluginFactory::describe
 
+template<unsigned int majorVersion>
 ImageEffect*
-RectanglePluginFactory::createInstance(OfxImageEffectHandle handle,
-                                       ContextEnum /*context*/)
+RectanglePluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
+                                                     ContextEnum /*context*/)
 {
-    return new RectanglePlugin(handle);
+    return new RectanglePlugin(handle, majorVersion);
 }
 
+template<unsigned int majorVersion>
 void
-RectanglePluginFactory::describeInContext(ImageEffectDescriptor &desc,
+RectanglePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
                                           ContextEnum context)
 {
     // Source clip only in the filter context
@@ -1657,6 +1732,9 @@ RectanglePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         }
     }
 
+    // falloff
+    ShapeDraw::describeFalloffParam(desc, page, (majorVersion >= 3) ? ShapeDraw::FalloffEnum::eFalloffSmooth : ShapeDraw::FalloffEnum::eFalloffQuadratic);
+
     // color1
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor1);
@@ -1691,7 +1769,10 @@ RectanglePluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
 } // RectanglePluginFactory::describeInContext
 
-static RectanglePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static RectanglePluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+// 2.2: the Softness from the pixel center without the extra pixel, Quadratic by default
+static RectanglePluginFactory<2> p2(kPluginIdentifier, 2);
+mRegisterPluginFactoryInstance(p2)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

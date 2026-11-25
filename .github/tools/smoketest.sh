@@ -104,7 +104,7 @@ set -eo pipefail
 # (the counts of a release build; debug builds have more). A missing bundle, or one with
 # fewer plug-ins, fails the test (raise or lower the minimum when plug-ins are added or
 # removed). Other bundles (DebugProxy) are not required. SMOKETEST_BUNDLES replaces it.
-BUNDLES=(Misc:168 CImg:40 Shadertoy:1 Test:6)
+BUNDLES=(Misc:171 CImg:40 Shadertoy:1 Test:6)
 # shellcheck disable=SC2206
 [ -z "$SMOKETEST_BUNDLES" ] || BUNDLES=($SMOKETEST_BUNDLES)
 # The plug-ins that are not tested: "identifier regex|reason" (the whole identifier; a

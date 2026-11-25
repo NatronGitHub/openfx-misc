@@ -21,6 +21,7 @@
  * OFX Mirror plugin.
  */
 
+#include <algorithm>
 #include <cstring> // for memcpy
 #include <cmath>
 #include <iostream>
@@ -39,7 +40,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "This plugin does not concatenate transforms."
 #define kPluginMirrorIdentifier "net.sf.openfx.Mirror"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+// 1.1: (unreleased) the Mirror Around parameter: mirror around the input format (issue #301), or around the input
+//      region of definition (the default, as in 1.0)
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -55,6 +58,17 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamMirrorFlop "flop"
 #define kParamMirrorFlopLabel "Horizontal (flop)"
 #define kParamMirrorFlopHint "Mirror image (swap left and right)"
+
+#define kParamMirrorAround "mirrorAround"
+#define kParamMirrorAroundLabel "Mirror Around"
+#define kParamMirrorAroundHint "The rectangle whose center the image is mirrored around."
+#define kParamMirrorAroundOptionFormat "Format", "The format of the input: an element at the left of the frame goes to its right. The region of definition of the input if the host gives no format.", "format"
+#define kParamMirrorAroundOptionRoD "Region of Definition", "The region of definition of the input (Mirror 1.0): an element alone in the input stays in place.", "rod"
+enum MirrorAroundEnum
+{
+    eMirrorAroundFormat = 0,
+    eMirrorAroundRoD,
+};
 
 #define kParamSrcClipChanged "sourceChanged"
 
@@ -78,18 +92,15 @@ public:
     void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
         unused(rs);
-        if (flip) {
-            assert(_srcBounds.y1 <= ( _yoff - (procWindow.y2 - 1) ) && (_yoff - procWindow.y1) < _srcBounds.y2);
-        } else {
-            assert(_srcBounds.y1 <= procWindow.y1 && procWindow.y2 <= _srcBounds.y2);
-        }
-        if (flop) {
-            assert(_srcBounds.x1 <= ( _xoff - (procWindow.x2 - 1) ) && (_xoff - procWindow.x1) < _srcBounds.x2);
-        } else {
-            assert(_srcBounds.x1 <= procWindow.x1 && procWindow.x2 <= _srcBounds.x2);
-        }
-
-        int srcx1 = flop ? (_xoff - procWindow.x1) : procWindow.x1;
+        // the destination columns whose source pixel is in the source image: [vx1, vx2)
+        // (the others, and the rows whose source row is outside it, are black and transparent:
+        // with Mirror Around Format, the render window may reach one pixel beyond the mirrored
+        // source bounds at a render scale where the format does not fall on whole pixels)
+        int vx1 = flop ? (_xoff - _srcBounds.x2 + 1) : _srcBounds.x1;
+        int vx2 = flop ? (_xoff - _srcBounds.x1 + 1) : _srcBounds.x2;
+        vx1 = (std::max)(vx1, procWindow.x1);
+        vx2 = (std::min)(vx2, procWindow.x2);
+        const int rowLength = procWindow.x2 - procWindow.x1;
 
         for (int dsty = procWindow.y1; dsty < procWindow.y2; ++dsty) {
             if ( _effect.abort() ) {
@@ -102,24 +113,28 @@ public:
                 continue;
             }
 
-            int srcy = flip ? (_yoff - dsty) : dsty;
-
-            assert( !( (srcy < _srcBounds.y1) || (_srcBounds.y2 <= srcy) || (_srcBounds.y2 <= _srcBounds.y1) ) );
-
-            const PIX *srcPix = (const PIX *) getSrcPixelAddress(srcx1, srcy);
-            assert(srcPix);
+            const int srcy = flip ? (_yoff - dsty) : dsty;
+            const PIX *srcPix = ( (srcy < _srcBounds.y1) || (_srcBounds.y2 <= srcy) || (vx2 <= vx1) ) ? NULL :
+                                (const PIX *) getSrcPixelAddress(flop ? (_xoff - vx1) : vx1, srcy);
             if (!srcPix) {
-                std::memset( dstPix, 0, sizeof(PIX) * nComponents * (procWindow.x2 - procWindow.x1) );
-            } else if (flop) {
-                for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents, srcPix -= nComponents) {
+                std::fill( dstPix, dstPix + nComponents * rowLength, PIX() );
+                continue;
+            }
+            std::fill( dstPix, dstPix + nComponents * (vx1 - procWindow.x1), PIX() );
+            dstPix += nComponents * (vx1 - procWindow.x1);
+            if (flop) {
+                for (int x = vx1; x < vx2; ++x, dstPix += nComponents, srcPix -= nComponents) {
                     std::copy(srcPix, srcPix + nComponents, dstPix);
                 }
             } else {
-                std::memcpy( dstPix, srcPix, sizeof(PIX) * nComponents * (procWindow.x2 - procWindow.x1) );
+                std::copy(srcPix, srcPix + nComponents * (vx2 - vx1), dstPix);
+                dstPix += nComponents * (vx2 - vx1);
             }
+            std::fill( dstPix, dstPix + nComponents * (procWindow.x2 - vx2), PIX() );
         }
     }
 
+private:
     int _xoff, _yoff;
 };
 
@@ -158,20 +173,7 @@ mirrorPixelsForDepthAndComponents(ImageEffect &instance,
                                   int xoff,
                                   int yoff)
 {
-#ifndef NDEBUG
-    const OfxRectI& srcBounds = src->getBounds();
-    if (flip) {
-        assert(srcBounds.y1 <= (yoff + 1 - renderWindow.y2) && renderWindow.y1 <= renderWindow.y2 && (yoff + 1 - renderWindow.y1) <= srcBounds.y2);
-    } else {
-        assert(srcBounds.y1 <= renderWindow.y1 && renderWindow.y1 <= renderWindow.y2 && renderWindow.y2 <= srcBounds.y2);
-    }
-    if (flop) {
-        assert(srcBounds.x1 <= (xoff + 1 - renderWindow.x2) && renderWindow.x1 <= renderWindow.x2 && (xoff + 1 - renderWindow.x1) <= srcBounds.x2);
-    } else {
-        assert(srcBounds.x1 <= renderWindow.x1 && renderWindow.x1 <= renderWindow.x2 && renderWindow.x2 <= srcBounds.x2);
-    }
     assert(src->getPixelComponentCount() == dst->getPixelComponentCount() && src->getPixelComponentCount() == nComponents);
-#endif
 
     if (flip) {
         if (flop) {
@@ -260,6 +262,7 @@ public:
         , _srcClip(NULL)
         , _flip(NULL)
         , _flop(NULL)
+        , _mirrorAround(NULL)
         , _srcClipChanged(NULL)
     {
 
@@ -268,7 +271,8 @@ public:
 
         _flip = fetchBooleanParam(kParamMirrorFlip);
         _flop = fetchBooleanParam(kParamMirrorFlop);
-        assert(_flip && _flop);
+        _mirrorAround = fetchChoiceParam(kParamMirrorAround);
+        assert(_flip && _flop && _mirrorAround);
         if (_srcClip) {
             _flip->setEnabled(_srcClip->getFieldOrder() == eFieldNone);
         }
@@ -282,7 +286,12 @@ private:
 
     // override the roi call
     virtual void getRegionsOfInterest(const RegionsOfInterestArguments &args, RegionOfInterestSetter &rois) OVERRIDE FINAL;
+    virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
+
+    // The rectangle the image is mirrored in (around its center), in canonical coordinates: the input
+    // format with Mirror Around Format (if the host gives one), else the input RoD.
+    OfxRectD getMirrorRect(double time) const;
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
@@ -290,8 +299,29 @@ private:
     Clip *_srcClip;
     BooleanParam* _flip;
     BooleanParam* _flop;
+    ChoiceParam* _mirrorAround;
     BooleanParam* _srcClipChanged; // set to true the first time the user connects src
 };
+
+OfxRectD
+MirrorPlugin::getMirrorRect(double time) const
+{
+    assert(_srcClip);
+#ifdef OFX_EXTENSIONS_NATRON
+    if (_mirrorAround->getValueAtTime(time) == eMirrorAroundFormat) {
+        OfxRectI format = {0, 0, 0, 0};
+        _srcClip->getFormat(format); // in pixels at render scale 1
+        if ( !Coords::rectIsEmpty(format) ) {
+            const double par = _srcClip->getPixelAspectRatio();
+            const OfxRectD rect = {format.x1 * par, (double)format.y1, format.x2 * par, (double)format.y2};
+
+            return rect;
+        }
+    }
+#endif
+
+    return _srcClip->getRegionOfDefinition(time);
+}
 
 // the overridden render function
 void
@@ -333,38 +363,23 @@ MirrorPlugin::render(const RenderArguments &args)
     _flip->getValueAtTime(time, flip);
     _flop->getValueAtTime(time, flop);
 
+    // source pixel x maps to xoff - x, y to yoff - y
     int xoff = 0;
     int yoff = 0;
-    OfxRectI srcRoD = {0, 0, 0, 0};
-    OfxRectD srcRoDCanonical = _srcClip->getRegionOfDefinition(time);
-    assert( !Coords::rectIsEmpty(srcRoDCanonical) );
-    Coords::toPixelEnclosing(srcRoDCanonical, args.renderScale, _srcClip->getPixelAspectRatio(), &srcRoD);
-    if ( !Coords::rectIsEmpty(srcRoD) ) {
+    OfxRectI mirrorRect = {0, 0, 0, 0};
+    const OfxRectD mirrorRectCanonical = getMirrorRect(time);
+    assert( !Coords::rectIsEmpty(mirrorRectCanonical) );
+    Coords::toPixelEnclosing(mirrorRectCanonical, args.renderScale, _srcClip->getPixelAspectRatio(), &mirrorRect);
+    if ( !Coords::rectIsEmpty(mirrorRect) ) {
         if (flop) {
-            xoff = srcRoD.x1 + srcRoD.x2 - 1;
+            xoff = mirrorRect.x1 + mirrorRect.x2 - 1;
         }
         if (flip) {
-            yoff = srcRoD.y1 + srcRoD.y2 - 1;
+            yoff = mirrorRect.y1 + mirrorRect.y2 - 1;
         }
     }
 
-# ifndef NDEBUG
-    const OfxRectI& renderWindow = args.renderWindow;
-    const OfxRectI& srcBounds = src->getBounds();
-    // these things should never happen
-    if ( !src.get() ||
-         ( flip  &&
-           !( ( srcBounds.y1 <= (yoff + 1 - renderWindow.y2) ) && ( renderWindow.y1 <= renderWindow.y2) && ( (yoff + 1 - renderWindow.y1) <= srcBounds.y2 ) ) ) ||
-         ( !flip &&
-           !( ( srcBounds.y1 <= renderWindow.y1) && ( renderWindow.y1 <= renderWindow.y2) && ( renderWindow.y2 <= srcBounds.y2) ) ) ||
-         ( flop  &&
-           !( ( srcBounds.x1 <= (xoff + 1 - renderWindow.x2) ) && ( renderWindow.x1 <= renderWindow.x2) && ( (xoff + 1 - renderWindow.x1) <= srcBounds.x2 ) ) ) ||
-         ( !flop &&
-           !( ( srcBounds.x1 <= renderWindow.x1) && ( renderWindow.x1 <= renderWindow.x2) && ( renderWindow.x2 <= srcBounds.x2) ) ) ) {
-        setPersistentMessage(Message::eMessageError, "", "OFX Host gave source image with wrong dimensions");
-        throwSuiteStatusException(kOfxStatFailed);
-    }
-# endif
+    // the processor fills with black the pixels whose source is outside the source image
     mirrorPixels(*this, args.renderWindow, args.renderScale, src.get(), dst.get(), flip, flop, xoff, yoff);
 } // MirrorPlugin::render
 
@@ -377,7 +392,7 @@ MirrorPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
         return;
     }
     const double time = args.time;
-    OfxRectD srcRod = _srcClip->getRegionOfDefinition(time);
+    const OfxRectD srcRod = getMirrorRect(time);
     bool flip;
     bool flop;
     _flip->getValueAtTime(time, flip);
@@ -398,6 +413,38 @@ MirrorPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
         roi.y2 = args.regionOfInterest.y2;
     }
     rois.setRegionOfInterest(*_srcClip, roi);
+}
+
+bool
+MirrorPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
+                                    OfxRectD &rod)
+{
+    if ( !_srcClip || !_srcClip->isConnected() ||
+         (_mirrorAround->getValueAtTime(args.time) == eMirrorAroundRoD) ) {
+        return false; // the host default: the Source RoD, which mirrors into itself
+    }
+    const double time = args.time;
+    bool flip;
+    bool flop;
+    _flip->getValueAtTime(time, flip);
+    _flop->getValueAtTime(time, flop);
+    const OfxRectD srcRod = _srcClip->getRegionOfDefinition(time);
+    if ( Coords::rectIsEmpty(srcRod) || (!flip && !flop) ) {
+        return false;
+    }
+    // the Source RoD, mirrored in the rectangle
+    const OfxRectD rect = getMirrorRect(time);
+    rod = srcRod;
+    if (flop) {
+        rod.x1 = rect.x1 + rect.x2 - srcRod.x2;
+        rod.x2 = rect.x1 + rect.x2 - srcRod.x1;
+    }
+    if (flip) {
+        rod.y1 = rect.y1 + rect.y2 - srcRod.y2;
+        rod.y2 = rect.y1 + rect.y2 - srcRod.y1;
+    }
+
+    return true;
 }
 
 // overridden is identity
@@ -529,6 +576,25 @@ MirrorPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamMirrorFlopLabel);
         param->setHint(kParamMirrorFlopHint);
         param->setAnimates(true);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    // mirrorAround
+    {
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamMirrorAround);
+        param->setLabel(kParamMirrorAroundLabel);
+        param->setHint(kParamMirrorAroundHint);
+        assert(param->getNOptions() == eMirrorAroundFormat);
+        param->appendOption(kParamMirrorAroundOptionFormat);
+        assert(param->getNOptions() == eMirrorAroundRoD);
+        param->appendOption(kParamMirrorAroundOptionRoD);
+        param->setDefault( (int)eMirrorAroundRoD );
+        param->setAnimates(false);
+#ifndef OFX_EXTENSIONS_NATRON
+        param->setEnabled(false); // no input format: always the RoD
+#endif
         if (page) {
             page->addChild(*param);
         }

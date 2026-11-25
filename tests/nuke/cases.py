@@ -834,10 +834,8 @@ MERGE_OPERATORS = [
     "geometric", "hard-light", "hypot", "in", "mask", "matte", "max", "min",
     "minus", "multiply", "out", "over", "overlay", "plus", "screen",
     "soft-light", "stencil", "under", "xor"]
-# Operators whose renders differ for these inputs (Merge issue).
-MERGE_KNOWN = {
-    "color-burn", "color-dodge", "divide", "exclusion", "geometric",
-    "hard-light", "overlay", "screen", "soft-light"}
+# Operators whose renders differ for these inputs (Merge issue): none since Merge 3 (#277).
+MERGE_KNOWN = set()
 MERGE_KNOWN_ALPHA = set()
 # Operators that use alpha: compared with alpha outside [0, 1] too.
 MERGE_ALPHA_OPERATORS = [
@@ -863,14 +861,35 @@ for _op in MERGE_ALPHA_OPERATORS:
         (ofx_id("MergePlugin"), {"operation": _op}),
         nuke_inputs=["Ba", "Aa"], clips={"Source": "Ba", "A": "Aa"},
         channels="rgba", tolerance=1e-4))
-for _op in ("multiply", "min", "overlay", "divide", "over"):
+# Operators for which Alpha masking applies (MergeImages2D::isMaskable), and over (where it does not).
+MERGE_MASKABLE_OPERATORS = [
+    "average", "color-burn", "color-dodge", "difference", "divide",
+    "exclusion", "from", "geometric", "hard-light", "hypot", "max", "min",
+    "minus", "multiply", "overlay", "plus", "soft-light"]
+# The other operators, with alpha outside [0, 1] (the alpha is processed as a color).
+for _op in MERGE_OPERATORS:
+    if _op in MERGE_ALPHA_OPERATORS:
+        continue
+    CASES.append(case(
+        "Merge %s, alpha outside [0, 1]" % _op,
+        ("Merge2", {"operation": _op}),
+        (ofx_id("MergePlugin"), {"operation": _op}),
+        nuke_inputs=["Ba", "Aa"], clips={"Source": "Ba", "A": "Aa"},
+        channels="rgba", tolerance=1e-4))
+for _op in MERGE_MASKABLE_OPERATORS:
+    CASES.append(case(
+        "Merge %s, alpha masking, alpha outside [0, 1]" % _op,
+        ("Merge2", {"operation": _op, "screen_alpha": True}),
+        (ofx_id("MergePlugin"), {"operation": _op, "screenAlpha": 1}),
+        nuke_inputs=["Ba", "Aa"], clips={"Source": "Ba", "A": "Aa"},
+        channels="rgba", tolerance=1e-4))
+for _op in MERGE_MASKABLE_OPERATORS + ["over"]:
     CASES.append(case(
         "Merge %s, alpha masking" % _op,
         ("Merge2", {"operation": _op, "screen_alpha": True}),
         (ofx_id("MergePlugin"), {"operation": _op, "screenAlpha": 1}),
         nuke_inputs=["Ba01", "Aa01"], clips={"Source": "Ba01", "A": "Aa01"},
-        channels="rgba", tolerance=1e-4,
-        known=277 if _op != "over" else None))
+        channels="rgba", tolerance=1e-4))
 CASES += [
     case("Merge over, mask and mix 0.5",
          ("Merge2", dict(MASKED, mix=.5)), (ofx_id("MergePlugin"),
@@ -1256,7 +1275,32 @@ CASES += [
                                 "size": [cx(500), 376], "softness": 40}),
          **dict(GEN, tolerance=1e-4)),
 ]
-
+# Radial and Rectangle 3 (#288): Smooth, the default Falloff, is the curve of the reference (the cases above); version 2
+# (obsolete) is compared too, and a tiny Softness.
+CASES += [
+    case("Radial 2 area 100,100-600,476 softness 1",
+         ("Radial", {"area": [100, 100, 600, 476]}),
+         (ofx_id("Radial"), {"bottomLeft": [cx(100), 100],
+                             "size": [cx(500), 376]}),
+         major=2, **dict(GEN, tolerance=1e-4)),
+    case("Radial 2 softness 0.3, plinear",
+         ("Radial", {"area": [100, 100, 600, 476], "softness": .3,
+                     "plinear": True}),
+         (ofx_id("Radial"), {"bottomLeft": [cx(100), 100],
+                             "size": [cx(500), 376], "softness": .3,
+                             "plinear": 1}),
+         major=2, **dict(GEN, tolerance=1e-4)),
+    case("Radial softness 0.001",
+         ("Radial", {"area": [100, 100, 600, 476], "softness": .001}),
+         (ofx_id("Radial"), {"bottomLeft": [cx(100), 100],
+                             "size": [cx(500), 376], "softness": .001}),
+         **dict(GEN, tolerance=1e-4)),
+    case("Rectangle 2 softness 40",
+         ("Rectangle", {"area": [100, 100, 600, 476], "softness": 40}),
+         (ofx_id("Rectangle"), {"bottomLeft": [cx(100), 100],
+                                "size": [cx(500), 376], "softness": 40}),
+         major=2, **dict(GEN, tolerance=1e-4)),
+]
 # ------------------------------------------------------------- Transform
 TRANSFORM = ofx_id("TransformPlugin")
 CENTRE = {"nuke": [16, 16], "ofx": [cx(16), 16]}
@@ -1448,6 +1492,8 @@ CASES += [
     case("Mirror2 flop on an element (axis)", ("Mirror2", {"flop": True}),
          (ofx_id("Mirror"), {"flop": 1}), input="element", channels="rgba",
          known=301),
+    # Mirror Around Format (#301) is not compared: hostDemo gives a file input (the element) the format of its
+    # box, so that the format and the RoD are the same.
     case("Card3D defaults", ("Card3D", {}),
          (ofx_id("Card3D"), {"format": "Size", "size": [cx(32), 32]}),
          input="checker", channels="rgba", tolerance=1e-3),
@@ -2044,13 +2090,13 @@ KNOWN = {
                 "Bilinear", "Cubic", "Keys", "Simon", "Rifman", "Mitchell",
                 "Parzen", "Notch")],
     273: ["TimeBlur defaults"],
-    277: ["Merge %s, alpha outside [0, 1]" % _op
-                             for _op in MERGE_ALPHA_OPERATORS],
     279: ["ShuffleCopy defaults"],
     287: ["ColorWheel defaults"],
     288: [
-        "Radial area 100,100-600,476 softness 1",
-        "Radial softness 0.3, plinear", "Rectangle softness 40"],
+        # version 2 (obsolete): the Softness at the pixel corner nearest to the center (Radial) or without the
+        # extra pixel (Rectangle), and Quadratic by default
+        "Radial 2 area 100,100-600,476 softness 1", "Radial 2 softness 0.3, plinear",
+        "Rectangle 2 softness 40"],
     296: [
         "Colorspace linear to HSV (RGBToHSV)",
         "Colorspace linear to HSL (RGBToHSL)",
@@ -2087,7 +2133,7 @@ KNOWN = {
         "Reformat to box 20x12 fit, box PAR = PAR",
         "Reformat to box 20x12 fit, reference black outside",
         "Blur size 4 on the ramp (edges)", "Convolve2 3x3 kernel, edges",
-        "Radial softness 0", "Roto no clip, Source in a box"] + [
+        "Radial softness 0", "Radial softness 0.001", "Roto no clip, Source in a box"] + [
             "Ramp %s, horizontal" % _t
             for _t in ("linear", "plinear", "smooth0", "smooth1", "smooth")],
 }

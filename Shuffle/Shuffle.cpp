@@ -66,6 +66,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              In 4.0, 3.2 and 2.2 (unreleased), whether the output has an alpha channel is read from the
 //              outputComponents parameter, so R, G, B from an RGB input and A from an Alpha input is not
 //              taken for an identity of the RGB input (the alpha was 1).
+//              In 4.0 (unreleased, fixed in place), with the multiplane suites, the defaults of R, G, B and A are
+//              found by their labels (B.Color.R...): on hosts without dynamic choices, the fixed indices were
+//              channels of other planes of A (issue #405). Versions 2 and 3 keep the fixed indices.
+// 4.0, 3.2 and 2.2 (unreleased, fixed in place): with the multiplane suites, an Alpha output is an identity only of an
+//              Alpha input read through the A choice (R, G and B, which an Alpha output does not get, were checked too,
+//              so that the RGBA input B was taken for an identity of an Alpha output), and an RGB or RGBA output only of
+//              an input with the same components.
 #define kPluginVersionMajor 4 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -830,8 +837,21 @@ ShufflePlugin::isIdentityInternal(double time,
         // built, i.e. with the Output clip components that the host had before applying our clip
         // preferences (e.g. RGB when the inputs are RGB and Alpha, although the output is RGBA).
         const PixelComponentEnum dstColorComponents = getOutputComponents(time);
-        const bool dstHasAlpha = dstPlane.isColorPlane() &&
-                                 (dstColorComponents == ePixelComponentRGBA || dstColorComponents == ePixelComponentAlpha);
+        if ( dstPlane.isColorPlane() && (dstColorComponents == ePixelComponentAlpha) ) {
+            // an Alpha output only gets the A choice (R, G and B are not written): an identity if A is the alpha
+            // of an Alpha input, which then has the components of the output (an RGBA input is not an Alpha output)
+            IdentityChoiceData& alpha = data[3];
+            if ( (getPlaneNeeded(_channelParam[3]->getName(), &alpha.clip, &alpha.plane, &alpha.index) !=
+                  MultiPlane::MultiPlaneEffect::eGetPlaneNeededRetCodeReturnedChannelInPlane) ||
+                 !alpha.clip || !alpha.plane.isColorPlane() || (alpha.index != alpha.plane.getNumComponents() - 1) ||
+                 (alpha.clip->getPixelComponents() != ePixelComponentAlpha) ) {
+                return false;
+            }
+            identityClip = alpha.clip;
+
+            return true;
+        }
+        const bool dstHasAlpha = dstPlane.isColorPlane() && (dstColorComponents == ePixelComponentRGBA);
         const int nChannelsChecked = dstHasAlpha ? 4 : 3;
         int expectedIndex = -1;
         for (int i = 0; i < nChannelsChecked; ++i) {
@@ -861,6 +881,11 @@ ShufflePlugin::isIdentityInternal(double time,
 
         // 2 planes might not be equal but be the color plane (e.g RGB and RGBA)
         if (data[0].plane != dstPlane && data[0].plane.isColorPlane() != dstPlane.isColorPlane()) {
+            return false;
+        }
+        // the color plane of the identity clip must have the components of the output, as without the multiplane
+        // suites: an RGBA input is not an identity of an RGB output
+        if ( dstPlane.isColorPlane() && ( !data[0].clip || (data[0].clip->getPixelComponents() != dstColorComponents) ) ) {
             return false;
         }
         identityClip = data[0].clip;
@@ -1939,6 +1964,38 @@ ShufflePluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
     desc.addSupportedContext(eContextGeneral);
 } // ShufflePluginFactory::describe
 
+// The index of the option labelled label of the choice param, or fallback if there is none.
+int
+findOptionByLabel(ChoiceParamDescriptor& param,
+                  const std::string& label,
+                  int fallback)
+{
+    const int n = param.getNOptions();
+    const PropertySet& props = param.getPropertySet();
+    for (int i = 0; i < n; ++i) {
+        if (props.propGetString(kOfxParamPropChoiceOption, i, false) == label) {
+            return i;
+        }
+    }
+
+    return fallback;
+}
+
+// The label of channel c (0 to 3: R, G, B, A) of the color plane of clip, in the options of a channel
+// choice of the multiplane suites that lists clips (MultiPlane::Factory::addInputChannelOptionsRGBA():
+// prefixed by the clip name if there are several clips, e.g. "B.Color.R").
+std::string
+colorChannelOptionLabel(const std::vector<std::string>& clips,
+                        const std::string& clip,
+                        int c)
+{
+    const MultiPlane::ImagePlaneDesc& rgba = MultiPlane::ImagePlaneDesc::getRGBAComponents();
+    assert( 0 <= c && c < (int)rgba.getChannels().size() );
+    std::string label = (clips.size() > 1) ? clip + '.' : std::string();
+
+    return label + rgba.getPlaneLabel() + '.' + rgba.getChannels()[c];
+}
+
 template<unsigned int majorVersion>
 void
 ShufflePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
@@ -2096,16 +2153,31 @@ ShufflePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &des
         std::vector<std::string>{kOfxImageEffectSimpleSourceClipName} :
         std::vector<std::string>{kClipA, kClipB};
     const bool defaultIsA = (this->getMajorVersion() < 3) || channelsFromSourceOnly;
+    // The default of a channel choice of the multiplane suites: channel c (0 to 3: R, G, B, A) of the
+    // color plane of the default input. Version 4 finds it by its label: on hosts without dynamic
+    // choices (the Nuke multiplane extension), the options list every hard-coded plane of A before B,
+    // so that the index of B's channel c is not eInputChannelBR + c (issue #405). Versions 2 and 3
+    // keep that index, so that their projects keep their defaults.
+    const auto setChannelDefault = [&](ChoiceParamDescriptor* param,
+                                       int c) {
+        const int index = (defaultIsA ? eInputChannelAR : eInputChannelBR) + c;
+        if (this->getMajorVersion() < 4) {
+            param->setDefault(index);
+        } else {
+            const std::string clip = defaultIsA ? clipsForChannels.front() : std::string(kClipB);
+            param->setDefault( findOptionByLabel(*param, colorChannelOptionLabel(clipsForChannels, clip, c), index) );
+        }
+    };
 
     if (gSupportsRGB || gSupportsRGBA) {
         // outputR
         if (gIsMultiPlanarV1 || gIsMultiPlanarV2) {
             ChoiceParamDescriptor* r = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clipsForChannels, kParamOutputR, kParamOutputRLabel, kParamOutputRHint);
-            r->setDefault(defaultIsA ? eInputChannelAR : eInputChannelBR);
+            setChannelDefault(r, 0);
             ChoiceParamDescriptor* g = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clipsForChannels, kParamOutputG, kParamOutputGLabel, kParamOutputGHint);
-            g->setDefault(defaultIsA ? eInputChannelAG : eInputChannelBG);
+            setChannelDefault(g, 1);
             ChoiceParamDescriptor* b = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clipsForChannels, kParamOutputB, kParamOutputBLabel, kParamOutputBHint);
-            b->setDefault(defaultIsA ? eInputChannelAB : eInputChannelBB);
+            setChannelDefault(b, 2);
         } else {
             {
                 ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputR);
@@ -2143,7 +2215,7 @@ ShufflePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &des
     if (gSupportsRGBA || gSupportsAlpha) {
         if (gIsMultiPlanarV1 || gIsMultiPlanarV2) {
             ChoiceParamDescriptor* a = MultiPlane::Factory::describeInContextAddPlaneChannelChoice(desc, page, clipsForChannels, kParamOutputA, kParamOutputALabel, kParamOutputAHint);
-            a->setDefault(defaultIsA ? eInputChannelAA : eInputChannelBA);
+            setChannelDefault(a, 3);
         } else {
             {
                 ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputA);

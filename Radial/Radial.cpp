@@ -83,9 +83,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 2.2: add angle parameter, fix rendering to an Alpha-only output
 // version 2.2 (unreleased, fixed in place): not a pass-through when Process A is checked and Source is Opaque,
 //              since the Output is then UnPremultiplied (issue #328);
-//              add the Premultiply, Replace and Invert parameters (default off: the output is unchanged) (#288)
-#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 2 // Increment this when you have fixed a bug or made it faster.
+//              add the Premultiply, Replace and Invert parameters (default off: the output is unchanged) (#288);
+//              add the Falloff parameter, the curve of the Softness (default Quadratic: the output is unchanged) (#288)
+// version 3.0 (unreleased): the Softness is computed at the pixel center (it was the pixel corner nearest to the
+//              center), with no other antialiasing, and Falloff is Smooth by default (it was Quadratic): the soft edge
+//              matches the tests/nuke reference (#288). Version 2 is kept, obsolete, with its output.
+#define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsByte true
 #define kSupportsUShort true
@@ -161,20 +165,6 @@ struct RGBAValues
 
     RGBAValues() : r(0), g(0), b(0), a(0) {}
 };
-
-static inline
-double
-rampSmooth(double t)
-{
-    t *= 2.;
-    if (t < 1) {
-        return t * t / (2.);
-    } else {
-        t -= 1.;
-
-        return -0.5 * (t * (t - 2) - 1);
-    }
-}
 
 class RadialProcessorBase
     : public ImageProcessor
@@ -414,6 +404,9 @@ private:
         OfxPointD r; // radius in pixel
         r.x = r_canonical.x * rs.x / par;
         r.y = r_canonical.y * rs.y;
+        // version 3: a Softness narrower than a pixel is drawn as Softness 0 (antialiased), as the tests/nuke
+        // reference does
+        const double softness = ( _drawOptions.pixelCenterSoftness && (_softness * (std::min)(r.x, r.y) < 1.) ) ? 0. : _softness;
 
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if ( _effect.abort() ) {
@@ -424,6 +417,19 @@ private:
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
+
+                if ( _drawOptions.pixelCenterSoftness && (softness > 0.) ) {
+                    // version 3: the Softness at the pixel center (pixel x is centered on x here). A Softness
+                    // narrower than a pixel is drawn as Softness 0 (antialiased), as the tests/nuke reference does
+                    const double dxc = (r.x > 0.) ? (x - c.x) / r.x : 1.;
+                    const double dyc = (r.y > 0.) ? (y - c.y) / r.y : 1.;
+                    const bool emptyShape = (r.x <= 0.) || (r.y <= 0.);
+                    const float w = emptyShape ? 0.f :
+                                    ShapeDraw::softWeight( _drawOptions.falloff, ( 1. - std::sqrt(dxc * dxc + dyc * dyc) ) / softness, _plinear );
+                    setSoftPixel(w, tmpPix);
+                    writePixel<processR, processG, processB, processA>(tmpPix, srcPix, x, y, dstPix);
+                    continue;
+                }
 
                 // approximate subpixel rendering of the disc:
                 // - test the pixel corner closer to the center. if it is outside, the pixel is fully outside
@@ -481,7 +487,7 @@ private:
                         tmpPix[4] = 0.f; // the shape weight
                     } else {
                         // always consider the value closest top the center to avoid discontinuities/artifacts
-                        if ( (dsq_closer <= 0) || (_softness == 0) ) {
+                        if ( (dsq_closer <= 0) || (softness == 0) ) {
                             // solid color
                             tmpPix[0] = (float)_color1.r;
                             tmpPix[1] = (float)_color1.g;
@@ -490,7 +496,7 @@ private:
                             tmpPix[4] = 1.f;
                         } else {
                             // mixed
-                            float t = ( 1.f - (float)std::sqrt( (std::max)(dsq_closer, 0.) ) ) / (float)_softness;
+                            float t = ( 1.f - (float)std::sqrt( (std::max)(dsq_closer, 0.) ) ) / (float)softness;
                             if (t >= 1) {
                                 tmpPix[0] = (float)_color1.r;
                                 tmpPix[1] = (float)_color1.g;
@@ -498,7 +504,7 @@ private:
                                 tmpPix[3] = (float)_color1.a;
                                 tmpPix[4] = 1.f;
                             } else {
-                                t = (float)rampSmooth(t);
+                                t = (float)ShapeDraw::falloff(_drawOptions.falloff, t);
 
                                 if (_plinear) {
                                     // it seems to be the way Nuke does it... I could understand t*t, but why t*t*t?
@@ -536,6 +542,17 @@ private:
         }
     } // process
 
+    // tmpPix (RGBA and the shape weight) for the shape weight w: Color 0 (w = 0) to Color 1 (w = 1)
+    void setSoftPixel(float w,
+                      float tmpPix[5]) const
+    {
+        tmpPix[0] = (float)_color0.r * (1.f - w) + (float)_color1.r * w;
+        tmpPix[1] = (float)_color0.g * (1.f - w) + (float)_color1.g * w;
+        tmpPix[2] = (float)_color0.b * (1.f - w) + (float)_color1.b * w;
+        tmpPix[3] = (float)_color0.a * (1.f - w) + (float)_color1.a * w;
+        tmpPix[4] = w;
+    }
+
     // Render a rotated ellipse. The ellipse is rotated by _angle around its center, in canonical coordinates.
     // Antialiasing: the normalized distance to the center d is computed at the pixel center, and the
     // pixel footprint is approximated by d-h and d+h, where h is the half-extent of the pixel along the gradient of d.
@@ -558,6 +575,9 @@ private:
         const double cosa = std::cos(angleRad);
         const double sina = std::sin(angleRad);
         const bool empty = (r.x <= 0.) || (r.y <= 0.);
+        // version 3: a Softness narrower than a pixel is drawn as Softness 0, as in process()
+        const double softness = ( _drawOptions.pixelCenterSoftness &&
+                                  (_softness * (std::min)(r.x / pixSize.x, r.y / pixSize.y) < 1.) ) ? 0. : _softness;
 
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if ( _effect.abort() ) {
@@ -592,6 +612,12 @@ private:
                     }
                     d_closer = (std::max)(d - h, 0.);
                     d_farther = d + h;
+                    if ( _drawOptions.pixelCenterSoftness && (softness > 0.) ) {
+                        // version 3: the Softness at the pixel center (narrower than a pixel: as Softness 0)
+                        setSoftPixel(ShapeDraw::softWeight(_drawOptions.falloff, (1. - d) / softness, _plinear), tmpPix);
+                        writePixel<processR, processG, processB, processA>(tmpPix, srcPix, x, y, dstPix);
+                        continue;
+                    }
                 }
 
                 if (d_closer >= 1) {
@@ -603,7 +629,7 @@ private:
                     tmpPix[4] = 0.f; // the shape weight
                 } else {
                     // always consider the value closest top the center to avoid discontinuities/artifacts
-                    if ( (d_closer <= 0) || (_softness == 0) ) {
+                    if ( (d_closer <= 0) || (softness == 0) ) {
                         // solid color
                         tmpPix[0] = (float)_color1.r;
                         tmpPix[1] = (float)_color1.g;
@@ -612,7 +638,7 @@ private:
                         tmpPix[4] = 1.f;
                     } else {
                         // mixed
-                        float t = ( 1.f - (float)d_closer ) / (float)_softness;
+                        float t = ( 1.f - (float)d_closer ) / (float)softness;
                         if (t >= 1) {
                             tmpPix[0] = (float)_color1.r;
                             tmpPix[1] = (float)_color1.g;
@@ -620,7 +646,7 @@ private:
                             tmpPix[3] = (float)_color1.a;
                             tmpPix[4] = 1.f;
                         } else {
-                            t = (float)rampSmooth(t);
+                            t = (float)ShapeDraw::falloff(_drawOptions.falloff, t);
 
                             if (_plinear) {
                                 t = t * t * t;
@@ -656,8 +682,10 @@ class RadialPlugin
 {
 public:
     /** @brief ctor */
-    RadialPlugin(OfxImageEffectHandle handle)
+    RadialPlugin(OfxImageEffectHandle handle,
+                 unsigned int majorVersion)
         : GeneratorPlugin(handle, false, kSupportsByte, kSupportsUShort, kSupportsHalf, kSupportsFloat)
+        , _majorVersion(majorVersion)
         , _srcClip(NULL)
         , _processR(NULL)
         , _processG(NULL)
@@ -698,6 +726,15 @@ private:
     /* override is identity */
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
 
+    /** @brief the Draw options at time, and how the Softness is computed (at the pixel center since version 3) */
+    ShapeDraw::Options drawOptions(double time) const
+    {
+        ShapeDraw::Options options = _draw.options(time);
+        options.pixelCenterSoftness = (_majorVersion >= 3);
+
+        return options;
+    }
+
     /** @brief true if Process A is checked and the Source is Opaque (the Output is then UnPremultiplied) */
     bool outputIsUnpremultipliedFromOpaque() const;
 
@@ -721,6 +758,7 @@ private:
     }
 
 private:
+    const unsigned int _majorVersion;
 
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_srcClip;
@@ -857,7 +895,7 @@ RadialPlugin::setupAndProcess(RadialProcessorBase &processor,
                         color0, color1,
                         mix,
                         processR, processG, processB, processA,
-                        _draw.options(time));
+                        drawOptions(time));
     // Call the base class process member, this will call the derived templated process code
     processor.process();
 } // RadialPlugin::setupAndProcess
@@ -1109,14 +1147,18 @@ RadialPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
     return true;
 } // RadialPlugin::getRegionOfDefinition
 
-mDeclarePluginFactory(RadialPluginFactory, {ofxsThreadSuiteCheck();}, {});
+mDeclarePluginFactoryVersioned(RadialPluginFactory, {ofxsThreadSuiteCheck();}, {});
+template<unsigned int majorVersion>
 void
-RadialPluginFactory::describe(ImageEffectDescriptor &desc)
+RadialPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsObsolete(true);
+    }
 
     desc.addSupportedContext(eContextGeneral);
     desc.addSupportedContext(eContextGenerator);
@@ -1152,15 +1194,17 @@ RadialPluginFactory::describe(ImageEffectDescriptor &desc)
 #endif
 }
 
+template<unsigned int majorVersion>
 ImageEffect*
-RadialPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                    ContextEnum /*context*/)
+RadialPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
+                                                  ContextEnum /*context*/)
 {
-    return new RadialPlugin(handle);
+    return new RadialPlugin(handle, majorVersion);
 }
 
+template<unsigned int majorVersion>
 void
-RadialPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+RadialPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
                                        ContextEnum context)
 {
     // Source clip only in the filter context
@@ -1298,6 +1342,9 @@ RadialPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         }
     }
 
+    // falloff
+    ShapeDraw::describeFalloffParam(desc, page, (majorVersion >= 3) ? ShapeDraw::FalloffEnum::eFalloffSmooth : ShapeDraw::FalloffEnum::eFalloffQuadratic);
+
     // color1
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor1);
@@ -1332,7 +1379,10 @@ RadialPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
 } // RadialPluginFactory::describeInContext
 
-static RadialPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static RadialPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+// 2.2: the Softness at the pixel corner nearest to the center, Quadratic by default
+static RadialPluginFactory<2> p2(kPluginIdentifier, 2);
+mRegisterPluginFactoryInstance(p2)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

@@ -187,6 +187,8 @@ pfm("diffa.pfm", 64, 48, lambda x, y, c: (0.25, 0.5, 0.75)[c])
 pfm("diffb.pfm", 64, 48, lambda x, y, c: (0.5, 0.5, 0.25)[c])
 # kimpulse.pfm: a 64x64 PF, black except a white pixel at (32,32) (the filter kernels, #270)
 pfm("kimpulse.pfm", 64, 64, lambda x, y, c: 1. if (x, y) == (32, 32) else 0.)
+# mirror65.pfm: a 65x8 PF (an odd width), white at x 0 to 9, black elsewhere (Mirror at render scale 0.5)
+pfm("mirror65.pfm", 65, 8, lambda x, y, c: 1. if x < 10 else 0.)
 EOF2
 
 # check REPORT DEPTH EXPECT [CLIP=CRC32...]: check the --report JSON file of a
@@ -498,12 +500,14 @@ hostdemo() {
 # failed assertion) is only expected in debug builds.
 # ContactSheet (filter context): hostDemo connects every clip that has no -i, so the inputs
 # after the last one of a test are disconnected with -i N=none (Center Rows depends on the last
-# connected input). The clips of inputs 10 to 15 are named 01, 11, 21, 31, 41 and 51: the
-# plug-in's unsignedToString() writes the digits in reverse order (a bug, to be fixed separately,
-# which will rename them here)
-cs_none10="01 11 21 31 41 51"
+# connected input). The clips of inputs 10 to 15 are named 10 to 15; in ContactSheet 1, they are
+# named 01, 11, 21, 31, 41 and 51 (it wrote the digits in reverse order, #401).
+cs_none10="10 11 12 13 14 15"
 cs_none2=$(for i in $(seq 2 9) $cs_none10; do printf -- ' -i %s=none' "$i"; done)
 cs_none3=$(for i in $(seq 3 9) $cs_none10; do printf -- ' -i %s=none' "$i"; done)
+# input 10 only (with Source), in ContactSheet 2 and 1
+cs_only10=$(for i in $(seq 1 9) 11 12 13 14 15; do printf -- ' -i %s=none' "$i"; done)
+cs1_only10=$(for i in $(seq 1 9) 11 21 31 41 51; do printf -- ' -i %s=none' "$i"; done)
 tests=(
     # generators. The byte and short outputs of Constant are sRGB and Rec.709:
     # 1 and 0 are the same in all three.
@@ -893,7 +897,8 @@ tests=(
     "PIK AP1 clean plate|net.sf.openfx.PIK|general|float|mean=0.3182,0.7158,0.3182,1||-i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0.1,0.9,0.15 colorspace=3 alphaBias=0.2,0.8,0.3 show=2 rgbal=0"
     # render scale 0.5 (the means are those of the full-scale renders), tiles
     # (--window: the same pixels as the full render), and a fractional time
-    "Radial scale 0.5|net.sf.openfx.Radial|general|*|mean=0.231,0.231,0.231,0.231||-i Source=none -i Mask=none --scale 0.5"
+    "Radial 2 scale 0.5|net.sf.openfx.Radial|general|*|mean=0.231,0.231,0.231,0.231||-m 2 -i Source=none -i Mask=none --scale 0.5"
+    "Radial scale 0.5|net.sf.openfx.Radial|general|*|nonconst||-i Source=none -i Mask=none --scale 0.5"
     # Radial (softness 0) and Rectangle (a 200x200 shape at 100,100) over a solid Source: Invert draws Color 0 (black and
     # transparent) inside and Color 1 (white) outside; Premultiply sets the Source RGB to black outside of the
     # shape (with nothing drawn), or inside with Invert; Replace draws on black in the drawn channels (here inside
@@ -917,10 +922,49 @@ tests=(
     "Rectangle premultiply replace opaque|net.sf.openfx.Rectangle|general|*|premult=PreMultiplied+notidentity||-i Source=file:autocrop.pfm#opaque -i Mask=none bottomLeft=10,8 size=32,16 premultiply=1 replace=1"
     "Rectangle premultiply opaque|net.sf.openfx.Rectangle|general|*|premult=UnPreMultiplied+notidentity||-i Source=file:autocrop.pfm#opaque -i Mask=none bottomLeft=10,8 size=32,16 premultiply=1"
     # Premultiply in the softness: the Source RGB times the shape weight (0.399 here, the output with Color 1 white)
-    "Rectangle softness weight|net.sf.openfx.Rectangle|general|float|mean=0.399,0.399,0.399,0.399||-i Source=none -i Mask=none bottomLeft=100,100 size=200,200 softness=40 --frames 0 --window 110,199,111,201"
-    "Rectangle premultiply softness|net.sf.openfx.Rectangle|general|*|mean=0.1995,0.1995,0.1995,1||-i Source=solid:0.5,0.5,0.5,1 -i Mask=none bottomLeft=100,100 size=200,200 softness=40 color1=0,0,0,0 premultiply=1 --frames 0 --window 110,199,111,201"
+    "Rectangle 2 softness weight|net.sf.openfx.Rectangle|general|float|mean=0.399,0.399,0.399,0.399||-m 2 -i Source=none -i Mask=none bottomLeft=100,100 size=200,200 softness=40 --frames 0 --window 110,199,111,201"
+    "Rectangle softness weight|net.sf.openfx.Rectangle|general|float|mean=0.4224,0.4224,0.4224,0.4224||-i Source=none -i Mask=none bottomLeft=100,100 size=200,200 softness=40 --frames 0 --window 110,199,111,201"
+    # Falloff (#288), Rectangle 2: t = 16.75/37.5 = 0.4467 across the Softness (40 canonical = 37.5 pixels; x 110.5 -
+    # 93.75 pixels): Linear t, Smooth0 t^2(2-t), Smooth1 t(1+t(1-t)), Smooth t^2(3-2t) (Quadratic, its default, 2t^2 =
+    # 0.399 above). Rectangle 3 spans one more pixel: t = (16.75 + 0.5)/(37.5 + 1) = 0.4481, and Smooth is its default.
+    "Rectangle 2 falloff linear|net.sf.openfx.Rectangle|general|float|mean=0.4467,0.4467,0.4467,0.4467+tol=0.0005||-m 2 -i Source=none -i Mask=none bottomLeft=100,100 size=200,200 softness=40 falloff=1 --frames 0 --window 110,199,111,201"
+    "Rectangle falloff linear|net.sf.openfx.Rectangle|general|float|mean=0.4481,0.4481,0.4481,0.4481+tol=0.0005||-i Source=none -i Mask=none bottomLeft=100,100 size=200,200 softness=40 falloff=1 --frames 0 --window 110,199,111,201"
+    "Rectangle 2 falloff smooth0|net.sf.openfx.Rectangle|general|float|mean=0.3099,0.3099,0.3099,0.3099+tol=0.0005||-m 2 -i Source=none -i Mask=none bottomLeft=100,100 size=200,200 softness=40 falloff=2 --frames 0 --window 110,199,111,201"
+    "Rectangle falloff smooth0|net.sf.openfx.Rectangle|general|float|mean=0.3116,0.3116,0.3116,0.3116+tol=0.0005||-i Source=none -i Mask=none bottomLeft=100,100 size=200,200 softness=40 falloff=2 --frames 0 --window 110,199,111,201"
+    "Rectangle 2 falloff smooth1|net.sf.openfx.Rectangle|general|float|mean=0.5571,0.5571,0.5571,0.5571+tol=0.0005||-m 2 -i Source=none -i Mask=none bottomLeft=100,100 size=200,200 softness=40 falloff=3 --frames 0 --window 110,199,111,201"
+    "Rectangle falloff smooth1|net.sf.openfx.Rectangle|general|float|mean=0.5589,0.5589,0.5589,0.5589+tol=0.0005||-i Source=none -i Mask=none bottomLeft=100,100 size=200,200 softness=40 falloff=3 --frames 0 --window 110,199,111,201"
+    "Rectangle 2 falloff smooth|net.sf.openfx.Rectangle|general|float|mean=0.4203,0.4203,0.4203,0.4203+tol=0.0005||-m 2 -i Source=none -i Mask=none bottomLeft=100,100 size=200,200 softness=40 falloff=4 --frames 0 --window 110,199,111,201"
+    "Rectangle falloff smooth|net.sf.openfx.Rectangle|general|float|mean=0.4224,0.4224,0.4224,0.4224+tol=0.0005||-i Source=none -i Mask=none bottomLeft=100,100 size=200,200 softness=40 falloff=4 --frames 0 --window 110,199,111,201"
+    # Radial, center (187, 199.5) and radius (93.75, 100) in pixels: Radial 2 takes pixel (187, 279) at the normalized
+    # distance 0.79 (its corner nearest to the center, 278.5 - 199.5 = 79), t = (1 - 0.79) / Softness 1 = 0.21;
+    # Radial 3 at its center, 0.795, t = 0.205: Quadratic 2t^2, Linear t, Smooth0 t^2(2-t), Smooth1 t(1+t(1-t)),
+    # Smooth t^2(3-2t) (the default of Radial 3)
+    "Radial 2 falloff quadratic|net.sf.openfx.Radial|general|float|mean=0.0882,0.0882,0.0882,0.0882+tol=0.0005||-m 2 -i Source=none -i Mask=none bottomLeft=100,100 size=200,200 --frames 0 --window 187,279,188,280"
+    "Radial falloff default|net.sf.openfx.Radial|general|float|mean=0.1088,0.1088,0.1088,0.1088+tol=0.0005||-i Source=none -i Mask=none bottomLeft=100,100 size=200,200 --frames 0 --window 187,279,188,280"
+    "Radial falloff quadratic|net.sf.openfx.Radial|general|float|mean=0.0841,0.0841,0.0841,0.0841+tol=0.0005||-i Source=none -i Mask=none bottomLeft=100,100 size=200,200 falloff=0 --frames 0 --window 187,279,188,280"
+    "Radial 2 falloff linear|net.sf.openfx.Radial|general|float|mean=0.21,0.21,0.21,0.21+tol=0.0005||-m 2 -i Source=none -i Mask=none bottomLeft=100,100 size=200,200 falloff=1 --frames 0 --window 187,279,188,280"
+    "Radial falloff linear|net.sf.openfx.Radial|general|float|mean=0.205,0.205,0.205,0.205+tol=0.0005||-i Source=none -i Mask=none bottomLeft=100,100 size=200,200 falloff=1 --frames 0 --window 187,279,188,280"
+    "Radial 2 falloff smooth0|net.sf.openfx.Radial|general|float|mean=0.0789,0.0789,0.0789,0.0789+tol=0.0005||-m 2 -i Source=none -i Mask=none bottomLeft=100,100 size=200,200 falloff=2 --frames 0 --window 187,279,188,280"
+    "Radial falloff smooth0|net.sf.openfx.Radial|general|float|mean=0.0754,0.0754,0.0754,0.0754+tol=0.0005||-i Source=none -i Mask=none bottomLeft=100,100 size=200,200 falloff=2 --frames 0 --window 187,279,188,280"
+    "Radial 2 falloff smooth1|net.sf.openfx.Radial|general|float|mean=0.2448,0.2448,0.2448,0.2448+tol=0.0005||-m 2 -i Source=none -i Mask=none bottomLeft=100,100 size=200,200 falloff=3 --frames 0 --window 187,279,188,280"
+    "Radial falloff smooth1|net.sf.openfx.Radial|general|float|mean=0.2384,0.2384,0.2384,0.2384+tol=0.0005||-i Source=none -i Mask=none bottomLeft=100,100 size=200,200 falloff=3 --frames 0 --window 187,279,188,280"
+    # Invert swaps the colors: 1 - t with Linear (0.79 in Radial 2, 0.795 in Radial 3)
+    "Radial 2 falloff linear invert|net.sf.openfx.Radial|general|float|mean=0.79,0.79,0.79,0.79+tol=0.0005||-m 2 -i Source=none -i Mask=none bottomLeft=100,100 size=200,200 falloff=1 invert=1 --frames 0 --window 187,279,188,280"
+    "Radial falloff linear invert|net.sf.openfx.Radial|general|float|mean=0.795,0.795,0.795,0.795+tol=0.0005||-i Source=none -i Mask=none bottomLeft=100,100 size=200,200 falloff=1 invert=1 --frames 0 --window 187,279,188,280"
+    "Radial 2 falloff smooth|net.sf.openfx.Radial|general|float|mean=0.1138,0.1138,0.1138,0.1138+tol=0.0005||-m 2 -i Source=none -i Mask=none bottomLeft=100,100 size=200,200 falloff=4 --frames 0 --window 187,279,188,280"
+    "Radial falloff smooth|net.sf.openfx.Radial|general|float|mean=0.1088,0.1088,0.1088,0.1088+tol=0.0005||-i Source=none -i Mask=none bottomLeft=100,100 size=200,200 falloff=4 --frames 0 --window 187,279,188,280"
+    "Rectangle 2 premultiply softness|net.sf.openfx.Rectangle|general|*|mean=0.1995,0.1995,0.1995,1||-m 2 -i Source=solid:0.5,0.5,0.5,1 -i Mask=none bottomLeft=100,100 size=200,200 softness=40 color1=0,0,0,0 premultiply=1 --frames 0 --window 110,199,111,201"
+    # Rectangle 3 with Corner Radius 40 (37.5 x 40 pixels): the straight edges keep the Softness of the rectangle
+    # (pixel 110 at mid-height: 0.4224, as without a radius); in the corner, pixel (115, 120) is at d = 0.6435 of the
+    # corner ellipse (u = (37.5 - 21.75)/37.5, v = (40 - 20.5)/40), 13.89 pixels inside it along its radius, over a
+    # Softness of 38.88 pixels there (37.5 and 40 weighted by |u| r.x and |v| r.y): Smooth((13.89 + 0.5)/(38.88 + 1))
+    # = 0.2965, less than the weight of the straight edges (0.3192)
+    "Rectangle corner radius edge|net.sf.openfx.Rectangle|general|float|mean=0.4224,0.4224,0.4224,0.4224+tol=0.0005||-i Source=none -i Mask=none bottomLeft=100,100 size=200,200 softness=40 cornerRadius=40,40 --frames 0 --window 110,199,111,201"
+    "Rectangle corner radius corner|net.sf.openfx.Rectangle|general|float|mean=0.2965,0.2965,0.2965,0.2965+tol=0.0005||-i Source=none -i Mask=none bottomLeft=100,100 size=200,200 softness=40 cornerRadius=40,40 --frames 0 --window 115,120,116,121"
+    "Rectangle premultiply softness|net.sf.openfx.Rectangle|general|*|mean=0.2112,0.2112,0.2112,1||-i Source=solid:0.5,0.5,0.5,1 -i Mask=none bottomLeft=100,100 size=200,200 softness=40 color1=0,0,0,0 premultiply=1 --frames 0 --window 110,199,111,201"
     # Extent = Format with no Source: the RoD is the format, also when only Color 0 is not black (here with Invert)
-    "Radial format invert|net.sf.openfx.Radial|general|*|nonconst+mean=0.769,0.769,0.769,0.769||-i Source=none -i Mask=none extent=0 invert=1"
+    "Radial 2 format invert|net.sf.openfx.Radial|general|*|nonconst+mean=0.769,0.769,0.769,0.769||-m 2 -i Source=none -i Mask=none extent=0 invert=1"
+    "Radial format invert|net.sf.openfx.Radial|general|*|nonconst||-i Source=none -i Mask=none extent=0 invert=1"
     # Rectangle: the shape is the format, with a softness so that Invert draws Color 1 near its edges (it was an
     # empty RoD, a constant output)
     "Rectangle format invert|net.sf.openfx.Rectangle|general|*|nonconst||-i Source=none -i Mask=none extent=0 softness=50 invert=1"
@@ -995,6 +1039,75 @@ tests=(
     # filter=2: Box (FIR). The default IIR filters have an infinite support, so
     # their tiles differ slightly (up to 0.003) from the full render.
     "CImgBlur tile|net.sf.cimg.CImgBlur|filter|float|nonconst+tile||-i Source=checker:8 -i Mask=none size=5,5 expandRoD=0 filter=2 --frames 0 --window 100,100,300,250"
+    # Mirror (#301): Source is a 768x100 strip (canonical; its pixels are 0) at y 100 to 200 of the 720x576 PAL
+    # format: flipped around the format, it goes to y 576-200 to 576-100; around its RoD (the default), it stays.
+    "Mirror flip around format|net.sf.openfx.Mirror|filter|float|bounds=0,376,720,476||-i Source=rod:0,100,768,200 flip=1 mirrorAround=0 --frames 0"
+    "Mirror flip around RoD|net.sf.openfx.Mirror|filter|float|bounds=0,100,720,200||-i Source=rod:0,100,768,200 flip=1 --frames 0"
+    # autocrop.pfm (64x48, its format in hostDemo) flopped: its white rectangle (x 10 to 42, y 8 to 24) goes to
+    # x 22 to 54 (64 - 42 to 64 - 10)
+    "Mirror flop around format|net.sf.openfx.Mirror|filter|*|mean=1,1,1,1||-i Source=file:autocrop.pfm flop=1 mirrorAround=0 --frames 0 --window 50,10,52,12"
+    "Mirror flop around format outside|net.sf.openfx.Mirror|filter|*|mean=0,0,0,1||-i Source=file:autocrop.pfm flop=1 mirrorAround=0 --frames 0 --window 12,10,14,12"
+    # a 96x576 strip (canonical) at x 96 to 192 of the 768x576 PAL format, flopped: x 768-192 to 768-96, i.e. pixels
+    # 540 to 630 (x 720/768); around its RoD: pixels 90 to 180
+    "Mirror flop strip around format|net.sf.openfx.Mirror|filter|float|bounds=540,0,630,576||-i Source=rod:96,0,192,576 flop=1 mirrorAround=0 --frames 0"
+    "Mirror flop strip around RoD|net.sf.openfx.Mirror|filter|float|bounds=90,0,180,576||-i Source=rod:96,0,192,576 flop=1 --frames 0"
+    # render scale 0.5, mirror65.pfm (65x8 pixels at that scale, white at x 0 to 9): flopped, pixel x goes to 64 - x,
+    # so the white columns are 55 to 64. This checks the axis at a render scale with an odd image width; the format
+    # (130 pixels at scale 1) still falls on whole pixels there, so the processor's black fill beyond the source is
+    # not reached
+    "Mirror flop around format, scale 0.5|net.sf.openfx.Mirror|filter|*|mean=1,1,1,1||-i Source=file:mirror65.pfm flop=1 mirrorAround=0 --scale 0.5 --frames 0 --window 60,2,62,4"
+    "Mirror flop around format, scale 0.5, outside|net.sf.openfx.Mirror|filter|*|mean=0,0,0,1||-i Source=file:mirror65.pfm flop=1 mirrorAround=0 --scale 0.5 --frames 0 --window 52,2,54,4"
+    # Merge 3 (#277) matches the tests/nuke reference (MergeV3 in Merge.cpp); Merge 2 (and 1) keep their results.
+    # Alpha masking, multiply, A (0.4, a 0.5) and B (0.3, b 0.6): A(1-b) + B(1-a) + AB = 0.16 + 0.15 + 0.12 = 0.43,
+    # alpha a+b-ab = 0.8 (Merge 2: AB = 0.12); B transparent: A, unchanged (Merge 2: 0)
+    "Merge alpha masking multiply|net.sf.openfx.MergePlugin|filter|float|mean=0.43,0.43,0.43,0.8||-i A=solid:0.4,0.4,0.4,0.5 -i Source=solid:0.3,0.3,0.3,0.6 operation=multiply screenAlpha=1 -i Mask=none --frames 0"
+    "Merge 2 alpha masking multiply|net.sf.openfx.MergePlugin|filter|float|mean=0.12,0.12,0.12,0.8||-m 2 -i A=solid:0.4,0.4,0.4,0.5 -i Source=solid:0.3,0.3,0.3,0.6 operation=multiply screenAlpha=1 -i Mask=none --frames 0"
+    "Merge 1 alpha masking multiply|net.sf.openfx.MergePlugin|filter|float|mean=0.12,0.12,0.12,0.8||-m 1 -i A=solid:0.4,0.4,0.4,0.5 -i Source=solid:0.3,0.3,0.3,0.6 operation=multiply screenAlpha=1 -i Mask=none --frames 0"
+    "Merge alpha masking multiply, B transparent|net.sf.openfx.MergePlugin|filter|float|mean=0.4,0.4,0.4,0.5||-i A=solid:0.4,0.4,0.4,0.5 -i Source=solid:0,0,0,0 operation=multiply screenAlpha=1 -i Mask=none --frames 0"
+    # overlay, the same inputs: A(1-b) + B(1-a) + T, with T = ab - 2(a-A)(b-B) = 0.3 - 2 x 0.1 x 0.3 = 0.24 (2B = b):
+    # 0.16 + 0.15 + 0.24 = 0.55 (Merge 2: overlay(0.4, 0.3) = 2AB = 0.24), alpha 0.8
+    "Merge alpha masking overlay|net.sf.openfx.MergePlugin|filter|float|mean=0.55,0.55,0.55,0.8||-i A=solid:0.4,0.4,0.4,0.5 -i Source=solid:0.3,0.3,0.3,0.6 operation=overlay screenAlpha=1 -i Mask=none --frames 0"
+    "Merge 2 alpha masking overlay|net.sf.openfx.MergePlugin|filter|float|mean=0.24,0.24,0.24,0.8||-m 2 -i A=solid:0.4,0.4,0.4,0.5 -i Source=solid:0.3,0.3,0.3,0.6 operation=overlay screenAlpha=1 -i Mask=none --frames 0"
+    "Merge 2 alpha masking multiply, B transparent|net.sf.openfx.MergePlugin|filter|float|mean=0,0,0,0.5||-m 2 -i A=solid:0.4,0.4,0.4,0.5 -i Source=solid:0,0,0,0 operation=multiply screenAlpha=1 -i Mask=none --frames 0"
+    # over, a = 1.44 clamped to 1 in "A+B(1-a)": A (0.5), and alpha 1.44 (Merge 2: 0.5 + 0.25(1 - 1.44) = 0.39, alpha 1)
+    "Merge over alpha above 1|net.sf.openfx.MergePlugin|filter|float|mean=0.5,0.5,0.5,1.44||-i A=solid:0.5,0.5,0.5,1.44 -i Source=solid:0.25,0.25,0.25,1 -i Mask=none --frames 0"
+    "Merge 2 over alpha above 1|net.sf.openfx.MergePlugin|filter|float|mean=0.39,0.39,0.39,1||-m 2 -i A=solid:0.5,0.5,0.5,1.44 -i Source=solid:0.25,0.25,0.25,1 -i Mask=none --frames 0"
+    "Merge 1 over alpha above 1|net.sf.openfx.MergePlugin|filter|float|mean=0.39,0.39,0.39,1||-m 1 -i A=solid:0.5,0.5,0.5,1.44 -i Source=solid:0.25,0.25,0.25,1 -i Mask=none --frames 0"
+    # divide, "A/B if B>0, otherwise A": B = 0 gives A (Merge 2: 0); alpha 1/1
+    "Merge divide by 0|net.sf.openfx.MergePlugin|filter|float|mean=0.5,0.5,0.5,1||-i A=solid:0.5,0.5,0.5,1 -i Source=solid:0,0,0,1 operation=divide -i Mask=none --frames 0"
+    "Merge 2 divide by 0|net.sf.openfx.MergePlugin|filter|float|mean=0,0,0,1||-m 2 -i A=solid:0.5,0.5,0.5,1 -i Source=solid:0,0,0,1 operation=divide -i Mask=none --frames 0"
+    "Merge 1 divide by 0|net.sf.openfx.MergePlugin|filter|float|mean=0,0,0,1||-m 1 -i A=solid:0.5,0.5,0.5,1 -i Source=solid:0,0,0,1 operation=divide -i Mask=none --frames 0"
+    # soft-light, 2AB+BB(1-AB) if AB<1, otherwise 2AB: A = B = 0.5 gives 0.5 + 0.25 x 0.75 = 0.6875, alpha (AB = 1) 2
+    # (Merge 2, W3C: 0.5, alpha 1)
+    "Merge soft-light|net.sf.openfx.MergePlugin|filter|float|mean=0.6875,0.6875,0.6875,2||-i A=solid:0.5,0.5,0.5,1 -i Source=solid:0.5,0.5,0.5,1 operation=soft-light -i Mask=none --frames 0"
+    "Merge 2 soft-light|net.sf.openfx.MergePlugin|filter|float|mean=0.5,0.5,0.5,1||-m 2 -i A=solid:0.5,0.5,0.5,1 -i Source=solid:0.5,0.5,0.5,1 operation=soft-light -i Mask=none --frames 0"
+    "Merge 1 soft-light|net.sf.openfx.MergePlugin|filter|float|mean=0.5,0.5,0.5,1||-m 1 -i A=solid:0.5,0.5,0.5,1 -i Source=solid:0.5,0.5,0.5,1 operation=soft-light -i Mask=none --frames 0"
+    # outside [0, 1]: screen A+B-AB if 0<A<1 and 0<B<1, otherwise max(A,B), A 2, B 0.5: 2 (Merge 2: 1.5);
+    # hard-light 1-2(1-A)(1-B) (2A >= 1) with A,B <= 1, A 0.75, B 1.5: 1 (Merge 2: screen(2A-1, B) = 1.25), alpha 1;
+    # overlay, the same with A and B swapped, A = B = 1.5: 1 (Merge 2: max(2B-1, A) = 2);
+    # geometric 2AB/(A+B) if A,B>0, otherwise 0, A 1, B -0.5: 0 (Merge 2: -2); color-dodge 1 if A>=1, A 1.5,
+    # B 0.5: 1 (Merge 2: A); color-burn 0 if A<=0, A -0.5, B 0.5: 0 (Merge 2: A); exclusion A+B-2AB if A,B>=0,
+    # otherwise A+B, A -0.5, B 0.5: 0 (Merge 2: A+B-2AB = 0.5), alpha 1+1-2 = 0
+    "Merge screen above 1|net.sf.openfx.MergePlugin|filter|float|mean=2,2,2,1||-i A=solid:2,2,2,1 -i Source=solid:0.5,0.5,0.5,1 operation=screen -i Mask=none --frames 0"
+    "Merge 2 screen above 1|net.sf.openfx.MergePlugin|filter|float|mean=1.5,1.5,1.5,1||-m 2 -i A=solid:2,2,2,1 -i Source=solid:0.5,0.5,0.5,1 operation=screen -i Mask=none --frames 0"
+    "Merge hard-light above 1|net.sf.openfx.MergePlugin|filter|float|mean=1,1,1,1||-i A=solid:0.75,0.75,0.75,1 -i Source=solid:1.5,1.5,1.5,1 operation=hard-light -i Mask=none --frames 0"
+    "Merge overlay above 1|net.sf.openfx.MergePlugin|filter|float|mean=1,1,1,1||-i A=solid:1.5,1.5,1.5,1 -i Source=solid:1.5,1.5,1.5,1 operation=overlay -i Mask=none --frames 0"
+    "Merge geometric negative|net.sf.openfx.MergePlugin|filter|float|mean=0,0,0,1||-i A=solid:1,1,1,1 -i Source=solid:-0.5,-0.5,-0.5,1 operation=geometric -i Mask=none --frames 0"
+    "Merge color-dodge above 1|net.sf.openfx.MergePlugin|filter|float|mean=1,1,1,1||-i A=solid:1.5,1.5,1.5,1 -i Source=solid:0.5,0.5,0.5,1 operation=color-dodge -i Mask=none --frames 0"
+    "Merge color-burn negative|net.sf.openfx.MergePlugin|filter|float|mean=0,0,0,1||-i A=solid:-0.5,-0.5,-0.5,1 -i Source=solid:0.5,0.5,0.5,1 operation=color-burn -i Mask=none --frames 0"
+    "Merge exclusion negative|net.sf.openfx.MergePlugin|filter|float|mean=0,0,0,0||-i A=solid:-0.5,-0.5,-0.5,1 -i Source=solid:0.5,0.5,0.5,1 operation=exclusion -i Mask=none --frames 0"
+    "Merge 2 exclusion negative|net.sf.openfx.MergePlugin|filter|float|mean=0.5,0.5,0.5,0||-m 2 -i A=solid:-0.5,-0.5,-0.5,1 -i Source=solid:0.5,0.5,0.5,1 operation=exclusion -i Mask=none --frames 0"
+    "Merge 2 hard-light above 1|net.sf.openfx.MergePlugin|filter|float|mean=1.25,1.25,1.25,1||-m 2 -i A=solid:0.75,0.75,0.75,1 -i Source=solid:1.5,1.5,1.5,1 operation=hard-light -i Mask=none --frames 0"
+    "Merge 2 overlay above 1|net.sf.openfx.MergePlugin|filter|float|mean=2,2,2,1||-m 2 -i A=solid:1.5,1.5,1.5,1 -i Source=solid:1.5,1.5,1.5,1 operation=overlay -i Mask=none --frames 0"
+    "Merge 2 geometric negative|net.sf.openfx.MergePlugin|filter|float|mean=-2,-2,-2,1||-m 2 -i A=solid:1,1,1,1 -i Source=solid:-0.5,-0.5,-0.5,1 operation=geometric -i Mask=none --frames 0"
+    "Merge 2 color-dodge above 1|net.sf.openfx.MergePlugin|filter|float|mean=1.5,1.5,1.5,1||-m 2 -i A=solid:1.5,1.5,1.5,1 -i Source=solid:0.5,0.5,0.5,1 operation=color-dodge -i Mask=none --frames 0"
+    "Merge 2 color-burn negative|net.sf.openfx.MergePlugin|filter|float|mean=-0.5,-0.5,-0.5,1||-m 2 -i A=solid:-0.5,-0.5,-0.5,1 -i Source=solid:0.5,0.5,0.5,1 operation=color-burn -i Mask=none --frames 0"
+    "Merge 1 screen above 1|net.sf.openfx.MergePlugin|filter|float|mean=1.5,1.5,1.5,1||-m 1 -i A=solid:2,2,2,1 -i Source=solid:0.5,0.5,0.5,1 operation=screen -i Mask=none --frames 0"
+    "Merge 1 hard-light above 1|net.sf.openfx.MergePlugin|filter|float|mean=1.25,1.25,1.25,1||-m 1 -i A=solid:0.75,0.75,0.75,1 -i Source=solid:1.5,1.5,1.5,1 operation=hard-light -i Mask=none --frames 0"
+    "Merge 1 overlay above 1|net.sf.openfx.MergePlugin|filter|float|mean=2,2,2,1||-m 1 -i A=solid:1.5,1.5,1.5,1 -i Source=solid:1.5,1.5,1.5,1 operation=overlay -i Mask=none --frames 0"
+    "Merge 1 geometric negative|net.sf.openfx.MergePlugin|filter|float|mean=-2,-2,-2,1||-m 1 -i A=solid:1,1,1,1 -i Source=solid:-0.5,-0.5,-0.5,1 operation=geometric -i Mask=none --frames 0"
+    "Merge 1 color-dodge above 1|net.sf.openfx.MergePlugin|filter|float|mean=1.5,1.5,1.5,1||-m 1 -i A=solid:1.5,1.5,1.5,1 -i Source=solid:0.5,0.5,0.5,1 operation=color-dodge -i Mask=none --frames 0"
+    "Merge 1 color-burn negative|net.sf.openfx.MergePlugin|filter|float|mean=-0.5,-0.5,-0.5,1||-m 1 -i A=solid:-0.5,-0.5,-0.5,1 -i Source=solid:0.5,0.5,0.5,1 operation=color-burn -i Mask=none --frames 0"
     "Merge tile|net.sf.openfx.MergePlugin|filter|float|nonconst+tile||-i A=checker:16 -i Source=ramp -i Mask=none --frames 0 --window 50,60,250,200"
     # Merge "Range From" (#277): in the general context, Merge 3 passes B's frame range by default, or
     # A's (hostDemo's inputs all have the frames 0 to 25, so this only checks which input is used, by
@@ -1126,8 +1239,16 @@ tests=(
     "Shuffle filter comps|net.sf.openfx.ShufflePlugin|filter|*|comps=RGBA+mean=0.75,0.5,0.25,1||-i Source=solid:0.25,0.5,0.75,1 outputComponents=1 outputR=8 outputB=6"
     # a multiplane host (hostDemo --multiplane, openfx#331; the menus list the channels by label).
     # hostDemo is a multiplane host without Natron's extension (kFnOfxImageEffectPropMultiPlanar
-    # only): the channel menus list all the planes of A, then of B, so the default indices of R, G
-    # and B are not B.Color.R, G, B (6 is A.DisparityRight.X) and the tests set them by label.
+    # only): the channel menus list all the planes of A, then of B, so index 6 is A.DisparityRight.X;
+    # Shuffle 4 finds its defaults by label (#405), the other tests set them by label.
+    # The defaults are B's color channels:
+    "Shuffle multiplane default|net.sf.openfx.ShufflePlugin|general|float|mean=0.1,0.2,0.3,0.4||--multiplane -i A=solid:0.5,0.6,0.7,0.8 -i B=solid:0.1,0.2,0.3,0.4"
+    # an Alpha output with the defaults: B's alpha, not an identity of the RGBA input B (it was:
+    # R, G and B, which an Alpha output does not get, were checked too)
+    "Shuffle multiplane Alpha output|net.sf.openfx.ShufflePlugin|general|float|notidentity+comps=Alpha+mean=0.4||--multiplane -i A=solid:0.5,0.6,0.7,0.8 -i B=solid:0.1,0.2,0.3,0.4 outputComponents=Alpha"
+    # Shuffle 3 keeps the fixed indices: R 6 A.DisparityRight.X, G 7 A.DisparityRight.Y (A has no disparity: 0),
+    # B 8 A.Backward.U, A 9 A.Backward.V (A's backward motion vectors)
+    "Shuffle 3 multiplane default|net.sf.openfx.ShufflePlugin|general|float|mean=0,0,0.25,0.75||-m 3 --multiplane -i A=solid:0.5,0.6,0.7,0.8 -i A@BackMotionVector=solid:0.25,0.75,0,0 -i B=solid:0.1,0.2,0.3,0.4"
     # R, G, B from B's color plane and A from another plane (B's backward motion vectors, whose U
     # is the first value of the solid) is not an identity of B: the alpha is that channel (#268)
     "Shuffle multiplane A from another plane|net.sf.openfx.ShufflePlugin|general|float|notidentity+mean=0.1,0.2,0.3,0.25||--multiplane -i A=solid:0.5,0.6,0.7,0.8 -i B=solid:0.1,0.2,0.3,0.4 -i B@BackMotionVector=solid:0.25,0.75,0,0 -s outputR=B.Color.R -s outputG=B.Color.G -s outputB=B.Color.B -s outputA=B.Backward.U"
@@ -1487,6 +1608,10 @@ tests=(
     # the first row goes from left to right (RightLeft would put input 1, 0.5, at the bottom left)
     "ContactSheet Snake first row|net.sf.openfx.ContactSheetOFX|filter|float|mean=1,1,1,1||-i Source=solid:1,1,1,1 -i 1=solid:0.5,0.5,0.5,1 -i 2=solid:0.25,0.25,0.25,1${cs_none3} resolution=64,64 rowsColumns=2,2 colOrder=2 --frames 0 --window 4,4,12,12"
     "ContactSheet Snake empty|net.sf.openfx.ContactSheetOFX|filter|float|mean=0,0,0,0||-i Source=solid:1,1,1,1 -i 1=solid:0.5,0.5,0.5,1 -i 2=solid:0.25,0.25,0.25,1${cs_none3} resolution=64,64 rowsColumns=2,2 colOrder=2 --frames 0 --window 4,36,12,44"
+    # input 10 (#401): 4x4 cells of 32x32 pixels, top to bottom: input 10 is in the third row from the
+    # top (y 32 to 64) and the third column (x 64 to 96). Its clip is "10" in ContactSheet 2, "01" in 1.
+    "ContactSheet input 10|net.sf.openfx.ContactSheetOFX|filter|float|mean=0.5,0.5,0.5,1||-i Source=solid:1,1,1,1 -i 10=solid:0.5,0.5,0.5,1${cs_only10} resolution=128,128 rowsColumns=4,4 rowOrder=0 --frames 0 --window 68,36,76,44"
+    "ContactSheet 1 input 10|net.sf.openfx.ContactSheetOFX|filter|float|mean=0.5,0.5,0.5,1||-m 1 -i Source=solid:1,1,1,1 -i 01=solid:0.5,0.5,0.5,1${cs1_only10} resolution=128,128 rowsColumns=4,4 rowOrder=0 --frames 0 --window 68,36,76,44"
     "AppendClip dissolve 4 after|net.sf.openfx.AppendClip|general|*|identity+mean=0.5,0.5,0.5,1||-i 1=default -i 2=solid:0.5,0.5,0.5,1 crossDissolve=4 --frames 27"
 )
 
@@ -1597,7 +1722,7 @@ for t in "${tests[@]}"; do
         fi
     done
 done
-rm -f out.* full.* report.json ref.json autocrop.pfm convsrc.pfm convk.pfm diffa.pfm diffb.pfm
+rm -f out.* full.* report.json ref.json autocrop.pfm convsrc.pfm convk.pfm diffa.pfm diffb.pfm mirror65.pfm
 
 if [ $n = 0 ]; then
     echo "no render matches RENDERTEST_ONLY=$RENDERTEST_ONLY"
