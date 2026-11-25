@@ -1188,7 +1188,6 @@ RetimePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc
             param->setHint(kParamSpeedHint);
             param->setDefault(1);
             param->setIncrement(0.05);
-            param->setRange(-DBL_MAX, DBL_MAX);
             param->setDisplayRange(0.1, 10.);
             param->setAnimates(true); // can animate
             param->setCacheInvalidation(eCacheInvalidateValueChangeToEnd); // any speed change affects all frames to end of sequence
@@ -1198,10 +1197,8 @@ RetimePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc
             }
         }
 
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        const bool supportsParametricParameter = ( hostDescription.supportsParametricParameter &&
-                                                   !(hostDescription.hostName == "uk.co.thefoundry.nuke" &&
-                                                     8 <= hostDescription.versionMajor && hostDescription.versionMajor <= 11) );  // Nuke 8-11.1 are known to *not* support Parametric
+        // false in Nuke 8 to 11.1, whose parametric suite is broken (Support, NatronGitHub/openfx#351)
+        const bool supportsParametricParameter = getImageEffectHostDescription()->supportsParametricParameter;
         if (supportsParametricParameter) {
             PageParamDescriptor* page = desc.definePageParam(kPageTimeWarp);
             if (page) {
@@ -1292,10 +1289,8 @@ ImageEffect*
 RetimePluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                                   ContextEnum /*context*/)
 {
-    const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-    const bool supportsParametricParameter = ( hostDescription.supportsParametricParameter &&
-                                               !(hostDescription.hostName == "uk.co.thefoundry.nuke" &&
-                                                 8 <= hostDescription.versionMajor && hostDescription.versionMajor <= 11) );  // Nuke 8-11.1 are known to *not* support Parametric
+    // false in Nuke 8 to 11.1, whose parametric suite is broken (Support, NatronGitHub/openfx#351)
+    const bool supportsParametricParameter = getImageEffectHostDescription()->supportsParametricParameter;
 
     return new RetimePlugin(handle, supportsParametricParameter, (majorVersion >= 2) ? RetimeVersion::e2 : RetimeVersion::e1);
 }

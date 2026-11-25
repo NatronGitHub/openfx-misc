@@ -402,7 +402,6 @@ CImgPlasmaPluginFactory::describeInContext(ImageEffectDescriptor& desc,
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOffset);
         param->setLabel(kParamOffsetLabel);
         param->setHint(kParamOffsetHint);
-        param->setRange(-DBL_MAX, DBL_MAX);
         param->setDisplayRange(0., 1.);
         if (context == eContextGenerator) {
             param->setDefault(kParamOffsetGeneratorDefault);

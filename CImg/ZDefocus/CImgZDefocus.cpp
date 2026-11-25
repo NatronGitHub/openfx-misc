@@ -1353,7 +1353,6 @@ ZDefocusPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamFocus);
         param->setLabel(kParamFocusLabel);
         param->setHint(kParamFocusHint);
-        param->setRange(-DBL_MAX, DBL_MAX);
         param->setDisplayRange(0., 100.);
         param->setDefault(0.);
         if (page) {
@@ -1377,7 +1376,6 @@ ZDefocusPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setDoubleType(eDoubleTypeXYAbsolute);
         ofxsSetDefaultCoordinateSystemNormalised(*param); // see ofxsNormalisedDefaults.h (#66)
         param->setDefault(0.5, 0.5);
-        param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
         if ( param->getHostHasNativeOverlayHandle() ) {
             param->setUseHostNativeOverlayHandle(true);

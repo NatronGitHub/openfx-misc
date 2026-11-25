@@ -213,8 +213,9 @@ renders = r.get("renders") or []
 nframes = int(refs.get("frames", 2))
 # hostDemo is built with the OFX_EXTENSIONS_* of the plugins (by -DOFX_BUILD_HOSTDEMO=ON,
 # or above with openfx's defaults): it always renders views 0 and 1 of each frame (the
-# report has no view count). The expectations are checked on view 0.
-nviews = 2
+# report has no view count; one view with --ofx14 and --ofx11). The expectations are checked
+# on view 0.
+nviews = int(refs.get("views", 2))
 views = [k.get("view") or 0 for k in renders]
 if len(renders) != nframes * nviews or views != list(range(nviews)) * nframes:
     errors.append("%d renders (views %s), expected %d frames of %d views" % (len(renders), views, nframes, nviews))
@@ -1541,6 +1542,13 @@ tests=(
     # Offset and a Focus Point (the image center) on the sky: the output is the input (without
     # Blur Inside).
     "CImgZDefocus sky focus|net.sf.cimg.CImgZDefocus|general|float|conv=convsrc.pfm,delta.pfm||--frames 0 -i Source=file:convsrc.pfm -i Depth=solid:0,0,0,1 -i Filter=none depthType=2 useFocusPoint=1 blurInside=0"
+    # The Focus Point default (0.5, 0.5 normalised) is the middle of the 768x576 (canonical)
+    # project, also on a host without normalised defaults (OFX 1.1 hosts such as VEGAS; hostDemo
+    # --no-normalised-defaults, and --ofx11, which implies it): SupportExt's
+    # ofxsNormalisedDefaults.h (#66, #416)
+    "CImgZDefocus focus point, no normalised defaults|net.sf.cimg.CImgZDefocus|general|float|value:focusPoint=384,288||--frames 0 -i Source=checker:32 -i Depth=solid:0,0,0,1 -i Filter=none --no-normalised-defaults"
+    "CImgZDefocus focus point, normalised defaults|net.sf.cimg.CImgZDefocus|general|float|value:focusPoint=384,288||--frames 0 -i Source=checker:32 -i Depth=solid:0,0,0,1 -i Filter=none"
+    "CImgZDefocus focus point, OFX 1.1 host|net.sf.cimg.CImgZDefocus|general|float|value:focusPoint=384,288||--frames 0 -i Source=checker:32 -i Depth=solid:0,0,0,1 -i Filter=none --ofx11"
     # A depth map with a focus of 0: the radius is Size*|1 - 0/z| = Size everywhere (Size 2, a disc
     # whose center weight is 0.126)
     "CImgZDefocus depth focus 0|net.sf.cimg.CImgZDefocus|general|float|max=0.126,0.126,0.126,1+tol=0.003||--frames 0 -i Source=file:impulse.pfm -i Depth=solid:3,3,3,1 -i Filter=none depthType=0 useFocusPoint=0 focus=0 size=2 maxSize=20 slices=10 aperture=1 blurInside=0"
@@ -1636,16 +1644,18 @@ for t in "${tests[@]}"; do
         # (for the full render that a tile is compared to)
         # shellcheck disable=SC2086
         set -- $args
-        frames=2 scale=() nowindow=()
+        frames=2 views=2 scale=() nowindow=()
         while [ $# -gt 0 ]; do
             case "$1" in
                 --frames) f=${2//[^,]/}; frames=$(( ${#f} + 1 )) ;;
+                # hostDemo --ofx14 and --ofx11 render one view
+                --ofx14|--ofx11) views=1 ;;
                 --scale) scale=(--scale "$2") ;;
             esac
             if [ "$1" = --window ]; then shift; else nowindow+=("$1"); fi
             shift
         done
-        refs=("frames=$frames") refok=1
+        refs=("frames=$frames" "views=$views") refok=1
         for e in ${expect//+/ }; do
             case "$e" in
                 changed:*)

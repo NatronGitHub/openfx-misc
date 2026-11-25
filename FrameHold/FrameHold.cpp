@@ -426,8 +426,6 @@ FrameHoldPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamFirstFrameLabel);
         param->setHint(kParamFirstFrameHint);
         param->setDefault(kParamFirstFrameDefault);
-        param->setRange(INT_MIN, INT_MAX);
-        param->setDisplayRange(INT_MIN, INT_MAX);
         param->setAnimates(true);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {

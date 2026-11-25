@@ -1456,7 +1456,6 @@ defineCornerPinToDouble2DParam(ImageEffectDescriptor &desc,
         param->setLabel(kParamTo[i]);
         param->setAnimates(true);
         param->setIncrement(1.);
-        param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX);
         param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
         param->setDoubleType(eDoubleTypeXYAbsolute);
         // Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
@@ -1505,7 +1504,6 @@ defineCornerPinFromsDouble2DParam(ImageEffectDescriptor &desc,
     param->setLabel(kParamFrom[i]);
     param->setAnimates(true);
     param->setIncrement(1.);
-    param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
     param->setDisplayRange(-10000, -10000, 10000, 10000);
     param->setDoubleType(eDoubleTypeXYAbsolute);
     // Some hosts (e.g. Resolve) may not support normalized defaults (setDefaultCoordinateSystem(eCoordinatesNormalised))
@@ -1614,7 +1612,6 @@ CornerPinPluginDescribeInContext(ImageEffectDescriptor &desc,
         param->setHint(kParamTransformAmountHint);
         param->setDoubleType(eDoubleTypeScale);
         param->setDefault(1.);
-        param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(0., 1.);
         param->setIncrement(0.01);
         //if (group) {

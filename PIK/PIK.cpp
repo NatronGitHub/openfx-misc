@@ -2597,7 +2597,6 @@ PIKPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamRedWeight);
         param->setLabel(kParamRedWeightLabel);
         param->setHint(kParamRedWeightHint);
-        param->setRange(-DBL_MAX, DBL_MAX);
         param->setDisplayRange(0., 1.);
         param->setDefault(kParamRedWeightDefault);
         param->setAnimates(true);
@@ -2613,7 +2612,6 @@ PIKPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamBlueGreenWeight);
         param->setLabel(kParamBlueGreenWeightLabel);
         param->setHint(kParamBlueGreenWeightHint);
-        param->setRange(-DBL_MAX, DBL_MAX);
         param->setDisplayRange(0., 1.);
         param->setDefault(kParamBlueGreenWeightDefault);
         param->setAnimates(true);
@@ -2694,7 +2692,6 @@ PIKPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamLevel);
         param->setLabel(kParamLevelLabel);
         param->setHint(kParamLevelHint);
-        param->setRange(-DBL_MAX, DBL_MAX);
         param->setDisplayRange(0., 1.);
         param->setDefault(kParamLevelDefault);
         param->setAnimates(true);
@@ -2714,7 +2711,6 @@ PIKPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamLuma);
         param->setLabel(kParamLumaLabel);
         param->setHint(kParamLumaHint);
-        param->setRange(-DBL_MAX, DBL_MAX);
         param->setDisplayRange(0., 1.);
         param->setDefault(kParamLumaDefault);
         param->setAnimates(true);
@@ -2898,7 +2894,6 @@ PIKPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
             DoubleParamDescriptor* param = desc.defineDoubleParam(kParamScreenClipMin);
             param->setLabel(kParamScreenClipMinLabel);
             param->setHint(kParamScreenClipMinHint);
-            param->setRange(-DBL_MAX, DBL_MAX);
             param->setDisplayRange(0., 1.);
             param->setDefault(0.);
             param->setAnimates(true);
@@ -2914,7 +2909,6 @@ PIKPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
             DoubleParamDescriptor* param = desc.defineDoubleParam(kParamScreenClipMax);
             param->setLabel(kParamScreenClipMaxLabel);
             param->setHint(kParamScreenClipMaxHint);
-            param->setRange(-DBL_MAX, DBL_MAX);
             param->setDisplayRange(0., 1.);
             param->setDefault(1.);
             param->setAnimates(true);

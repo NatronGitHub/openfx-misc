@@ -1985,7 +1985,6 @@ HSVToolPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &des
                 gHostSupportsDefaultCoordinateSystem = false; // no multithread here, see kParamDefaultsNormalised
             }
             param->setDefault(0.25, 0.25);
-            param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0, 0, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
             param->setIncrement(1.);
             param->setHint(kParamRectangleInteractBtmLeftHint);
@@ -2085,7 +2084,6 @@ HSVToolPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &des
             param->setHint(kParamHueRangeHint);
             param->setDimensionLabels("", ""); // the two values have the same meaning (they just define a range)
             param->setDefault(0., 360.);
-            param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0., 0., 360., 360.);
             param->setDoubleType(eDoubleTypeAngle);
             param->setUseHostNativeOverlayHandle(false);
@@ -2100,7 +2098,6 @@ HSVToolPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &des
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamHueRotation);
             param->setLabel(kParamHueRotationLabel);
             param->setHint(kParamHueRotationHint);
-            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-180., 180.);
             param->setDoubleType(eDoubleTypeAngle);
             if (group) {
@@ -2114,7 +2111,6 @@ HSVToolPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &des
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamHueRotationGain);
             param->setLabel(kParamHueRotationGainLabel);
             param->setHint(kParamHueRotationGainHint);
-            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0., 2.);
             param->setDefault(1.);
             if (group) {
@@ -2186,7 +2182,6 @@ HSVToolPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &des
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSaturationAdjustmentGain);
             param->setLabel(kParamSaturationAdjustmentGainLabel);
             param->setHint(kParamSaturationAdjustmentGainHint);
-            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0., 2.);
             param->setDefault(1.);
             if (group) {
@@ -2258,7 +2253,6 @@ HSVToolPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &des
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamBrightnessAdjustment);
             param->setLabel(kParamBrightnessAdjustmentLabel);
             param->setHint(kParamBrightnessAdjustmentHint);
-            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0., 1.);
             if (group) {
                 param->setParent(*group);
@@ -2271,7 +2265,6 @@ HSVToolPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &des
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamBrightnessAdjustmentGain);
             param->setLabel(kParamBrightnessAdjustmentGainLabel);
             param->setHint(kParamBrightnessAdjustmentGainHint);
-            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0., 2.);
             param->setDefault(1.);
             if (group) {

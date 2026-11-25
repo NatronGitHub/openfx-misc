@@ -928,8 +928,6 @@ TimeBufferReadPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         IntParamDescriptor* param = desc.defineIntParam(kParamStartFrame);
         param->setLabel(kParamStartFrameLabel);
         param->setHint(kParamStartFrameHint);
-        param->setRange(INT_MIN, INT_MAX);
-        param->setDisplayRange(INT_MIN, INT_MAX);
         param->setDefault(1);
         param->setAnimates(false);
         if (page) {

@@ -393,7 +393,6 @@ TimeOffsetPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &
         param->setLabel(kParamTimeOffsetLabel);
         param->setHint(kParamTimeOffsetHint);
         param->setDefault(0.);
-        param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(-100., 100.);
         param->setIncrement(1.);
         param->setAnimates(false); // used in getTimeDomain()
@@ -407,8 +406,6 @@ TimeOffsetPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &
         param->setDefault(0);
         // keep default range (INT_MIN..INT_MAX)
         // no display range
-        param->setRange(INT_MIN, INT_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
-        param->setDisplayRange(INT_MIN, INT_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setAnimates(false); // used in getTimeDomain()
         if (page) {
             page->addChild(*param);

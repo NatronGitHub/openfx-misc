@@ -499,7 +499,6 @@ DiscBladesPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setHint(kParamRotationHint);
         param->setDoubleType(eDoubleTypeAngle);
         param->setDefault(kParamRotationDefault);
-        param->setRange(-DBL_MAX, DBL_MAX);
         param->setDisplayRange(-180., 180.);
         param->setAnimates(true);
         if (page) {
@@ -537,7 +536,6 @@ DiscBladesPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setDoubleType(eDoubleTypeXY);
         param->setDefaultCoordinateSystem(eCoordinatesCanonical); // Nuke defaults to Normalized for XY and XYAbsolute!
         param->setDefault(0., 0.);
-        param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX);
         param->setDisplayRange(-100., -100., 100., 100.);
         param->setAnimates(true);
         if (page) {

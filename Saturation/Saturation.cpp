@@ -739,7 +739,6 @@ SaturationPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamSaturation);
         param->setLabel(kParamSaturationLabel);
         param->setHint(kParamSaturationHint);
-        param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(0., 4.);
         param->setDefault(1.);
         if (page) {
