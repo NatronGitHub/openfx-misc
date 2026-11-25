@@ -46,7 +46,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Image"
 #define kPluginDescription \
     "Generate an image with SMPTE color bars, in linear RGB (no alpha: 0 if the output is RGBA).\n" \
-    "The top two thirds have seven bars at Bar Intensity (0 to 1 on the slider, 0.5 by default): gray, yellow, cyan, green, magenta, red and blue. Below them, a strip of blue, magenta, cyan and gray patches, alternating with black. The bottom quarter has the -I, white, +Q and black patches and the black-level steps (PLUGE), which vanish in 8-bit output.\n" \
+    "The top two thirds have seven bars at Bar Intensity (0 to 1 on the slider, 0.5 by default): gray, yellow, cyan, green, magenta, red and blue. Below them, a strip of blue, magenta, cyan and gray patches, alternating with black. The bottom quarter has the -I, white, +Q and black patches and the black-level steps (PLUGE); in 8-bit output, the below-black step clips to black.\n" \
     "PAL removes the NTSC-specific patches: the seven bars fill the image.\n" \
     "See also: https://learn.foundry.com/nuke/content/reference_guide/image_nodes/colorbars.html"
 #define kPluginDescriptionV1 \
