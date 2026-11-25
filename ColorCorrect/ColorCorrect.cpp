@@ -43,7 +43,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "The ranges of the shadows, midtones and highlights are controlled by the curves " \
     "in the \"Ranges\" tab.\n" \
     "The Contrast adjustment works using the formula: Output = (Input/0.18)^Contrast*0.18. " \
-    "Negative values are multiplied by (0.18^(1-Contrast))^(1/Gamma) (before version 3, Contrast and Gamma left them unchanged).\n" \
+    "Negative values are multiplied by (0.18^(1-Contrast))^(1/Gamma). Gamma 0 gives 1 for positive values and keeps the negative ones, " \
+    "and a Gamma between 0 and 0.001 gives the same output as 0.001 " \
+    "(before version 3, Contrast and Gamma left the negative values unchanged, and Gamma 0 gave 0 below 1 and the largest float above 1).\n" \
     "\n" \
     "See also:\n" \
     "- https://web.archive.org/web/20220627021703/http://www.opticalenquiry.com/nuke/index.php?title=ColorCorrect\n" \
@@ -63,15 +65,15 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              colours are those of the dominant tone range (red and blue) and of the weighted tone ranges (green)
 // version 3.0: Clamp Black is off by default, so that the default node keeps negative values (#272), and
 //              Contrast and Gamma multiply negative values by (0.18^(1 - contrast))^(1 / gamma) instead of leaving
-//              them unchanged (#289);
+//              them unchanged, Gamma 0 gives 1 for positive values, and a gamma in (0, 0.001) is 0.001 (#289);
 //              version 2.2 is kept, with the former defaults and output
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 // the first major version whose Clamp Black is off by default (issue #272)
 #define kVersionClampBlackOff 3
-// the first major version where Contrast and Gamma scale the negative values (issue #289)
-#define kVersionNegativesScaled 3
+// the first major version whose Contrast and Gamma follow the tests/nuke reference outside (0, 1] (issue #289)
+#define kVersionContrastGamma 3
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -198,11 +200,13 @@ struct ColorControlGroup
     ColorControlValues offset;
 };
 
-// what Contrast and Gamma do to the negative values
-enum class NegativesEnum
+// how Contrast and Gamma treat the values outside (0, 1], and the small gammas
+enum class ContrastGammaEnum
 {
-    eUnchanged, // version 2: left unchanged
-    eScaled, // version 3: multiplied by (0.18^(1 - contrast))^(1 / gamma)
+    eVersion2, // negative values unchanged; Gamma 0 gives 0 below 1, 1 at 1, FLT_MAX above 1
+    eVersion3, // the tests/nuke reference: negative values multiplied by (0.18^(1 - contrast))^(1 / gamma),
+               // Gamma 0 gives 1 for positive values and keeps the negative ones, a gamma in (0, 0.001) is
+               // 0.001; the results are capped to the float range, and infinite or NaN values are kept
 };
 
 template<bool processR, bool processG, bool processB, bool processA>
@@ -210,20 +214,20 @@ struct RGBAPixel
 {
     double r, g, b, a;
     LuminanceMathEnum luminanceMath;
-    NegativesEnum negatives;
+    ContrastGammaEnum contrastGamma;
 
     RGBAPixel(double r_,
               double g_,
               double b_,
               double a_,
               LuminanceMathEnum luminanceMath_,
-              NegativesEnum negatives_)
+              ContrastGammaEnum contrastGamma_)
         : r(r_)
         , g(g_)
         , b(b_)
         , a(a_)
         , luminanceMath(luminanceMath_)
-        , negatives(negatives_)
+        , contrastGamma(contrastGamma_)
     {
     }
 
@@ -309,32 +313,44 @@ private:
         }
     }
 
-    // Contrast then Gamma: ((v / 0.18)^contrast * 0.18)^(1 / gamma) for v > 0. A negative value is
-    // multiplied by (0.18^(1 - contrast))^(1 / gamma), as in the tests/nuke reference (version 3), or
-    // left unchanged (version 2). Gamma 0 keeps the negative values (the tests/nuke reference: the
-    // exponent 1 / gamma is 0); a result beyond the float range is -FLT_MAX, and -inf stays -inf
+    // Contrast then Gamma: ((v / 0.18)^contrast * 0.18)^(1 / gamma) for v > 0, see ContrastGammaEnum for
+    // the other values and version 3
     double contrastGammaFunc(double v,
                              double contrast,
                              double gamma) const
     {
+        if (contrastGamma == ContrastGammaEnum::eVersion2) {
+            if (v > 0) {
+                if (contrast != 1.) {
+                    v = std::pow(v / 0.18, contrast) * 0.18;
+                }
+                // pow may underflow to 0, which Gamma keeps
+                return (v > 0 && gamma != 1.) ? gammaFunc(v, gamma) : v;
+            }
+
+            return v;
+        }
+        if ( !std::isfinite(v) || (v == 0.) ) {
+            return v;
+        }
+        // the exponent of Gamma (1 / gamma), as in the tests/nuke reference: 0 for gamma 0, at most 1000
+        const double exponent = (gamma == 0.) ? 0. : 1. / ( (gamma > 0. && gamma < kGammaMin) ? kGammaMin : gamma );
         if (v > 0) {
             if (contrast != 1.) {
-                v = std::pow(v / 0.18, contrast) * 0.18;
+                v = (std::min)( std::pow(v / 0.18, contrast) * 0.18, (double)FLT_MAX );
             }
-            // pow may underflow to 0, which Gamma keeps
-            return (v > 0 && gamma != 1.) ? gammaFunc(v, gamma) : v;
+
+            // pow of a positive value is never NaN; pow(0, 0) (contrast underflow, gamma 0) is 1
+            return (std::min)( std::pow(v, exponent), (double)FLT_MAX );
         }
-        if ( (negatives == NegativesEnum::eUnchanged) || !std::isfinite(v) ) {
-            return v;
-        }
-        if (gamma == 0.) {
-            return v;
-        }
-        // the factor is positive, maybe +inf (capped to FLT_MAX), so that the product is in [-inf, 0]
-        const double factor = (std::min)( std::pow( std::pow(0.18, 1. - contrast), 1. / gamma ), (double)FLT_MAX );
+        // v < 0: the factor is positive, maybe +inf (capped to FLT_MAX), so that the product is in [-inf, 0]
+        const double factor = (std::min)( std::pow(std::pow(0.18, 1. - contrast), exponent), (double)FLT_MAX );
 
         return (std::max)( v * factor, -(double)FLT_MAX );
     }
+
+    // the smallest gamma (version 3): smaller ones give the same output, as in the tests/nuke reference
+    static constexpr double kGammaMin = 0.001;
 
     void applyGain(const ColorControlValues &c)
     {
@@ -430,7 +446,7 @@ public:
         , _luminanceMath(eLuminanceMathRec709)
         , _mixLuminance(0.)
         , _test(false)
-        , _negatives(NegativesEnum::eScaled)
+        , _contrastGamma(ContrastGammaEnum::eVersion3)
     {
     }
 
@@ -455,7 +471,7 @@ public:
                                bool processA,
                                double mixLuminance,
                                bool test,
-                               NegativesEnum negatives)
+                               ContrastGammaEnum contrastGamma)
     {
         _masterValues = master;
         _shadowValues = shadow;
@@ -471,7 +487,7 @@ public:
         _processA = processA;
         _mixLuminance = mixLuminance;
         _test = test;
-        _negatives = negatives;
+        _contrastGamma = contrastGamma;
     }
 
 
@@ -500,7 +516,7 @@ protected:
     LuminanceMathEnum _luminanceMath;
     double _mixLuminance; // 0: the corrected luminance, 1: the input luminance
     bool _test; // show the tone ranges instead of the corrected colors
-    NegativesEnum _negatives;
+    ContrastGammaEnum _contrastGamma;
 };
 
 // floats don't clamp except if _clampBlack or _clampWhite
@@ -635,7 +651,7 @@ private:
         double h_scale = interpolate(1, l);
         double m_scale = 1.f - s_scale - h_scale;
 
-        RGBAPixel<processR, processG, processB, processA> p(*r, *g, *b, *a, _luminanceMath, _negatives);
+        RGBAPixel<processR, processG, processB, processA> p(*r, *g, *b, *a, _luminanceMath, _contrastGamma);
         p.applySMH(_shadowValues, s_scale,
                    _midtoneValues, m_scale,
                    _highlightsValues, h_scale,
@@ -808,7 +824,7 @@ public:
                        unsigned int majorVersion)
         : ImageEffect(handle)
         , _supportsParametricParameter(supportsParametricParameter)
-        , _negatives(majorVersion >= kVersionNegativesScaled ? NegativesEnum::eScaled : NegativesEnum::eUnchanged)
+        , _contrastGamma(majorVersion >= kVersionContrastGamma ? ContrastGammaEnum::eVersion3 : ContrastGammaEnum::eVersion2)
         , _dstClip(NULL)
         , _srcClip(NULL)
         , _maskClip(NULL)
@@ -926,7 +942,7 @@ private:
 
 private:
     bool _supportsParametricParameter;
-    const NegativesEnum _negatives;
+    const ContrastGammaEnum _contrastGamma;
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
     Clip *_srcClip;
@@ -1053,7 +1069,7 @@ ColorCorrectPlugin::setupAndProcess(ColorCorrecterBase &processor,
     bool test = _test->getValueAtTime(time);
 
     processor.setColorControlValues(masterValues, shadowValues, midtoneValues, highlightValues, luminanceMath, premult, premultChannel, mix,
-                                    processR, processG, processB, processA, mixLuminance, test, _negatives);
+                                    processR, processG, processB, processA, mixLuminance, test, _contrastGamma);
     processor.process();
 } // ColorCorrectPlugin::setupAndProcess
 

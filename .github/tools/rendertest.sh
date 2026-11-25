@@ -689,6 +689,14 @@ tests=(
     "ColorCorrect contrast gamma negatives|net.sf.openfx.ColorCorrectPlugin|filter|float|tol=1e-3+mean=-7.716049,1.929012,9.765625,1||-i Source=solid:-0.25,0.5,0.75,1 -i Mask=none MasterContrast=2,2,2,2 MasterGamma=0.5,0.5,0.5,0.5"
     "ColorCorrect contrast 2 gamma 0 negatives|net.sf.openfx.ColorCorrectPlugin|filter|float|mean=-2,-2,-2,1||-i Source=solid:-2,-2,-2,1 -i Mask=none MasterContrast=2,2,2,2 MasterGamma=0,0,0,0"
     "ColorCorrect contrast 2 gamma 0.01 negatives|net.sf.openfx.ColorCorrectPlugin|filter|float|tol=1e33+mean=-3.402823e38,-3.402823e38,-3.402823e38,1||-i Source=solid:-2,-2,-2,1 -i Mask=none MasterContrast=2,2,2,2 MasterGamma=0.01,0.01,0.01,0.01 --frames 0 --window 0,0,1,1"
+    # ColorCorrect 3 Gamma on positive values (issue #289): Gamma 0 gives 1 (0 stays 0); a gamma below 0.001
+    # is 0.001: 0.999^1000, 1, 1.001^1000; beyond the float range, FLT_MAX (not inf). ColorCorrect 2: Gamma 0
+    # gives 0 below 1 and FLT_MAX above 1
+    "ColorCorrect gamma 0 positives|net.sf.openfx.ColorCorrectPlugin|filter|float|mean=0,1,1,1||-i Source=solid:0,0.5,2,1 -i Mask=none MasterGamma=0,0,0,0"
+    "ColorCorrect 2 gamma 0 positives|net.sf.openfx.ColorCorrectPlugin|filter|float|mean=0,0,1,1||-m 2 -i Source=solid:0,0.5,1,1 -i Mask=none MasterGamma=0,0,0,0 clampBlack=0"
+    "ColorCorrect 2 gamma 0 above 1|net.sf.openfx.ColorCorrectPlugin|filter|float|tol=1e33+mean=3.402823e38,3.402823e38,3.402823e38,1||-m 2 -i Source=solid:2,2,2,1 -i Mask=none MasterGamma=0,0,0,0 clampBlack=0 --frames 0 --window 0,0,1,1"
+    "ColorCorrect gamma 1e-6|net.sf.openfx.ColorCorrectPlugin|filter|float|tol=2e-3+mean=0.367695,1,2.716924,1||-i Source=solid:0.999,1,1.001,1 -i Mask=none MasterGamma=1e-6,1e-6,1e-6,1e-6"
+    "ColorCorrect gamma 0.001 above 1|net.sf.openfx.ColorCorrectPlugin|filter|float|tol=1e33+mean=3.402823e38,3.402823e38,3.402823e38,1||-i Source=solid:2,2,2,1 -i Mask=none MasterGamma=0.001,0.001,0.001,0.001 --frames 0 --window 0,0,1,1"
     "ColorCorrect 2 contrast negatives|net.sf.openfx.ColorCorrectPlugin|filter|float|tol=1e-4+mean=-0.25,1.388889,3.125,1||-m 2 -i Source=solid:-0.25,0.5,0.75,1 -i Mask=none MasterContrast=2,2,2,2 clampBlack=0"
     # ColorMatrix Invert (issue #291, off by default) applies the inverse matrix: with R' = R + G and
     # B' = 2 B, the inverse gives R = R' - G' = 0.75 - 0.5 and B = B' / 2 = 0.25 / 2 (without

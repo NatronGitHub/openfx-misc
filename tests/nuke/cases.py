@@ -580,7 +580,20 @@ CASES += [
          (ofx_id("ColorCorrectPlugin"), {"MasterContrast": rgba(.5),
                                          "MasterGamma": rgba(.8)}),
          input="ramp", tolerance=1e-4),
-    # Gamma 0 keeps the negative values (positive values differ: #289).
+    # Gamma 0 gives 1 for positive values and keeps the negative ones; a
+    # gamma below 0.001 is 0.001 (compared up to 1: beyond, the outputs
+    # are infinite in Nuke, FLT_MAX in openfx-misc).
+    case("ColorCorrect gamma 0, greys", ("ColorCorrect", {"gamma": 0.}),
+         (ofx_id("ColorCorrectPlugin"), {"MasterGamma": rgba(0.)}),
+         input="grey_ramp", tolerance=1e-4),
+    case("ColorCorrect gamma 1e-6, greys up to 1",
+         ("ColorCorrect", {"gamma": 1e-6}),
+         (ofx_id("ColorCorrectPlugin"), {"MasterGamma": rgba(1e-6)}),
+         input="grey_ramp", region=(0, 0, WIDTH, 24), tolerance=1e-3),
+    case("ColorCorrect gamma 0.01, greys up to 1",
+         ("ColorCorrect", {"gamma": .01}),
+         (ofx_id("ColorCorrectPlugin"), {"MasterGamma": rgba(.01)}),
+         input="grey_ramp", region=(0, 0, WIDTH, 24), tolerance=1e-4),
     case("ColorCorrect contrast 2, gamma 0, negative red",
          ("ColorCorrect", {"contrast": 2., "gamma": 0.}),
          (ofx_id("ColorCorrectPlugin"), {"MasterContrast": rgba(2.),
