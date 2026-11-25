@@ -150,7 +150,7 @@ jobs:
       - name: Show tools
         run: |
           echo "PATH=$PATH"
-          echo "MACOSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET:-(unset: CMakeLists.txt's 14.0)}"
+          echo "MACOSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET:-(unset: CMakeLists.txt default 14.0)}"
           command -v c++ gsed cmake
           c++ --version
           cmake --version
