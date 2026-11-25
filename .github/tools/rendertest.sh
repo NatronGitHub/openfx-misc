@@ -884,13 +884,16 @@ tests=(
     "Shuffle 2 filter|net.sf.openfx.ShufflePlugin|filter|float|mean=0.75,0.5,0.25,1||-m 2 -i Source=solid:0.25,0.5,0.75,1 outputR=2 outputB=0"
     "Shuffle filter comps|net.sf.openfx.ShufflePlugin|filter|*|comps=RGBA+mean=0.75,0.5,0.25,1||-i Source=solid:0.25,0.5,0.75,1 outputComponents=1 outputR=8 outputB=6"
     # a multiplane host (hostDemo --multiplane, openfx#331; the menus list the channels by label).
+    # hostDemo is a multiplane host without Natron's extension (kFnOfxImageEffectPropMultiPlanar
+    # only): the channel menus list all the planes of A, then of B, so the default indices of R, G
+    # and B are not B.Color.R, G, B (6 is A.DisparityRight.X) and the tests set them by label.
     # R, G, B from B's color plane and A from another plane (B's backward motion vectors, whose U
     # is the first value of the solid) is not an identity of B: the alpha is that channel (#268)
-    "Shuffle multiplane A from another plane|net.sf.openfx.ShufflePlugin|general|float|notidentity+mean=0.1,0.2,0.3,0.25||--multiplane -i A=solid:0.5,0.6,0.7,0.8 -i B=solid:0.1,0.2,0.3,0.4 -i B@BackMotionVector=solid:0.25,0.75,0,0 -s outputA=B.Backward.U"
+    "Shuffle multiplane A from another plane|net.sf.openfx.ShufflePlugin|general|float|notidentity+mean=0.1,0.2,0.3,0.25||--multiplane -i A=solid:0.5,0.6,0.7,0.8 -i B=solid:0.1,0.2,0.3,0.4 -i B@BackMotionVector=solid:0.25,0.75,0,0 -s outputR=B.Color.R -s outputG=B.Color.G -s outputB=B.Color.B -s outputA=B.Backward.U"
     # R, G, B from an RGB input (B, #rgb: openfx#330) and A from an Alpha-only input (A, #alpha:
     # its alpha in all four channels): the output alpha is that of A, not 1 (#375; multiplane:
     # the identity test; without the multiplane suites, outputA=3 is A.a)
-    "Shuffle multiplane alpha-only A|net.sf.openfx.ShufflePlugin|general|float|notidentity+comps=RGBA+mean=0.1,0.2,0.3,0.4||--multiplane -i A=solid:0.4,0.4,0.4,0.4#alpha -i B=solid:0.1,0.2,0.3,1#rgb -s outputA=A.Color.A"
+    "Shuffle multiplane alpha-only A|net.sf.openfx.ShufflePlugin|general|float|notidentity+comps=RGBA+mean=0.1,0.2,0.3,0.4||--multiplane -i A=solid:0.4,0.4,0.4,0.4#alpha -i B=solid:0.1,0.2,0.3,1#rgb -s outputR=B.Color.R -s outputG=B.Color.G -s outputB=B.Color.B -s outputA=A.Color.A"
     "Shuffle alpha-only A|net.sf.openfx.ShufflePlugin|general|*|notidentity+comps=RGBA+mean=0.1,0.2,0.3,0.4||-i A=solid:0.4,0.4,0.4,0.4#alpha -i B=solid:0.1,0.2,0.3,1#rgb outputA=3"
     # isIdentity is false where the render does not copy the input (a host would pass the input
     # through instead of rendering). KeyMix: out of A, but in the mask, the output is
