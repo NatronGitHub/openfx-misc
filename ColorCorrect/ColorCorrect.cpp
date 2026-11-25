@@ -42,7 +42,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDescription "Adjusts the saturation, contrast, gamma, gain and offset of an image.\n" \
     "The ranges of the shadows, midtones and highlights are controlled by the curves " \
     "in the \"Ranges\" tab.\n" \
-    "The Contrast adjustment works using the formula: Output = (Input/0.18)^Contrast*0.18.\n" \
+    "The Contrast adjustment works using the formula: Output = (Input/0.18)^Contrast*0.18. " \
+    "Negative values are multiplied by (0.18^(1-Contrast))^(1/Gamma) (before version 3, Contrast and Gamma left them unchanged).\n" \
     "\n" \
     "See also:\n" \
     "- https://web.archive.org/web/20220627021703/http://www.opticalenquiry.com/nuke/index.php?title=ColorCorrect\n" \
@@ -57,9 +58,15 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              and the results of a small gamma are capped to FLT_MAX;
 //              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79);
 //              a NaN value no longer converts NaN to int for the curve lookup (undefined behaviour) (#178);
-//              add the Mix Luminance and Test parameters (default 0 and off: the output is unchanged) (#289)
-#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 2 // Increment this when you have fixed a bug or made it faster.
+//              add the Mix Luminance and Test parameters (default 0 and off: the output is unchanged) (#289);
+//              (2.2 is unreleased, fixed in place, #289) Mix Luminance works on sRGB-encoded values, and the Test
+//              colours are those of the dominant tone range (red and blue) and of the weighted tone ranges (green)
+// version 3.0: Clamp Black is off by default, so that the default node keeps negative values (#272), and
+//              Contrast and Gamma multiply negative values by (0.18^(1 - contrast))^(1 / gamma) instead of leaving
+//              them unchanged (#289);
+//              version 2.2 is kept, with the former defaults and output
+#define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -133,14 +140,16 @@ static const std::string kParamOffset = std::string("Offset");
 #define kParamMixLuminance "mixLuminance"
 #define kParamMixLuminanceLabel "Mix Luminance"
 #define kParamMixLuminanceHint "How much of the luminance of the input is kept after the color correction. " \
-    "0 keeps the luminance of the corrected image, 1 gives the luminance of the input, by adding the same value to the corrected red, green and blue channels. " \
-    "The luminance is computed with the Luminance Math formula."
+    "0 keeps the luminance of the corrected image, 1 gives the luminance of the input. " \
+    "The luminance is computed with the Luminance Math formula from the sRGB-encoded red, green and blue channels, " \
+    "and the same value is added to the three sRGB-encoded channels of the corrected image."
 
 #define kParamTest "test"
 #define kParamTestLabel "Test"
-#define kParamTestHint "Replace the red, green and blue channels of the output with the tone range of each pixel: " \
-    "black for the shadows, gray (0.5) for the midtones and white for the highlights. " \
-    "A mixture of shadows and midtones is green, and a mixture of midtones and highlights is magenta. " \
+#define kParamTestHint "Replace the red, green and blue channels of the output with the tone range of each pixel. " \
+    "Each tone range has a value: 0 for the shadows, 0.25 for the midtones and 1 for the highlights. " \
+    "Red and blue are the value of the tone range with the largest weight, and green is the sum of the values times their weights, " \
+    "so that a mixture of two tone ranges is green or magenta. " \
     "The tone ranges are set by the curves of the Ranges tab, and computed from the luminance of the input."
 
 struct ColorControlValues
@@ -189,17 +198,20 @@ struct RGBAPixel
 {
     double r, g, b, a;
     LuminanceMathEnum luminanceMath;
+    bool contrastNegatives; // Contrast and Gamma multiply negative values (version 3), or keep them
 
     RGBAPixel(double r_,
               double g_,
               double b_,
               double a_,
-              LuminanceMathEnum luminanceMath_)
+              LuminanceMathEnum luminanceMath_,
+              bool contrastNegatives_)
         : r(r_)
         , g(g_)
         , b(b_)
         , a(a_)
         , luminanceMath(luminanceMath_)
+        , contrastNegatives(contrastNegatives_)
     {
     }
 
@@ -255,7 +267,8 @@ private:
         }
     }
 
-    void applyContrast(const ColorControlValues &c)
+    void applyContrastGamma(const ColorControlValues &c,
+                            const ColorControlValues &gm)
     {
         // See https://compositormathematic.wordpress.com/2013/07/06/gamma-contrast/
         // 0.18 is the value that a (maybe) correctly exposed grey card is in sRGB
@@ -270,18 +283,39 @@ private:
         // like 12%. It would also seem that the people making grey cards aren’t
         // talking to the people making light meters.
 
-        if (processR && (r > 0) && c.r != 1.) {
-            r = std::pow(r / 0.18, c.r) * 0.18;
+        if ( processR && (c.r != 1. || gm.r != 1.) ) {
+            r = contrastGammaFunc(r, c.r, gm.r);
         }
-        if (processG && (g > 0) && c.g != 1.) {
-            g = std::pow(g / 0.18, c.g) * 0.18;
+        if ( processG && (c.g != 1. || gm.g != 1.) ) {
+            g = contrastGammaFunc(g, c.g, gm.g);
         }
-        if (processB && (b > 0) && c.b != 1.) {
-            b = std::pow(b / 0.18, c.b) * 0.18;
+        if ( processB && (c.b != 1. || gm.b != 1.) ) {
+            b = contrastGammaFunc(b, c.b, gm.b);
         }
-        if (processA && (a > 0) && c.a != 1.) {
-            a = std::pow(a / 0.18, c.a) * 0.18;
+        if ( processA && (c.a != 1. || gm.a != 1.) ) {
+            a = contrastGammaFunc(a, c.a, gm.a);
         }
+    }
+
+    // Contrast then Gamma: ((v / 0.18)^contrast * 0.18)^(1 / gamma) for v > 0. A negative value is
+    // multiplied by (0.18^(1 - contrast))^(1 / gamma), as in the tests/nuke reference (version 3), or
+    // left unchanged (version 2)
+    double contrastGammaFunc(double v,
+                             double contrast,
+                             double gamma) const
+    {
+        if (v > 0) {
+            if (contrast != 1.) {
+                v = std::pow(v / 0.18, contrast) * 0.18;
+            }
+            // pow may underflow to 0, which Gamma keeps
+            return (v > 0 && gamma != 1.) ? gammaFunc(v, gamma) : v;
+        }
+        if (!contrastNegatives) {
+            return v;
+        }
+
+        return v * gammaFunc(std::pow(0.18, 1. - contrast), gamma);
     }
 
     void applyGain(const ColorControlValues &c)
@@ -316,22 +350,6 @@ private:
         return (std::min)( std::pow(v, 1. / gamma), (double)FLT_MAX );
     }
 
-    void applyGamma(const ColorControlValues &c)
-    {
-        if ( processR && (r > 0) && c.r != 1. ) {
-            r = gammaFunc(r, c.r);
-        }
-        if ( processG && (g > 0) && c.g != 1. ) {
-            g = gammaFunc(g, c.g);
-        }
-        if ( processB && (b > 0) && c.b != 1. ) {
-            b = gammaFunc(b, c.b);
-        }
-        if ( processA && (a > 0) && c.a != 1. ) {
-            a = gammaFunc(a, c.a);
-        }
-    }
-
     void applyOffset(const ColorControlValues &c)
     {
         if (processR && c.r != 0.) {
@@ -351,8 +369,7 @@ private:
     void applyGroup(const ColorControlGroup& group)
     {
         applySaturation(group.saturation);
-        applyContrast(group.contrast);
-        applyGamma(group.gamma);
+        applyContrastGamma(group.contrast, group.gamma);
         applyGain(group.gain);
         applyOffset(group.offset);
     }
@@ -395,6 +412,7 @@ public:
         , _luminanceMath(eLuminanceMathRec709)
         , _mixLuminance(0.)
         , _test(false)
+        , _contrastNegatives(true)
     {
     }
 
@@ -418,7 +436,8 @@ public:
                                bool processB,
                                bool processA,
                                double mixLuminance,
-                               bool test)
+                               bool test,
+                               bool contrastNegatives)
     {
         _masterValues = master;
         _shadowValues = shadow;
@@ -434,6 +453,7 @@ public:
         _processA = processA;
         _mixLuminance = mixLuminance;
         _test = test;
+        _contrastNegatives = contrastNegatives;
     }
 
 
@@ -462,6 +482,7 @@ protected:
     LuminanceMathEnum _luminanceMath;
     double _mixLuminance; // 0: the corrected luminance, 1: the input luminance
     bool _test; // show the tone ranges instead of the corrected colors
+    bool _contrastNegatives; // see RGBAPixel::contrastNegatives
 };
 
 // floats don't clamp except if _clampBlack or _clampWhite
@@ -596,20 +617,23 @@ private:
         double h_scale = interpolate(1, l);
         double m_scale = 1.f - s_scale - h_scale;
 
-        RGBAPixel<processR, processG, processB, processA> p(*r, *g, *b, *a, _luminanceMath);
+        RGBAPixel<processR, processG, processB, processA> p(*r, *g, *b, *a, _luminanceMath, _contrastNegatives);
         p.applySMH(_shadowValues, s_scale,
                    _midtoneValues, m_scale,
                    _highlightsValues, h_scale,
                    _masterValues);
         if (_mixLuminance != 0.) {
-            // shift r, g and b by the same value: all the Luminance Math formulas are then shifted
-            // by that value (their weights sum to 1, or the maximum), so that 1 gives the input luminance
-            // the input luminance in double (l is the float of the tone range lookup)
-            const double lIn = luminance(*r, *g, *b, _luminanceMath);
-            const double shift = _mixLuminance * ( lIn - luminance(p.r, p.g, p.b, _luminanceMath) );
-            p.r += shift;
-            p.g += shift;
-            p.b += shift;
+            // shift the sRGB-encoded r, g and b by the same value, as in the tests/nuke reference: all the
+            // Luminance Math formulas of the encoded values are then shifted by that value (their weights
+            // sum to 1, or the maximum), so that 1 gives the luminance of the encoded input
+            const double lIn = luminance( toSRGB(*r), toSRGB(*g), toSRGB(*b), _luminanceMath );
+            const double eR = toSRGB(p.r);
+            const double eG = toSRGB(p.g);
+            const double eB = toSRGB(p.b);
+            const double shift = _mixLuminance * ( lIn - luminance(eR, eG, eB, _luminanceMath) );
+            p.r = fromSRGB(eR + shift);
+            p.g = fromSRGB(eG + shift);
+            p.b = fromSRGB(eB + shift);
         }
         if (_test) {
             testColor(s_scale, h_scale, &p.r, &p.g, &p.b);
@@ -628,8 +652,9 @@ private:
         }
     }
 
-    // the Test color of the tone range weights: black (shadows), gray (midtones) and white
-    // (highlights), green where shadows and midtones mix, magenta where midtones and highlights mix
+    // the Test color of the tone range weights, as in the tests/nuke reference: each range has a value,
+    // 0 (shadows), 0.25 (midtones) and 1 (highlights); red and blue are the value of the range with the
+    // largest weight, green is the sum of the values times the weights
     static void testColor(double s_scale,
                           double h_scale,
                           double *r,
@@ -639,11 +664,21 @@ private:
         const double s = ofxsClamp(s_scale, 0, 1);
         const double h = ofxsClamp(h_scale, 0, 1);
         const double m = ofxsClamp(1. - s - h, 0, 1);
-        const double gray = 0.5 * m + h;
-        const double sm = 4. * s * m; // 1 at s = m = 0.5
-        const double mh = 4. * m * h; // 1 at m = h = 0.5
-        *r = *b = ofxsClamp(gray + 0.25 * (mh - sm), 0, 1);
-        *g = ofxsClamp(gray + 0.25 * (sm - mh), 0, 1);
+        *r = *b = (h >= m && h >= s) ? 1. : (m >= s ? 0.25 : 0.);
+        *g = 0.25 * m + h;
+    }
+
+    // the sRGB encoding (IEC 61966-2-1), whose linear part also encodes the negative values
+    static double toSRGB(double v)
+    {
+        return v <= 0.0031308 ? 12.92 * v : 1.055 * std::pow(v, 1. / 2.4) - 0.055;
+    }
+
+    // the sRGB decoding, the inverse of toSRGB; a value beyond the float range is the largest float, as
+    // in gammaFunc
+    static double fromSRGB(double v)
+    {
+        return v <= 0.04045 ? v / 12.92 : (std::min)( std::pow( (v + 0.055) / 1.055, 2.4 ), (double)FLT_MAX );
     }
 
     double lookupTableValue(int curve, double parametricPos) const
@@ -746,9 +781,11 @@ public:
 
     /** @brief ctor */
     ColorCorrectPlugin(OfxImageEffectHandle handle,
-                       bool supportsParametricParameter)
+                       bool supportsParametricParameter,
+                       unsigned int majorVersion)
         : ImageEffect(handle)
         , _supportsParametricParameter(supportsParametricParameter)
+        , _contrastNegatives(majorVersion >= 3)
         , _dstClip(NULL)
         , _srcClip(NULL)
         , _maskClip(NULL)
@@ -866,6 +903,7 @@ private:
 
 private:
     bool _supportsParametricParameter;
+    const bool _contrastNegatives; // see RGBAPixel::contrastNegatives
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
     Clip *_srcClip;
@@ -992,7 +1030,7 @@ ColorCorrectPlugin::setupAndProcess(ColorCorrecterBase &processor,
     bool test = _test->getValueAtTime(time);
 
     processor.setColorControlValues(masterValues, shadowValues, midtoneValues, highlightValues, luminanceMath, premult, premultChannel, mix,
-                                    processR, processG, processB, processA, mixLuminance, test);
+                                    processR, processG, processB, processA, mixLuminance, test, _contrastNegatives);
     processor.process();
 } // ColorCorrectPlugin::setupAndProcess
 
@@ -1176,15 +1214,19 @@ ColorCorrectPlugin::changedParam(const InstanceChangedArgs &args,
     }
 }
 
-mDeclarePluginFactory(ColorCorrectPluginFactory, {ofxsThreadSuiteCheck();}, {});
+mDeclarePluginFactoryVersioned(ColorCorrectPluginFactory, {ofxsThreadSuiteCheck();}, {});
+template<unsigned int majorVersion>
 void
-ColorCorrectPluginFactory::describe(ImageEffectDescriptor &desc)
+ColorCorrectPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
     //std::cout << "describe!\n";
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsObsolete(true);
+    }
 
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
@@ -1273,9 +1315,10 @@ defineColorGroup(const std::string& groupName,
     defineRGBAScaleParam(desc, groupName + kParamOffset,     kParamOffset,     hint, group, page, 0, -1, 1);
 }
 
+template<unsigned int majorVersion>
 void
-ColorCorrectPluginFactory::describeInContext(ImageEffectDescriptor &desc,
-                                             ContextEnum context)
+ColorCorrectPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
+                                                           ContextEnum context)
 {
     //std::cout << "describeInContext!\n";
     // Source clip only in the filter context
@@ -1446,7 +1489,7 @@ ColorCorrectPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampBlack);
         param->setLabel(kParamClampBlackLabel);
         param->setHint(kParamClampBlackHint);
-        param->setDefault(true);
+        param->setDefault(majorVersion < 3); // off from version 3 (issue #272)
         param->setAnimates(true);
         param->setLayoutHint(eLayoutHintNoNewLine, 0);
         if (page) {
@@ -1492,19 +1535,23 @@ ColorCorrectPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
 } // ColorCorrectPluginFactory::describeInContext
 
+template<unsigned int majorVersion>
 ImageEffect*
-ColorCorrectPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                          ContextEnum /*context*/)
+ColorCorrectPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
+                                                        ContextEnum /*context*/)
 {
     const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
     const bool supportsParametricParameter = ( hostDescription.supportsParametricParameter &&
                                                !(hostDescription.hostName == "uk.co.thefoundry.nuke" &&
                                                  8 <= hostDescription.versionMajor && hostDescription.versionMajor <= 11) );  // Nuke 8-11.1 are known to *not* support Parametric
 
-    return new ColorCorrectPlugin(handle, supportsParametricParameter);
+    return new ColorCorrectPlugin(handle, supportsParametricParameter, majorVersion);
 }
 
-static ColorCorrectPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static ColorCorrectPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
+// version 2: Clamp Black is on by default, and Contrast leaves negative values unchanged
+static ColorCorrectPluginFactory<2> p2(kPluginIdentifier, 2);
 mRegisterPluginFactoryInstance(p)
+mRegisterPluginFactoryInstance(p2)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

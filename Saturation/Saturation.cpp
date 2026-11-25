@@ -56,6 +56,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              for a non-RGBA source, as in the other plug-ins (#240)
 //              (versions 2.1 and 3.0) the saturation can be negative (complementary colours): its minimum
 //              was 0, although the render handles a negative value (issue #292)
+//              (3.0 is unreleased, changed in place, issue #272) Clamp Black is off by default (on in version 2),
+//              so that the default node keeps negative values
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -768,7 +770,7 @@ SaturationPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampBlack);
         param->setLabel(kParamClampBlackLabel);
         param->setHint(kParamClampBlackHint);
-        param->setDefault(true);
+        param->setDefault(majorVersion < 3); // off from version 3 (issue #272)
         param->setAnimates(true);
         param->setLayoutHint(eLayoutHintNoNewLine, 0);
         if (page) {

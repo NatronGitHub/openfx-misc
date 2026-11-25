@@ -257,6 +257,14 @@ def nuke_script(case, result_path):
         "    for frame in %r:" % (case_frames(case),),
         "        nuke.frame(frame)",  # sample()'s frame argument is ignored
         "        b = out.bbox()",
+    ] + ([
+        # a first pass, whose values are discarded: the first samples of
+        # some nodes give different values
+        "        for x, y in points:",
+        "            for ch in ('rgba.red', 'rgba.green', 'rgba.blue',"
+        " 'rgba.alpha'):",
+        "                out.sample(ch, x + 0.5, y + 0.5)",
+    ] if case.get("nuke_warmup") else []) + [
         "        bx, by, bw, bh = b.x(), b.y(), b.w(), b.h()",
         "        values = []",
         "        for x, y in points:",
