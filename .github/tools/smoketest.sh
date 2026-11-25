@@ -57,6 +57,10 @@
 # default). A plug-in fails if:
 # - hostDemo --describe fails (load, describe or describeInContext), or the
 #   plug-in supports neither the filter nor the general context;
+# - a describe-time string (the plug-in's label or grouping, a clip's label or hint, a
+#   parameter's label, hint or choice options) has a percent sign: a host may pass it
+#   to a printf-style function (issue #66; .github/tools/check-percent-strings.py
+#   checks the string literals of the sources);
 # - in the filter context, the Output clip does not support every component
 #   that the Source clip supports (the spec says that Output always has the
 #   components of Source there), or, in a filter-context render, the Output components
@@ -491,6 +495,21 @@ for line in open(os.path.join(work, "plugins.txt")):
         continue
     contexts = desc["contexts"]
     generator = "OfxImageEffectContextGenerator" in contexts
+    # no percent sign in the describe-time strings (issue #66: a host may use them as printf formats)
+    percent = []
+    for key in ("label", "grouping"):
+        if "%" in str((desc.get("plugin") or {}).get(key) or ""):
+            percent.append("plug-in " + key)
+    for c in contexts.values():
+        for kind, key, fields in (("clip", "clips", ("label", "hint")),
+                                  ("param", "params", ("label", "hint", "choiceOptions"))):
+            for item in c.get(key) or []:
+                for field in fields:
+                    if "%" in json.dumps(item.get(field) or ""):
+                        percent.append("%s %s %s" % (kind, item.get("name"), field))
+    if percent:
+        print("FAIL|%s|%s||percent sign in describe-time strings (issue #66): %s"
+              % (tag, pid, ", ".join(sorted(set(percent)))), file=sys.stderr)
     # OPENGL: described with --opengl-describe; not rendered where it needs OpenGL
     gl_reason = opengl.get(pid)
     gl_only = False

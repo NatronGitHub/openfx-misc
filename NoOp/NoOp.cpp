@@ -94,7 +94,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamHostInfoLabel "Host Info..."
 #define kParamHostInfoHint "Display what the OpenFX host supports (host name and version, properties, suites), " \
     "in the format of openfx-misc's README-hosts.txt. The same text is also saved to OFXHostInfo-<hostName>.txt " \
-    "in the temporary directory (TMPDIR or /tmp, or %TEMP% on Windows)."
+    "in the temporary directory (TMPDIR or /tmp, or the TEMP folder on Windows)."
 
 #define kParamForceCopy "forceCopy"
 #define kParamForceCopyLabel "Force Copy"
@@ -994,7 +994,7 @@ saveHostInfo(const std::string& hostName,
         return std::string();
     }
 
-    return "%TEMP%\\" + fileName;
+    return fileName + " in the TEMP folder"; // no percent sign in messages (#66)
 #else
     const char* dir = std::getenv("TMPDIR");
     std::string path = (dir && *dir) ? dir : "/tmp";

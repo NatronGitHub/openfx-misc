@@ -55,8 +55,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 // History:
 // version 1.0: initial version
+// version 1.1: no Paint context, which mandates a Brush clip that this effect does not have (#66)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -441,7 +442,8 @@ ThresholdPluginFactory::describe(ImageEffectDescriptor &desc)
 
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
-    desc.addSupportedContext(eContextPaint);
+    // not the Paint context: it mandates a "Brush" clip (ofxImageEffectContexts.rst), and this effect
+    // has no mask (#66)
     desc.addSupportedBitDepth(eBitDepthUByte);
     desc.addSupportedBitDepth(eBitDepthUShort);
     desc.addSupportedBitDepth(eBitDepthFloat);

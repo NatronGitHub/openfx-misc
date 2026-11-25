@@ -179,6 +179,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libglu1-mesa-dev libgl-dev libexpat1-dev cmake ninja-build
+      - name: Check string literals (no percent sign)
+        # a host may pass the plug-ins' strings to a printf-style function (issue #66)
+        run: python3 .github/tools/check-percent-strings.py
       - name: Build (release)
         # OFX_BUILD_HOSTDEMO: openfx's hostDemo, in install/bin, for the render tests
         run: |

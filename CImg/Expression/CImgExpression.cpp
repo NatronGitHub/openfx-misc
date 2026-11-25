@@ -61,7 +61,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "\n" \
     "'0.5*(j(1)-j(-1))' will estimate the X-derivative of an image with a classical finite difference scheme.\n" \
     "\n" \
-    "'if(x%10==0,1,i)' will draw blank vertical lines on every 10th column of an image.\n" \
+    "'if(int(x/10)*10==x,1,i)' will draw blank vertical lines on every 10th column of an image.\n" \
     "\n" \
     "Press the 'Help' button for more documentation or read the expression documentation at http://gmic.eu/reference.shtml#section9\n" \
     "\n" \
@@ -84,15 +84,15 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "\n" \
     "- '`j(sin(y/100/K+T/10)*20*K,sin(x/100/K+T/10)*20*K)`' distorts the image with time-varying waves.\n" \
     "- '`0.5*(j(1)-j(-1))`' estimates the X-derivative of an image with a classical finite difference scheme.\n" \
-    "- '`if(x%10==0,1,i)`' draws blank vertical lines on every 10th column of an image.\n" \
+    "- '`if(int(x/10)*10==x,1,i)`' draws blank vertical lines on every 10th column of an image.\n" \
     "- '`sqrt(zr=-1.2+2.4*x/w;zi=-1.2+2.4*y/h;for(i=0,zr*zr+zi*zi<=4&&i<256,t=zr*zr-zi*zi+0.4;zi=2*zr*zi+0.2;zr=t; i=i+1))/255`' draws the Mandelbrot fractal (give it a 1024x1024 image as input).\n" \
     "\n" \
     "### Expression language\n" \
     "\n" \
     "- The expression is evaluated for each pixel of the selected images.\n" \
     "- The mathematical parser understands the following set of functions, operators and variables:\n" \
-    "    + __Usual operators:__ `||` (logical or), `&&` (logical and), `|` (bitwise or), `&` (bitwise and), `!=`, `==`, `<=`, `>=`, `<`, `>`, `<<` (left bitwise shift), `>>` (right bitwise shift), `-`, `+`, `*`, `/`, `%` (modulo), `^` (power), `!` (logical not), `~` (bitwise not),\n" \
-    "       `++`, `--`, `+=`, `-=`, `*=`, `/=`, `%=`, `&=`, `|=`, `^=`, `>>=`, `<<=` (in-place operators).\n" \
+    "    + __Usual operators:__ `||` (logical or), `&&` (logical and), `|` (bitwise or), `&` (bitwise and), `!=`, `==`, `<=`, `>=`, `<`, `>`, `<<` (left bitwise shift), `>>` (right bitwise shift), `-`, `+`, `*`, `/`, the percent sign (modulo), `^` (power), `!` (logical not), `~` (bitwise not),\n" \
+    "       `++`, `--`, `+=`, `-=`, `*=`, `/=`, the percent sign followed by `=`, `&=`, `|=`, `^=`, `>>=`, `<<=` (in-place operators).\n" \
     "    + __Usual math functions:__ `abs()`, `acos()`, `arg()`, `argkth()`, `argmax()`, `argmin()`, `asin()`, `atan()`, `atan2()`, `avg()`, `bool()`, `cbrt()`, `ceil()`, `cos()`, `cosh()`, `cut()`, `exp()`, `fact()`, `fibo()`, `floor()`, `gauss()`, `int()`, `isval()`, `isnan()`, `isinf()`, `isint()`, `isbool()`, `isfile()`, `isdir()`, `isin()`, `kth()`, `log()`, `log2()`, `log10()`, `max()`, `mean()`, med()`, `min()`, `narg()`, `prod()`, `rol()` (left bit rotation), `ror()` (right bit rotation), `round()`, `sign()`, `sin()`, `sinc()`, `sinh()`, `sqrt()`, `std()`, `srand(_seed)`, `sum()`, `tan()`, `tanh()`, `variance()`, `xor()`.\n" \
     "        * '`atan2(y,x)`' is the version of '`atan()`' with two arguments __'y'__ and __'x'__ (as in C/C\\+\\+).\n" \
     "        * '`permut(k,n,with_order)`' computes the number of permutations of __k__ objects from a set of __n__ objects.\n" \
@@ -178,7 +178,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "        * '`crop(_#ind,_x,_y,_z,_c,_dx,_dy,_dz,_dc,_boundary_conditions)`' returns a vector whose values come from the cropped region of image __\\[ind\\]__ (or from default image selected if '`ind`' is not specified). Cropped region starts from point __(x,y,z,c)__ and has a size of __dx x dy x dz x dc__. Arguments for coordinates and sizes can be omitted if they are not ambiguous (e.g. '`crop(#ind,x,y,dx,dy)`' is a valid invocation of this function).\n" \
     "        * '`draw(_#ind,S,x,y,z,c,dx,_dy,_dz,_dc,_opacity,_M,_max_M)`' draws a sprite __S__ in image __\\[ind\\]__ (or in default image selected if '`ind`' is not specified) at coordinates __(x,y,z,c)__. The size of the sprite __dx x dy x dz x dc__ must be specified. You can also specify a corresponding opacity mask __M__ if its size matches __S__.\n" \
     "        * '`resize(#ind,w,_h,_d,_s,_interp,_boundary_conditions,cx,_cy,_cz,_cc)`' resizes an image of the associated list with specified dimension and interpolation method. When using this, function, you should consider retrieving the (non-constant) image dimensions using the dynamic functions '`w(_#ind)`', '`h(_#ind)`', '`d(_#ind)`', '`s(_#ind)`', '`wh(_#ind)`', '`whd(_#ind)`' and '`whds(_#ind)`' instead of the corresponding constant variables.\n" \
-    "        * '`if(condition,expr_then,_expr_else)`': return value of '`expr_then`' or '`expr_else`', depending on the value of '`condition`' __(0=false, other=true)__. '`expr_else`' can be omitted in which case __0__ is returned if the condition does not hold. Using the ternary operator '`condition?expr_then[:expr_else]`' gives an equivalent expression. For instance, expressions '`if(x%10==0,255,i)`' and '`x%10?i:255`' both draw blank vertical lines on every 10th column of an image.\n" \
+    "        * '`if(condition,expr_then,_expr_else)`': return value of '`expr_then`' or '`expr_else`', depending on the value of '`condition`' __(0=false, other=true)__. '`expr_else`' can be omitted in which case __0__ is returned if the condition does not hold. Using the ternary operator '`condition?expr_then[:expr_else]`' gives an equivalent expression. For instance, expressions '`if(int(x/10)*10==x,255,i)`' and '`x-int(x/10)*10?i:255`' both draw blank vertical lines on every 10th column of an image.\n" \
     "        * '`dowhile(expression,_condition)`' repeats the evaluation of '`expression`' until '`condition`' vanishes (or until '`expression`' vanishes if no '`condition`' is specified). For instance, the expression: '`if(N<2,N,n=N-1;F0=0;F1=1;dowhile(F2=F0+F1;F0=F1;F1=F2,n=n-1))`' returns the Nth value of the Fibonacci sequence, for __N>=0__ (e.g., __46368__ for __N=24__). '`dowhile(expression,condition)`' always evaluates the specified expression at least once, then check for the loop condition. When done, it returns the last value of '`expression`'.\n" \
     "        * '`for(init,condition,_procedure,body)`' first evaluates the expression '`init`', then iteratively evaluates '`body`' (followed by '`procedure`' if specified) while '`condition`' is verified (i.e. not zero). It may happen that no iteration is done, in which case the function returns __nan__. Otherwise, it returns the last value of '`body`'. For instance, the expression: '`if(N<2,N,for(n=N;F0=0;F1=1,n=n-1,F2=F0+F1;F0=F1;F1=F2))`' returns the __Nth__ value of the Fibonacci sequence, for __N>=0__ (e.g., __46368__ for __N=24__).\n" \
     "        * '`whiledo(condition,expression)`' is exactly the same as '`for(init,condition,expression)`' without the specification of an initializing expression.\n" \

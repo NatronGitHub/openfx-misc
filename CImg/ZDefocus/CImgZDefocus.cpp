@@ -36,6 +36,7 @@
 #include "ofxsMacros.h"
 #include "ofxsCoords.h"
 #include "ofxsCopier.h" // fillBlack
+#include "ofxsNormalisedDefaults.h"
 #ifdef OFX_EXTENSIONS_NATRON
 #include "ofxNatron.h"
 #endif
@@ -183,7 +184,7 @@ unnegatedDepthType(DepthTypeEnum depthType)
 #define kParamAperture "aperture"
 #define kParamApertureLabel "Aperture"
 #define kParamApertureHint "Shape of the aperture (the blur kernel). Draft renders and renders at a reduced scale (proxy) always use the Gaussian."
-#define kParamApertureOptionGaussian "Gaussian", "Gaussian aperture of standard deviation radius/sqrt(8), truncated at the blur radius horizontally and vertically. At the radius, this Gaussian is exp(-4) = 1.8% of its peak, so the truncation, which gives it the support of the disc, changes it little. Large kernels use the FFT.", "gaussian"
+#define kParamApertureOptionGaussian "Gaussian", "Gaussian aperture of standard deviation radius/sqrt(8), truncated at the blur radius horizontally and vertically. At the radius, this Gaussian is exp(-4) = 1.8 percent of its peak, so the truncation, which gives it the support of the disc, changes it little. Large kernels use the FFT.", "gaussian"
 #define kParamApertureOptionDisc "Disc", "Disc (circular) aperture with an antialiased edge, giving a bokeh effect: a pixel at a distance d from the center has the weight clamp(radius - d, 0, 1), a linear antialiasing over the last pixel inside the radius, so that the disc never reaches beyond its radius, and a radius of 1 pixel or less is sharp.", "disc"
 #define kParamApertureOptionCustom "Custom", "Custom aperture given by the Filter input, scaled so that its larger dimension is twice the blur radius. Large kernels use the FFT, which is slower than Disc. If the Filter input is not connected or empty, Disc is used.", "custom"
 enum ApertureEnum
@@ -872,6 +873,10 @@ public:
                _size && _maxSize && _slices && _aperture && _fillBackground && _blurInside);
 
         updateGUI();
+        // Hosts that ignore normalised defaults (OFX 1.1 hosts such as VEGAS, and Resolve) give the
+        // normalised value as is: convert it if it is still the default (#66, see
+        // ofxsNormalisedDefaults.h). Last, since setValue() may call changedParam().
+        ofxsDenormaliseUntouchedDefault(*this, *_focusPoint, /*isPosition=*/true);
     }
 
 private:
@@ -1370,7 +1375,7 @@ ZDefocusPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamFocusPointLabel);
         param->setHint(kParamFocusPointHint);
         param->setDoubleType(eDoubleTypeXYAbsolute);
-        param->setDefaultCoordinateSystem(eCoordinatesNormalised);
+        ofxsSetDefaultCoordinateSystemNormalised(*param); // see ofxsNormalisedDefaults.h (#66)
         param->setDefault(0.5, 0.5);
         param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)

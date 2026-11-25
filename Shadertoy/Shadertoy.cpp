@@ -381,7 +381,7 @@ namespace Shadertoy {
     "### Language:\n" \
     "\n" \
     "* __Preprocessor:__ `#` `#define` `#undef` `#if` `#ifdef` `#ifndef` `#else` `#elif` `#endif` `#error` `#pragma` `#extension` `#version` `#line`\n" \
-    "* __Operators:__ `()` `+` `-` `!` `*` `/` `%` `<` `>` `<=` `>=` `==` `!=` `&&` `||`\n" \
+    "* __Operators:__ `()` `+` `-` `!` `*` `/` `<` `>` `<=` `>=` `==` `!=` `&&` `||`, and the percent sign (integer modulo)\n" \
     "* __Comments:__ `//` `/*` `*/`\n" \
     "* __Types:__ void bool int float vec2 vec3 vec4 bvec2 bvec3 bvec4 ivec2 ivec3 ivec4 mat2 mat3 mat4 sampler2D\n" \
     "* __Function Parameter Qualifiers:__ ~~none~~, in, out, inout\n" \
@@ -711,11 +711,11 @@ namespace Shadertoy {
 
 #define kParamImageShaderPresetDir "imageShaderPresetDir"
 #define kParamImageShaderPresetDirLabel "Presets Directory"
-#define kParamImageShaderPresetDirHint "The directory where presets are located. There must be a \"Shadertoy.txt\" file in this directory to give the list of presets (see the default presets directory for an example). The default textures are located in \"%1\"."
+#define kParamImageShaderPresetDirHint "The directory where presets are located. There must be a \"Shadertoy.txt\" file in this directory to give the list of presets (see the default presets directory for an example). The default textures are located in \"PRESETS_DIR\"."
 
 #define kParamImageShaderPreset "imageShaderPreset"
 #define kParamImageShaderPresetLabel "Load from Preset"
-#define kParamImageShaderPresetHint "Load the source from the preset. The default textures are located in \"%1\", and more presets can be added by editing \"Shadertoy.txt\" in the Presets Directory."
+#define kParamImageShaderPresetHint "Load the source from the preset. The default textures are located in \"PRESETS_DIR\", and more presets can be added by editing \"Shadertoy.txt\" in the Presets Directory."
 
 #define kParamImageShaderSource "imageShaderSource"
 #define kParamImageShaderSourceLabel "Source"
@@ -2799,7 +2799,7 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             StringParamDescriptor* param = desc.defineStringParam(kParamImageShaderPresetDir);
             param->setLabel(kParamImageShaderPresetDirLabel);
             string hint = kParamImageShaderPresetDirHint;
-            replace(hint, "%1", resourcesPath + "/presets");
+            replace(hint, "PRESETS_DIR", resourcesPath + "/presets");
             param->setHint(hint);
             param->setStringType(eStringTypeDirectoryPath);
             param->setDefault(resourcesPath + "/presets/default");
@@ -2818,7 +2818,7 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamImageShaderPreset);
             param->setLabel(kParamImageShaderPresetLabel);
             string hint = kParamImageShaderPresetHint;
-            replace(hint, "%1", resourcesPath + "/presets");
+            replace(hint, "PRESETS_DIR", resourcesPath + "/presets");
             param->setHint(hint);
             param->setCascading(true);
             param->appendOption("No preset");

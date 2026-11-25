@@ -88,10 +88,14 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "Auto Crop Bottom Left and Auto Crop Size (or set expressions on them) to crop the image to that box. " \
     "Analyzing the sequence animates the box.\n" \
     "The Analyze Sequence buttons analyze the frames given by Sequence Range: the frame range of the input " \
-    "(the default), the timeline (project) frame range, or a custom range, within the frame range of the input."
+    "(the default), the timeline (project) frame range, or a custom range, within the frame range of the input.\n" \
+    "The statistics are only computed on full-resolution images: in proxy mode (render scale below 1), the " \
+    "image goes through unchanged and the statistics are not updated."
 #define kPluginIdentifier "net.sf.openfx.ImageStatistics"
 // (#236, in the current minor version, not released yet) on hosts that ignore normalised defaults
 //              (e.g. DaVinci Resolve), the default rectangle is the project's, not (1,1) pixels
+// (#66, in the current minor version, not released yet) any render scale is accepted (OFX 1.1 hosts
+//              such as VEGAS): below full resolution, the image goes through and nothing is analyzed
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 2 // Increment this when you have fixed a bug or made it faster.
 // 1.2: the S.Dev. of fewer than 2 pixels, and the skewness and kurtosis of fewer than 3 and 4 pixels,
@@ -103,10 +107,20 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // only, one render at a time per instance. The output is a copy of the input either way.
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
-#define kSupportsRenderScale 0 // no renderscale support: statistics are computed at full resolution
+// OFX has no way to refuse a render scale (an OFX 1.1 host such as VEGAS renders at any scale, and a
+// failed action may crash it), so every scale is accepted. The statistics are only computed at
+// render scale 1: at another scale (e.g. proxy mode), the effect is an identity (the output is a
+// copy of the input anyway) and the analysis is skipped (#66).
 #define kSupportsMultipleClipPARs false
 #define kSupportsMultipleClipDepths false
 #define kRenderThreadSafety eRenderInstanceSafe
+
+// whether the analysis can run at this render scale (see above)
+inline bool
+isFullResolution(const OfxPointD& renderScale)
+{
+    return (renderScale.x == 1.) && (renderScale.y == 1.);
+}
 
 
 #define kParamRestrictToRectangle "restrictToRectangle"
@@ -1384,9 +1398,6 @@ private:
 void
 ImageStatisticsPlugin::render(const RenderArguments &args)
 {
-    if ( !kSupportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
-        throwSuiteStatusException(kOfxStatFailed);
-    }
 
     assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
@@ -1413,7 +1424,9 @@ ImageStatisticsPlugin::render(const RenderArguments &args)
 
     copyPixels( *this, args.renderWindow, args.renderScale, src.get(), dst.get() );
 
-    if ( src.get() ) {
+    // the analysis runs at full resolution only (see isFullResolution): at another render scale,
+    // isIdentity returns true, and a host that renders anyway only gets the copy
+    if ( src.get() && isFullResolution(args.renderScale) ) {
         bool autoUpdate = _autoUpdate->getValueAtTime(args.time);
         assert(autoUpdate); // render should only be called if autoUpdate is true: in other cases isIdentity returns true
         if (autoUpdate) {
@@ -1465,13 +1478,9 @@ ImageStatisticsPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &ar
 }
 
 bool
-ImageStatisticsPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
+ImageStatisticsPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments & /*args*/,
                                              OfxRectD & /*rod*/)
 {
-    if ( !kSupportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
-        throwSuiteStatusException(kOfxStatFailed);
-    }
-
     return false;
 }
 
@@ -1481,14 +1490,11 @@ ImageStatisticsPlugin::isIdentity(const IsIdentityArguments &args,
                                   double & /*identityTime*/
                                   , int& /*view*/, std::string& /*plane*/)
 {
-    if ( !kSupportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
-        throwSuiteStatusException(kOfxStatFailed);
-    }
-
     const double time = args.time;
     bool autoUpdate = _autoUpdate->getValueAtTime(time);
 
-    if (!autoUpdate) {
+    // no analysis below full resolution: the output is the input
+    if ( !autoUpdate || !isFullResolution(args.renderScale) ) {
         identityClip = _srcClip;
 
         return true;
@@ -1501,10 +1507,6 @@ void
 ImageStatisticsPlugin::changedParam(const InstanceChangedArgs &args,
                                     const std::string &paramName)
 {
-    if ( !kSupportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
-        throwSuiteStatusException(kOfxStatFailed);
-    }
-    
     bool doUpdate = false;
     bool doAnalyzeRGBA = false;
     bool doAnalyzeHSVL = false;
@@ -1645,6 +1647,16 @@ ImageStatisticsPlugin::changedParam(const InstanceChangedArgs &args,
     if (paramName == kParamClearSequenceAutoCrop) {
         _autoCropBtmLeft->deleteAllKeys();
         _autoCropSize->deleteAllKeys();
+    }
+    if ( !isFullResolution(args.renderScale) ) {
+        // the analysis runs at full resolution only: tell the user if they asked for it (not for
+        // the Auto Update of a key)
+        if (doAnalyzeRGBA || doAnalyzeHSVL || doAnalyzeLuma || doAnalyzeAutoCrop ||
+            doAnalyzeSequenceRGBA || doAnalyzeSequenceHSVL || doAnalyzeSequenceLuma || doAnalyzeSequenceAutoCrop) {
+            sendMessage(Message::eMessageError, "", "The analysis needs full-resolution images: turn off proxy mode (render scale 1) and try again.");
+        }
+
+        return;
     }
     if (doUpdate) {
         // check if there is already a Keyframe, if yes update it

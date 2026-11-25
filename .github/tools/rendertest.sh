@@ -1122,6 +1122,11 @@ tests=(
     # finite (a NaN output pixel fails hostDemo). A 2-pixel analysis (size 1x1 at PAR 768/720) has
     # no skewness and kurtosis: 0 (it was infinity).
     "ImageStatistics 2 pixels|net.sf.openfx.ImageStatistics|filter|float|value:statSkewness=0,0,0,0+value:statKurtosis=0,0,0,0||-i Source=ramp restrictToRectangle=1 bottomLeft=100,100 size=1,1 -s analyzeFrame"
+    # Any render scale (issue #66: OFX 1.1 hosts such as VEGAS cannot be refused one; getRoD and
+    # isIdentity used to fail): below full resolution the effect is an identity and analyzes
+    # nothing. hostDemo presses the button at render scale 1, so the key is set.
+    "ImageStatistics scale 0.5|net.sf.openfx.ImageStatistics|filter|*|identity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 --scale 0.5"
+    "ImageStatistics frame scale 0.5|net.sf.openfx.ImageStatistics|filter|float|identity+mean=0.25,0.5,0.75,1+value:statMean=0.25,0.5,0.75,1+keys:statMean=1||-i Source=solid:0.25,0.5,0.75,1 -s analyzeFrame --scale 0.5"
     # LensDistortion STMap output (u, v, 1, 1): PFBarrel squeeze 0, 3DE Classic filmback width 0 and
     # 3DE Standard cylindric bending b=-2 (sqrt(1+b)) gave a NaN RoD (nothing rendered). Models: 1
     # PFBarrel, 2 3DE Classic, 5 3DE4 Radial Standard Degree 4.
