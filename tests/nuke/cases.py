@@ -880,11 +880,13 @@ CASES += [
          input="ramp"),
     # CImgExpression's x and y are buffer indices from the lower-left corner of the RoD, at the render
     # scale; X and Y are the full-size pixel coordinates (#297).
+    # Nuke's Expression fills the whole format; CImgExpression's RoD is its
+    # Source's: compare the element only.
     case("Expression x/32 on an element not at 0,0 (CImgExpression X/32)",
          ("Expression", {"expr0": "x/32", "expr1": "y/32", "expr2": "0"}),
          ("net.sf.cimg.CImgExpression",
           {"expression": "c==0?X/32:c==1?Y/32:0"}),
-         input="element"),
+         input="element", region=(2, 4, 12, 20)),
 ]
 
 # ---------------------------------------------------------------- Merge
@@ -1569,7 +1571,7 @@ CASES += [
     case("AdjBBox 16, AdjustRoD 16 (both divided by the PAR in x)",
          ("AdjBBox", {"numpixels": 16}),
          (ofx_id("AdjustRoDPlugin"), {"addPixels": [16, 16]}),
-         input="element", channels="rgba", region=(0, 0, 26, 40)),
+         input="element", channels="rgba", region=(0, 0, 26, 32)),
     case("Position 3,-2", ("Position", {"translate": [3, -2]}),
          (ofx_id("Position"), {"translate": [cx(3), -2]}), input="ramp",
          channels="rgba"),
