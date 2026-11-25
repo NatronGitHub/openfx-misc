@@ -457,6 +457,32 @@ def rgba(*values):
 # rgba.alpha by default); maskChannelInput would take it from the source.
 MASKED = {}
 
+# LensDistortion: the knobs and params of a few cases (see the cases).
+LENS_K1K2C = {"distortionDenominator0": .1, "distortionDenominator1": .05,
+              "centre": [.1, .2]}
+OFX_LENS_K1K2C = {"k1": .1, "k2": .05, "center": [.1, .2]}
+LENS_ANAMORPHIC = {"lens": "Anamorphic", "anamorphicSqueeze": 2,
+                   "distortionDenominator0": .1,
+                   "distortionDenominatorX00": .1,
+                   "distortionDenominatorY00": .05}
+OFX_LENS_ANAMORPHIC = {"k1": .1, "anamorphicSqueeze": 2,
+                       "asymmetricDistortion": [.1, .05]}
+
+
+def lens_map(layer):
+    """The nuke_post that copies a LensDistortion2 STMap layer to R and G.
+
+    Args:
+        layer: "backward" (the map of Redistort) or "forward" (Undistort).
+    """
+    return ("copy = nuke.nodes.Copy(inputs=[n, n])\n"
+            "copy['from0'].setValue('%s.u')\n"
+            "copy['to0'].setValue('rgba.red')\n"
+            "copy['from1'].setValue('%s.v')\n"
+            "copy['to1'].setValue('rgba.green')\n"
+            "n = copy" % (layer, layer))
+
+
 CASES = []
 
 # Self-tests: Nuke's Expression and the PFM files give the same pixels.
@@ -1567,21 +1593,69 @@ CASES += [
          nuke_inputs=["ramp", "stmap"],
          clips={"Source": "ramp", "UV": "stmap"}, channels="rgba",
          tolerance=2e-3),
-    case("LensDistortion k 0.1, undistort",
+    # LensDistortion, Nuke model: K1 and K2 are the first and second
+    # radial denominator coefficients of the reference's NukeX Classic model
+    # (distortionDenominator0, 1), Center its centre, Squeeze and Asymmetric
+    # its anamorphic squeeze and X00, Y00 denominator coefficients (with the
+    # Anamorphic lens type). Undistort is the reference's Mode when it is
+    # created from the menu (nuke.nodes gives STMap, so the cases set it).
+    # Redistort: tolerance 2e-3, as STMap (the reference rounds the sub-pixel
+    # sample positions).
+    case("LensDistortion k1 0.1 (default: undistort)",
          ("LensDistortion2", {"output": "Undistort",
-                              "distortionNumerator0": .1}),
-         (ofx_id("LensDistortion"), {"k1": .1, "direction": "Undistort"}),
+                              "distortionDenominator0": .1}),
+         (ofx_id("LensDistortion"), {"k1": .1}),
          input="ramp", region=INNER, channels="rgba", tolerance=1e-3),
-    case("LensDistortion k 0.1, undistort (k1 -0.1)",
+    case("LensDistortion k1 -0.1, undistort",
          ("LensDistortion2", {"output": "Undistort",
-                              "distortionNumerator0": .1}),
+                              "distortionDenominator0": -.1}),
          (ofx_id("LensDistortion"), {"k1": -.1, "direction": "Undistort"}),
          input="ramp", region=INNER, channels="rgba", tolerance=1e-3),
-    case("LensDistortion k 0.1, redistort (distort)",
+    case("LensDistortion k1 0.1, redistort (distort)",
          ("LensDistortion2", {"output": "Redistort",
-                              "distortionNumerator0": .1}),
+                              "distortionDenominator0": .1}),
          (ofx_id("LensDistortion"), {"k1": .1, "direction": "Distort"}),
-         input="ramp", region=INNER, channels="rgba", tolerance=1e-3),
+         input="ramp", region=INNER, channels="rgba", tolerance=2e-3),
+    # version 4 (obsolete): Direction defaults to Distort
+    case("LensDistortion 4 k1 0.1 (default: distort)",
+         ("LensDistortion2", {"output": "Redistort",
+                              "distortionDenominator0": .1}),
+         (ofx_id("LensDistortion"), {"k1": .1}), major=4,
+         input="ramp", region=INNER, channels="rgba", tolerance=2e-3),
+    case("LensDistortion k1 0.1, k2 0.05, center 0.1,0.2, redistort",
+         ("LensDistortion2", dict(LENS_K1K2C, output="Redistort")),
+         (ofx_id("LensDistortion"), dict(OFX_LENS_K1K2C,
+                                         direction="Distort")),
+         input="ramp", region=INNER, channels="rgba", tolerance=2e-3),
+    case("LensDistortion squeeze 2, asymmetric 0.1,0.05, redistort",
+         ("LensDistortion2", dict(LENS_ANAMORPHIC, output="Redistort")),
+         (ofx_id("LensDistortion"), dict(OFX_LENS_ANAMORPHIC,
+                                         direction="Distort")),
+         input="ramp", region=INNER, channels="rgba", tolerance=2e-3),
+    # The STMap output mode against the reference's backward (Distort) and
+    # forward (Undistort) maps, copied to red and green: the model itself,
+    # without the filter. The reference's forward map is solved to about
+    # 0.003 pixel.
+    case("LensDistortion STMap distort, k1 0.1, k2 0.05, center 0.1,0.2",
+         ("LensDistortion2", dict(LENS_K1K2C, output="STMap")),
+         (ofx_id("LensDistortion"), dict(OFX_LENS_K1K2C, direction="Distort",
+                                         outputMode="STMap")),
+         nuke_post=lens_map("backward"),
+         input="ramp", region=INNER, channels="rg", tolerance=1e-5),
+    case("LensDistortion STMap undistort, k1 0.1, k2 0.05, center 0.1,0.2",
+         ("LensDistortion2", dict(LENS_K1K2C, output="STMap")),
+         (ofx_id("LensDistortion"), dict(OFX_LENS_K1K2C,
+                                         direction="Undistort",
+                                         outputMode="STMap")),
+         nuke_post=lens_map("forward"),
+         input="ramp", region=INNER, channels="rg", tolerance=2e-4),
+    case("LensDistortion STMap distort, squeeze 2, asymmetric 0.1,0.05",
+         ("LensDistortion2", dict(LENS_ANAMORPHIC, output="STMap")),
+         (ofx_id("LensDistortion"), dict(OFX_LENS_ANAMORPHIC,
+                                         direction="Distort",
+                                         outputMode="STMap")),
+         nuke_post=lens_map("backward"),
+         input="ramp", region=INNER, channels="rg", tolerance=1e-5),
 ]
 for _steps in (1, 2, 3, 5):
     CASES.append(case(
@@ -2292,10 +2366,13 @@ KNOWN = {
         "Colorspace sRGB to YCbCr (RGBToYCbCr709)",
         "Colorspace rec709 to YCbCr (RGBToYCbCr709)",
         "Colorspace linear to HSV, values outside [0, 1]"],
+    # the reference's Undistort is not the exact inverse of its Redistort
+    # (its forward map differs by up to 0.03 pixel in the middle of the image
+    # and by pixels near the corners, see the STMap case)
     302: [
-        "LensDistortion k 0.1, undistort",
-        "LensDistortion k 0.1, undistort (k1 -0.1)",
-        "LensDistortion k 0.1, redistort (distort)"],
+        "LensDistortion k1 0.1 (default: undistort)",
+        "LensDistortion k1 -0.1, undistort",
+        "LensDistortion STMap undistort, k1 0.1, k2 0.05, center 0.1,0.2"],
     352: [
         "IDistort, alpha 0.5, premultiplied",
         "STMap uv = rgb, premultiplied, alpha 0.5",

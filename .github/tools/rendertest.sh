@@ -1206,11 +1206,11 @@ tests=(
     # LensDistortion 3DE Anamorphic 4 with zero coefficients: Squeeze 1 (the default) is an
     # identity, another squeeze is not (issue #326; it tested Squeeze 0)
     "LensDistortion 3DE Anamorphic 4 default|net.sf.openfx.LensDistortion|general|*|identity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 model=6"
-    "LensDistortion 3DE Anamorphic 4 squeeze 2|net.sf.openfx.LensDistortion|general|float|notidentity||-i Source=checker:16 model=6 tde4_Squeeze_X=2"
+    "LensDistortion 3DE Anamorphic 4 squeeze 2|net.sf.openfx.LensDistortion|general|float|notidentity||-i Source=checker:16 model=6 tde4_Squeeze_X=2 direction=0"
     # Squeeze-X 0 maps the image to its center column: the RoI (Distort) and the RoD (Undistort)
     # are zero-wide before their margin, which aborted debug builds (issue #336). Distort: each
     # output pixel samples the center column of the source, so the output is the solid colour
-    "LensDistortion 3DE Anamorphic 4 squeeze 0|net.sf.openfx.LensDistortion|general|*|notidentity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 model=6 tde4_Squeeze_X=0"
+    "LensDistortion 3DE Anamorphic 4 squeeze 0|net.sf.openfx.LensDistortion|general|*|notidentity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 model=6 tde4_Squeeze_X=0 direction=0"
     "LensDistortion 3DE Anamorphic 4 squeeze 0 undistort|net.sf.openfx.LensDistortion|general|float|notidentity||-i Source=checker:16 model=6 tde4_Squeeze_X=0 direction=1"
     # Rectangle and Radial with Process A on an opaque Source make the Output UnPremultiplied, also
     # with Mix 0 (issue #328)
@@ -1335,12 +1335,17 @@ tests=(
     # nothing. hostDemo presses the button at render scale 1, so the key is set.
     "ImageStatistics scale 0.5|net.sf.openfx.ImageStatistics|filter|*|identity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 --scale 0.5"
     "ImageStatistics frame scale 0.5|net.sf.openfx.ImageStatistics|filter|float|identity+mean=0.25,0.5,0.75,1+value:statMean=0.25,0.5,0.75,1+keys:statMean=1||-i Source=solid:0.25,0.5,0.75,1 -s analyzeFrame --scale 0.5"
+    # LensDistortion 5 (#302): Direction defaults to Undistort (version 4, obsolete: Distort). The
+    # STMap output of the Nuke model with K1 0.05 and the center at 0.5,0, in the window x 100-200, y
+    # 250-330: mean u 0.1692 (Undistort) or 0.2401 (Distort).
+    "LensDistortion default undistort|net.sf.openfx.LensDistortion|general|float|mean=0.1692,0.5037,1,1||-i Source=checker:16 k1=0.05 center=0.5,0 outputMode=STMap --frames 0 --window 100,250,200,330"
+    "LensDistortion 4 default distort|net.sf.openfx.LensDistortion|general|float|mean=0.2401,0.5033,1,1||-m 4 -i Source=checker:16 k1=0.05 center=0.5,0 outputMode=STMap --frames 0 --window 100,250,200,330"
     # LensDistortion STMap output (u, v, 1, 1): PFBarrel squeeze 0, 3DE Classic filmback width 0 and
     # 3DE Standard cylindric bending b=-2 (sqrt(1+b)) gave a NaN RoD (nothing rendered). Models: 1
     # PFBarrel, 2 3DE Classic, 5 3DE4 Radial Standard Degree 4.
-    "LensDistortion PFBarrel squeeze 0|net.sf.openfx.LensDistortion|general|float|mean=0.5,0.5,1,1||-i Source=checker:16 model=1 pfSqueeze=0 outputMode=STMap"
-    "LensDistortion 3DE filmback 0|net.sf.openfx.LensDistortion|general|float|mean=0.5,0.5,1,1||-i Source=checker:16 model=2 tde4_filmback_width_cm=0 outputMode=STMap"
-    "LensDistortion 3DE b=-2|net.sf.openfx.LensDistortion|general|float|mean=0.5,0.5,1,1||-i Source=checker:16 model=5 tde4_B_Cylindric_Bending=-2 outputMode=STMap"
+    "LensDistortion PFBarrel squeeze 0|net.sf.openfx.LensDistortion|general|float|mean=0.5,0.5,1,1||-i Source=checker:16 model=1 pfSqueeze=0 outputMode=STMap direction=0"
+    "LensDistortion 3DE filmback 0|net.sf.openfx.LensDistortion|general|float|mean=0.5,0.5,1,1||-i Source=checker:16 model=2 tde4_filmback_width_cm=0 outputMode=STMap direction=0"
+    "LensDistortion 3DE b=-2|net.sf.openfx.LensDistortion|general|float|mean=0.5,0.5,1,1||-i Source=checker:16 model=5 tde4_B_Cylindric_Bending=-2 outputMode=STMap direction=0"
     # IDistort and STMap (#303), float (the UV input has the output depth, and only float UV values
     # are supported). Version 3 does not multiply the output by the UV alpha; version 2 (-m 2,
     # obsolete) does.
@@ -1352,12 +1357,12 @@ tests=(
     # and 65 are white without blur (Blur Scale 0). The blur along x is 4 / PAR = 3.75 pixels (hostDemo's
     # PAR is 768/720), so with the Box filter (filter=1) the sampled area is 4.75 pixels wide: 2.875/4.75
     # and 3.875/4.75 white (mean 0.7105; version 2, in x pixels: 5 pixels wide, 3/5 and 4/5, mean 0.7).
-    # The default Cubic filter is a separable kernel 4.75 pixels wide along x: the white part of the
-    # normalized kernel weights, at (i + 0.5 - c) / 4.75, gives a mean of 0.6983. tile: the render
+    # The default Cubic filter is a separable kernel 4.75 pixels wide along x, its scale rounded to 13/64
+    # (4.923 pixels): the white part of the normalized kernel weights gives a mean of 0.6922. tile: the render
     # window matches the full render (the UV RoI includes the pixels around the window).
     "IDistort blur box|net.sf.openfx.IDistort|general|float|tile+mean=0.7105,0.7105,0.7105,0.7105||-i Source=checker:64 -i UV=solid:0,0,4,1 -i Mask=none channelBlur=2 filter=1 --frames 0 --window 64,10,66,20"
     "IDistort v2 blur box|net.sf.openfx.IDistort|general|float|mean=0.7,0.7,0.7,0.7||-m 2 -i Source=checker:64 -i UV=solid:0,0,4,1 -i Mask=none channelBlur=2 filter=1 --frames 0 --window 64,10,66,20"
-    "IDistort blur cubic|net.sf.openfx.IDistort|general|float|tile+tol=2e-3+mean=0.6983,0.6983,0.6983,0.6983||-i Source=checker:64 -i UV=solid:0,0,4,1 -i Mask=none channelBlur=2 --frames 0 --window 64,10,66,20"
+    "IDistort blur cubic|net.sf.openfx.IDistort|general|float|tile+tol=2e-3+mean=0.6922,0.6922,0.6922,0.6922||-i Source=checker:64 -i UV=solid:0,0,4,1 -i Mask=none channelBlur=2 --frames 0 --window 64,10,66,20"
     "IDistort blur scale 0|net.sf.openfx.IDistort|general|float|mean=1,1,1,1||-i Source=checker:64 -i UV=solid:0,0,4,1 -i Mask=none channelBlur=2 blurScale=0 filter=1 --frames 0 --window 64,10,66,20"
     # the same at render scale 0.5: the blur is in full-scale pixels, so the Box area is 1 + 1.875 pixels
     # wide at x=32 and 33 (the edge is at x=32): 1.9375/2.875 and 1 white (mean 0.837; 0.7 if the blur
@@ -1381,9 +1386,10 @@ tests=(
     # sampled every 2 x 3 pixels, each tap the mean of its 2x3 cell (a summed-area table), so the output is
     # 0.5 everywhere (point samples every 2 pixels would read only white or only black)
     "IDistort blur 64 checker 1|net.sf.openfx.IDistort|general|float|range=0.499,0.501+mean=0.5,0.5,0.5,0.5||-i Source=checker:1 -i UV=solid:0,0,64,1 -i Mask=none channelBlur=2 --frames 0 --window 200,200,232,232"
-    # Clamp with Black Outside: at x=0, a Rifman kernel 1 + 8/PAR = 8.5 pixels wide reads 0.5588 of white
+    # Clamp with Black Outside: at x=0, a Rifman kernel 1 + 8/PAR = 8.5 pixels wide (its scale rounded to
+    # 8/64: 8 pixels) reads 0.5625 of white
     # (the rest is the black outside), and the clamp to the values read (black included) keeps it
-    "IDistort blur clamp black outside|net.sf.openfx.IDistort|general|float|tol=2e-3+mean=0.5588,0.5588,0.5588,0.5588||-i Source=solid:1,1,1,1 -i UV=solid:0,0,8,1 -i Mask=none channelBlur=2 filter=6 clamp=1 black_outside=1 --frames 0 --window 0,100,1,101"
+    "IDistort blur clamp black outside|net.sf.openfx.IDistort|general|float|tol=2e-3+mean=0.5625,0.5625,0.5625,0.5625||-i Source=solid:1,1,1,1 -i UV=solid:0,0,8,1 -i Mask=none channelBlur=2 filter=6 clamp=1 black_outside=1 --frames 0 --window 0,100,1,101"
     # Clamp with the separable blur: Rifman's negative lobes would ring around the edges; clamped, the
     # values are within the source's [0, 1]
     "IDistort blur clamp|net.sf.openfx.IDistort|general|float|range=0,1||-i Source=checker:16 -i UV=solid:0,0,6,1 -i Mask=none channelBlur=2 filter=6 clamp=1 --frames 0 --window 40,40,120,120"

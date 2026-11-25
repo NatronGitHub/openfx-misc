@@ -163,6 +163,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              takes the area mean (a summed-area table), with edge repeat when Black Outside is off. Version
 //              2.1 (obsolete) keeps the version-2 behaviour, so old projects render as before without an
 //              upstream transform.
+//              (#352, in version 3.0, not released yet) as the tests/nuke reference: the UV derivatives
+//              are forward differences (0 on the last column and row), and the separable blur's kernel
+//              width along x is the length of (|dx/dX| + blur, dx/dY), at least 1 pixel (it was
+//              max(1, |dx/dX| + |dx/dY|) + blur), likewise along y; the kernel scale (1/width) is rounded to
+//              a multiple of 1/64.
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 #define kPluginVersionMinorV2 1 // the minor version of the obsolete version 2 (IDistort and STMap)
@@ -194,8 +199,14 @@ constexpr int kPluginVersionUVSquarePixels = 3;
 //              2.1, 3.1 and 4.1: a degenerate model that maps the image to a line (e.g. a 3DE Anamorphic 4
 //              Squeeze-X of 0) no longer aborts debug builds in the RoI and RoD actions (issue #336); the
 //              release builds and the rendered pixels are unchanged
-#define kPluginVersionLensDistortionMajor 4 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionLensDistortionMinor 1 // Increment this when you have fixed a bug or made it faster.
+// version 5.0 (#302): Direction defaults to Undistort, as in the tests/nuke reference (version 4.1, obsolete,
+//              keeps Distort). The Nuke model matches the tests/nuke reference (its K1 and K2 are the
+//              reference's first and second radial denominator coefficients).
+#define kPluginVersionLensDistortionMajor 5 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionLensDistortionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionLensDistortionMinorV4 1 // the minor version of the obsolete versions 2, 3 and 4
+// the first LensDistortion version whose Direction defaults to Undistort
+constexpr int kPluginVersionLensDistortionUndistortDefault = 5;
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -972,6 +983,8 @@ private:
 // the most taps along each axis of the separable blur: beyond that, the kernel is sampled every
 // stride pixels (a coarser, much cheaper, approximation for blurs of more than about 30 pixels)
 constexpr int kSeparableBlurMaxTaps = 64;
+// the separable blur's kernel scale (1/width) is rounded to a multiple of 1/kSeparableBlurScaleSteps
+constexpr double kSeparableBlurScaleSteps = 64.;
 // sample positions beyond this many pixels from the origin are outside any image (and the int conversions
 // below must not overflow)
 constexpr double kSeparableBlurMaxPosition = 1e9;
@@ -1504,6 +1517,14 @@ separableWeights(FilterEnum filter,
                  double w,
                  SeparableWeights *sw)
 {
+    // as the tests/nuke reference: the kernel's scale, 1/w, is a multiple of 1/64 (rounded), up to widths
+    // of about 40 pixels (beyond, w is kept)
+    {
+        const double n = std::round(kSeparableBlurScaleSteps / w);
+        if (n >= 2.) {
+            w = kSeparableBlurScaleSteps / n;
+        }
+    }
     // the kernel's support, in pixels: the pixel centers strictly inside it have a non-zero weight
     const double radius = filterKernelRadius(filter) * w;
     const int i0 = static_cast<int>( std::floor(c - 0.5 - radius) ) + 1;
@@ -1848,10 +1869,20 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
                         unpremult(getVal(eUVChannelAlpha, aPix_yn, aPix), &u_yn, &v_yn);
                         unpremult(getVal(eUVChannelAlpha, aPix_yp, aPix), &u_yp, &v_yp);
                     }
-                    ux = (u_xn - u_xp) / 2.;
-                    vx = (v_xn - v_xp) / 2.;
-                    uy = (u_yn - u_yp) / 2.;
-                    vy = (v_yn - v_yp) / 2.;
+                    if (_uvBehaviour == eUVBehaviourV3) {
+                        // forward differences, as the tests/nuke reference: on the last column (row),
+                        // whose next pixel is the edge pixel itself, the derivative along x (y) is 0
+                        ux = u_xn - u;
+                        vx = v_xn - v;
+                        uy = u_yn - u;
+                        vy = v_yn - v;
+                    } else {
+                        // version 2: central differences
+                        ux = (u_xn - u_xp) / 2.;
+                        vx = (v_xn - v_xp) / 2.;
+                        uy = (u_yn - u_yp) / 2.;
+                        vy = (v_yn - v_yp) / 2.;
+                    }
                 }
                 u = (u - _uOffset) * _uScale;
                 ux *= _uScale;
@@ -1978,14 +2009,16 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
                 } else if (boxBlur) {
                     boxBlurSample<PIX, nComponents>(_sat, _blackOutside, sx, sy, J, tmpPix);
                 } else if (separableBlur) {
-                    // the kernel widths, in source pixels: the extent of the footprint along x and y (the
-                    // bounding box of the output pixel in the source, at least 1 pixel), plus the extent of
-                    // the blur (bx, by in the pixels of the transformed source) through the upstream transform
+                    // the kernel widths, in source pixels, as the tests/nuke reference: along x, the
+                    // footprint's own extent (|dx/dX|) plus the blur (bx, by in the pixels of the
+                    // transformed source, through the upstream transform), combined with the shear
+                    // (dx/dY) as the length of a vector, and at least 1 pixel (so a magnified footprint,
+                    // |dx/dX| < 1, adds less than 1 pixel to the blur); along y likewise
                     const double maxWidth = 2 * maxBlur + 1; // a wild UV gradient must not cost hours either
-                    const double wx = (std::min)( (std::max)(1., std::abs(J.xx) + std::abs(J.xy)) +
-                                                  std::abs(JH.xx) * bx + std::abs(JH.xy) * by, maxWidth );
-                    const double wy = (std::min)( (std::max)(1., std::abs(J.yx) + std::abs(J.yy)) +
-                                                  std::abs(JH.yx) * bx + std::abs(JH.yy) * by, maxWidth );
+                    const double wx = (std::min)( (std::max)( 1., std::hypot(std::abs(J.xx) + std::abs(JH.xx) * bx + std::abs(JH.xy) * by,
+                                                                             J.xy) ), maxWidth );
+                    const double wy = (std::min)( (std::max)( 1., std::hypot(std::abs(J.yy) + std::abs(JH.yx) * bx + std::abs(JH.yy) * by,
+                                                                             J.yx) ), maxWidth );
                     separableBlurSample<PIX, nComponents, clamp>(_srcImg, _sat, _blackOutside, filter, sx, sy,
                                                                  wx, wy, blurWeightsX, blurWeightsY, tmpPix);
                 } else {
@@ -4993,7 +5026,9 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
             param->appendOption(kParamDistortionDirectionOptionDistort);
             assert(param->getNOptions() == eDirectionUndistort);
             param->appendOption(kParamDistortionDirectionOptionUndistort);
-            param->setDefault((int)eDirectionDistort); // the most straightforward (non-iterative) transform for most models
+            // version 5: Undistort, as in the tests/nuke reference; before: Distort, the most straightforward
+            // (non-iterative) transform for most models
+            param->setDefault( (int)( (majorVersion >= kPluginVersionLensDistortionUndistortDefault) ? eDirectionUndistort : eDirectionDistort ) );
             if (page) {
                 page->addChild(*param);
             }
@@ -5820,9 +5855,10 @@ static DistortionPluginFactory<eDistortionPluginIDistort,2> pIDistort2(kPluginID
 static DistortionPluginFactory<eDistortionPluginIDistort,kPluginVersionMajor> pIDistort(kPluginIDistortIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 static DistortionPluginFactory<eDistortionPluginSTMap,2> pSTMap2(kPluginSTMapIdentifier, 2, kPluginVersionMinorV2);
 static DistortionPluginFactory<eDistortionPluginSTMap,kPluginVersionMajor> pSTMap(kPluginSTMapIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-static DistortionPluginFactory<eDistortionPluginLensDistortion,2> pLensDistortion2(kPluginLensDistortionIdentifier, 2, kPluginVersionLensDistortionMinor);
-static DistortionPluginFactory<eDistortionPluginLensDistortion,3> pLensDistortion3(kPluginLensDistortionIdentifier, 3, kPluginVersionLensDistortionMinor);
-static DistortionPluginFactory<eDistortionPluginLensDistortion,kPluginVersionLensDistortionMajor> pLensDistortion4(kPluginLensDistortionIdentifier, kPluginVersionLensDistortionMajor, kPluginVersionLensDistortionMinor);
+static DistortionPluginFactory<eDistortionPluginLensDistortion,2> pLensDistortion2(kPluginLensDistortionIdentifier, 2, kPluginVersionLensDistortionMinorV4);
+static DistortionPluginFactory<eDistortionPluginLensDistortion,3> pLensDistortion3(kPluginLensDistortionIdentifier, 3, kPluginVersionLensDistortionMinorV4);
+static DistortionPluginFactory<eDistortionPluginLensDistortion,4> pLensDistortion4(kPluginLensDistortionIdentifier, 4, kPluginVersionLensDistortionMinorV4);
+static DistortionPluginFactory<eDistortionPluginLensDistortion,kPluginVersionLensDistortionMajor> pLensDistortion5(kPluginLensDistortionIdentifier, kPluginVersionLensDistortionMajor, kPluginVersionLensDistortionMinor);
 mRegisterPluginFactoryInstance(pIDistort2)
 mRegisterPluginFactoryInstance(pIDistort)
 mRegisterPluginFactoryInstance(pSTMap2)
@@ -5830,5 +5866,6 @@ mRegisterPluginFactoryInstance(pSTMap)
 mRegisterPluginFactoryInstance(pLensDistortion2)
 mRegisterPluginFactoryInstance(pLensDistortion3)
 mRegisterPluginFactoryInstance(pLensDistortion4)
+mRegisterPluginFactoryInstance(pLensDistortion5)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
