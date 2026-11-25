@@ -49,8 +49,15 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 2.0: use kNatronOfxParamProcess* parameters
 // version 2.1: on hosts that ignore normalised defaults (e.g. DaVinci Resolve), the default rectangle
 //              is the project's, not (1,1) pixels (#236)
-#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+// version 3.0: the Softness falloff is a smoothstep over [-0.5, Softness + 0.5] pixels from each edge (the last
+//              pixel of the fade at the top and right edges is A), in canonical units (Softness is divided by
+//              the pixel aspect ratio in x); the rectangle edges may be fractional (in y, even without softness,
+//              the edge pixels are partly A; in x, the rectangle is from the left edge rounded up to the right
+//              edge rounded up); the default rectangle is the middle half of the project (#282). Version 2 is
+//              kept, obsolete, for old projects.
+#define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinorV2 1 // the minor version of the obsolete version 2
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -94,7 +101,82 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamSoftness "softness"
 #define kParamSoftnessLabel "Softness"
-#define kParamSoftnessHint "Size of the fade around edges of the rectangle to apply"
+#define kParamSoftnessHint "Size of the fade from B to A around the edges of the rectangle, in canonical coordinates (pixels at render scale 1, times the pixel aspect ratio in x). Along each axis, A is mixed over B by smoothstep((d + 1/2) / (Softness + 1)), where d is the distance in pixels from the pixel centre to the nearest edge (the fade starts half a pixel outside the rectangle); at the top and right edges, the last pixel of the fade is A; in x, only the pixels from the left edge, rounded up, to the right edge, rounded up, are in the rectangle; in the corners, the two factors are multiplied."
+#define kParamSoftnessHintV2 "Size of the fade around edges of the rectangle to apply, in pixels: at d pixels from the nearest edge pixel, A is mixed over B by d / Softness; in the corners, the two factors are multiplied."
+
+// The major versions, whose softness differs (see the History)
+enum class CopyRectangleVersion
+{
+    e2 = 2, // integer rectangle, linear fade
+    e3 = 3, // fractional rectangle, smoothstep fade
+};
+
+// TODO: move to SupportExt (the same as Crop's)
+// smoothstep(t) = 3t^2 - 2t^3 for t in [0,1], 0 below, 1 above
+static inline
+double
+smoothstep(double t)
+{
+    if (t <= 0.) {
+        return 0.;
+    }
+    if (t >= 1.) {
+        return 1.;
+    }
+
+    return t * t * (3. - 2. * t);
+}
+
+// Version 3: the factor along one axis of the rectangle [r1, r2), in pixels at render scale 1, at the pixel whose
+// left (or bottom) edge is at p1 and centre at c, for a softness s >= 0 in pixels: a smoothstep from half a pixel
+// outside the nearest edge to s + 1/2 pixels inside it. At the top or right edge, a pixel whose left (bottom) edge
+// is not after r2 - s is not faded, so that the last pixel of the fade there is A; the pixels from r2 rounded up
+// are not in the rectangle.
+static inline
+double
+softnessFactorV3(double r1,
+                 double r2,
+                 double p1,
+                 double c,
+                 double s)
+{
+    const double dLow = c - r1;
+    const double dHigh = r2 - c;
+
+    if ( p1 >= std::ceil(r2) ) {
+        // after the top (right) edge, rounded up
+
+        return 0.;
+    }
+    if (dLow <= dHigh) {
+        return smoothstep( (dLow + 0.5) / (s + 1.) );
+    }
+    if ( !(p1 > r2 - s) ) {
+        return 1.;
+    }
+
+    return smoothstep( (dHigh + 0.5) / (s + 1.) );
+}
+
+// Version 3, along x: the pixels before r1 rounded up are not in the rectangle either, and without softness the
+// pixels in it are all A.
+static inline
+double
+softnessFactorV3X(double r1,
+                  double r2,
+                  double p1,
+                  double c,
+                  double s)
+{
+    if ( (p1 < std::ceil(r1)) || (p1 >= std::ceil(r2)) ) {
+        return 0.;
+    }
+    if (s <= 0.) {
+        return 1.;
+    }
+
+    return softnessFactorV3(r1, r2, p1, c, s);
+}
 
 class CopyRectangleProcessorBase
     : public ImageProcessor
@@ -109,9 +191,14 @@ protected:
     bool _doMasking;
     double _mix;
     bool _maskInvert;
+    const CopyRectangleVersion _version;
+    OfxRectD _rectangleCanonical; // version 3
+    double _softnessCanonical; // version 3
+    double _par;
 
 public:
-    CopyRectangleProcessorBase(ImageEffect &instance)
+    CopyRectangleProcessorBase(ImageEffect &instance,
+                               CopyRectangleVersion version)
         : ImageProcessor(instance)
         , _srcImgA(NULL)
         , _srcImgB(NULL)
@@ -120,7 +207,11 @@ public:
         , _doMasking(false)
         , _mix(1.)
         , _maskInvert(false)
+        , _version(version)
+        , _softnessCanonical(0.)
+        , _par(1.)
     {
+        _rectangleCanonical.x1 = _rectangleCanonical.y1 = _rectangleCanonical.x2 = _rectangleCanonical.y2 = 0.;
         _process[0] = _process[1] = _process[2] = _process[3] = false;
         _rectangle.x1 = _rectangle.y1 = _rectangle.x2 = _rectangle.y2 = 0;
     }
@@ -154,6 +245,17 @@ public:
         _process[3] = processA;
         _mix = mix;
     }
+
+    // version 3
+    void setValuesV3(const OfxRectD& rectangle,
+                     double softness,
+                     double par)
+    {
+        _rectangleCanonical = rectangle;
+        _softnessCanonical = softness;
+        _par = par;
+    }
+
 };
 
 
@@ -164,16 +266,21 @@ class CopyRectangleProcessor
     : public CopyRectangleProcessorBase
 {
 public:
-    CopyRectangleProcessor(ImageEffect &instance)
-        : CopyRectangleProcessorBase(instance)
+    CopyRectangleProcessor(ImageEffect &instance,
+                           CopyRectangleVersion version)
+        : CopyRectangleProcessorBase(instance, version)
     {
     }
 
 private:
     void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
-        unused(rs);
         assert(nComponents == 1 || nComponents == 3 || nComponents == 4);
+        if (_version >= CopyRectangleVersion::e3) {
+            processV3(procWindow, rs);
+
+            return;
+        }
         float yMultiplier, xMultiplier;
         float tmpPix[nComponents];
 
@@ -234,6 +341,50 @@ private:
             }
         }
     } // multiThreadProcessImages
+
+    // Version 3: the factor is computed in pixels at render scale 1, from the pixel edges and centres
+    void processV3(const OfxRectI& procWindow,
+                   const OfxPointD& rs)
+    {
+        // the rectangle and the softness in pixels at render scale 1
+        const double x1 = _rectangleCanonical.x1 / _par;
+        const double x2 = _rectangleCanonical.x2 / _par;
+        const double y1 = _rectangleCanonical.y1;
+        const double y2 = _rectangleCanonical.y2;
+        const double sx = _softnessCanonical / _par;
+        const double sy = _softnessCanonical;
+        float tmpPix[nComponents];
+
+        for (int y = procWindow.y1; y < procWindow.y2; ++y) {
+            if ( _effect.abort() ) {
+                break;
+            }
+            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+            const double yFactor = softnessFactorV3(y1, y2, y / rs.y, (y + 0.5) / rs.y, sy);
+            for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
+                const double xFactor = (yFactor <= 0.) ? 0. : softnessFactorV3X(x1, x2, x / rs.x, (x + 0.5) / rs.x, sx);
+                const float multiplier = static_cast<float>(xFactor * yFactor);
+                const PIX *srcPixB = _srcImgB ? (const PIX*)_srcImgB->getPixelAddress(x, y) : NULL;
+                if (multiplier > 0.f) {
+                    const PIX *srcPixA = _srcImgA ? (const PIX*)_srcImgA->getPixelAddress(x, y) : NULL;
+                    for (int k = 0; k < nComponents; ++k) {
+                        if (!_process[(nComponents) == 1 ? 3 : k]) {
+                            tmpPix[k] = srcPixB ? srcPixB[k] : 0.f;
+                        } else {
+                            const PIX A = srcPixA ? srcPixA[k] : PIX();
+                            const PIX B = srcPixB ? srcPixB[k] : PIX();
+                            tmpPix[k] = A * multiplier + B * (1.f - multiplier);
+                        }
+                    }
+                    ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPixB, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
+                } else {
+                    for (int k = 0; k < nComponents; ++k) {
+                        dstPix[k] = srcPixB ? srcPixB[k] : PIX();
+                    }
+                }
+            }
+        }
+    } // processV3
 };
 
 
@@ -244,8 +395,10 @@ class CopyRectanglePlugin
 {
 public:
     /** @brief ctor */
-    CopyRectanglePlugin(OfxImageEffectHandle handle)
+    CopyRectanglePlugin(OfxImageEffectHandle handle,
+                        CopyRectangleVersion version)
         : ImageEffect(handle)
+        , _version(version)
         , _dstClip(NULL)
         , _srcClipA(NULL)
         , _srcClipB(NULL)
@@ -310,6 +463,7 @@ private:
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
+    const CopyRectangleVersion _version;
     Clip *_dstClip;
     Clip *_srcClipA;
     Clip *_srcClipB;
@@ -427,6 +581,11 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor,
     double mix;
     _mix->getValueAtTime(args.time, mix);
     processor.setValues(rectanglePixel, softness, processR, processG, processB, processA, mix);
+    if (_version >= CopyRectangleVersion::e3) {
+        double softnessCanonical;
+        _softness->getValueAtTime(args.time, softnessCanonical);
+        processor.setValuesV3(rectangle, softnessCanonical, par);
+    }
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -445,6 +604,14 @@ CopyRectanglePlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args
     OfxRectD rectangle;
 
     getRectanglecanonical(args.time, rectangle);
+    if (_version >= CopyRectangleVersion::e3) {
+        // the fade starts half a pixel outside the rectangle
+        const double par = _srcClipA->getPixelAspectRatio();
+        rectangle.x1 -= 0.5 * par;
+        rectangle.x2 += 0.5 * par;
+        rectangle.y1 -= 0.5;
+        rectangle.y2 += 0.5;
+    }
 
     // intersect the crop rectangle with args.regionOfInterest
     Coords::rectIntersection(rectangle, args.regionOfInterest, &rectangle);
@@ -483,17 +650,17 @@ CopyRectanglePlugin::renderInternal(const RenderArguments &args,
 {
     switch (dstBitDepth) {
     case eBitDepthUByte: {
-        CopyRectangleProcessor<unsigned char, nComponents, 255> fred(*this);
+        CopyRectangleProcessor<unsigned char, nComponents, 255> fred(*this, _version);
         setupAndProcess(fred, args);
         break;
     }
     case eBitDepthUShort: {
-        CopyRectangleProcessor<unsigned short, nComponents, 65535> fred(*this);
+        CopyRectangleProcessor<unsigned short, nComponents, 65535> fred(*this, _version);
         setupAndProcess(fred, args);
         break;
     }
     case eBitDepthFloat: {
-        CopyRectangleProcessor<float, nComponents, 1> fred(*this);
+        CopyRectangleProcessor<float, nComponents, 1> fred(*this, _version);
         setupAndProcess(fred, args);
         break;
     }
@@ -573,10 +740,13 @@ CopyRectanglePlugin::render(const RenderArguments &args)
     }
 }
 
-mDeclarePluginFactory(CopyRectanglePluginFactory, {ofxsThreadSuiteCheck();}, {});
+mDeclarePluginFactoryVersioned(CopyRectanglePluginFactory, {ofxsThreadSuiteCheck();}, {});
+template<unsigned int majorVersion>
 void
-CopyRectanglePluginFactory::describe(ImageEffectDescriptor &desc)
+CopyRectanglePluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
+    // version 2 (Natron 2.5 and earlier) is kept for old projects
+    desc.setIsObsolete(majorVersion < kPluginVersionMajor);
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -610,11 +780,12 @@ CopyRectanglePluginFactory::describe(ImageEffectDescriptor &desc)
 #endif
 }
 
+template<unsigned int majorVersion>
 ImageEffect*
-CopyRectanglePluginFactory::createInstance(OfxImageEffectHandle handle,
-                                           ContextEnum /*context*/)
+CopyRectanglePluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
+                                                         ContextEnum /*context*/)
 {
-    return new CopyRectanglePlugin(handle);
+    return new CopyRectanglePlugin(handle, (majorVersion >= 3) ? CopyRectangleVersion::e3 : CopyRectangleVersion::e2);
 }
 
 static void
@@ -637,9 +808,10 @@ defineComponentParam(ImageEffectDescriptor &desc,
     }
 }
 
+template<unsigned int majorVersion>
 void
-CopyRectanglePluginFactory::describeInContext(ImageEffectDescriptor &desc,
-                                              ContextEnum context)
+CopyRectanglePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
+                                                            ContextEnum context)
 {
     ClipDescriptor *srcClipB = desc.defineClip(kClipB);
 
@@ -701,7 +873,12 @@ CopyRectanglePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamRectangleInteractBtmLeftLabel);
         param->setDoubleType(eDoubleTypeXYAbsolute);
         ofxsSetDefaultCoordinateSystemNormalised(*param); // see ofxsNormalisedDefaults.h (#236)
-        param->setDefault(0., 0.);
+        // version 3: the middle half of the project (#282)
+        if (majorVersion >= 3) {
+            param->setDefault(0.25, 0.25);
+        } else {
+            param->setDefault(0., 0.);
+        }
         param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(-10000., -10000., 10000., 10000.); // Resolve requires display range or values are clamped to (-1,1)
         param->setIncrement(1.);
@@ -718,7 +895,11 @@ CopyRectanglePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamRectangleInteractSizeLabel);
         param->setDoubleType(eDoubleTypeXY);
         ofxsSetDefaultCoordinateSystemNormalised(*param); // see ofxsNormalisedDefaults.h (#236)
-        param->setDefault(1., 1.);
+        if (majorVersion >= 3) {
+            param->setDefault(0.5, 0.5);
+        } else {
+            param->setDefault(1., 1.);
+        }
         param->setRange(0., 0., DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(0., 0., 10000., 10000.); // Resolve requires display range or values are clamped to (-1,1)
         param->setDimensionLabels(kParamRectangleInteractSizeDim1, kParamRectangleInteractSizeDim2);
@@ -751,7 +932,7 @@ CopyRectanglePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setRange(0., 100.);
         param->setDisplayRange(0., 100.);
         param->setIncrement(1.);
-        param->setHint(kParamSoftnessHint);
+        param->setHint( (majorVersion >= 3) ? kParamSoftnessHint : kParamSoftnessHintV2 );
         if (page) {
             page->addChild(*param);
         }
@@ -760,7 +941,9 @@ CopyRectanglePluginFactory::describeInContext(ImageEffectDescriptor &desc,
     ofxsMaskMixDescribeParams(desc, page);
 } // CopyRectanglePluginFactory::describeInContext
 
-static CopyRectanglePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static CopyRectanglePluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+static CopyRectanglePluginFactory<2> p_v2(kPluginIdentifier, kPluginVersionMinorV2);
+mRegisterPluginFactoryInstance(p_v2)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

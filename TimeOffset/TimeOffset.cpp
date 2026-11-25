@@ -23,6 +23,9 @@
  * This can also reverse the order of the input frames so that last one is first.
  */
 
+#include <cmath> // std::trunc
+#include <cfloat> // DBL_MAX
+
 #include "ofxsProcessing.H"
 #include "ofxsCopier.h"
 #include "ofxsMacros.h"
@@ -44,8 +47,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.1: render copies the Source at the source time (it wrote nothing): the spec says that the
 //              host should not call render after isIdentity returns true, but some hosts (e.g. hostDemo) do;
 //              a NULL Source image (disconnected input) renders black instead of crashing (SupportExt copyPixels)
-#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+// version 2.0: Time Offset is fractional, and a Mode parameter (first) says how it is used: Whole Frames (the
+//              default) truncates it toward zero, Fractional Time uses it as is; the frame range is offset by the
+//              truncated offset (#306). Version 1 (an integer offset) is kept, obsolete, for old projects.
+#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinorV1 1 // the minor version of the obsolete version 1
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -53,6 +60,27 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kSupportsMultipleClipPARs false
 #define kSupportsMultipleClipDepths false
 #define kRenderThreadSafety eRenderFullySafe
+
+#define kParamRoundingMode "roundingMode"
+#define kParamRoundingModeLabel "Mode"
+#define kParamRoundingModeHint "How Time Offset is used."
+#define kParamRoundingModeOptionWhole "Whole Frames", "Truncate Time Offset toward zero to a whole number of frames (e.g. 5.7 gives 5, -5.5 gives -5).", "whole"
+#define kParamRoundingModeOptionFractional "Fractional Time", "Use the exact Time Offset, which may ask the input for times between frames (the frame range is still offset by the truncated value).", "fractional"
+
+// The major versions (see the History)
+enum class TimeOffsetVersion
+{
+    e1 = 1, // an integer offset
+    e2 = 2, // a fractional offset, and Mode
+};
+
+enum RoundingModeEnum
+{
+    eRoundingModeWhole = 0,
+    eRoundingModeFractional,
+};
+
+#define kParamRoundingModeDefault eRoundingModeWhole
 
 #define kParamTimeOffset "timeOffset"
 #define kParamTimeOffsetLabel "Time Offset (Frames)"
@@ -73,7 +101,7 @@ class TimeOffsetPlugin
 {
 public:
     /** @brief ctor */
-    TimeOffsetPlugin(OfxImageEffectHandle handle);
+    TimeOffsetPlugin(OfxImageEffectHandle handle, TimeOffsetVersion version);
 
 private:
     /* Override the render */
@@ -90,22 +118,31 @@ private:
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
     double getSourceTime(double time) const;
+    // the offset applied to the time (Mode: Whole Frames truncates it), and to the frame range (truncated)
+    double getTimeOffset(double time) const;
+    double getFrameRangeOffset(double time) const;
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;            /**< @brief Mandated output clips */
     Clip *_srcClip;            /**< @brief Mandated input clips */
-    IntParam  *_time_offset;      /**< @brief only used in the filter context. */
+    IntParam  *_time_offset;      /**< @brief version 1: the offset, in frames. */
+    DoubleParam *_time_offset_v2; /**< @brief version 2: the offset, maybe fractional. */
+    ChoiceParam *_roundingMode;   /**< @brief version 2 */
     BooleanParam  *_reverse_input;
     BooleanParam  *_clip;
 };
 
-TimeOffsetPlugin::TimeOffsetPlugin(OfxImageEffectHandle handle)
+TimeOffsetPlugin::TimeOffsetPlugin(OfxImageEffectHandle handle,
+                                   TimeOffsetVersion version)
     : ImageEffect(handle)
     , _dstClip(NULL)
     , _srcClip(NULL)
     , _time_offset(NULL)
+    , _time_offset_v2(NULL)
+    , _roundingMode(NULL)
     , _reverse_input(NULL)
+    , _clip(NULL)
 {
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
     assert(_dstClip);
@@ -115,10 +152,15 @@ TimeOffsetPlugin::TimeOffsetPlugin(OfxImageEffectHandle handle)
                            _srcClip->getPixelComponents() == ePixelComponentRGB ||
                            _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
 
-    _time_offset   = fetchIntParam(kParamTimeOffset);
+    if (version >= TimeOffsetVersion::e2) {
+        _roundingMode = fetchChoiceParam(kParamRoundingMode);
+        _time_offset_v2 = fetchDoubleParam(kParamTimeOffset);
+    } else {
+        _time_offset   = fetchIntParam(kParamTimeOffset);
+    }
     _reverse_input = fetchBooleanParam(kParamReverseInput);
     _clip = fetchBooleanParam(kParamClipToInputRange);
-    assert(_time_offset && _reverse_input && _clip);
+    assert( (_time_offset || (_time_offset_v2 && _roundingMode)) && _reverse_input && _clip );
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -127,11 +169,33 @@ TimeOffsetPlugin::TimeOffsetPlugin(OfxImageEffectHandle handle)
 ////////////////////////////////////////////////////////////////////////////////
 // basic plugin render function, just a skelington to instantiate templates from
 
+double
+TimeOffsetPlugin::getTimeOffset(double t) const
+{
+    if (_time_offset) {
+        return _time_offset->getValueAtTime(t); // no animation
+    }
+    const double offset = _time_offset_v2->getValueAtTime(t); // no animation
+    const bool whole = static_cast<RoundingModeEnum>( _roundingMode->getValue() ) == eRoundingModeWhole;
+
+    return whole ? std::trunc(offset) : offset;
+}
+
+double
+TimeOffsetPlugin::getFrameRangeOffset(double t) const
+{
+    if (_time_offset) {
+        return _time_offset->getValueAtTime(t); // no animation
+    }
+
+    return std::trunc( _time_offset_v2->getValueAtTime(t) ); // no animation
+}
+
 // figure the frame we should be retiming from
 double
 TimeOffsetPlugin::getSourceTime(double t) const
 {
-    double sourceTime = t - _time_offset->getValueAtTime(t); // no animation
+    double sourceTime = t - getTimeOffset(t);
 
     if (!_srcClip || !_srcClip->isConnected()) {
         return sourceTime;
@@ -162,8 +226,8 @@ TimeOffsetPlugin::getTimeDomain(OfxRangeD &range)
         // how many frames on the input clip
         OfxRangeD srcRange = _srcClip->getFrameRange();
 
-        range.min = srcRange.min + _time_offset->getValueAtTime(srcRange.min);
-        range.max = srcRange.max + _time_offset->getValueAtTime(srcRange.max);
+        range.min = srcRange.min + getFrameRangeOffset(srcRange.min);
+        range.max = srcRange.max + getFrameRangeOffset(srcRange.max);
 
         return true;
     }
@@ -230,9 +294,10 @@ TimeOffsetPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
     return true;
 }
 
-mDeclarePluginFactory(TimeOffsetPluginFactory,; , {});
+mDeclarePluginFactoryVersioned(TimeOffsetPluginFactory,; , {});
+template<unsigned int majorVersion>
 void
-TimeOffsetPluginFactory::load()
+TimeOffsetPluginFactory<majorVersion>::load()
 {
     ofxsThreadSuiteCheck();
     // we can't be used on hosts that don't perfrom temporal clip access
@@ -242,9 +307,12 @@ TimeOffsetPluginFactory::load()
 }
 
 /** @brief The basic describe function, passed a plugin descriptor */
+template<unsigned int majorVersion>
 void
-TimeOffsetPluginFactory::describe(ImageEffectDescriptor &desc)
+TimeOffsetPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
+    // version 1 (Natron 2.5 and earlier) is kept for old projects
+    desc.setIsObsolete(majorVersion < kPluginVersionMajor);
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -279,9 +347,10 @@ TimeOffsetPluginFactory::describe(ImageEffectDescriptor &desc)
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
+template<unsigned int majorVersion>
 void
-TimeOffsetPluginFactory::describeInContext(ImageEffectDescriptor &desc,
-                                           ContextEnum /*context*/)
+TimeOffsetPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
+                                                         ContextEnum /*context*/)
 {
     // we are a transition, so define the sourceTo input clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
@@ -302,8 +371,36 @@ TimeOffsetPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
-    // time_offset
-    {
+    // roundingMode (version 2), first
+    if (majorVersion >= 2) {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamRoundingMode);
+        param->setLabel(kParamRoundingModeLabel);
+        param->setHint(kParamRoundingModeHint);
+        assert(param->getNOptions() == eRoundingModeWhole);
+        param->appendOption(kParamRoundingModeOptionWhole);
+        assert(param->getNOptions() == eRoundingModeFractional);
+        param->appendOption(kParamRoundingModeOptionFractional);
+        param->setDefault( (int)kParamRoundingModeDefault );
+        param->setAnimates(false); // used in getTimeDomain()
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    // time_offset: fractional in version 2
+    if (majorVersion >= 2) {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamTimeOffset);
+        param->setLabel(kParamTimeOffsetLabel);
+        param->setHint(kParamTimeOffsetHint);
+        param->setDefault(0.);
+        param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+        param->setDisplayRange(-100., 100.);
+        param->setIncrement(1.);
+        param->setAnimates(false); // used in getTimeDomain()
+        if (page) {
+            page->addChild(*param);
+        }
+    } else {
         IntParamDescriptor *param = desc.defineIntParam(kParamTimeOffset);
         param->setLabel(kParamTimeOffsetLabel);
         param->setHint(kParamTimeOffsetHint);
@@ -344,14 +441,17 @@ TimeOffsetPluginFactory::describeInContext(ImageEffectDescriptor &desc,
 } // TimeOffsetPluginFactory::describeInContext
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref ImageEffect class */
+template<unsigned int majorVersion>
 ImageEffect*
-TimeOffsetPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                        ContextEnum /*context*/)
+TimeOffsetPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
+                                                      ContextEnum /*context*/)
 {
-    return new TimeOffsetPlugin(handle);
+    return new TimeOffsetPlugin(handle, (majorVersion >= 2) ? TimeOffsetVersion::e2 : TimeOffsetVersion::e1);
 }
 
-static TimeOffsetPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static TimeOffsetPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+static TimeOffsetPluginFactory<1> p_v1(kPluginIdentifier, kPluginVersionMinorV1);
+mRegisterPluginFactoryInstance(p_v1)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

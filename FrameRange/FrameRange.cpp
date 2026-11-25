@@ -24,6 +24,7 @@
 
 #include <algorithm> // for std::max
 #include <cmath> // for std::floor, std::ceil
+#include <climits> // INT_MIN, INT_MAX
 #include <stdio.h> // for snprintf & _snprintf
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #  ifndef NOMINMAX
@@ -61,7 +62,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.0: initial version
 // version 1.1: a NULL Source image (disconnected input; render is called although isIdentity returned true,
 //              e.g. by hostDemo) renders black instead of crashing (SupportExt copyPixels);
-//              the sublabel shows the range as the host displays it (kOfxImageClipPropDisplayTimeOffset, display only)
+//              the sublabel shows the range as the host displays it (kOfxImageClipPropDisplayTimeOffset, display only);
+//              (#400) connecting the Source sets Frame Range to the input range only if it was never set (a
+//              secret, saved flag) and is still (1,1), so that a host that loads values as user edits cannot
+//              replace a saved range; a range of (1,1) (set, reset or Reset) clears the flag; old projects behave as in 1.0
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -74,7 +78,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamFrameRange "frameRange"
 #define kParamFrameRangeLabel "Frame Range"
-#define kParamFrameRangeHint "Output frame range."
+#define kParamFrameRangeHint "Output frame range. Connecting the Source sets it to the input frame range if it was never set."
+#define kParamFrameRangeDefaultMin 1
+#define kParamFrameRangeDefaultMax 1
+// Whether Frame Range was set: by the user (or loaded with a project), by Reset, or from the input range when the
+// Source was connected. Secret, saved with the project.
+#define kParamFrameRangeInitialised "frameRangeInitialised"
 
 #define kParamReset "reset"
 #define kParamResetLabel "Reset"
@@ -95,6 +104,7 @@ public:
         , _dstClip(NULL)
         , _srcClip(NULL)
         , _frameRange(NULL)
+        , _frameRangeInitialised(NULL)
         , _before(NULL)
         , _after(NULL)
         , _sublabel(NULL)
@@ -103,9 +113,10 @@ public:
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         _srcClip = getContext() == eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
         _frameRange = fetchInt2DParam(kParamFrameRange);
+        _frameRangeInitialised = fetchBooleanParam(kParamFrameRangeInitialised);
         _before = fetchChoiceParam(kParamBefore);
         _after = fetchChoiceParam(kParamAfter);
-        assert(_frameRange && _before && _after);
+        assert(_frameRange && _frameRangeInitialised && _before && _after);
         _sublabel = fetchStringParam(kNatronOfxParamStringSublabelName);
         assert(_sublabel);
 
@@ -135,11 +146,13 @@ private:
 private:
 
     void refreshSubLabel(int rangeMin, int rangeMax);
+    void setFrameRangeToInputRange();
     BeforeAfterEnum getSourceTime(double time, double *srcTime);
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
     Clip *_srcClip;
     Int2DParam *_frameRange;
+    BooleanParam *_frameRangeInitialised;
     ChoiceParam *_before;
     ChoiceParam *_after;
     StringParam *_sublabel;
@@ -288,28 +301,52 @@ FrameRangePlugin::getTransform(const TransformArguments &args,
 #endif
 
 
+// Set Frame Range to the input frame range (Reset, or the Source connected). It is marked as set, unless it is
+// the default (1,1): then connecting the Source updates it again, as before the flag existed. An input range
+// that is not finite or does not fit an int (e.g. an infinite generator) leaves Frame Range unchanged.
+void
+FrameRangePlugin::setFrameRangeToInputRange()
+{
+    const OfxRangeD range = _srcClip->getFrameRange();
+    const double first = std::floor(range.min);
+    const double last = std::ceil(range.max);
+    if ( !(first >= INT_MIN && first <= INT_MAX && last >= INT_MIN && last <= INT_MAX) ) { // also false for NaN
+
+        return;
+    }
+    const int min = static_cast<int>(first);
+    const int max = static_cast<int>(last);
+
+    _frameRange->setValue(min, max);
+    _frameRangeInitialised->setValue( !(min == kParamFrameRangeDefaultMin && max == kParamFrameRangeDefaultMax) );
+    refreshSubLabel(min, max);
+}
+
 /** @brief called when a clip has just been changed in some way (a rewire maybe) */
 void
 FrameRangePlugin::changedClip(const InstanceChangedArgs &args,
                               const std::string &clipName)
 {
-    if ( (clipName == kOfxImageEffectSimpleSourceClipName) &&
-         ( args.reason == eChangeUserEdit) &&
-         _srcClip &&
-         _srcClip->isConnected() ) {
-        // if range is (1,1), i.e. the default value, set it to the input range
+    if ( (clipName != kOfxImageEffectSimpleSourceClipName) || (args.reason != eChangeUserEdit) ) {
+        return;
+    }
+    // When the Source is connected and Frame Range was never set and is still the default (1,1), set it to
+    // the input range, on all hosts (as in version 1.0). Loading a project is a user edit too (ofxCore.h,
+    // kOfxChangeUserEdited: "loading values from files or presets"), so a host could call this while it
+    // loads a project: frameRangeInitialised, saved with the project, keeps a Frame Range that was set, even
+    // to (1,1) (#400). Old projects have no flag, and behave as in version 1.0.
+    if ( _srcClip && _srcClip->isConnected() && !_frameRangeInitialised->getValue() ) {
         int min, max;
         _frameRange->getValue(min, max);
-        if ( (min == 1) && (max == 1) ) {
-            OfxRangeD srcRange = _srcClip->getFrameRange();
-            _frameRange->setValue( std::floor(srcRange.min), std::ceil(srcRange.max) );
+        if ( (min == kParamFrameRangeDefaultMin) && (max == kParamFrameRangeDefaultMax) ) {
+            setFrameRangeToInputRange();
+
+            return;
         }
     }
-    if ( (clipName == kOfxImageEffectSimpleSourceClipName) && (args.reason == eChangeUserEdit) ) {
-        // the display time offset is a clip property, which may follow the input
-        OfxPointI range = _frameRange->getValue();
-        refreshSubLabel(range.x, range.y);
-    }
+    // the display time offset is a clip property, which may follow the input
+    OfxPointI range = _frameRange->getValue();
+    refreshSubLabel(range.x, range.y);
 }
 
 void
@@ -330,13 +367,16 @@ FrameRangePlugin::changedParam(const InstanceChangedArgs &args,
                                const std::string &paramName)
 {
     if ( (paramName == kParamReset) && _srcClip && _srcClip->isConnected() && (args.reason == eChangeUserEdit) ) {
-        OfxRangeD range = _srcClip->getFrameRange();
-        _frameRange->setValue( (int)std::floor(range.min), (int)std::ceil(range.max) );
-        refreshSubLabel((int)std::floor(range.min), (int)std::ceil(range.max));
+        setFrameRangeToInputRange();
     }
     if ( (paramName == kParamFrameRange) && (args.reason == eChangeUserEdit) ) {
-
-        OfxPointI range = _frameRange->getValue();
+        // a value set by the user (or loaded with a project) is never replaced on connect, unless it is the
+        // default (1,1) (e.g. the parameter was reset by the host): then the update on connect comes back
+        const OfxPointI range = _frameRange->getValue();
+        const bool initialised = !(range.x == kParamFrameRangeDefaultMin && range.y == kParamFrameRangeDefaultMax);
+        if (_frameRangeInitialised->getValue() != initialised) {
+            _frameRangeInitialised->setValue(initialised);
+        }
         refreshSubLabel(range.x, range.y);
     }
 }
@@ -443,7 +483,7 @@ FrameRangePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         Int2DParamDescriptor *param = desc.defineInt2DParam(kParamFrameRange);
         param->setLabel(kParamFrameRangeLabel);
         param->setHint(kParamFrameRangeHint);
-        param->setDefault(1, 1);
+        param->setDefault(kParamFrameRangeDefaultMin, kParamFrameRangeDefaultMax);
         param->setDimensionLabels("first", "last");
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
         param->setAnimates(false); // used in getTimeDomain()
@@ -463,6 +503,17 @@ FrameRangePluginFactory::describeInContext(ImageEffectDescriptor &desc,
     // before, after (legacy Bounce option id, see FrameRangeBeforeAfter.h)
     defineBeforeAfterParam(desc, page, kParamBefore, kParamBeforeLabel, kParamBeforeHint, eBeforeAfterBlack, true);
     defineBeforeAfterParam(desc, page, kParamAfter, kParamAfterLabel, kParamAfterHint, eBeforeAfterBlack, true);
+    // frameRangeInitialised (after the visible params: Frame Range and Reset share a line)
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamFrameRangeInitialised);
+        param->setDefault(false);
+        param->setIsSecretAndDisabled(true); // always secret
+        param->setAnimates(false);
+        param->setEvaluateOnChange(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
     // sublabel
     {
         StringParamDescriptor* param = desc.defineStringParam(kNatronOfxParamStringSublabelName);

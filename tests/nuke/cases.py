@@ -31,6 +31,10 @@ Cases: CASES is a list of dicts with
   disconnected); no input for a generator;
 - "context": the OFX context (default: filter, else general);
 - "frames" (default [0]; whole frames only), "views" (default ["left"]);
+- "ofx_times": the times hostDemo renders, one per frame, for a case whose
+  "nuke_post" adds a time node (e.g. a Retime) that samples the node at
+  those, maybe fractional, times (Nuke's sample() only takes whole frames);
+- "major": the plug-in major version hostDemo uses (default: the newest);
 - "nuke_edges": compare Nuke's pixels outside its bounding box as sample()
   gives them (the edge pixels repeated), not as 0;
 - "region": the compared pixels, (x1, y1, x2, y2[, step]) or "project"
@@ -807,8 +811,29 @@ CASES += [
                                           "size": [cx(20), 20],
                                           "softness": 4}),
          nuke_inputs=["black", "white"], clips={"B": "black", "A": "white"},
-         channels="rgba", tolerance=1e-4,
-         known=282),
+         channels="rgba", tolerance=1e-4),
+    case("CopyRectangle area 6,6-26,26 softness 8",
+         ("CopyRectangle", {"area": [6, 6, 26, 26], "softness": 8}),
+         (ofx_id("CopyRectanglePlugin"), {"bottomLeft": [cx(6), 6],
+                                          "size": [cx(20), 20],
+                                          "softness": 8}),
+         nuke_inputs=["black", "white"], clips={"B": "black", "A": "white"},
+         channels="rgba", tolerance=1e-4),
+    # Fractional edges; at the top and right edges, the last pixel of the
+    # fade is A.
+    case("CopyRectangle area 6.3,6.7-25.6,25.2 softness 4",
+         ("CopyRectangle", {"area": [6.3, 6.7, 25.6, 25.2], "softness": 4}),
+         (ofx_id("CopyRectanglePlugin"), {"bottomLeft": [cx(6.3), 6.7],
+                                          "size": [cx(19.3), 18.5],
+                                          "softness": 4}),
+         nuke_inputs=["black", "white"], clips={"B": "black", "A": "white"},
+         channels="rgba", tolerance=1e-4),
+    case("CopyRectangle area 6.3,6.7-25.6,25.2 softness 0",
+         ("CopyRectangle", {"area": [6.3, 6.7, 25.6, 25.2]}),
+         (ofx_id("CopyRectanglePlugin"), {"bottomLeft": [cx(6.3), 6.7],
+                                          "size": [cx(19.3), 18.5]}),
+         nuke_inputs=["black", "white"], clips={"B": "black", "A": "white"},
+         channels="rgba", tolerance=1e-4),
     # ShuffleCopy's input 0 is "2" (B), input 1 is "1" (A).
     case("ShuffleCopy defaults", ("ShuffleCopy", {}),
          (ofx_id("ShufflePlugin"), {}),
@@ -1072,6 +1097,26 @@ CASES += [
          (ofx_id("CropPlugin"), {"bottomLeft": [cx(4), 4],
                                  "size": [cx(24), 24], "softness": 4}),
          input="ramp", channels="rgba", tolerance=1e-3),
+    case("Crop softness 8", ("Crop", {"box": [4, 4, 28, 28], "softness": 8}),
+         (ofx_id("CropPlugin"), {"bottomLeft": [cx(4), 4],
+                                 "size": [cx(24), 24], "softness": 8}),
+         input="ramp", channels="rgba", tolerance=1e-3),
+    case("Crop softness 1", ("Crop", {"box": [4, 4, 28, 28], "softness": 1}),
+         (ofx_id("CropPlugin"), {"bottomLeft": [cx(4), 4],
+                                 "size": [cx(24), 24], "softness": 1}),
+         input="ramp", channels="rgba", tolerance=1e-3),
+    # Fractional edges: the fade starts half a pixel outside the box.
+    case("Crop 4.3,4.7-27.6,27.2 softness 4",
+         ("Crop", {"box": [4.3, 4.7, 27.6, 27.2], "softness": 4}),
+         (ofx_id("CropPlugin"), {"bottomLeft": [cx(4.3), 4.7],
+                                 "size": [cx(23.3), 22.5], "softness": 4}),
+         input="ramp", channels="rgba", tolerance=1e-3),
+    case("Crop softness 4, no black outside",
+         ("Crop", {"box": [4, 4, 28, 28], "softness": 4, "crop": False}),
+         (ofx_id("CropPlugin"), {"bottomLeft": [cx(4), 4],
+                                 "size": [cx(24), 24], "softness": 4,
+                                 "blackOutside": 0}),
+         input="ramp", channels="rgba", tolerance=1e-3),
     case("Reformat scale 0.5 defaults",
          ("Reformat", {"type": "scale", "scale": .5}),
          (ofx_id("Reformat"), {"reformatType": "Scale",
@@ -1107,8 +1152,17 @@ CASES += [
          input="ramp", channels="rgba", tolerance=1e-3),
     case("AdjBBox defaults (AdjustRoD)", ("AdjBBox", {}),
          (ofx_id("AdjustRoDPlugin"), {}), input="ramp", channels="rgba",
-         region=(0, 0, 64, 64), nuke_edges=False,
-         known=299),
+         region=(0, 0, 64, 64), nuke_edges=False),
+    # Shrinking: whole pixels, truncated toward zero (-4 / PAR: 3 in x).
+    case("AdjBBox -4 (AdjustRoD -4)", ("AdjBBox", {"numpixels": -4}),
+         (ofx_id("AdjustRoDPlugin"), {"addPixels": [-4, -4]}),
+         input="ramp", channels="rgba", nuke_edges=False),
+    case("AdjBBox -16 (AdjustRoD -16)", ("AdjBBox", {"numpixels": -16}),
+         (ofx_id("AdjustRoDPlugin"), {"addPixels": [-16, -16]}),
+         input="ramp", channels="rgba", nuke_edges=False),
+    case("AdjBBox -5.6 (AdjustRoD -5.6)", ("AdjBBox", {"numpixels": -5.6}),
+         (ofx_id("AdjustRoDPlugin"), {"addPixels": [-5.6, -5.6]}),
+         input="ramp", channels="rgba", nuke_edges=False),
     # Both amounts are in square pixels: 16 / (768 / 720) = 15 pixels in
     # x; the renders differ by one column there, which x < 26 avoids.
     case("AdjBBox 16, AdjustRoD 16 (both divided by the PAR in x)",
@@ -1396,10 +1450,61 @@ CASES += [
 # ------------------------------------------------------------------ Time
 # "frame" has red = the frame number; hostDemo's clips have frames 0-25.
 TIME = {"input": "frame", "channels": "rgba", "tolerance": 1e-4}
+
+
+def retime_post(speed):
+    """A "nuke_post" that samples the node through a Retime.
+
+    Args:
+        speed: the Retime speed: Nuke frame f samples the node at the time
+            f * speed (filter none, input and output ranges from 0).
+
+    Returns:
+        The Python lines, for `nuke -t`.
+    """
+    return "\n".join([
+        "n = nuke.nodes.Retime(inputs=[n])",
+        "for _k, _v in (('input.first', 0), ('input.last', 40),",
+        "               ('output.first', 0), ('speed', %r),"
+        % speed,
+        "               ('filter', 'none')):",
+        "    n[_k].setValue(_v)"])
+
 CASES += [
     case("TimeOffset 5", ("TimeOffset", {"time_offset": 5}),
          (ofx_id("timeOffset"), {"timeOffset": 5}),
          frames=[0, 3, 10, 25], **TIME),
+    # A fractional offset: Whole Frames (the default) truncates it toward
+    # zero; Fractional Time uses it (the frame range uses the truncated one).
+    case("TimeOffset 5.5, whole frames", ("TimeOffset", {"time_offset": 5.5}),
+         (ofx_id("timeOffset"), {"timeOffset": 5.5}),
+         frames=[0, 3, 10, 25], **TIME),
+    case("TimeOffset -5.5, fractional time",
+         ("TimeOffset", {"time_offset": -5.5,
+                         "rounding_mode": "Fractional time"}),
+         (ofx_id("timeOffset"), {"timeOffset": -5.5,
+                                 "roundingMode": "Fractional Time"}),
+         frames=[0, 3, 10, 19], **TIME),
+    # Fractional output times (motion blur, a retime downstream): a Retime
+    # with the None filter samples the node at frame * speed.
+    case("TimeOffset 5 at fractional times, whole frames",
+         ("TimeOffset", {"time_offset": 5}),
+         (ofx_id("timeOffset"), {"timeOffset": 5}),
+         nuke_post=retime_post(0.25),
+         frames=[41, 42, 43], ofx_times=[10.25, 10.5, 10.75],
+         **TIME),
+    case("TimeOffset 5.5 at fractional times, whole frames",
+         ("TimeOffset", {"time_offset": 5.5}),
+         (ofx_id("timeOffset"), {"timeOffset": 5.5}),
+         nuke_post=retime_post(0.5),
+         frames=[21, 23], ofx_times=[10.5, 11.5], **TIME),
+    case("TimeOffset 5.5 at fractional times, fractional time",
+         ("TimeOffset", {"time_offset": 5.5,
+                         "rounding_mode": "Fractional time"}),
+         (ofx_id("timeOffset"), {"timeOffset": 5.5,
+                                 "roundingMode": "Fractional Time"}),
+         nuke_post=retime_post(0.5),
+         frames=[21, 23], ofx_times=[10.5, 11.5], **TIME),
     case("TimeOffset 5, reverse input",
          ("TimeOffset", {"time_offset": 5, "reverse_input": True}),
          (ofx_id("timeOffset"), {"timeOffset": 5, "reverseInput": 1}),
@@ -1655,7 +1760,6 @@ KNOWN = {
         "Colorspace sRGB to YCbCr (RGBToYCbCr709)",
         "Colorspace rec709 to YCbCr (RGBToYCbCr709)",
         "Colorspace linear to HSV, values outside [0, 1]"],
-    298: ["Crop softness 4"],
     302: [
         "LensDistortion k 0.1, undistort",
         "LensDistortion k 0.1, undistort (k1 -0.1)",
@@ -1669,8 +1773,7 @@ KNOWN = {
         "STMap uv = rgb, blur = blue (1), blur scale 3"],
     305: [
         "ContactSheet 2 inputs, 2x2 cells of 32x32, center off"],
-    309: ["Retime speed 0.5, filter none",
-                              "Retime speed 0.5, filter nearest"],
+    309: ["Retime speed 0.5, filter none"],
     312: [
         "Blur size 10, impulse (BlurCImg size 10)",
         "Blur size 10, impulse (BlurCImg size x times PAR)",

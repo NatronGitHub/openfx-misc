@@ -43,8 +43,16 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "If the 'Extent' parameter is set to 'Format', and 'Reformat' is checked, the output pixel aspect ratio is also set to this of the format.\n" \
     "This plugin does not concatenate transforms."
 #define kPluginIdentifier "net.sf.openfx.CropPlugin"
-#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+// History:
+// version 1.0: initial version
+// version 1.1: with Softness and without Black Outside, the edge pixels whose centre is outside the crop
+//              rectangle (fractional edges, render scale < 1, PAR != 1) are black: the fade factor is clamped
+//              to [0,1] (it was 2t^2 > 0 for the negative t there) (#298)
+// version 2.0: the Softness falloff is a smoothstep over [-0.5, Softness + 0.5] pixels from each edge, the two
+//              axes multiplied; Black Outside is on by default (#298). Version 1 is kept, obsolete, for old projects.
+#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinorV1 1 // the minor version of the obsolete version 1
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -69,7 +77,17 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamSoftness "softness"
 #define kParamSoftnessLabel "Softness"
-#define kParamSoftnessHint "Size of the fade to black around edges to apply."
+#define kParamSoftnessHint "Size of the fade to black around edges to apply, in canonical coordinates (pixels at render scale 1, times the pixel aspect ratio in x). The fade is inside the rectangle: along each axis, the image is multiplied by smoothstep((d + p/2) / (Softness + p)), where d is the distance from the pixel centre to the nearest edge and p the size of a pixel (so the fade starts half a pixel outside the edge); in the corners, the two factors are multiplied."
+#define kParamSoftnessHintV1 "Size of the fade to black around edges to apply, in canonical coordinates. At a distance d < Softness inside the nearest edge, the image is multiplied by 2t^2 for t = d / Softness < 1/2, 1 - 2(1-t)^2 above; in the corners, the two factors are multiplied."
+#define kParamBlackOutsideDefault true // version 2: on by default (#298)
+#define kParamBlackOutsideDefaultV1 false
+
+// The softness falloff of each major version
+enum SoftnessFalloffEnum
+{
+    eSoftnessFalloffQuadratic = 0, // version 1: two parabolas over [0, softness]
+    eSoftnessFalloffSmoothstep,    // version 2: smoothstep over [-p/2, softness + p/2]
+};
 
 static inline
 double
@@ -85,6 +103,45 @@ rampSmooth(double t)
     }
 }
 
+// TODO: move to SupportExt (the same as CopyRectangle's)
+// smoothstep(t) = 3t^2 - 2t^3 for t in [0,1], 0 below, 1 above
+static inline
+double
+smoothstep(double t)
+{
+    if (t <= 0.) {
+        return 0.;
+    }
+    if (t >= 1.) {
+        return 1.;
+    }
+
+    return t * t * (3. - 2. * t);
+}
+
+// The fade factor at the distance d (canonical, inside the rectangle if positive) from the nearest edge, for a
+// softness > 0 and a pixel of size pixelSize (canonical, at render scale 1) along that axis.
+static inline
+double
+softnessFactor(SoftnessFalloffEnum falloff,
+               double d,
+               double softness,
+               double pixelSize)
+{
+    if (falloff == eSoftnessFalloffSmoothstep) {
+        return smoothstep( (d + 0.5 * pixelSize) / (softness + pixelSize) );
+    }
+    // version 1, clamped to [0,1] (the pixels whose centre is outside the rectangle are black)
+    if (d <= 0.) {
+        return 0.;
+    }
+    if (d >= softness) {
+        return 1.;
+    }
+
+    return rampSmooth(d / softness);
+}
+
 class CropProcessorBase
     : public ImageProcessor
 {
@@ -94,6 +151,8 @@ protected:
     OfxPointI _translation;
     bool _blackOutside;
     double _softness;
+    SoftnessFalloffEnum _falloff;
+    double _par;
     OfxRectI _cropRectFullPixel;
 
 public:
@@ -102,6 +161,8 @@ public:
         , _srcImg(NULL)
         , _blackOutside(false)
         , _softness(0.)
+        , _falloff(eSoftnessFalloffSmoothstep)
+        , _par(1.)
     {
         _cropRectFull.x1 = _cropRectFull.y1 = _cropRectFull.x2 = _cropRectFull.y2 = 0.;
         _cropRectFullPixel.x1 = _cropRectFullPixel.y1 = _cropRectFullPixel.x2 = _cropRectFullPixel.y2 = 0;
@@ -119,11 +180,14 @@ public:
                    double par,
                    bool blackOutside,
                    bool reformat,
-                   double softness)
+                   double softness,
+                   SoftnessFalloffEnum falloff)
     {
         _cropRectFull = cropRectFull;
         _blackOutside = blackOutside;
         _softness = softness;
+        _falloff = falloff;
+        _par = par;
         Coords::toPixelNearest(cropRectFull, renderScale, par, &_cropRectFullPixel);
         if (reformat) {
             _translation.x = -_cropRectFullPixel.x1;
@@ -160,8 +224,9 @@ private:
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
                 bool xblack = _blackOutside && ( x == (_cropRectFullPixel.x1 + _translation.x) || x == (_cropRectFullPixel.x2 - 1 + _translation.x) );
-                // treat the black case separately
-                if (xblack || yblack || !_srcImg) {
+                // treat the black case separately. Version 2: the black pixels are those outside the rectangle
+                // (below), not its edge pixels
+                if ( ( (xblack || yblack) && (_falloff != eSoftnessFalloffSmoothstep) ) || !_srcImg ) {
                     for (int k = 0; k < nComponents; ++k) {
                         dstPix[k] =  PIX();
                     }
@@ -174,7 +239,11 @@ private:
                     double dx = (std::min)(p.x - _cropRectFull.x1, _cropRectFull.x2 - p.x);
                     double dy = (std::min)(p.y - _cropRectFull.y1, _cropRectFull.y2 - p.y);
 
-                    if ( _blackOutside && ( (dx <= 0) || (dy <= 0) ) ) {
+                    // with the smoothstep softness, the fade starts half a pixel outside the rectangle
+                    const bool fadeOutside = (_falloff == eSoftnessFalloffSmoothstep) && (_softness > 0);
+                    const double outsideX = fadeOutside ? -0.5 * _par : 0.;
+                    const double outsideY = fadeOutside ? -0.5 : 0.;
+                    if ( _blackOutside && ( (dx <= outsideX) || (dy <= outsideY) ) ) {
                         // outside of the rectangle
                         for (int k = 0; k < nComponents; ++k) {
                             dstPix[k] =  PIX();
@@ -186,23 +255,18 @@ private:
                         //        dstPix[k] =  PIX();
                         //    }
                         //} else
-                        if ( (_softness == 0) || ( (dx >= _softness) && (dy >= _softness) ) ) {
+                        // beyond this distance from the edges, the factor is 1 (smoothstep: half a pixel more)
+                        const double insideX = _softness + ( (_falloff == eSoftnessFalloffSmoothstep) ? 0.5 * _par : 0. );
+                        const double insideY = _softness + ( (_falloff == eSoftnessFalloffSmoothstep) ? 0.5 : 0. );
+                        if ( (_softness == 0) || ( (dx >= insideX) && (dy >= insideY) ) ) {
                             // inside of the rectangle
                             for (int k = 0; k < nComponents; ++k) {
                                 dstPix[k] =  srcPix[k];
                             }
                         } else {
                             double tx, ty;
-                            if (dx >= _softness) {
-                                tx = 1.;
-                            } else {
-                                tx = rampSmooth(dx / _softness);
-                            }
-                            if (dy >= _softness) {
-                                ty = 1.;
-                            } else {
-                                ty = rampSmooth(dy / _softness);
-                            }
+                            tx = softnessFactor(_falloff, dx, _softness, _par); // a pixel is PAR wide in canonical x
+                            ty = softnessFactor(_falloff, dy, _softness, 1.);
                             double t = tx * ty;
                             if (t >= 1) {
                                 for (int k = 0; k < nComponents; ++k) {
@@ -233,7 +297,8 @@ class CropPlugin
 {
 public:
     /** @brief ctor */
-    CropPlugin(OfxImageEffectHandle handle)
+    CropPlugin(OfxImageEffectHandle handle,
+               SoftnessFalloffEnum falloff)
         : ImageEffect(handle)
         , _dstClip(NULL)
         , _srcClip(NULL)
@@ -246,6 +311,7 @@ public:
         , _interactive(NULL)
         , _hiDPI(NULL)
         , _recenter(NULL)
+        , _falloff(falloff)
         , _softness(NULL)
         , _reformat(NULL)
         , _intersect(NULL)
@@ -339,6 +405,7 @@ private:
     BooleanParam* _interactive;
     BooleanParam* _hiDPI;
     PushButtonParam *_recenter;
+    const SoftnessFalloffEnum _falloff; // from the major version
     DoubleParam* _softness;
     BooleanParam* _reformat;
     BooleanParam* _intersect;
@@ -520,7 +587,7 @@ CropPlugin::setupAndProcess(CropProcessorBase &processor,
     double softness = _softness->getValueAtTime(args.time);
     // no need to softness *= args.renderScale.x; since softness is computed on canonical coords
 
-    processor.setValues(cropRectFullCanonical, args.renderScale, par, blackOutside, reformat, softness);
+    processor.setValues(cropRectFullCanonical, args.renderScale, par, blackOutside, reformat, softness, _falloff);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -799,11 +866,14 @@ class CropOverlayDescriptor
 };
 
 
-mDeclarePluginFactory(CropPluginFactory, {ofxsThreadSuiteCheck();}, {});
+mDeclarePluginFactoryVersioned(CropPluginFactory, {ofxsThreadSuiteCheck();}, {});
 
+template<unsigned int majorVersion>
 void
-CropPluginFactory::describe(ImageEffectDescriptor &desc)
+CropPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
+    // version 1 (Natron 2.5 and earlier) is kept for old projects
+    desc.setIsObsolete(majorVersion < kPluginVersionMajor);
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -841,16 +911,18 @@ CropPluginFactory::describe(ImageEffectDescriptor &desc)
 #endif
 }
 
+template<unsigned int majorVersion>
 ImageEffect*
-CropPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                  ContextEnum /*context*/)
+CropPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
+                                                ContextEnum /*context*/)
 {
-    return new CropPlugin(handle);
+    return new CropPlugin(handle, (majorVersion >= 2) ? eSoftnessFalloffSmoothstep : eSoftnessFalloffQuadratic);
 }
 
+template<unsigned int majorVersion>
 void
-CropPluginFactory::describeInContext(ImageEffectDescriptor &desc,
-                                     ContextEnum context)
+CropPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
+                                                   ContextEnum context)
 {
     // Source clip only in the filter context
     // create the mandated source clip
@@ -900,7 +972,7 @@ CropPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setRange(0., 1000.);
         param->setDisplayRange(0., 100.);
         param->setIncrement(1.);
-        param->setHint(kParamSoftnessHint);
+        param->setHint( (majorVersion >= 2) ? kParamSoftnessHint : kParamSoftnessHintV1 );
         if (page) {
             page->addChild(*param);
         }
@@ -937,7 +1009,7 @@ CropPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamBlackOutside);
         param->setLabel(kParamBlackOutsideLabel);
-        param->setDefault(false);
+        param->setDefault( (majorVersion >= 2) ? kParamBlackOutsideDefault : kParamBlackOutsideDefaultV1 );
         param->setAnimates(true);
         param->setHint(kParamBlackOutsideHint);
         if (page) {
@@ -946,7 +1018,9 @@ CropPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
 } // CropPluginFactory::describeInContext
 
-static CropPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static CropPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+static CropPluginFactory<1> p_v1(kPluginIdentifier, kPluginVersionMinorV1);
+mRegisterPluginFactoryInstance(p_v1)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

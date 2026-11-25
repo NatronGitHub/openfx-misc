@@ -37,16 +37,23 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginName "AdjustRoD"
 #define kPluginGrouping "Transform"
-#define kPluginDescription "Enlarges the input image by a given amount. The added pixels are copies of the closest edge pixel (Border Conditions: Nearest, the default), or black and transparent (Border Conditions: Black)."
+#define kPluginDescription "Enlarges the input image by a given amount, or shrinks it with negative amounts. The added pixels are copies of the closest edge pixel (Border Conditions: Nearest, the default), or black and transparent (Border Conditions: Black). A negative amount removes pixels on each side: the region of definition is the input's, shrunk by that amount, and the pixels outside it are those of the shrunk image under the same border conditions. The default amount is 25."
 #define kPluginIdentifier "net.sf.openfx.AdjustRoDPlugin"
 // History:
 // 1.0 initial version
 // 1.1 add boundary param
 // 1.2 a NULL Source image (disconnected, or fetchImage failed) renders black instead of crashing;
 //     with Nearest border conditions, ask for the Source edge pixels even where the render window
-//     is out of the Source RoD (it got no Source image there)
-#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 2 // Increment this when you have fixed a bug or made it faster.
+//     is out of the Source RoD (it got no Source image there);
+//     (#299, in the same unreleased minor version) negative amounts shrink the region of definition (the range
+//     started at 0); the pixels outside the shrunk region follow the border conditions, from its edge
+// 2.0 the default amount is 25 (it was 0, a no-op); the amounts are whole pixels, truncated toward zero (in x,
+//     Add Pixels divided by the pixel aspect ratio) (#299). Version 1 is kept, obsolete, for old projects.
+#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinorV1 2 // the minor version of the obsolete version 1
+#define kParamAddPixelsDefault 25. // version 2
+#define kParamAddPixelsDefaultV1 0.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -57,7 +64,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamAddPixels "addPixels"
 #define kParamAddPixelsLabel "Add Pixels"
-#define kParamAddPixelsHint "How many pixels to add on each side for both dimensions (width/height)"
+#define kParamAddPixelsHintV1 "How many pixels to add on each side for both dimensions (width/height), in canonical coordinates. Negative values remove pixels: the region of definition shrinks (down to an empty region at its centre)."
+#define kParamAddPixelsHint "How many pixels to add on each side for both dimensions (width/height), in canonical coordinates, truncated toward zero to whole pixels (in x, the amount is divided by the pixel aspect ratio). Negative values remove pixels: the region of definition shrinks (down to an empty region at its centre)."
 
 #define kParamBoundary "boundary"
 #define kParamBoundaryLabel "Border Conditions" //"Boundary Conditions"
@@ -80,6 +88,58 @@ enum BoundaryEnum
     //eBoundaryPeriodic,
 };
 
+// How Add Pixels is used: as is (version 1), or as whole pixels, truncated toward zero (version 2)
+enum class AmountRounding
+{
+    eExact,
+    eWholePixels,
+};
+
+// Version 2: a canonical x coordinate of the RoD near c whose pixel (floor(c / par) for a lower edge, ceil for an
+// upper one) is exactly pixel, so that the host gets whole pixels: (n * par) / par may be 92.999... for n = 93.
+static double
+canonicalEdgeX(double c,
+               double par,
+               double pixel,
+               bool lower)
+{
+    for (int i = 0; i < 8; ++i) {
+        const double p = lower ? std::floor(c / par) : std::ceil(c / par);
+        if (p < pixel) {
+            c = std::nextafter(c, DBL_MAX);
+        } else if (p > pixel) {
+            c = std::nextafter(c, -DBL_MAX);
+        } else {
+            break;
+        }
+    }
+
+    return c;
+}
+
+// The output RoD: the Source RoD enlarged by (w,h) on each side, or shrunk if they are negative. Along an axis
+// shrunk by more than half its size, the RoD is empty, at the centre of the Source RoD.
+static OfxRectD
+adjustedRoD(const OfxRectD& srcRod,
+            double w,
+            double h)
+{
+    OfxRectD rod = srcRod;
+
+    rod.x1 -= w;
+    rod.x2 += w;
+    rod.y1 -= h;
+    rod.y2 += h;
+    if (rod.x2 < rod.x1) {
+        rod.x1 = rod.x2 = (srcRod.x1 + srcRod.x2) / 2;
+    }
+    if (rod.y2 < rod.y1) {
+        rod.y1 = rod.y2 = (srcRod.y1 + srcRod.y2) / 2;
+    }
+
+    return rod;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class AdjustRoDPlugin
@@ -87,8 +147,10 @@ class AdjustRoDPlugin
 {
 public:
     /** @brief ctor */
-    AdjustRoDPlugin(OfxImageEffectHandle handle)
+    AdjustRoDPlugin(OfxImageEffectHandle handle,
+                    AmountRounding amountRounding)
         : ImageEffect(handle)
+        , _amountRounding(amountRounding)
         , _dstClip(NULL)
         , _srcClip(NULL)
         , _size(NULL)
@@ -125,7 +187,13 @@ private:
     /* set up and run a processor */
     void setupAndCopy(PixelProcessorFilterBase &, const RenderArguments &args);
 
+    // the amounts added on each side (canonical, negative to shrink)
+    void getAmounts(double time, double* w, double* h) const;
+    // version 2: the amounts in whole pixels at render scale 1 (x, then y)
+    OfxPointI getPixelAmounts(double time) const;
+
 private:
+    const AmountRounding _amountRounding; // from the major version
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
     Clip *_srcClip;
@@ -174,13 +242,79 @@ AdjustRoDPlugin::setupAndCopy(PixelProcessorFilterBase & processor,
 
     // set the images
     processor.setDstImg( dst.get() );
-    processor.setSrcImg( src.get(), _boundary->getValueAtTime(time) );
+    const int boundary = _boundary->getValueAtTime(time);
+    double w = 0., h = 0.;
+    getAmounts(time, &w, &h);
+    if ( (w < 0) || (h < 0) ) {
+        // shrunk: only the Source pixels in the output RoD are shown, and the border conditions apply from
+        // its edge. The host may give a larger Source image: use the part of it in the shrunk RoD.
+        const OfxRectD srcRod = _srcClip->getRegionOfDefinition(time);
+        const OfxRectD shownRod = adjustedRoD(srcRod, (std::min)(w, 0.), (std::min)(h, 0.));
+        OfxRectI shownPixel;
+        if (_amountRounding == AmountRounding::eWholePixels) {
+            // whole pixels: shrink the Source RoD in pixels, without converting the amounts back
+            const OfxPointI n = getPixelAmounts(time);
+            Coords::toPixelEnclosing(srcRod, args.renderScale, src->getPixelAspectRatio(), &shownPixel);
+            const int sx = (n.x < 0) ? static_cast<int>( std::floor(-n.x * args.renderScale.x) ) : 0;
+            const int sy = (n.y < 0) ? static_cast<int>( std::floor(-n.y * args.renderScale.y) ) : 0;
+            shownPixel.x1 += sx;
+            shownPixel.x2 -= sx;
+            shownPixel.y1 += sy;
+            shownPixel.y2 -= sy;
+        } else {
+            Coords::toPixelEnclosing(shownRod, args.renderScale, src->getPixelAspectRatio(), &shownPixel);
+        }
+        OfxRectI bounds;
+        if ( Coords::rectIsEmpty(shownRod) || !Coords::rectIntersection(shownPixel, src->getBounds(), &bounds) || Coords::rectIsEmpty(bounds) ) {
+            fillBlack( *this, args.renderWindow, args.renderScale, dst.get() );
+
+            return;
+        }
+        processor.setSrcImg( src->getPixelAddress(bounds.x1, bounds.y1), bounds, src->getPixelComponents(),
+                             src->getPixelComponentCount(), src->getPixelDepth(), src->getRowBytes(), boundary );
+    } else {
+        processor.setSrcImg( src.get(), boundary );
+    }
 
     // set the render window
     processor.setRenderWindow(args.renderWindow, args.renderScale);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
+}
+
+// Version 2: whole pixels at render scale 1, truncated toward zero: Add Pixels is in canonical coordinates, so
+// the x amount is divided by the pixel aspect ratio (as a float: e.g. 16 at PAR 768/720 gives 14 pixels, not 15).
+OfxPointI
+AdjustRoDPlugin::getPixelAmounts(double time) const
+{
+    double w = 0., h = 0.;
+
+    _size->getValueAtTime(time, w, h);
+    const double par = ( _srcClip && _srcClip->isConnected() ) ? _srcClip->getPixelAspectRatio() : 1.;
+    const double parf = (par > 0.) ? static_cast<double>( static_cast<float>(par) ) : 1.;
+    // clamped to a range where the int conversions are defined
+    const double nx = (std::max)( -1e9, (std::min)( 1e9, std::trunc(w / parf) ) );
+    const double ny = (std::max)( -1e9, (std::min)( 1e9, std::trunc(h) ) );
+    const OfxPointI n = { static_cast<int>(nx), static_cast<int>(ny) };
+
+    return n;
+}
+
+void
+AdjustRoDPlugin::getAmounts(double time,
+                            double* w,
+                            double* h) const
+{
+    if (_amountRounding == AmountRounding::eExact) {
+        _size->getValueAtTime(time, *w, *h);
+
+        return;
+    }
+    const OfxPointI n = getPixelAmounts(time);
+    const double par = ( _srcClip && _srcClip->isConnected() ) ? _srcClip->getPixelAspectRatio() : 1.;
+    *w = n.x * ( (par > 0.) ? par : 1. );
+    *h = n.y;
 }
 
 // Along one axis: the part of the Source range [s1,s2) that Nearest border conditions need to
@@ -225,25 +359,28 @@ AdjustRoDPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
     if ( Coords::rectIsEmpty(srcRod) || Coords::rectIsEmpty(args.regionOfInterest) ) {
         return;
     }
-    double w, h;
-    _size->getValueAtTime(args.time, w, h);
+    double w = 0., h = 0.;
+    getAmounts(args.time, &w, &h);
 
-    OfxRectD paddedRoD = srcRod;
-    paddedRoD.x1 -= w;
-    paddedRoD.x2 += w;
-    paddedRoD.y1 -= h;
-    paddedRoD.y2 += h;
+    OfxRectD paddedRoD = adjustedRoD(srcRod, w, h);
+    // the part of the Source that the output shows: all of it, or the shrunk RoD
+    const OfxRectD shownRod = (w < 0 || h < 0) ? adjustedRoD(srcRod, (std::min)(w, 0.), (std::min)(h, 0.)) : srcRod;
+    if ( Coords::rectIsEmpty(shownRod) ) {
+        // the output RoD is empty (render fills black): keep the default RoI
+
+        return;
+    }
 
     if (_boundary->getValueAtTime(args.time) == eBoundaryNeumann) {
-        // Out of the Source RoD, the output pixels are those of the nearest Source pixel: they
-        // need the Source edge pixels even where args.regionOfInterest is out of the Source RoD.
+        // Out of the shown Source RoD, the output pixels are those of the nearest shown Source pixel: they
+        // need its edge pixels even where args.regionOfInterest is out of it.
         const double par = _srcClip->getPixelAspectRatio();
         // the size of a pixel in canonical coordinates (renderScale and the PAR are > 0 per the spec)
         const double pixelW = (args.renderScale.x > 0. && par > 0.) ? par / args.renderScale.x : 1.;
         const double pixelH = (args.renderScale.y > 0.) ? 1. / args.renderScale.y : 1.;
         OfxRectD roi;
-        nearestRoI(args.regionOfInterest.x1, args.regionOfInterest.x2, srcRod.x1, srcRod.x2, pixelW, &roi.x1, &roi.x2);
-        nearestRoI(args.regionOfInterest.y1, args.regionOfInterest.y2, srcRod.y1, srcRod.y2, pixelH, &roi.y1, &roi.y2);
+        nearestRoI(args.regionOfInterest.x1, args.regionOfInterest.x2, shownRod.x1, shownRod.x2, pixelW, &roi.x1, &roi.x2);
+        nearestRoI(args.regionOfInterest.y1, args.regionOfInterest.y2, shownRod.y1, shownRod.y2, pixelH, &roi.y1, &roi.y2);
         rois.setRegionOfInterest(*_srcClip, roi);
 
         return;
@@ -251,8 +388,8 @@ AdjustRoDPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
 
     // intersect the crop rectangle with args.regionOfInterest
     Coords::rectIntersection(paddedRoD, args.regionOfInterest, &paddedRoD);
-    // intersect the crop rectangle with srcRoD
-    Coords::rectIntersection(paddedRoD, srcRod, &paddedRoD);
+    // intersect the crop rectangle with the shown part of srcRoD
+    Coords::rectIntersection(paddedRoD, shownRod, &paddedRoD);
     rois.setRegionOfInterest(*_srcClip, paddedRoD);
 }
 
@@ -267,14 +404,19 @@ AdjustRoDPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
     if ( Coords::rectIsEmpty(srcRod) ) {
         return false;
     }
-    double w, h;
-    _size->getValueAtTime(args.time, w, h);
+    double w = 0., h = 0.;
+    getAmounts(args.time, &w, &h);
 
-    rod = srcRod;
-    rod.x1 -= w;
-    rod.x2 += w;
-    rod.y1 -= h;
-    rod.y2 += h;
+    rod = adjustedRoD(srcRod, w, h);
+    if ( (_amountRounding == AmountRounding::eWholePixels) && !Coords::rectIsEmpty(rod) ) {
+        // whole pixels: the RoD in pixels must be the Source's, plus the amount
+        const double par = _srcClip->getPixelAspectRatio();
+        if (par > 0.) {
+            const OfxPointI n = getPixelAmounts(args.time);
+            rod.x1 = canonicalEdgeX(rod.x1, par, std::floor(srcRod.x1 / par) - n.x, true);
+            rod.x2 = canonicalEdgeX(rod.x2, par, std::ceil(srcRod.x2 / par) + n.x, false);
+        }
+    }
 
     return true;
 }
@@ -337,9 +479,9 @@ AdjustRoDPlugin::isIdentity(const IsIdentityArguments &args,
                             double & /*identityTime*/
                             , int& /*view*/, std::string& /*plane*/)
 {
-    double w, h;
+    double w = 0., h = 0.;
 
-    _size->getValueAtTime(args.time, w, h);
+    getAmounts(args.time, &w, &h);
     if ( (w == 0) && (h == 0) ) {
         identityClip = _srcClip;
 
@@ -349,10 +491,13 @@ AdjustRoDPlugin::isIdentity(const IsIdentityArguments &args,
     return false;
 }
 
-mDeclarePluginFactory(AdjustRoDPluginFactory, {ofxsThreadSuiteCheck();}, {});
+mDeclarePluginFactoryVersioned(AdjustRoDPluginFactory, {ofxsThreadSuiteCheck();}, {});
+template<unsigned int majorVersion>
 void
-AdjustRoDPluginFactory::describe(ImageEffectDescriptor &desc)
+AdjustRoDPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
+    // version 1 (Natron 2.5 and earlier) is kept for old projects
+    desc.setIsObsolete(majorVersion < kPluginVersionMajor);
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -389,15 +534,17 @@ AdjustRoDPluginFactory::describe(ImageEffectDescriptor &desc)
 #endif
 }
 
+template<unsigned int majorVersion>
 ImageEffect*
-AdjustRoDPluginFactory::createInstance(OfxImageEffectHandle handle,
+AdjustRoDPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                        ContextEnum /*context*/)
 {
-    return new AdjustRoDPlugin(handle);
+    return new AdjustRoDPlugin(handle, (majorVersion >= 2) ? AmountRounding::eWholePixels : AmountRounding::eExact);
 }
 
+template<unsigned int majorVersion>
 void
-AdjustRoDPluginFactory::describeInContext(ImageEffectDescriptor &desc,
+AdjustRoDPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
                                           ContextEnum /*context*/)
 {
     // Source clip only in the filter context
@@ -434,13 +581,14 @@ AdjustRoDPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     {
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamAddPixels);
         param->setLabel(kParamAddPixelsLabel);
-        param->setHint(kParamAddPixelsHint);
+        param->setHint( (majorVersion >= 2) ? kParamAddPixelsHint : kParamAddPixelsHintV1 );
         param->setDoubleType(eDoubleTypeXY);
         param->setDefaultCoordinateSystem(eCoordinatesCanonical); // Nuke defaults to Normalized for XY and XYAbsolute!
-        param->setDefault(0., 0.);
+        const double amount = (majorVersion >= 2) ? kParamAddPixelsDefault : kParamAddPixelsDefaultV1;
+        param->setDefault(amount, amount);
         param->setIncrement(1.);
-        param->setRange(0., 0., DBL_MAX, DBL_MAX);
-        param->setDisplayRange(0., 0., 1000., 1000.);
+        param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // negative values shrink the RoD (#299)
+        param->setDisplayRange(-1000., -1000., 1000., 1000.);
         param->setDimensionLabels("w", "h");
         param->setIncrement(1.);
         param->setDigits(0);
@@ -466,7 +614,9 @@ AdjustRoDPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
 } // AdjustRoDPluginFactory::describeInContext
 
-static AdjustRoDPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static AdjustRoDPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+static AdjustRoDPluginFactory<1> p_v1(kPluginIdentifier, kPluginVersionMinorV1);
+mRegisterPluginFactoryInstance(p_v1)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
