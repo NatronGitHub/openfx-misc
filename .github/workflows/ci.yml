@@ -19,7 +19,9 @@ name: Continous Integration tests
 # through their pull request (not twice). Draft pull requests run no CI: a PR is
 # rebased on the latest master, then marked ready, which runs CI (ready_for_review),
 # and goes back to draft if CI fails. A branch can still be tested on demand with
-# workflow_dispatch. Superseded runs are cancelled, except for tags. Jobs time out.
+# workflow_dispatch (it also uploads the bundles, and is grouped by branch, not by PR:
+# cancel it before marking the PR ready). Superseded runs are cancelled, except for
+# tags. Jobs time out.
 on:
   push:
     branches: [master, 'RB-*']
@@ -161,8 +163,7 @@ jobs:
 
   build_linux:
     name: Build Ubuntu 24.04
-    # Draft pull requests run no CI (maintainer, 2026-11-25): a draft is rebased on the latest master before it
-    # is marked ready, so its earlier runs would have to be redone anyway. Marking it ready (ready_for_review) runs CI.
+    # no CI on draft pull requests (see the header)
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     timeout-minutes: 20
     runs-on: ubuntu-24.04
@@ -233,8 +234,7 @@ jobs:
 
   build_windows:
     name: Build Windows (MSYS2 UCRT64)
-    # Draft pull requests run no CI (maintainer, 2026-11-25): a draft is rebased on the latest master before it
-    # is marked ready, so its earlier runs would have to be redone anyway. Marking it ready (ready_for_review) runs CI.
+    # no CI on draft pull requests (see the header)
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     timeout-minutes: 30
     runs-on: windows-2022
@@ -314,8 +314,7 @@ jobs:
   # Windows.
   build_windows_msvc_arm64x:
     name: Build Windows MSVC Arm64X
-    # Draft pull requests run no CI (maintainer, 2026-11-25): a draft is rebased on the latest master before it
-    # is marked ready, so its earlier runs would have to be redone anyway. Marking it ready (ready_for_review) runs CI.
+    # no CI on draft pull requests (see the header)
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     timeout-minutes: 45
     runs-on: windows-2025
