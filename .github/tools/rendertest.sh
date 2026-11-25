@@ -1423,6 +1423,12 @@ tests=(
     "Retime Box speed 1|net.sf.openfx.Retime|general|float|identity+tol=0.05+mean=10,0,0,1||filter=3 --frames 10"
     "Retime Box speed 10|net.sf.openfx.Retime|general|float|tol=0.05+mean=13.47,0,0,0.6||filter=3 speed=10 after=2 --frames 2"
     "Retime Box speed 0.5|net.sf.openfx.Retime|general|float|identity+tol=0.05+mean=10,0,0,1||filter=3 speed=0.5 --frames 21"
+    # Reverse input (version 2): the input reversed as whole frames, so Box at speed 1 and t = 0 covers source
+    # times 25 to 26 (frame 25, mean 24.949); at speed 2, frames 24 and 25 (mean 24.5 x 0.998). Version 1
+    # (Box not released) reverses around frame 25: t = 0 covers 24 to 25 (frame 24)
+    "Retime reverse Box|net.sf.openfx.Retime|general|float|identity+tol=0.005+mean=24.949,0,0,1||filter=3 reverseInput=1 --frames 0"
+    "Retime reverse Box speed 2|net.sf.openfx.Retime|general|float|notidentity+tol=0.05+mean=24.45,0,0,1||filter=3 speed=2 reverseInput=1 --frames 0"
+    "Retime v1 reverse Box|net.sf.openfx.Retime|general|float|identity+tol=0.05+mean=23.95,0,0,1||-m 1 filter=3 reverseInput=1 --frames 0"
     "Retime Box shutter 2|net.sf.openfx.Retime|general|float|notidentity+tol=0.05+mean=11.48,0,0,1||filter=3 speed=2 shutter=2 --frames 5"
     # FrameHold Set to Current Frame (#307), on the same default input: pressed at t=7, First Frame is 7
     # and every frame shows frame 7; with First Frame animated (keys at 0 and 20), it adds a key at 7.
@@ -1453,10 +1459,10 @@ tests=(
     "TimeOffset v1 fractional time|net.sf.openfx.timeOffset|general|float|identity+tol=0.05+mean=5.25,0,0,1||-m 1 timeOffset=5 --frames 10.25"
     # Retime Nearest (#309), speed 0.5 at t = 21: source time 10.5; version 2 takes the frame at the middle of
     # the Box interval (10.5 to 11: frame 10), version 1 the nearest frame, half frames rounded up (frame 11);
-    # at speed 2, t = 10: the interval 20 to 22, frame 21 (version 1: frame 20)
+    # at speed 2, t = 10: the interval 20 to 22, frame 21 (mean 21 x 0.998; version 1: frame 20)
     "Retime Nearest|net.sf.openfx.Retime|general|float|identity+tol=0.05+mean=10,0,0,1||filter=1 speed=0.5 --frames 21"
     "Retime v1 Nearest|net.sf.openfx.Retime|general|float|identity+tol=0.05+mean=11,0,0,1||-m 1 filter=1 speed=0.5 --frames 21"
-    "Retime Nearest speed 2|net.sf.openfx.Retime|general|float|identity+tol=0.05+mean=21,0,0,1||filter=1 speed=2 --frames 10"
+    "Retime Nearest speed 2|net.sf.openfx.Retime|general|float|identity+tol=0.05+mean=20.96,0,0,1||filter=1 speed=2 --frames 10"
     "Retime v1 Nearest speed 2|net.sf.openfx.Retime|general|float|identity+tol=0.05+mean=20,0,0,1||-m 1 filter=1 speed=2 --frames 10"
     # the defaults: version 2, Box (frames 20 and 21 at speed 2, t = 10: not an identity) and After = Hold
     # (frame 25 at t = 30, whose time drawn in black makes the mean 24.949); version 1, Linear (frame 20 at

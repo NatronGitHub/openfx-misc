@@ -78,7 +78,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              Before and After default to Hold; Box averages the source frames from the output time to Shutter
 //              frames after it (source frame n covers n to n+1), and Nearest takes the source frame at the
 //              middle of that interval (version 1: the nearest frame, half frames rounded up); the Shutter
-//              parameter (default 1) sets its length (#309). Version 1 is kept, obsolete, for old projects;
+//              parameter (default 1) sets its length. The input is reversed as whole frames (Reverse input:
+//              output time 0 is the end of the last frame; a decreasing warp curve likewise), and None and
+//              Linear read the start of the source interval of the output frame, which differs from the source
+//              time at the output time when the input plays backwards (version 1: output time 0 reads the last
+//              frame) (#309). In the Retimer context, Box and Nearest read the frame at the source time
+//              (rounded down). Version 1 is kept, obsolete, for old projects;
 //              its Box filter (not released either) uses the same interval, with a shutter of 1.
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
@@ -111,7 +116,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamFilterOptionNearest "Nearest", "Pick the input frame at the middle of the source interval of the output frame (see Box and Shutter): at speed 1, the input frame at the same time; at speed 2, output frame 2 shows input frame 5 (the interval is 4 to 6, and input frame n covers the times n to n+1).", "nearest"
 #define kParamFilterOptionNearestV1 "Nearest", "Pick input image with nearest integer time. Half frames are rounded up (e.g. 1.5 gives frame 2).", "nearest"
 #define kParamFilterOptionLinear "Linear", "Blend the two nearest images with linear interpolation.", "linear"
-#define kParamFilterOptionBox "Box", "Average the input frames covered by the output frame (from the output time to Shutter frames after it, mapped to the input time), each weighted by the part of it that is covered (input frame n covers the times from n to n+1). At speed 1, this is the input frame; faster speeds blend several frames (motion blur, e.g. at speed 2 output frame 2 averages input frames 4 and 5), at most " STRINGISE(kBoxMaxFrames) " frames plus a partial frame at each end; slower speeds show each input frame on several output frames. At the ends of the input frame range, the frames outside it are read according to Before/After, so the first and last frames fade (to black, or to what the input gives there) unless Before/After is Hold. In the Retimer context, where the host only gives the source time of the current frame, Box reads the frame at that time (rounded down).", "box"
+#define kParamFilterOptionBox "Box", "Average the input frames covered by the output frame (from the output time to Shutter frames after it, mapped to the input time), each weighted by the part of it that is covered (input frame n covers the times from n to n+1). At speed 1, this is the input frame; faster speeds blend several frames (motion blur, e.g. at speed 2 output frame 2 averages input frames 4 and 5), at most " STRINGISE(kBoxMaxFrames) " frames plus a partial frame at each end; slower speeds show each input frame on several output frames. At the ends of the input frame range, the frames outside it are read according to Before/After, so the first and last frames fade (to black, or to what the input gives there) unless Before/After is Hold. In the Retimer context, where the host only gives the source time of the current frame, Box (and Nearest) read the frame at that time (rounded down).", "box"
 
 // The major versions, whose behaviours differ (see the History)
 enum class RetimeVersion
@@ -139,7 +144,7 @@ enum FilterEnum
 // version 2 only (version 1: 1)
 #define kParamShutter "shutter"
 #define kParamShutterLabel "Shutter"
-#define kParamShutterHint "Length of the source interval of an output frame, in output frames, for the Box and Nearest filters: it goes from the output time to Shutter frames after it, mapped to the input time. Box averages the input frames in it, and Nearest takes the input frame at its middle. 1 covers the whole output frame; with 0, Box shows the input frame at the output time."
+#define kParamShutterHint "Length of the source interval of an output frame, in output frames, for the Box and Nearest filters: it goes from the output time to Shutter frames after it, mapped to the input time. Box averages the input frames in it, and Nearest takes the input frame at its middle. 1 covers the whole output frame; with 0, Box shows the input frame at the output time. Ignored (and disabled) with the None and Linear filters, and in the Retimer context, where the host gives the source time."
 #define kParamShutterDefault 1.
 
 #define kParamBeforeHint "What to read when the source frame (computed from the retiming parameters) is before the first frame of the input clip. This refers to source frames: when the input is played backwards, it applies at the end of the output."
@@ -283,6 +288,7 @@ public:
         if (_version >= RetimeVersion::e2) {
             _shutter = fetchDoubleParam(kParamShutter);
             assert(_shutter);
+            updateShutterEnabled();
         }
     }
 
@@ -303,6 +309,7 @@ public:
     virtual bool getTimeDomain(OfxRangeD &range) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
+    virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
     /* set up and run a processor */
     void setupAndProcess(ImageBlenderBase &, const RenderArguments &args, const SourceFrames &frames);
@@ -311,7 +318,9 @@ private:
     auto_ptr<Image> fetchDstImage(const RenderArguments &args);
     void getSourceFrames(double time, FieldEnum fieldToRender, SourceFrames *frames);
     std::vector<BoxSample> getBoxSamples(double time, double sourceTime, FieldEnum fieldToRender);
-    bool getSourceInterval(double time, double sourceTime, FieldEnum fieldToRender, double *a, double *b);
+    std::optional<OfxRangeD> getSourceInterval(double time, FieldEnum fieldToRender, double shutter);
+    double getShutter(double time) const { return _shutter ? _shutter->getValueAtTime(time) : kParamShutterDefault; }
+    void updateShutterEnabled();
     double getSourceTime(double time);
     std::optional<double> getSpeedDuration(const OfxRangeD &srcRange);
 };
@@ -596,6 +605,27 @@ RetimePlugin::renderBox(const RenderArguments &args,
     writer.process();
 }
 
+// Shutter is only used by Box and Nearest, and not in the Retimer context (no source interval there)
+void
+RetimePlugin::updateShutterEnabled()
+{
+    if (!_shutter) {
+        return;
+    }
+    const FilterEnum filter = (FilterEnum)_filter->getValue();
+    _shutter->setEnabled( (getContext() != eContextRetimer) &&
+                          ( (filter == eFilterBox) || (filter == eFilterNearest) ) );
+}
+
+void
+RetimePlugin::changedParam(const InstanceChangedArgs & /*args*/,
+                           const std::string &paramName)
+{
+    if (paramName == kParamFilter) {
+        updateShutterEnabled();
+    }
+}
+
 // figure the source frame we should be retiming from at the given output time
 double
 RetimePlugin::getSourceTime(double time)
@@ -611,12 +641,17 @@ RetimePlugin::getSourceTime(double time)
         _reverse_input->getValueAtTime(time, reverse_input);
         // we have our own param, which is a speed, so we integrate it to get the time we want
         if (reverse_input) {
-            sourceTime = srcRange.max - _speed->integrate(srcRange.min, time);
+            // version 2: the input reversed as whole frames (source frame n covers n to n+1), so that output
+            // time 0 is the end of the last frame; version 1: the last frame
+            const double end = (_version >= RetimeVersion::e2) ? srcRange.max + 1. : srcRange.max;
+            sourceTime = end - _speed->integrate(srcRange.min, time);
         } else {
             sourceTime = srcRange.min + _speed->integrate(srcRange.min, time);
         }
         if (_warp) {
-            double r = srcRange.max - srcRange.min;
+            // version 2: the input range as whole frames (the last frame ends at srcRange.max + 1), so that
+            // a decreasing warp curve reverses the input as Reverse input does; version 1: to the last frame
+            const double r = srcRange.max - srcRange.min + ( (_version >= RetimeVersion::e2) ? 1. : 0. );
             if (r != 0.) {
                 sourceTime = srcRange.min + r * _warp->getValue(0, time, (sourceTime - srcRange.min) / r);
             }
@@ -634,8 +669,16 @@ RetimePlugin::getSourceFrames(double time,
                               FieldEnum fieldToRender,
                               SourceFrames *frames)
 {
-    const double sourceTime = getSourceTime(time);
     const FilterEnum filter = (FilterEnum)_filter->getValueAtTime(time);
+    double sourceTime = getSourceTime(time);
+    if ( (_version >= RetimeVersion::e2) && ( (filter == eFilterNone) || (filter == eFilterLinear) ) ) {
+        // version 2: None and Linear read the start of the source interval of the output frame (or field),
+        // which is sourceTime if the source time increases, and the source time at the end of the output
+        // frame if it decreases (Reverse input, a negative speed, a decreasing warp curve)
+        if ( const std::optional<OfxRangeD> interval = getSourceInterval(time, fieldToRender, 1.) ) {
+            sourceTime = interval->min;
+        }
+    }
 
     frames->blended = false;
     frames->blend = 0.;
@@ -651,13 +694,9 @@ RetimePlugin::getSourceFrames(double time,
         }
     } else if ( (filter == eFilterNearest) && (_version >= RetimeVersion::e2) ) {
         // version 2: the frame at the middle of the source interval (frame n covers n to n+1); in the
-        // Retimer context (no interval), the nearest frame, the previous one at a half frame
-        double a, b;
-        if ( getSourceInterval(time, sourceTime, fieldToRender, &a, &b) ) {
-            frames->from = std::floor( (a + b) / 2 );
-        } else {
-            frames->from = std::ceil(sourceTime - 0.5);
-        }
+        // Retimer context (no interval), the frame at the source time, as Box
+        const std::optional<OfxRangeD> interval = getSourceInterval(time, fieldToRender, getShutter(time));
+        frames->from = std::floor( interval ? (interval->min + interval->max) / 2 : sourceTime );
     } else if ( (sourceTime == (int)sourceTime) || (filter == eFilterNone) ) {
         frames->from = sourceTime;
     } else if (filter == eFilterNearest) {
@@ -730,30 +769,42 @@ RetimePlugin::getSourceFrames(double time,
     frames->original = (fromMode == eBeforeAfterOriginal) && (!frames->blended || toMode == eBeforeAfterOriginal);
 }
 
-// The source interval [*a, *b] of the output frame (or field) at the given time, used by the Box and
-// Nearest filters: from the output time to Shutter frames (or fields) after it, mapped to the source time
-// (in increasing order). False if there is none: the Retimer context, where the host gives the source
-// time of the current time only, or a source time that is not finite and reasonable.
-bool
+// A source time within a relative 1e-9 of a whole step (frame or field), snapped to it: e.g. speed 0.1 at
+// time 30 gives 3.0000000000000004, which would add a sliver of the next frame to a Box average (and the
+// output would no longer be an identity).
+static double
+snapToStep(double t,
+           double step)
+{
+    const double n = std::round(t / step) * step;
+
+    return ( std::fabs(t - n) <= 1e-9 * (std::max)( 1., std::fabs(t) ) ) ? n : t;
+}
+
+// The source interval of the output frame (or field) at the given time: from the output time to shutter
+// frames (or fields) after it, mapped to the source time, in increasing order (Reverse input, a negative
+// speed or a decreasing warp curve map it backwards), its ends snapped to whole steps. Used by the Box and
+// Nearest filters, and by None and Linear (version 2) with a shutter of 1. None in the Retimer context,
+// where the host gives the source time of the current time only, or if a source time is not finite and
+// reasonable.
+std::optional<OfxRangeD>
 RetimePlugin::getSourceInterval(double time,
-                                double sourceTime,
                                 FieldEnum fieldToRender,
-                                double *a,
-                                double *b)
+                                double shutter)
 {
     if (getContext() == eContextRetimer) {
-        return false;
+        return std::nullopt;
     }
     const double step = (fieldToRender == eFieldNone) ? 1. : 0.5;
-    const double shutter = _shutter ? _shutter->getValueAtTime(time) : kParamShutterDefault;
-    *a = sourceTime;
-    *b = getSourceTime(time + shutter * step);
-    if (*b < *a) {
-        std::swap(*a, *b);
-    }
-
+    const double a = getSourceTime(time);
+    const double b = getSourceTime(time + shutter * step);
     // a finite, reasonable interval (also false for NaN)
-    return (std::fabs(*a) < kMaxBeforeAfterFrame) && (std::fabs(*b) < kMaxBeforeAfterFrame);
+    if ( !( (std::fabs(a) < kMaxBeforeAfterFrame) && (std::fabs(b) < kMaxBeforeAfterFrame) ) ) {
+        return std::nullopt;
+    }
+    const OfxRangeD interval = { snapToStep( (std::min)(a, b), step ), snapToStep( (std::max)(a, b), step ) };
+
+    return interval;
 }
 
 // Box filter: the source frames (or fields, at half-frame times) covered by the source interval of the
@@ -768,8 +819,10 @@ RetimePlugin::getBoxSamples(double time,
 {
     const double step = (fieldToRender == eFieldNone) ? 1. : 0.5;
     std::vector<BoxSample> samples;
-    double a, b;
-    if ( getSourceInterval(time, sourceTime, fieldToRender, &a, &b) && (b > a) ) {
+    const std::optional<OfxRangeD> interval = getSourceInterval(time, fieldToRender, getShutter(time));
+    if ( interval && (interval->max > interval->min) ) {
+        double a = interval->min;
+        double b = interval->max;
         if (b - a > kBoxMaxFrames * step) {
             const double middle = (a + b) / 2;
             a = middle - kBoxMaxFrames * step / 2;

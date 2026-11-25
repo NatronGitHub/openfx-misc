@@ -305,8 +305,8 @@ private:
     IntParam* _crossDissolve;
     IntParam* _firstFrame;
     IntParam* _lastFrame;
-    bool _legacyCrossDissolve; // version 1 cross-dissolve: clip1 is weighted by 1-alpha0, and the RoD is clip0's only
-    bool _linearCurves; // version 1: linear fades and cross-dissolve (version 2: quadratic fades, smoothstep cross-dissolve)
+    const bool _legacyCrossDissolve; // version 1 cross-dissolve: clip1 is weighted by 1-alpha0, and the RoD is clip0's only
+    const bool _linearCurves; // version 1: linear fades and cross-dissolve (version 2: quadratic fades, smoothstep cross-dissolve)
 };
 
 

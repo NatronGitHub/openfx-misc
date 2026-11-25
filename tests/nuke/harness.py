@@ -29,6 +29,9 @@ NUKE_TIMEOUT = 300  # seconds, per case
 HOSTDEMO_TIMEOUT = 300  # seconds, per case
 FIRST_FRAME, LAST_FRAME = 0, 25  # hostDemo's clip frame range
 PROJECT_STEP = 8  # compare one pixel in 8x8 over the project area
+# The first frame change goes this far before the first compared frame, to
+# a frame that no case compares (see nuke_script).
+FRAME_CHANGE_OFFSET = 1000
 
 
 class CaseError(Exception):
@@ -252,7 +255,7 @@ def nuke_script(case, result_path):
         # frame change come back once more at the next frame (frame 1
         # sampled right after frame 0 gives frame 0): change the frame
         # first.
-        "nuke.frame(%d)" % (min(case_frames(case)) - 1000),
+        "nuke.frame(%d)" % (min(case_frames(case)) - FRAME_CHANGE_OFFSET),
         "points = %r" % (case_points(case),),
         "results = {}",
         "for view in %r:" % (case_views(case),),

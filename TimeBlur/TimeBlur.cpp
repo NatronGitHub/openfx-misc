@@ -58,7 +58,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              limited to 2 and +-1; SupportExt#205, part of #273)
 // version 2.0: with Divisions 1, the output is the input at the current time, whatever the Shutter and Shutter
 //              Offset (version 1: the input at the start of the shutter range), as the tests/nuke reference
-//              (#273). Version 1 is kept, obsolete, for old projects.
+//              (#273). Version 1 is kept, obsolete, for old projects. (The kNatronOfxParamProcess* parameters,
+//              once planned for version 2.0, are left for a future major version.)
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 #define kPluginVersionMinorV1 1 // the minor version of the obsolete version 1
