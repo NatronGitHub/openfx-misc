@@ -52,11 +52,7 @@ Blur/eu.cimg.EdgeDetect.png \
 Blur/eu.cimg.EdgeDetect.svg \
 Blur/eu.cimg.EdgeExtend.png \
 Blur/eu.cimg.EdgeExtend.svg \
-Blur/fr.inria.EdgeBlur.png \
-Blur/fr.inria.EdgeBlur.svg \
-Blur/EdgeBlur.py \
 Blur/EdgeBlur.nps \
-Blur/EdgeBlur.gizmo \
 Blur/net.sf.cimg.CImgLaplacian.png \
 Blur/net.sf.cimg.CImgLaplacian.svg \
 Blur/net.sf.cimg.CImgSharpen.png \
@@ -92,6 +88,14 @@ Smooth/net.sf.cimg.CImgSmooth.png \
 Smooth/net.sf.cimg.CImgSmooth.svg \
 ZDefocus/net.sf.cimg.CImgZDefocus.png \
 ZDefocus/net.sf.cimg.CImgZDefocus.svg \
+
+
+# the PyPlugs, with their icons: in Contents/Resources/PyPlugs (Makefile.master)
+PYPLUGS = \
+Blur/EdgeBlur.py \
+Blur/EdgeBlur.gizmo \
+Blur/fr.inria.EdgeBlur.png \
+Blur/fr.inria.EdgeBlur.svg
 
 VPATH += \
 Bilateral \

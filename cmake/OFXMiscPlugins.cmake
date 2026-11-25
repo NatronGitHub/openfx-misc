@@ -23,8 +23,8 @@
 # plug-in to both.
 #
 #   ofxmisc_plugin(<name> [DIR <dir>] ID <ofx id> [COMPONENTS <SupportExt component>...]
-#                  [SOURCES <extra source>...] [OPENMP] [DEBUG_ONLY] [FFT] [LINK_GL]
-#                  [NO_ID_CHECK])
+#                  [SOURCES <extra source>...] [PYPLUGS <resource>...] [OPENMP] [DEBUG_ONLY] [FFT]
+#                  [LINK_GL] [NO_ID_CHECK])
 #
 # - <name>: the CMake target and install component of its separate bundle (DIR defaults to it);
 # - ID: names the separate bundle (<ID>.ofx.bundle): the plug-in's OFX identifier, as it is, if
@@ -33,6 +33,9 @@
 # - sources: <dir>/*.cpp plus SOURCES; resources: <dir>/*.{png,svg,py,gizmo,nps}, i.e. the icons
 #   (<pluginIdentifier>.png/.svg) of the plug-ins of <dir> and its PyPlugs (in both modes: the
 #   combined bundle gets the union);
+# - PYPLUGS: the resources of <dir> (file names) that go to Contents/Resources/PyPlugs instead of
+#   Contents/Resources, where Natron loads the PyPlugs of a bundle: a PyPlug's .py, its .gizmo and
+#   its icons (Natron finds the icon of a PyPlug next to its .py). Make: <dir>/Makefile's PYPLUGS;
 # - COMPONENTS: the SupportExt components (supportext_add_sources), from <dir>/Makefile's objects;
 # - DEBUG_ONLY: only compiled in debug builds (#ifdef DEBUG): no bundle in other builds;
 # - NO_ID_CHECK: an ID (prefix + dir) that no plug-in identifier of the sources starts with;
@@ -44,7 +47,7 @@
 # ofxmisc_plugin(): appends "PLUGIN <name> ..." to OFXMISC_<group>_PLUGINS (the arguments of
 # ofx_plugin_bundle_group) and its name to OFXMISC_<group>_NAMES
 function(ofxmisc_plugin NAME)
-  cmake_parse_arguments(PARSE_ARGV 1 _p "OPENMP;DEBUG_ONLY;FFT;LINK_GL;NO_ID_CHECK" "DIR;ID" "COMPONENTS;SOURCES")
+  cmake_parse_arguments(PARSE_ARGV 1 _p "OPENMP;DEBUG_ONLY;FFT;LINK_GL;NO_ID_CHECK" "DIR;ID" "COMPONENTS;SOURCES;PYPLUGS")
   if(_p_UNPARSED_ARGUMENTS OR NOT _p_ID)
     message(FATAL_ERROR "ofxmisc_plugin(${NAME}): bad arguments (ID is required): ${_p_UNPARSED_ARGUMENTS}")
   endif()
@@ -53,6 +56,15 @@ function(ofxmisc_plugin NAME)
   endif()
   # every directory of the table, for ofxmisc_check_makefiles()
   set_property(GLOBAL APPEND PROPERTY OFXMISC_TABLE_DIRS ${_p_DIR})
+  # its PyPlugs resources, for ofxmisc_check_makefiles()
+  foreach(_f IN LISTS _p_PYPLUGS)
+    if(NOT EXISTS "${PROJECT_SOURCE_DIR}/${_p_DIR}/${_f}")
+      message(FATAL_ERROR "ofxmisc_plugin(${NAME}): PYPLUGS ${_f} is not in ${_p_DIR}")
+    endif()
+  endforeach()
+  set_property(GLOBAL PROPERTY OFXMISC_TABLE_PYPLUGS_${NAME} ${_p_PYPLUGS})
+  set_property(GLOBAL PROPERTY OFXMISC_TABLE_PYDIR_${NAME} ${_p_DIR})
+  set_property(GLOBAL APPEND PROPERTY OFXMISC_TABLE_NAMES ${NAME})
   if(_p_DEBUG_ONLY AND NOT _debug_build)
     return()
   endif()
@@ -72,7 +84,14 @@ function(ofxmisc_plugin NAME)
   # no INCLUDE_DIRECTORIES: #include "..." finds the headers next to each source
   set(_args PLUGIN ${NAME} ID ${_p_ID} SOURCES ${_srcs} ${_p_SOURCES})
   if(_res)
-    list(APPEND _args RESOURCES ${_res})
+    list(APPEND _args RESOURCES)
+    foreach(_r IN LISTS _res)
+      list(APPEND _args "${_r}")
+      get_filename_component(_rn "${_r}" NAME)
+      if(_rn IN_LIST _p_PYPLUGS)
+        list(APPEND _args DESTINATION PyPlugs)
+      endif()
+    endforeach()
   endif()
   if(_p_OPENMP AND NOT MSVC) # MSVC has OpenMP 2.0 only
     list(APPEND _args OPENMP)
@@ -155,8 +174,34 @@ function(ofxmisc_check_makefiles)
   _ofxmisc_make_var(CImg/Makefile VPATH _vpath)
   list(TRANSFORM _vpath PREPEND "CImg/")
   _ofxmisc_check_set("CImg/Makefile's VPATH" _cimg _vpath)
-  # the resources: those of each <dir>/Makefile (except the pocketfft licence, which CMake adds
-  # with FFT=pocketfft), and the union in Misc/Makefile and CImg/Makefile
+  # the resources: those of each <dir>/Makefile (RESOURCES and PYPLUGS, except the pocketfft
+  # licence, which CMake adds with FFT=pocketfft), and the union in Misc/Makefile and CImg/Makefile;
+  # the PyPlugs resources: each <dir>/Makefile's PYPLUGS (also when the table lists none), and the
+  # union in Misc/Makefile's and CImg/Makefile's PYPLUGS
+  get_property(_names GLOBAL PROPERTY OFXMISC_TABLE_NAMES)
+  set(_misc_pyplugs)
+  set(_cimg_pyplugs)
+  foreach(_n IN LISTS _names)
+    get_property(_py GLOBAL PROPERTY OFXMISC_TABLE_PYPLUGS_${_n})
+    get_property(_d GLOBAL PROPERTY OFXMISC_TABLE_PYDIR_${_n})
+    if(EXISTS "${PROJECT_SOURCE_DIR}/${_d}/Makefile")
+      _ofxmisc_make_var(${_d}/Makefile PYPLUGS _mk)
+      _ofxmisc_check_set("${_d}/Makefile's PYPLUGS" _py _mk)
+    endif()
+    if(_py)
+      if(_d MATCHES "^CImg/(.*)$")
+        list(TRANSFORM _py PREPEND "${CMAKE_MATCH_1}/")
+        list(APPEND _cimg_pyplugs ${_py})
+      else()
+        list(TRANSFORM _py PREPEND "${_d}/")
+        list(APPEND _misc_pyplugs ${_py})
+      endif()
+    endif()
+  endforeach()
+  _ofxmisc_make_var(Misc/Makefile PYPLUGS _mk)
+  _ofxmisc_check_set("Misc/Makefile's PYPLUGS" _misc_pyplugs _mk)
+  _ofxmisc_make_var(CImg/Makefile PYPLUGS _mk)
+  _ofxmisc_check_set("CImg/Makefile's PYPLUGS" _cimg_pyplugs _mk)
   set(_misc_res)
   set(_cimg_res)
   foreach(_d IN LISTS _dirs)
@@ -166,8 +211,10 @@ function(ofxmisc_check_makefiles)
       "${PROJECT_SOURCE_DIR}/${_d}/*.nps")
     if(EXISTS "${PROJECT_SOURCE_DIR}/${_d}/Makefile")
       _ofxmisc_make_var(${_d}/Makefile RESOURCES _mk)
+      _ofxmisc_make_var(${_d}/Makefile PYPLUGS _mkpy)
+      list(APPEND _mk ${_mkpy})
       list(FILTER _mk EXCLUDE REGEX "Licence_pocketfft\\.txt$|^\\$")
-      _ofxmisc_check_set("${_d}/Makefile's RESOURCES" _res _mk)
+      _ofxmisc_check_set("${_d}/Makefile's RESOURCES and PYPLUGS" _res _mk)
     endif()
     if(_d MATCHES "^CImg/(.*)$")
       list(TRANSFORM _res PREPEND "${CMAKE_MATCH_1}/")
@@ -178,10 +225,14 @@ function(ofxmisc_check_makefiles)
     endif()
   endforeach()
   _ofxmisc_make_var(Misc/Makefile RESOURCES _mk)
-  _ofxmisc_check_set("Misc/Makefile's RESOURCES" _misc_res _mk)
+  _ofxmisc_make_var(Misc/Makefile PYPLUGS _mkpy)
+  list(APPEND _mk ${_mkpy})
+  _ofxmisc_check_set("Misc/Makefile's RESOURCES and PYPLUGS" _misc_res _mk)
   _ofxmisc_make_var(CImg/Makefile RESOURCES _mk)
+  _ofxmisc_make_var(CImg/Makefile PYPLUGS _mkpy)
+  list(APPEND _mk ${_mkpy})
   list(FILTER _mk EXCLUDE REGEX "Licence_pocketfft\\.txt$|^\\$")
-  _ofxmisc_check_set("CImg/Makefile's RESOURCES" _cimg_res _mk)
+  _ofxmisc_check_set("CImg/Makefile's RESOURCES and PYPLUGS" _cimg_res _mk)
 endfunction()
 
 # Misc.ofx.bundle
@@ -236,7 +287,8 @@ ofxmisc_plugin(MixViews ID net.sf.openfx.mixViewsPlugin COMPONENTS THREADS)
 ofxmisc_plugin(Multiply ID net.sf.openfx.MultiplyPlugin COMPONENTS THREADS)
 ofxmisc_plugin(NoOp ID net.sf.openfx.NoOpPlugin COMPONENTS THREADS GENERATOR RECTANGLE_INTERACT)
 ofxmisc_plugin(OneView ID net.sf.openfx.oneViewPlugin COMPONENTS THREADS)
-ofxmisc_plugin(PIK ID net.sf.openfx.PIK COMPONENTS THREADS LUT)
+ofxmisc_plugin(PIK ID net.sf.openfx.PIK COMPONENTS THREADS LUT
+  PYPLUGS PIKColor.py PIKColor.gizmo fr.inria.PIKColor.png fr.inria.PIKColor.svg)
 ofxmisc_plugin(PLogLin ID net.sf.openfx.PLogLin COMPONENTS THREADS)
 ofxmisc_plugin(Position ID net.sf.openfx.Position COMPONENTS THREADS TEXT)
 ofxmisc_plugin(Premult ID net.sf.openfx.Premult COMPONENTS THREADS MULTIPLANE)
@@ -267,7 +319,8 @@ ofxmisc_plugin(WhiteBalance ID net.sf.openfx.WhiteBalance COMPONENTS THREADS)
 
 # CImg.ofx.bundle (they all share CImg/CImgFilter.cpp)
 ofxmisc_plugin(CImgBilateral DIR CImg/Bilateral ID net.sf.cimg.CImgBilateral COMPONENTS THREADS SOURCES CImg/CImgOperator.cpp)
-ofxmisc_plugin(CImgBlur DIR CImg/Blur ID net.sf.cimg.CImgBlur COMPONENTS THREADS LUT)
+ofxmisc_plugin(CImgBlur DIR CImg/Blur ID net.sf.cimg.CImgBlur COMPONENTS THREADS LUT
+  PYPLUGS EdgeBlur.py EdgeBlur.gizmo fr.inria.EdgeBlur.png fr.inria.EdgeBlur.svg)
 ofxmisc_plugin(CImgConvolve DIR CImg/Convolve ID net.sf.cimg.CImgConvolve COMPONENTS THREADS FFT)
 ofxmisc_plugin(CImgDenoise DIR CImg/Denoise ID net.sf.cimg.CImgDenoise COMPONENTS THREADS)
 ofxmisc_plugin(CImgDistance DIR CImg/Distance ID eu.cimg.Distance COMPONENTS THREADS)

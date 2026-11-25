@@ -3,7 +3,7 @@ version 6.3 v4
 Gizmo {
  addUserKnob {20 User}
  addUserKnob {41 size l Size T EdgeDetectCImg1.blurSize}
- addUserKnob {41 filter l Filter T BlurCImg1.filter}
+ addUserKnob {41 filter l Filter T EdgeDetectCImg1.filter}
  addUserKnob {41 expandRoD l "Expand RoD" T BlurCImg1.expandRoD}
  addUserKnob {41 edgeMult l "Edge Mult" t "Sharpness of the borders of the blur area." T GammaOFX1.value}
 }
@@ -19,13 +19,13 @@ Gizmo {
   ypos -36
  }
 set N1ef966a0 [stack 0]
- OFXeu.cimg.edgedetect_v4 {
+ OFXeu.cimg.edgedetect_v5 {
   NatronOfxParamProcessR false
   NatronOfxParamProcessG false
   NatronOfxParamProcessB false
   NatronOfxParamProcessA true
   filter Gaussian
-  multiChannel Tensor
+  multiChannel Separate
   blurSize 3
   erodeSize 0
   nms false
@@ -58,7 +58,7 @@ set N1ef966a0 [stack 0]
   ypos 43
  }
 push $N1ef966a0
- OFXnet.sf.cimg.cimgblur_v4 {
+ OFXnet.sf.cimg.cimgblur_v5 {
   inputs 2
   NatronOfxParamProcessR true
   NatronOfxParamProcessG true
@@ -69,8 +69,8 @@ push $N1ef966a0
   orderX 0
   orderY 0
   boundary Black
-  filter Gaussian
-  expandRoD false
+  filter "FIR Gaussian"
+  expandRoD true
   alphaThreshold 0
   premult false
   premultChannel A

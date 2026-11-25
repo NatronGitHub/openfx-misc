@@ -11,3 +11,5 @@ Pick which color your screen type is in both nodes and then while viewing the al
 The 'Patch Black' slider allows you to fill in the black areas with screen color. This is not always necessary but if you see blue squares in your composite increase this value and it'll fix it.
 The optional 'InM' input can be used to provide an inside mask (a.k.a. core matte or holdout matte), which is excluded from the clean plate. If an inside mask is fed into the Keyer (PIK or another Keyer), the same inside mask should be fed inside PIKColor.
 The above is the only real workflow for this node - working from the top parameter to the bottom parameter- going back to tweak darks/lights with 'erode' and 'patch black' activated is not really going to work.
+
+Note: PIKColor.py (version 3) has hand edits that must be kept if it is re-exported: getIconPath(), RGBA Legal off in PIK2, the FIR Gaussian blurs (BlurCImg 5, Nearest), the red mask of Shuffle1, the FilterErode (ErodeSmooth, alpha only) nodes, and Premult 3 with Clamp Alpha off.
