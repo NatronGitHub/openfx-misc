@@ -1268,8 +1268,10 @@ GEN = {"region": "project", "channels": "rgba"}
 CASES += [
     case("Constant defaults", ("Constant", {}),
          (ofx_id("ConstantPlugin"), {}), **GEN),
+    # Nuke's knob default for Constant.channels is rgb (no alpha); the
+    # plug-in's Output Components default is RGBA: compare RGBA.
     case("Constant (0.25, -0.5, 1.5, 0.75)",
-         ("Constant", {"color": [.25, -.5, 1.5, .75]}),
+         ("Constant", {"channels": "rgba", "color": [.25, -.5, 1.5, .75]}),
          (ofx_id("ConstantPlugin"), {"color": [.25, -.5, 1.5, .75]}), **GEN),
     case("ColorBars defaults", ("ColorBars", {}), (ofx_id("ColorBars"), {}),
          **GEN),
