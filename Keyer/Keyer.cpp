@@ -54,7 +54,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "In the Luminance, Color, Saturation, Min and Max modes, the output alpha is the key: it is 1 (opaque) between B and C, and 0 (transparent) below A and above D, as in Foundry's Keyer node, where \"any pixel with a luminance value between B and C becomes opaque\". " \
     "In the Screen mode, the output alpha is 1 minus the key: the pixels of the key color are transparent. Invert inverts the matte.\n" \
     "With the default A, B, C, D (0, 1, 1, 1), the alpha is the foreground key, clamped to [0, 1].\n" \
-    "Setting the key color sets A, B, C, D so that it is transparent: in the Screen mode, the key is 1 around it; in the other modes, the alpha goes from 0 at the key color to 1 at 1 (A is the foreground key of the key color, in [0, 1], and B = C = D = 1).\n"
+    "Setting the key color sets A, B, C, D so that it is transparent: in the Screen mode, the key is 1 around it; in the other modes, with l the foreground key of the key color clamped to [0, 1], the alpha goes from 1 at 0 to 0 at l and above (A = B = C = 0, D = l), or, if l is 0, takes the defaults 0, 1, 1, 1.\n"
 #define kPluginDescriptionTail \
     "\n" \
     "Keyer can pull mattes that correspond to the RGB channels, the luminance and the red, green and blue colors. " \
@@ -995,9 +995,17 @@ KeyerPlugin::setThresholdsFromKeyColor(double r,
         _center->setValue(l);
         _toleranceUpper->setValue(0.);
         _softnessUpper->setValue(1. - l);
+    } else if (l > 0.) {
+        // alpha is the key: opaque at 0 (B = C = 0), going down to transparent at the key color
+        // (D = l) and above it; this also holds for l = 1, e.g. a pure primary in Color mode
+        _softnessLower->setValue(0.);
+        _toleranceLower->setValue(0.);
+        _center->setValue(0.);
+        _toleranceUpper->setValue(0.);
+        _softnessUpper->setValue(l);
     } else {
-        // alpha is the key: A = l (transparent at the key color), B = C = D = 1
-        _softnessLower->setValue(l - 1.);
+        // a zero key (e.g. black in Luminance mode): the defaults 0, 1, 1, 1, transparent at 0
+        _softnessLower->setValue(-1.);
         _toleranceLower->setValue(0.);
         _center->setValue(1.);
         _toleranceUpper->setValue(0.);

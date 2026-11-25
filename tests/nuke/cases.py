@@ -904,7 +904,8 @@ CASES += [
     case("Keyer max keyer", ("Keyer", {"operation": "max keyer"}),
          (ofx_id("KeyerPlugin"), {"mode": "Max"}), input="ramp",
          channels="a", tolerance=1e-5),
-    # Setting the key color sets A to its key (1): back to the defaults.
+    # Setting the key color makes it transparent (alpha 1 - r here, while
+    # the reference's red keyer gives r): A, B, C, D back to the defaults.
     case("Keyer red keyer (Color, key color red)",
          ("Keyer", {"operation": "red keyer"}),
          (ofx_id("KeyerPlugin"), {"mode": "Color", "keyColor": [1., 0., 0.],

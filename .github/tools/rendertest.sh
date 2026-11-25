@@ -588,6 +588,10 @@ tests=(
     # Saturation (max - min) / max = 0.75, Min 0.2 and Max 0.8 of (0.2, 0.4, 0.8), version 2 only
     "Keyer saturation|net.sf.openfx.KeyerPlugin|general|short float|mean=0.2,0.4,0.8,0.75||-i Source=solid:0.2,0.4,0.8,1 -i Bg=none -i InM=none -i OutM=none mode=4"
     "Keyer min|net.sf.openfx.KeyerPlugin|general|short float|mean=0.2,0.4,0.8,0.2||-i Source=solid:0.2,0.4,0.8,1 -i Bg=none -i InM=none -i OutM=none mode=5"
+    # Color mode, key color pure red (foreground key l = 1), set without resetting A, B, C, D: the key
+    # color is transparent (alpha 0) and the alpha ramps down from 1 at 0 to 0 at l (0.5 at 0.5 gray)
+    "Keyer key color red|net.sf.openfx.KeyerPlugin|general|short float|mean=1,0,0,0||-i Source=solid:1,0,0,1 -i Bg=none -i InM=none -i OutM=none mode=1 keyColor=1,0,0"
+    "Keyer key color red gray|net.sf.openfx.KeyerPlugin|general|short float|mean=0.5,0.5,0.5,0.5||-i Source=solid:0.5,0.5,0.5,1 -i Bg=none -i InM=none -i OutM=none mode=1 keyColor=1,0,0"
     "Keyer max|net.sf.openfx.KeyerPlugin|general|short float|mean=0.2,0.4,0.8,0.8||-i Source=solid:0.2,0.4,0.8,1 -i Bg=none -i InM=none -i OutM=none mode=6"
     # version 1 (deprecated) keeps its polarity and defaults (A = 0.5, B = C = 1): the background
     # key 0.25, alpha 0.75; inverted, 0.25
