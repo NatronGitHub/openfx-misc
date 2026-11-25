@@ -89,13 +89,16 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "Analyzing the sequence animates the box.\n" \
     "The Analyze Sequence buttons analyze the frames given by Sequence Range: the frame range of the input " \
     "(the default), the timeline (project) frame range, or a custom range, within the frame range of the input.\n" \
-    "The statistics are only computed on full-resolution images: in proxy mode (render scale below 1), the " \
-    "image goes through unchanged and the statistics are not updated."
+    "The statistics are only computed on full-resolution images: on hosts that render it below full " \
+    "resolution (e.g. a preview at reduced quality), the image goes through unchanged and the statistics are " \
+    "not updated."
 #define kPluginIdentifier "net.sf.openfx.ImageStatistics"
 // (#236, in the current minor version, not released yet) on hosts that ignore normalised defaults
 //              (e.g. DaVinci Resolve), the default rectangle is the project's, not (1,1) pixels
 // (#66, in the current minor version, not released yet) any render scale is accepted (OFX 1.1 hosts
-//              such as VEGAS): below full resolution, the image goes through and nothing is analyzed
+//              such as VEGAS): below full resolution, the image goes through and nothing is analyzed.
+//              On Natron only, getRegionOfDefinition still fails below full resolution: Natron
+//              uses that failure as its render scale probe, and then renders at scale 1.
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 2 // Increment this when you have fixed a bug or made it faster.
 // 1.2: the S.Dev. of fewer than 2 pixels, and the skewness and kurtosis of fewer than 3 and 4 pixels,
@@ -107,16 +110,18 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // only, one render at a time per instance. The output is a copy of the input either way.
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
-// OFX has no way to refuse a render scale (an OFX 1.1 host such as VEGAS renders at any scale, and a
-// failed action may crash it), so every scale is accepted. The statistics are only computed at
-// render scale 1: at another scale (e.g. proxy mode), the effect is an identity (the output is a
-// copy of the input anyway) and the analysis is skipped (#66).
+// OFX has no way to refuse a render scale: an OFX 1.1 host such as VEGAS renders at any scale (and
+// shows the source when an action fails), so every scale is accepted. The statistics are only
+// computed at render scale 1: at another scale, the effect is an identity (the output is a copy of
+// the input anyway) and the analysis is skipped (#66). Natron is the exception: it probes render
+// scale support by calling getRegionOfDefinition at scale 0.5, and renders the plug-in at scale 1
+// (in proxy mode and in a zoomed-out viewer) if that fails, so getRegionOfDefinition fails there.
 #define kSupportsMultipleClipPARs false
 #define kSupportsMultipleClipDepths false
 #define kRenderThreadSafety eRenderInstanceSafe
 
 // whether the analysis can run at this render scale (see above)
-inline bool
+bool
 isFullResolution(const OfxPointD& renderScale)
 {
     return (renderScale.x == 1.) && (renderScale.y == 1.);
@@ -1478,9 +1483,15 @@ ImageStatisticsPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &ar
 }
 
 bool
-ImageStatisticsPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments & /*args*/,
+ImageStatisticsPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                              OfxRectD & /*rod*/)
 {
+    // Natron's render scale probe (see isFullResolution): failing here makes Natron render this
+    // effect at scale 1, so that the analysis runs. Other hosts get the identity below full resolution.
+    if ( getImageEffectHostDescription()->isNatron && !isFullResolution(args.renderScale) ) {
+        throwSuiteStatusException(kOfxStatFailed);
+    }
+
     return false;
 }
 
@@ -1651,8 +1662,10 @@ ImageStatisticsPlugin::changedParam(const InstanceChangedArgs &args,
     if ( !isFullResolution(args.renderScale) ) {
         // the analysis runs at full resolution only: tell the user if they asked for it (not for
         // the Auto Update of a key)
-        if (doAnalyzeRGBA || doAnalyzeHSVL || doAnalyzeLuma || doAnalyzeAutoCrop ||
-            doAnalyzeSequenceRGBA || doAnalyzeSequenceHSVL || doAnalyzeSequenceLuma || doAnalyzeSequenceAutoCrop) {
+        const bool analyzeRequested = doAnalyzeRGBA || doAnalyzeHSVL || doAnalyzeLuma || doAnalyzeAutoCrop ||
+                                      doAnalyzeSequenceRGBA || doAnalyzeSequenceHSVL || doAnalyzeSequenceLuma ||
+                                      doAnalyzeSequenceAutoCrop;
+        if (analyzeRequested) {
             sendMessage(Message::eMessageError, "", "The analysis needs full-resolution images: turn off proxy mode (render scale 1) and try again.");
         }
 
