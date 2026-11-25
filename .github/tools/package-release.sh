@@ -22,25 +22,22 @@
 # Usage (from the top of the source tree, whose LICENSE, openfx/LICENSE.md, SupportExt and CImg
 # sources give the license texts; the script itself, its CeCILL-C text and its parameters may come
 # from another checkout, e.g. release.yml's .release-tools):
-#   .github/tools/package-release.sh [--version VERSION] --platform PLATFORM --out DIR \
+#   .github/tools/package-release.sh --platform PLATFORM --out DIR \
 #       --full DIR --shadertoy-gl DIR [--shadertoy-osmesa DIR] --denoisesharpen DIR --noop DIR \
-#       [--licenses DIR] \
-#       [--fft pocketfft|pow2|fftw3]
-#   .github/tools/package-release.sh --natron-testing [--version VERSION] --platform PLATFORM \
-#       --out DIR --full DIR --shadertoy-gl DIR [--licenses DIR] [--fft pocketfft|pow2|fftw3]
+#       [--licenses DIR]
+#   .github/tools/package-release.sh --natron-testing --platform PLATFORM --out DIR --full DIR \
+#       --shadertoy-gl DIR [--licenses DIR]
 # --natron-testing: instead of the downloads, the testing bundles of Natron's CI (ci.yml; README.md's
 #   "Natron's testing bundles"): DIR (created; it must not exist) gets Misc, CImg and the
 #   OpenGL-only Shadertoy at its root, since Natron unzips the archive into its plug-in directory,
 #   and openfx-misc-testing/ (README.txt, LICENSE.txt, and LICENSES/, as in a download). Not an
 #   archive: the artifact upload zips it.
-# --fft: the FFT of the CImg plug-ins (CMake's FFT; default pocketfft, whose
-#   CImg/pocketfft_hdronly.h, downloaded at configure, is then required for its license).
 # --licenses DIR: license files of code linked into every bundle of this platform, copied into
 #   every archive's LICENSES/ (Windows: the MinGW-w64 runtime and winpthreads that -static links;
 #   required for windows-*, except windows-*-msvc: MSVC builds, whose static runtime (/MT) needs
 #   no notice).
-# VERSION: by default, $RELEASE_TAG without its Natron- or openfx-misc- prefix (Natron-2.6.0:
-#   2.6.0), else <date>-<commit> (from $GITHUB_SHA, or git).
+# VERSION (in the download names and the testing README.txt): $RELEASE_TAG without its Natron- or
+#   openfx-misc- prefix (Natron-2.6.0: 2.6.0), else <date>-<commit> (from $GITHUB_SHA, or git).
 # Each input DIR holds the *.ofx.bundle directories (e.g. an install prefix's OFX/Plugins):
 #   --full: Misc and CImg; --shadertoy-gl and --shadertoy-osmesa: Shadertoy;
 #   --denoisesharpen: DenoiseSharpen; --noop: NoOp. The full set gets the Shadertoy of --shadertoy-osmesa;
@@ -49,16 +46,16 @@
 # PLATFORM: linux-x86_64, windows-x86_64, macos-universal... (linux-*, windows-*, macos-*);
 #   windows-*-msvc (e.g. windows-x86_64-msvc, windows-arm64x-msvc): built with MSVC (nightly.yml).
 set -eo pipefail
+. "$(dirname "$0")/lib.sh"
 
 usage() {
     sed -n '/^# Usage/,/^# PLATFORM/p' "$0" | sed 's/^# \{0,1\}//'
     exit 2
 }
 
-version='' platform='' out='' full='' stgl='' stmesa='' ds='' noop='' extra='' fft=pocketfft msvc='' testing=''
+platform='' out='' full='' stgl='' stmesa='' ds='' noop='' extra='' msvc='' testing=''
 while [ $# -gt 0 ]; do
     case "$1" in
-        --version) version=$2; shift 2 ;;
         --platform) platform=$2; shift 2 ;;
         --out) out=$2; shift 2 ;;
         --full) full=$2; shift 2 ;;
@@ -67,21 +64,18 @@ while [ $# -gt 0 ]; do
         --denoisesharpen) ds=$2; shift 2 ;;
         --noop) noop=$2; shift 2 ;;
         --licenses) extra=$2; shift 2 ;;
-        --fft) fft=$2; shift 2 ;;
         --natron-testing) testing=1; shift ;;
         *) usage ;;
     esac
 done
-if [ -z "$version" ]; then
-    if [ -n "$RELEASE_TAG" ]; then
-        version=${RELEASE_TAG#Natron-}
-        version=${version#openfx-misc-}
-    else
-        commit=${GITHUB_SHA:-$(git rev-parse HEAD 2> /dev/null || echo unknown)}
-        version=$(date -u +%Y%m%d)-${commit:0:7}
-    fi
+if [ -n "$RELEASE_TAG" ]; then
+    version=${RELEASE_TAG#Natron-}
+    version=${version#openfx-misc-}
+else
+    commit=${GITHUB_SHA:-$(git rev-parse HEAD 2> /dev/null || echo unknown)}
+    version=$(date -u +%Y%m%d)-${commit:0:7}
 fi
-[ -n "$version" ] && [ -n "$platform" ] && [ -n "$out" ] && [ -n "$full" ] && [ -n "$stgl" ] || usage
+[ -n "$platform" ] && [ -n "$out" ] && [ -n "$full" ] && [ -n "$stgl" ] || usage
 if [ -n "$testing" ]; then
     [ -z "$stmesa" ] && [ -z "$ds" ] && [ -z "$noop" ] || usage
     if [ -e "$out" ]; then
@@ -337,10 +331,10 @@ licenses() {
             [ -f "$src/CImg/CImg.h" ] || { echo "ERROR: $src/CImg/CImg.h not found (its license)"; exit 1; }
             header_block "$src/CImg/CImg.h" > "$dir/LICENSES/CImg-notice.txt"
             cp "$cecill_c" "$dir/LICENSES/CImg-Licence_CeCILL-C_V1-en.txt"
-            if [ "$fft" = pocketfft ]; then
-                [ -f "$src/CImg/pocketfft_hdronly.h" ] || { echo "ERROR: $src/CImg/pocketfft_hdronly.h not found (FFT=pocketfft: its license)"; exit 1; }
-                notice_block "$src/CImg/pocketfft_hdronly.h" "Redistribution and use" > "$dir/LICENSES/pocketfft-BSD-3-Clause.txt"
-            fi
+            # pocketfft (CMake's default FFT): the licence that CMake put in the bundle
+            [ -f "$b/Contents/Resources/Licence_pocketfft.txt" ] ||
+                { echo "ERROR: $b has no Contents/Resources/Licence_pocketfft.txt (CImg built without FFT=pocketfft?)"; exit 1; }
+            cp "$b/Contents/Resources/Licence_pocketfft.txt" "$dir/LICENSES/pocketfft-BSD-3-Clause.txt"
         fi
         if [ -n "$(ls -A "$b/Contents/Resources/licenses" 2> /dev/null)" ]; then
             cp -R "$b/Contents/Resources/licenses" "$dir/LICENSES/$bn"
@@ -353,15 +347,10 @@ licenses() {
 }
 
 src=$PWD
-case "$fft" in pocketfft|pow2|fftw3) ;; *) echo "ERROR: --fft $fft (pocketfft, pow2 or fftw3)"; exit 2 ;; esac
 for f in LICENSE openfx/LICENSE.md SupportExt/ofxsMerging.h; do
     [ -f "$src/$f" ] || { echo "ERROR: $src/$f not found: run from the top of the source tree"; exit 1; }
 done
-if command -v sha256sum > /dev/null; then
-    actual=$(sha256sum "$cecill_c" | cut -d' ' -f1)
-else
-    actual=$(shasum -a 256 "$cecill_c" | cut -d' ' -f1)
-fi
+actual=$(sha256_of "$cecill_c")
 if [ "$actual" != "$cecill_c_sha256" ]; then
     echo "ERROR: SHA256 of $cecill_c is $actual, expected $cecill_c_sha256"
     exit 1
