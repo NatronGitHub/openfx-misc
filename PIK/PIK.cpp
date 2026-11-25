@@ -114,9 +114,7 @@
 #include "ofxsCoords.h"
 #include "ofxsNonFinite.h" // clampToFloatRange, clampToUnit, finiteSample
 
-#define DISABLE_LM // define to disable luminance match (not yet implemented)
-#define DISABLE_AL // define to disable autolevels (not yet implemented)
-#define DISABLE_RGBAL // define to disable RGBA legal (not yet implemented)
+#define DISABLE_LL // define to disable the luminance level of luminance match (not yet implemented)
 
 
 using namespace OFX;
@@ -138,10 +136,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "\n" \
     "The Alpha Bias setting may be used either if there is a strong global color cast on the scene (e.g. the green or blue screen color is not pure), or if parts of the foreground are transparent in the output. This color is considered by the algorithm as being a grey reference: all colors from the PFg input are first normalized by this color before computation.\n" \
     "If the Alpha Bias is set, but the screen subtraction has a strong color bias (e.g. the despilled areas show the screen color), uncheck 'Use Alpha for Despill' and set the Despill Bias to the color of the foreground elements that are most affected by the color bias.\n" \
-/*"The 'Luminance Match' feature adds a luminance factor to the keying algorithm which helps to capture transparent areas of the foreground which are brighter than the backing screen. It will also allow you to lessen some of the garbage area noise by bringing down the screen range - pushing this control too far will also eat into some of your foreground blacks. 'Luminance Level' allows you to make the overall effect stronger or weaker.\n"*/ \
-/*"\n"*/ \
-/*"'Autolevels' will perform a color correction before the image is pulled so that hard edges from a foreground subject with saturated colors are reduced. The same can be achieved with the weights but here only those saturated colors are affected whereas the use of weights will affect the entire image. When using this feature it's best to have this as a separate node which you can then split with other PIKs as the weights will no longer work as expected. You can override some of the logic for when you actually have particular foreground colors you want to keep.\n"*/ \
-/*"For example when you have a saturated red subject against bluescreen you'll get a magenta transition area. Autolevels will eliminate this but if you have a magenta foreground object then this control will make the magenta more red unless you check the magenta box to keep it.\n"*/ \
+    "\n" \
+    "The 'Luminance Match' feature adds a luminance factor to the keying algorithm which helps to capture transparent areas of the foreground which are brighter than the backing screen: the PFg color used for the matte is scaled down to the luminance of the screen color where it is brighter. It will also allow you to lessen some of the garbage area noise by bringing down the screen range (the PFg color is divided by the screen range, up to the luminance of the screen color) - pushing this control too far will also eat into some of your foreground blacks. Luminance Match only changes the alpha: the screen subtraction uses the matte without it.\n" \
+    "\n" \
+    "'Autolevels' will perform a color correction before the image is pulled so that hard edges from a foreground subject with saturated colors are reduced: the larger of the two other channels (red and green for a blue screen, red and blue for a green screen) is lowered to the smaller one in the PFg color used for the matte. The same can be achieved with the weights but here only those saturated colors are affected whereas the use of weights will affect the entire image. When using this feature it's best to have this as a separate node which you can then split with other PIKs as the weights will no longer work as expected. You can override some of the logic for when you actually have particular foreground colors you want to keep.\n" \
+    "For example when you have a saturated red subject against bluescreen you'll get a magenta transition area. Autolevels will eliminate this but if you have a magenta foreground object then this control will make the magenta more red unless you check the magenta box to keep it.\n" \
+    "\n" \
+    "'RGBA Legal' raises the alpha to the luminance of the screen-subtracted color where it is lower, so that the output is not brighter than its alpha.\n" \
     "\n" \
     "'Screen Subtraction' (a.k.a. despill) removes the background color from the output via a subtraction process (1-alpha times the screen color is subtracted at each pixel). When unchecked, the output is simply the original Fg premultiplied with the generated matte.\n" \
     "\n" \
@@ -182,6 +183,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              inputs is unchanged where its computation did not overflow.
 // versions 1.1 and 2.0: Clean Plate output with C disconnected (and a screen type other than Pick) is not a
 //              pass-through of the disconnected C: the render reports that C is required (issue #328)
+// version 2.0: Luminance Match (with Screen Range), Autolevels (with the Yellow, Cyan and Magenta overrides) and
+//              RGBA Legal are implemented (issue #281); RGBA Legal is on by default, as in the IBKGizmo keyer, so
+//              that the alpha is at least the luminance of the screen-subtracted color (the alpha was 0 in
+//              saturated screen-like colors). The Luminance Level and its Enable are still not implemented
+//              (hidden). Version 1 keeps them all hidden and off.
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -254,12 +260,12 @@ enum ScreenTypeEnum
 
 #define kParamLMEnable "lmEnable"
 #define kParamLMEnableLabel "Luminance Match Enable"
-#define kParamLMEnableHint "Adds a luminance factor to the color difference algorithm."
+#define kParamLMEnableHint "Adds a luminance factor to the color difference algorithm: where the PFg color is brighter than the screen color, it is scaled down to the luminance of the screen color before the matte is computed. Only the alpha is changed."
 #define kParamLMEnableDefault false
 
 #define kParamLevel "level"
 #define kParamLevelLabel "Screen Range"
-#define kParamLevelHint "Helps retain blacks and shadows."
+#define kParamLevelHint "Helps retain blacks and shadows: the PFg color is divided by the screen range before the luminance match (up to the luminance of the screen color)."
 #define kParamLevelDefault 1
 
 #define kParamLuma "luma"
@@ -274,7 +280,7 @@ enum ScreenTypeEnum
 
 #define kParamAutolevels "autolevels"
 #define kParamAutolevelsLabel "Autolevels"
-#define kParamAutolevelsHint "Removes hard edges from the matte."
+#define kParamAutolevelsHint "Removes hard edges from the matte: in the PFg color used for the matte, the larger of the two other channels (red and green for a blue screen, red and blue for a green screen) is lowered to the smaller one."
 #define kParamAutolevelsDefault false
 
 #define kParamYellow "yellow"
@@ -323,8 +329,8 @@ enum ScreenTypeEnum
 
 #define kParamRGBAL "rgbal"
 #define kParamRGBALLabel "RGBA Legal"
-#define kParamRGBALHint "Legalize rgba relationship."
-#define kParamRGBALDefault false
+#define kParamRGBALHint "Legalize rgba relationship: the alpha is at least the luminance of the screen-subtracted color."
+#define kParamRGBALDefault true // false in IBK, true in IBKGizmo
 
 #define kGroupInsideMask "insideMask"
 #define kGroupInsideMaskLabel "Inside Mask"
@@ -612,6 +618,7 @@ protected:
     bool _magenta; // Magenta: Override autolevel with magenta component.
     bool _ss; // Screen Subtraction: Have the keyer subtract the foreground or just premult.
     bool _clampAlpha; // Clamp: Clamp matte to 0-1.
+    bool _rgbal = false; // RGBA Legal: the alpha is at least the luminance of the screen-subtracted color.
     double _screenClipMin;
     double _screenClipMax;
     ReplaceEnum _screenReplace;
@@ -672,6 +679,9 @@ public:
         _screenReplaceColor[0] = _screenReplaceColor[1] = _screenReplaceColor[2] = 0.;
         _insideReplaceColor[0] = _insideReplaceColor[1] = _insideReplaceColor[2] = 0.;
     }
+
+    // RGBA Legal (a setter rather than one more positional argument of setValues())
+    void setRGBALegal(bool rgbal) { _rgbal = rgbal; }
 
     void setSrcImgs(const Image *fgImg,
                     const Image *pfgImg,
@@ -805,6 +815,73 @@ public:
         _ubc = ubc;
         _outputMode = outputMode;
     } // setValues
+
+protected:
+    // the matte of the color p against the screen color c (both finite), for the screen type:
+    // 1 if the screen key of c or p is zero or negative, else 1 - (key of p) / (key of c), in the float range.
+    // The key of a color is, for a green screen, g - r * redWeight - b * blueGreenWeight.
+    float keyAlpha(const float p[3],
+                   const float c[3]) const
+    {
+        // the key channel, then the channel weighted by Red Weight, then the one by Blue/Green Weight
+        const int k = (_screenType == eScreenTypeGreen) ? 1 : 2;
+        const int o = (_screenType == eScreenTypeGreen) ? 2 : 1;
+        if (c[k] <= 0.) {
+            return 1.;
+        }
+        //alpha = (Ag-Ar*rw-Ab*gbw)<=0?1:clamp(1-(Ag-Ar*rw-Ab*gbw)/(Bg-Br*rw-Bb*gbw))
+        //A is pfg and B is c.
+        const double pKey = p[k] - p[0] * _redWeight - p[o] * _blueGreenWeight;
+        if (pKey <= 0.) {
+            return 1.;
+        }
+        const double cKey = c[k] - c[0] * _redWeight - c[o] * _blueGreenWeight;
+        if (cKey <= 0.) {
+            return 1.;
+        }
+
+        // pKey and cKey are finite and positive, so this is finite or -inf (an overflow): in the float range
+        return clampToFloatRange(1. - pKey / cKey);
+    }
+
+    // Autolevels: in the color used for the matte, the larger of the two non-screen channels is lowered
+    // to the smaller one, unless an override keeps it (Magenta keeps red and Cyan green on a blue screen,
+    // up to blue; on a green screen, Cyan keeps blue up to green, and Yellow keeps red, with the part
+    // above green halved), as in the tests/nuke reference.
+    void autolevels(float p[3]) const
+    {
+        if (_screenType == eScreenTypeBlue) {
+            if (p[0] > p[1]) {
+                p[0] = _magenta ? (std::min)(p[0], p[2]) : p[1];
+            } else if (p[1] > p[0]) {
+                p[1] = _cyan ? (std::min)(p[1], p[2]) : p[0];
+            }
+        } else {
+            if (p[0] > p[2]) {
+                // (the half sum, rather than the sum halved, cannot overflow)
+                p[0] = _yellow ? ( (p[0] > p[1]) ? (p[0] / 2.f + p[1] / 2.f) : p[0] ) : p[2];
+            } else if (p[2] > p[0]) {
+                p[2] = _cyan ? (std::min)(p[2], p[1]) : p[0];
+            }
+        }
+    }
+
+    // Luminance Match: the color used for the matte divided by the Screen Range, and scaled down to the
+    // luminance of the screen color where it is brighter (in the float range).
+    void luminanceMatch(const float p[3],
+                        const float c[3],
+                        float matched[3]) const
+    {
+        const double pY = luminanceFinite(_colorspace, _toXYZAbs, p);
+        const double cY = luminanceFinite(_colorspace, _toXYZAbs, c);
+        double scale = (_level > 0.) ? 1. / _level : 1.;
+        if ( (pY > 0.) && (cY / pY < scale) ) {
+            scale = cY / pY;
+        }
+        for (int i = 0; i < 3; ++i) {
+            matched[i] = clampToFloatRange(p[i] * scale);
+        }
+    }
 
 private:
     // a bias in [0.0001,FLT_MAX/2], NaN gives 0.0001 (only used if the luminance of the biases overflows)
@@ -1208,51 +1285,39 @@ private:
                 float status[4] = {0., 0., 0., 1.}; // only used for status output
 
                 float alpha = 0.;
+                // the matte used for the screen subtraction, and the one output (with Luminance Match)
+                float alphaKey = 0.;
                 if (_noKey) {
-                    alpha = fg[3];
+                    alpha = alphaKey = fg[3];
                 } else {
-                    if (_screenType == eScreenTypeGreen) {
-                        if (c[1] <= 0.) {
-                            alpha = 1.;
-                        } else {
-                            //alpha = (Ag-Ar*rw-Ab*gbw)<=0?1:clamp(1-(Ag-Ar*rw-Ab*gbw)/(Bg-Br*rw-Bb*gbw))
-                            //A is pfg and B is c.
-                            double pfgKey = pfg[1] - pfg[0] * _redWeight - pfg[2] * _blueGreenWeight;
-                            if (pfgKey <= 0.) {
-                                alpha = 1.;
-                            } else {
-                                double cKey = c[1] - c[0] * _redWeight - c[2] * _blueGreenWeight;
-                                if (cKey <= 0) {
-                                    alpha = 1.;
-                                } else {
-                                    // pfgKey and cKey are finite and positive, so this is finite or -inf (an
-                                    // overflow): in the float range
-                                    alpha = clampToFloatRange(1. - pfgKey / cKey);
-                                }
-                            }
-                        }
-                    } else if (_screenType == eScreenTypeBlue) {
-                        if (c[2] <= 0.) {
-                            alpha = 1.;
-                        } else {
-                            //alpha = (Ag-Ar*rw-Ab*gbw)<=0?1:clamp(1-(Ag-Ar*rw-Ab*gbw)/(Bg-Br*rw-Bb*gbw))
-                            //A is pfg and B is c.
-                            double pfgKey = pfg[2] - pfg[0] * _redWeight - pfg[1] * _blueGreenWeight;
-                            if (pfgKey <= 0.) {
-                                alpha = 1.;
-                            } else {
-                                double cKey = c[2] - c[0] * _redWeight - c[1] * _blueGreenWeight;
-                                if (cKey <= 0) {
-                                    alpha = 1.;
-                                } else {
-                                    // pfgKey and cKey are finite and positive, so this is finite or -inf (an
-                                    // overflow): in the float range
-                                    alpha = clampToFloatRange(1. - pfgKey / cKey);
-                                }
-                            }
-                        }
+                    float key[3] = {pfg[0], pfg[1], pfg[2]};
+                    if (_autolevels) {
+                        autolevels(key);
+                    }
+                    alpha = alphaKey = keyAlpha(key, c);
+                    if (_lmEnable) {
+                        float matched[3];
+                        luminanceMatch(key, c, matched);
+                        alpha = keyAlpha(matched, c);
                     }
                 } // if (!_noKey)
+                // screen subtraction / despill, with the matte without Luminance Match
+                float despilled[3] = {fg[0], fg[1], fg[2]};
+                if (alphaKey < 1) {
+                    for (int i = 0; i < 3; ++i) {
+                        // (alphaKey - 1 is finite and nonzero, so this is finite or +-inf: in the float range)
+                        float v = clampToFloatRange(fg[i] + c[i] * _despillBias[i] * (alphaKey - 1.));
+                        despilled[i] = v < 0. ? 0 : v;
+                    }
+                }
+                for (int i = 0; i < 3; ++i) {
+                    out[i] = _ss ? despilled[i] : fg[i];
+                }
+                if (_rgbal && !_noKey) {
+                    // RGBA Legal: the alpha is at least the luminance of the screen-subtracted color, also
+                    // without screen subtraction (the output is then Fg times this alpha)
+                    alpha = (std::max)( alpha, luminanceFinite(_colorspace, _toXYZAbs, despilled) );
+                }
                 if (_outputMode == eOutputModeScreenMatte) {
                     for (int i = 0; i < 3; ++i) {
                         out[i] = alpha;
@@ -1271,18 +1336,6 @@ private:
                     status[0] = status[1] = status[2] = 0.5;
                 }
 
-                if ( !_ss || (alpha >= 1) ) {
-                    for (int i = 0; i < 3; ++i) {
-                        out[i] = fg[i];
-                    }
-                } else {
-                    // screen subtraction / despill
-                    for (int i = 0; i < 3; ++i) {
-                        // (alpha - 1 is finite and nonzero, so this is finite or +-inf: in the float range)
-                        float v = clampToFloatRange(fg[i] + c[i] * _despillBias[i] * (alpha - 1.));
-                        out[i] = v < 0. ? 0 : v;
-                    }
-                }
 
                 if (_clampAlpha) {
                     if (alpha < 0.) {
@@ -1595,13 +1648,6 @@ private:
                     }
                 }
 
-#ifndef DISABLE_LM
-#pragma message WARN("luminance match not yet implemented")
-#endif
-#ifndef DISABLE_AL
-#pragma message WARN("autolevels not yet implemented")
-#endif
-
                 if (_outputMode == eOutputModeUnpremultiplied) {
                     if (out[3] <= 0) {
                         for (int i = 0; i < 3; ++i) {
@@ -1797,14 +1843,15 @@ private:
         _alphaBias->setEnabled( doSomething && (doScreenMatte || doScreenSubtraction) );
         _despillBias->setEnabled( doSomething && doScreenSubtraction && !_despillBiasIsAlphaBias->getValue() );
         _despillBiasIsAlphaBias->setEnabled(doSomething && doScreenSubtraction);
-        _lmEnable->setEnabled(doSomething && doScreenSubtraction);
-        _level->setEnabled(doSomething && lmEnable && doScreenSubtraction);
+        // Luminance Match and Autolevels change the matte
+        _lmEnable->setEnabled(doSomething && doScreenMatte && !noKey);
+        _level->setEnabled(doSomething && lmEnable && doScreenMatte && !noKey);
         _llEnable->setEnabled(doSomething && lmEnable && doScreenSubtraction);
         _luma->setEnabled(doSomething && llEnable && doScreenSubtraction);
-        _autolevels->setEnabled(doSomething && doScreenSubtraction);
-        _yellow->setEnabled(doSomething && autolevels && doScreenSubtraction);
-        _cyan->setEnabled(doSomething && autolevels && doScreenSubtraction);
-        _magenta->setEnabled(doSomething && autolevels && doScreenSubtraction);
+        _autolevels->setEnabled(doSomething && doScreenMatte && !noKey);
+        _yellow->setEnabled(doSomething && autolevels && doScreenMatte && !noKey);
+        _cyan->setEnabled(doSomething && autolevels && doScreenMatte && !noKey);
+        _magenta->setEnabled(doSomething && autolevels && doScreenMatte && !noKey);
         _ss->setEnabled(doSomething && doScreenSubtraction);
         _clampAlpha->setEnabled(doSomething);
         _rgbal->setEnabled(doSomething);
@@ -1909,11 +1956,14 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
     } else {
         _despillBias->getValueAtTime(time, despillBias.r, despillBias.g, despillBias.b);
     }
-    bool lmEnable = _lmEnable->getValueAtTime(time);
+    // Luminance Match, Autolevels and RGBA Legal are implemented in version 2 (issue #281): hidden and off
+    // in version 1, so that old projects render the same
+    const bool lmEnable = (_majorVersion >= 2) && _lmEnable->getValueAtTime(time);
     double level = _level->getValueAtTime(time);
     double luma = _luma->getValueAtTime(time);
     bool llEnable = _llEnable->getValueAtTime(time);
-    bool autolevels = _autolevels->getValueAtTime(time);
+    const bool autolevels = (_majorVersion >= 2) && _autolevels->getValueAtTime(time);
+    const bool rgbal = (_majorVersion >= 2) && _rgbal->getValueAtTime(time);
     bool yellow = _yellow->getValueAtTime(time);
     bool cyan = _cyan->getValueAtTime(time);
     bool magenta = _magenta->getValueAtTime(time);
@@ -2090,6 +2140,7 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
                         screenClipMin, screenClipMax, screenReplace, screenReplaceColor,
                         sourceAlpha, insideReplace, insideReplaceColor, noKey, ubl, ubc, colorspace, outputMode,
                         /*legacyColorspace=*/_majorVersion < 2);
+    processor.setRGBALegal(rgbal);
     processor.setDstImg( dst.get() );
     processor.setSrcImgs( fg.get(), ( /*!noKey &&*/ !( _pfgClip && _pfgClip->isConnected() ) ) ? fg.get() : pfg.get(), c.get(), bg.get(), inMask.get(), outMask.get() );
     processor.setRenderWindow(args.renderWindow, args.renderScale);
@@ -2623,9 +2674,10 @@ PIKPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
         param->setHint(kParamLMEnableHint);
         param->setDefault(kParamLMEnableDefault);
         param->setAnimates(false);
-#ifdef DISABLE_LM
-        param->setIsSecretAndDisabled(true);
-#endif
+        if (majorVersion < 2) {
+            // not implemented in version 1
+            param->setIsSecretAndDisabled(true);
+        }
         if (group) {
             // coverity[dead_error_line]
             param->setParent(*group);
@@ -2643,9 +2695,10 @@ PIKPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
         param->setDisplayRange(0., 1.);
         param->setDefault(kParamLevelDefault);
         param->setAnimates(true);
-#ifdef DISABLE_LM
-        param->setIsSecretAndDisabled(true);
-#endif
+        if (majorVersion < 2) {
+            // not implemented in version 1
+            param->setIsSecretAndDisabled(true);
+        }
         if (group) {
             // coverity[dead_error_line]
             param->setParent(*group);
@@ -2662,7 +2715,7 @@ PIKPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
         param->setDisplayRange(0., 1.);
         param->setDefault(kParamLumaDefault);
         param->setAnimates(true);
-#ifdef DISABLE_LM
+#ifdef DISABLE_LL
         param->setIsSecretAndDisabled(true);
 #else
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
@@ -2682,7 +2735,7 @@ PIKPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
         param->setHint(kParamLLEnableHint);
         param->setDefault(kParamLLEnableDefault);
         param->setAnimates(false);
-#ifdef DISABLE_LM
+#ifdef DISABLE_LL
         param->setIsSecretAndDisabled(true);
 #else
         param->setLayoutHint(eLayoutHintDivider);
@@ -2701,11 +2754,12 @@ PIKPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
         param->setHint(kParamAutolevelsHint);
         param->setDefault(kParamAutolevelsDefault);
         param->setAnimates(false);
-#ifdef DISABLE_AL
-        param->setIsSecretAndDisabled(true);
-#else
-        param->setLayoutHint(eLayoutHintNoNewLine, 1);
-#endif
+        if (majorVersion < 2) {
+            // not implemented in version 1
+            param->setIsSecretAndDisabled(true);
+        } else {
+            param->setLayoutHint(eLayoutHintNoNewLine, 1);
+        }
         if (group) {
             // coverity[dead_error_line]
             param->setParent(*group);
@@ -2720,11 +2774,12 @@ PIKPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
         param->setHint(kParamYellowHint);
         param->setDefault(kParamYellowDefault);
         param->setAnimates(false);
-#ifdef DISABLE_AL
-        param->setIsSecretAndDisabled(true);
-#else
-        param->setLayoutHint(eLayoutHintNoNewLine, 1);
-#endif
+        if (majorVersion < 2) {
+            // not implemented in version 1
+            param->setIsSecretAndDisabled(true);
+        } else {
+            param->setLayoutHint(eLayoutHintNoNewLine, 1);
+        }
         if (group) {
             // coverity[dead_error_line]
             param->setParent(*group);
@@ -2739,11 +2794,12 @@ PIKPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
         param->setHint(kParamCyanHint);
         param->setDefault(kParamCyanDefault);
         param->setAnimates(false);
-#ifdef DISABLE_AL
-        param->setIsSecretAndDisabled(true);
-#else
-        param->setLayoutHint(eLayoutHintNoNewLine, 1);
-#endif
+        if (majorVersion < 2) {
+            // not implemented in version 1
+            param->setIsSecretAndDisabled(true);
+        } else {
+            param->setLayoutHint(eLayoutHintNoNewLine, 1);
+        }
         if (group) {
             // coverity[dead_error_line]
             param->setParent(*group);
@@ -2758,11 +2814,12 @@ PIKPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
         param->setHint(kParamMagentaHint);
         param->setDefault(kParamMagentaDefault);
         param->setAnimates(false);
-#ifdef DISABLE_AL
-        param->setIsSecretAndDisabled(true);
-#else
-        param->setLayoutHint(eLayoutHintDivider);
-#endif
+        if (majorVersion < 2) {
+            // not implemented in version 1
+            param->setIsSecretAndDisabled(true);
+        } else {
+            param->setLayoutHint(eLayoutHintDivider);
+        }
         if (group) {
             // coverity[dead_error_line]
             param->setParent(*group);
@@ -2792,9 +2849,9 @@ PIKPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
         param->setHint(kParamClampAlphaHint);
         param->setDefault(kParamClampAlphaDefault);
         param->setAnimates(false);
-#ifndef DISABLE_RGBAL
-        param->setLayoutHint(eLayoutHintNoNewLine, 1);
-#endif
+        if (majorVersion >= 2) {
+            param->setLayoutHint(eLayoutHintNoNewLine, 1);
+        }
         if (group) {
             // coverity[dead_error_line]
             param->setParent(*group);
@@ -2807,11 +2864,12 @@ PIKPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamRGBAL);
         param->setLabel(kParamRGBALLabel);
         param->setHint(kParamRGBALHint);
-        param->setDefault(kParamRGBALDefault);
+        param->setDefault(majorVersion >= 2 ? kParamRGBALDefault : false);
         param->setAnimates(false);
-#ifdef DISABLE_RGBAL
-        param->setIsSecretAndDisabled(true);
-#endif
+        if (majorVersion < 2) {
+            // not implemented in version 1
+            param->setIsSecretAndDisabled(true);
+        }
         if (group) {
             // coverity[dead_error_line]
             param->setParent(*group);

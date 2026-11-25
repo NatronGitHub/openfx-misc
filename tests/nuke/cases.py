@@ -163,6 +163,11 @@ def _mask(x, y):
     return (_clamp01((x - 8.) / 16.),) * 4
 
 
+def _rect(x, y):
+    inside = 8 <= x < 24 and 8 <= y < 24
+    return (1., 1., 1., 1.) if inside else (0., 0., 0., 0.)
+
+
 def _grey3(x, y):
     del y  # along x
     v = .1 if x < 11 else .5 if x < 22 else .9
@@ -368,7 +373,16 @@ IMAGES = {
     "black": _const(0., 0., 0., 1.),
     "depth2": _const(2., 2., 2., 1.),
     "screen": _const(.1, .2, .8, 1.),
+    "screen_green": _const(.2, .8, .1, 1.),
+    # The Roto shape of ROTO_RECT, as an OFX Roto input: white inside
+    # [8, 24) x [8, 24), transparent black outside.
+    "rect": {
+        "nuke": ("x >= 8 && x < 24 && y >= 8 && y < 24 ? 1 : 0",) * 4,
+        "py": _rect,
+    },
 }
+# Aa01 on the bottom left quarter only (Roto Clip To).
+IMAGES["Aa01_box"] = dict(IMAGES["Aa01"], box=(0, 0, 16, 16))
 # An element on the left of the image (Mirror).
 IMAGES["element"] = dict(IMAGES["ramp"], box=(2, 4, 12, 20))
 
@@ -837,25 +851,152 @@ CASES += [
 # openfx-misc's Keyer description.
 KEYER_ABCD = {"softnessLower": -.2, "toleranceLower": -.1, "center": .5,
               "toleranceUpper": .1, "softnessUpper": .2}
+# Keyer's luminance (Rec. 709) differs from the reference by up to 3e-3 on
+# non-grey colours: tolerance 5e-3.
+KEYER_LUMINANCE_TOLERANCE = 5e-3
 CASES += [
+    # Nuke's knob default (knobdefaults.py) is the luminance key; nodes
+    # created by nuke.nodes in terminal mode get the compiled-in one.
+    case("Keyer defaults", ("Keyer", {"operation": "luminance key"}),
+         (ofx_id("KeyerPlugin"), {}), input="ramp", channels="rgba",
+         tolerance=KEYER_LUMINANCE_TOLERANCE),
     case("Keyer luminance key, same A, B, C, D (polarity)",
          ("Keyer", {"operation": "luminance key",
                     "range": [.2, .4, .6, .8]}),
          (ofx_id("KeyerPlugin"), dict(KEYER_ABCD, show="Unpremultiplied")),
-         input="grey3", channels="a", tolerance=1e-4,
-         known=280),
+         input="grey3", channels="a", tolerance=1e-4),
     case("Keyer luminance key, inverted",
          ("Keyer", {"operation": "luminance key", "invert": True,
                     "range": [.2, .4, .6, .8]}),
-         (ofx_id("KeyerPlugin"), dict(KEYER_ABCD, show="Unpremultiplied")),
-         input="ramp", channels="a",
-         tolerance=5e-3),  # outputs differ by up to 3e-3 here
+         (ofx_id("KeyerPlugin"), dict(KEYER_ABCD, show="Unpremultiplied",
+                                      invert=1)),
+         input="ramp", channels="a", tolerance=KEYER_LUMINANCE_TOLERANCE),
+    # Version 1 has the opposite polarity: its Invert gives the reference.
+    case("Keyer version 1, inverted, luminance key",
+         ("Keyer", {"operation": "luminance key",
+                    "range": [.2, .4, .6, .8]}),
+         (ofx_id("KeyerPlugin"), dict(KEYER_ABCD, show="Unpremultiplied",
+                                      invert=1)),
+         input="ramp", channels="a", tolerance=KEYER_LUMINANCE_TOLERANCE,
+         major=1),
+    case("Keyer saturation key", ("Keyer", {"operation": "saturation key"}),
+         (ofx_id("KeyerPlugin"), {"mode": "Saturation"}), input="ramp",
+         channels="a", tolerance=1e-5),
+    case("Keyer min keyer, range 0.2, 0.4, 0.6, 0.8",
+         ("Keyer", {"operation": "min keyer", "range": [.2, .4, .6, .8]}),
+         (ofx_id("KeyerPlugin"), dict(mode="Min", **KEYER_ABCD)),
+         input="hues01", channels="a", tolerance=1e-5),
+    case("Keyer max keyer", ("Keyer", {"operation": "max keyer"}),
+         (ofx_id("KeyerPlugin"), {"mode": "Max"}), input="ramp",
+         channels="a", tolerance=1e-5),
+    case("Keyer red keyer (Color, key color red)",
+         ("Keyer", {"operation": "red keyer"}),
+         (ofx_id("KeyerPlugin"), {"mode": "Color", "keyColor": [1., 0., 0.]}),
+         input="ramp", channels="a", tolerance=1e-5),
+    case("Keyer greenscreen (Screen, key color green)",
+         ("Keyer", {"operation": "greenscreen"}),
+         (ofx_id("KeyerPlugin"), {"mode": "Screen", "keyColor": [0., 1., 0.]}),
+         input="hues01", channels="a", tolerance=1e-3, known=280),
+]
+
+# ------------------------------------------------------------------- PIK
+# The IBKGizmoV3 gizmo, with its inputs fg and c; PIK's Fg is Source.
+PIK_INPUTS = {"nuke_inputs": ["hues01", "screen"],
+              "clips": {"Source": "hues01", "C": "screen"},
+              "channels": "rgba", "tolerance": 1e-3}
+PIK_GREEN_INPUTS = dict(PIK_INPUTS, nuke_inputs=["hues01", "screen_green"],
+                        clips={"Source": "hues01", "C": "screen_green"})
+PIK_BLUE = {"screenType": "C-Blue", "show": "Premultiplied"}
+PIK_GREEN = {"screenType": "C-Green", "show": "Premultiplied"}
+CASES += [
     case("PIK C-blue on IBK (IBKGizmoV3)",
-         ("IBKGizmoV3", {"st": "C-blue"}),
-         (ofx_id("PIK"), {"screenType": "C-Blue", "show": "Premultiplied"}),
-         nuke_inputs=["hues01", "screen"],
-         clips={"Source": "hues01", "C": "screen"},
-         channels="rgba", tolerance=1e-3),
+         ("IBKGizmoV3", {"st": "C-blue"}), (ofx_id("PIK"), PIK_BLUE),
+         **PIK_INPUTS),
+    case("PIK C-green (IBKGizmoV3)",
+         ("IBKGizmoV3", {"st": "C-green"}), (ofx_id("PIK"), PIK_GREEN),
+         **PIK_GREEN_INPUTS),
+    case("PIK C-blue, no screen subtraction (IBKGizmoV3)",
+         ("IBKGizmoV3", {"st": "C-blue", "ss": False}),
+         (ofx_id("PIK"), dict(PIK_BLUE, ss=0)), **PIK_INPUTS),
+    case("PIK C-blue, luminance match (IBKGizmoV3)",
+         ("IBKGizmoV3", {"st": "C-blue", "lm_enable": True}),
+         (ofx_id("PIK"), dict(PIK_BLUE, lmEnable=1)), **PIK_INPUTS),
+    case("PIK C-blue, luminance match, screen range 0.5 (IBKGizmoV3)",
+         ("IBKGizmoV3", {"st": "C-blue", "lm_enable": True, "level": .5}),
+         (ofx_id("PIK"), dict(PIK_BLUE, lmEnable=1, level=.5)),
+         **PIK_INPUTS),
+    case("PIK C-blue, luminance level 0.5 (IBKGizmoV3)",
+         ("IBKGizmoV3", {"st": "C-blue", "lm_enable": True, "luma": .5,
+                         "ll_enable": True}),
+         (ofx_id("PIK"), dict(PIK_BLUE, lmEnable=1, luma=.5,
+                              llEnable=1)),
+         known=281, **PIK_INPUTS),
+    case("PIK C-blue, autolevels (IBKGizmoV3)",
+         ("IBKGizmoV3", {"st": "C-blue", "autolevels": True}),
+         (ofx_id("PIK"), dict(PIK_BLUE, autolevels=1)), **PIK_INPUTS),
+    case("PIK C-blue, autolevels, cyan and magenta (IBKGizmoV3)",
+         ("IBKGizmoV3", {"st": "C-blue", "autolevels": True, "cyan": True,
+                         "magenta": True}),
+         (ofx_id("PIK"), dict(PIK_BLUE, autolevels=1, cyan=1,
+                              magenta=1)), **PIK_INPUTS),
+    case("PIK C-green, autolevels (IBKGizmoV3)",
+         ("IBKGizmoV3", {"st": "C-green", "autolevels": True}),
+         (ofx_id("PIK"), dict(PIK_GREEN, autolevels=1)),
+         **PIK_GREEN_INPUTS),
+    case("PIK C-green, autolevels, yellow and cyan (IBKGizmoV3)",
+         ("IBKGizmoV3", {"st": "C-green", "autolevels": True,
+                         "yellow": True, "cyan": True}),
+         (ofx_id("PIK"), dict(PIK_GREEN, autolevels=1, yellow=1,
+                              cyan=1)), **PIK_GREEN_INPUTS),
+    case("PIK C-blue, luminance match and autolevels (IBKGizmoV3)",
+         ("IBKGizmoV3", {"st": "C-blue", "lm_enable": True, "level": .7,
+                         "autolevels": True}),
+         (ofx_id("PIK"), dict(PIK_BLUE, lmEnable=1, level=.7,
+                              autolevels=1)), **PIK_INPUTS),
+]
+
+# ------------------------------------------------------------------ Roto
+# A Roto shape on [8, 24) x [8, 24) (exact pixel coverage); the OFX Roto
+# input is the "rect" image. Nuke's knob default output is alpha
+# (knobdefaults.py), set explicitly since nuke.nodes in terminal mode gets
+# the compiled-in rgba.
+ROTO_RECT = "\n".join([
+    "import nuke.rotopaint as rp",
+    "shape = rp.Shape(n['curves'])",
+    "for px, py in ((8, 8), (24, 8), (24, 24), (8, 24)):",
+    "    shape.append([px, py])",
+    "n['curves'].rootLayer.append(shape)"])
+ROTO = {"nuke_inputs": ["Aa01"], "clips": {"Source": "Aa01", "Roto": "rect"},
+        "nuke_post": ROTO_RECT, "channels": "rgba"}
+ROTO_BOX = dict(ROTO, nuke_inputs=["Aa01_box"],
+                clips={"Source": "Aa01_box", "Roto": "rect"})
+CASES += [
+    case("Roto defaults", ("Roto", {"output": "alpha"}),
+         (ofx_id("RotoPlugin"), {}), **ROTO),
+    case("Roto output rgba", ("Roto", {"output": "rgba"}),
+         (ofx_id("RotoPlugin"), {"NatronOfxParamProcessR": 1,
+                                 "NatronOfxParamProcessG": 1,
+                                 "NatronOfxParamProcessB": 1}), **ROTO),
+    case("Roto premultiply rgb",
+         ("Roto", {"output": "alpha", "premultiply": "rgb"}),
+         (ofx_id("RotoPlugin"), {"premultiply": 1}), **ROTO),
+    case("Roto replace", ("Roto", {"output": "alpha", "replace": True}),
+         (ofx_id("RotoPlugin"), {"replace": 1}), **ROTO),
+    case("Roto premultiply rgb and replace",
+         ("Roto", {"output": "alpha", "premultiply": "rgb",
+                   "replace": True}),
+         (ofx_id("RotoPlugin"), {"premultiply": 1, "replace": 1}),
+         **ROTO),
+    case("Roto clip to bbox, Source in a box",
+         ("Roto", {"output": "alpha", "cliptype": "bbox"}),
+         (ofx_id("RotoPlugin"), {"clipType": "BBox"}), **ROTO_BOX),
+    case("Roto clip to intersect bbox+format, Source in a box",
+         ("Roto", {"output": "alpha", "cliptype": "intersect bbox+format"}),
+         (ofx_id("RotoPlugin"), {"clipType": "Intersect BBox+Format"}),
+         **ROTO_BOX),
+    case("Roto no clip, Source in a box",
+         ("Roto", {"output": "alpha", "cliptype": "none"}),
+         (ofx_id("RotoPlugin"), {"clipType": "No Clip"}), **ROTO_BOX),
 ]
 
 # ------------------------------------------------------------ Generators
@@ -1643,7 +1784,6 @@ KNOWN = {
     277: ["Merge %s, alpha outside [0, 1]" % _op
                              for _op in MERGE_ALPHA_OPERATORS],
     279: ["ShuffleCopy defaults"],
-    281: ["PIK C-blue on IBK (IBKGizmoV3)"],
     287: ["ColorWheel defaults"],
     288: [
         "Radial area 100,100-600,476 softness 1",
@@ -1692,7 +1832,7 @@ KNOWN = {
         "Reformat to box 20x12 fit, box PAR = PAR",
         "Reformat to box 20x12 fit, reference black outside",
         "Blur size 4 on the ramp (edges)", "Convolve2 3x3 kernel, edges",
-        "Radial softness 0"] + [
+        "Radial softness 0", "Roto no clip, Source in a box"] + [
             "Ramp %s, horizontal" % _t
             for _t in ("linear", "plinear", "smooth0", "smooth1", "smooth")],
 }

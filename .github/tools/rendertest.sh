@@ -569,14 +569,22 @@ tests=(
     "Grade ramp masked|net.sf.openfx.GradePlugin|filter|*|nonconst+changed:Source||-i Source=ramp -i Mask=checker:32 gamma=2,2,2,2"
     "Merge over solid|net.sf.openfx.MergePlugin|filter|*|mean=0.5,0,0.5,1||-i A=solid:0.5,0,0,0.5 -i Source=solid:0,0,1,1 -i Mask=none"
     "Merge over checker|net.sf.openfx.MergePlugin|filter|*|nonconst+changed:A+changed:Source||-i A=checker:16 -i Source=ramp -i Mask=none"
-    # Keyer, luminance key with the defaults (A = 0.5, B = C = 1): the foreground key 0.625 gives
-    # the background key 0.25, alpha 0.75 (Intermediate output: the color is the source; no byte depth).
-    # Invert (issue #280) inverts the key, before the Inside Mask (alpha >= 0.5 here) is applied,
-    # and is ignored in None mode (no keying: alpha 0)
-    "Keyer|net.sf.openfx.KeyerPlugin|general|short float|mean=0.625,0.625,0.625,0.75||-i Source=solid:0.625,0.625,0.625,1 -i Bg=none -i InM=none -i OutM=none"
-    "Keyer invert|net.sf.openfx.KeyerPlugin|general|short float|mean=0.625,0.625,0.625,0.25||-i Source=solid:0.625,0.625,0.625,1 -i Bg=none -i InM=none -i OutM=none invert=1"
+    # Keyer (version 2), luminance key with the defaults (A, B, C, D = 0, 1, 1, 1): alpha is the
+    # foreground key 0.625 (Intermediate output: the color is the source; no byte depth). Invert
+    # (issue #280) inverts the key, before the Inside Mask (alpha >= 0.5 here) is applied, and is
+    # ignored in None mode (no keying: alpha 0)
+    "Keyer|net.sf.openfx.KeyerPlugin|general|short float|mean=0.625,0.625,0.625,0.625||-i Source=solid:0.625,0.625,0.625,1 -i Bg=none -i InM=none -i OutM=none"
+    "Keyer invert|net.sf.openfx.KeyerPlugin|general|short float|mean=0.625,0.625,0.625,0.375||-i Source=solid:0.625,0.625,0.625,1 -i Bg=none -i InM=none -i OutM=none invert=1"
     "Keyer invert inside mask|net.sf.openfx.KeyerPlugin|general|short float|mean=0.625,0.625,0.625,0.5||-i Source=solid:0.625,0.625,0.625,1 -i Bg=none -i InM=solid:0.5,0.5,0.5,0.5 -i OutM=none invert=1"
     "Keyer invert None mode|net.sf.openfx.KeyerPlugin|general|short float|mean=0.625,0.625,0.625,0||-i Source=solid:0.625,0.625,0.625,1 -i Bg=none -i InM=none -i OutM=none mode=3 invert=1"
+    # Saturation (max - min) / max = 0.75, Min 0.2 and Max 0.8 of (0.2, 0.4, 0.8), version 2 only
+    "Keyer saturation|net.sf.openfx.KeyerPlugin|general|short float|mean=0.2,0.4,0.8,0.75||-i Source=solid:0.2,0.4,0.8,1 -i Bg=none -i InM=none -i OutM=none mode=4"
+    "Keyer min|net.sf.openfx.KeyerPlugin|general|short float|mean=0.2,0.4,0.8,0.2||-i Source=solid:0.2,0.4,0.8,1 -i Bg=none -i InM=none -i OutM=none mode=5"
+    "Keyer max|net.sf.openfx.KeyerPlugin|general|short float|mean=0.2,0.4,0.8,0.8||-i Source=solid:0.2,0.4,0.8,1 -i Bg=none -i InM=none -i OutM=none mode=6"
+    # version 1 (deprecated) keeps its polarity and defaults (A = 0.5, B = C = 1): the background
+    # key 0.25, alpha 0.75; inverted, 0.25
+    "Keyer 1|net.sf.openfx.KeyerPlugin|general|short float|mean=0.625,0.625,0.625,0.75||-m 1 -i Source=solid:0.625,0.625,0.625,1 -i Bg=none -i InM=none -i OutM=none"
+    "Keyer 1 invert|net.sf.openfx.KeyerPlugin|general|short float|mean=0.625,0.625,0.625,0.25||-m 1 -i Source=solid:0.625,0.625,0.625,1 -i Bg=none -i InM=none -i OutM=none invert=1"
     # Screen mode, despill 1, Unpremultiplied output: Invert inverts alpha but not the despill
     # amount, which uses the key without Invert (the colour is the same)
     "Keyer screen despill|net.sf.openfx.KeyerPlugin|general|short float|mean=0.1,0.141,0.1,0.341||-i Source=solid:0.1,0.8,0.1,1 -i Bg=none -i InM=none -i OutM=none mode=2 keyColor=0,1,0 despill=1 show=2"
@@ -714,6 +722,13 @@ tests=(
     # Premultiply the RGB: not a pass-through
     "Roto replace outside RoD|net.sf.openfx.RotoPlugin|general|*|notidentity+mean=0.5,0.5,0.5,0||-i Source=solid:0.5,0.5,0.5,1 -i Roto=rod:100,100,200,200 replace=1 --frames 0 --window 0,0,4,4"
     "Roto premultiply outside RoD|net.sf.openfx.RotoPlugin|general|*|notidentity+mean=0,0,0,1||-i Source=solid:0.5,0.5,0.5,1 -i Roto=rod:100,100,200,200 premultiply=1 --frames 0 --window 0,0,4,4"
+    # Clip To (default Format, 0: No Clip, 1: BBox, 4: Intersect BBox+Format) on a Source in the left
+    # half of the project (transparent black): the shape alpha (0.5) is drawn where the output is
+    # rendered, across the Source edge (x = 360) or only on its left with BBox and Intersect
+    "Roto clip to format|net.sf.openfx.RotoPlugin|general|*|mean=0,0,0,0.5||-i Source=rod:0,0,384,576 -i Roto=solid:1,1,1,0.5 --frames 0 --window 350,0,370,4"
+    "Roto no clip|net.sf.openfx.RotoPlugin|general|*|mean=0,0,0,0.5||-i Source=rod:0,0,384,576 -i Roto=solid:1,1,1,0.5 clipType=0 --frames 0 --window 350,0,370,4"
+    "Roto clip to bbox|net.sf.openfx.RotoPlugin|general|*|mean=0,0,0,0.5||-i Source=rod:0,0,384,576 -i Roto=solid:1,1,1,0.5 clipType=1 --frames 0 --window 350,0,370,4"
+    "Roto clip to intersect|net.sf.openfx.RotoPlugin|general|*|mean=0,0,0,0.5||-i Source=rod:0,0,384,576 -i Roto=solid:1,1,1,0.5 clipType=4 --frames 0 --window 350,0,370,4"
     # ColorCorrect Mix Luminance 1: gain 2 doubles the color, and the same value is added to R, G and B so that
     # the Rec. 709 luminance is the input one (0.4648756): 2 * (0.25,0.5,0.75) - 0.4648756
     "ColorCorrect mix luminance|net.sf.openfx.ColorCorrectPlugin|filter|float|tol=1e-4+mean=0.0351244,0.5351244,1.0351244,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none MasterGain=2,2,2,2 mixLuminance=1"
@@ -737,9 +752,27 @@ tests=(
     "Log2Lin offset overflow|net.sf.openfx.Log2Lin|filter|*|mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none black=1023,1023,1023 white=0,0,0 gamma=0.001,0.001,0.001"
     # Log2Lin: the minimum gamma overflows the float range (capped to FLT_MAX), premultiplied by alpha 0
     "Log2Lin gamma min alpha 0|net.sf.openfx.Log2Lin|filter|*|mean=0,0,0,0||-i Source=solid:0.25,0.5,0.75,0 -i Mask=none gamma=0.001,0.001,0.001 premult=1"
+    # PIK (version 2): the existing cases below turn RGBA Legal off (on by default since issue #281).
+    # RGBA Legal: a color darker than the screen (0.1, 0.2, 0.8; Pick) has the key 0, but the alpha is
+    # the luminance of the screen-subtracted color, 0.1526 (0 without it, and in version 1)
+    "PIK RGBA legal|net.sf.openfx.PIK|general|float|mean=0.0753,0.1782,0.1268,0.1526||-i Fg=solid:0.1771,0.3818,0.9411,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0.1,0.2,0.8"
+    "PIK RGBA legal off|net.sf.openfx.PIK|general|float|mean=0.0753,0.1782,0.1268,0||-i Fg=solid:0.1771,0.3818,0.9411,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0.1,0.2,0.8 rgbal=0"
+    "PIK 1 RGBA legal|net.sf.openfx.PIK|general|float|mean=0.0753,0.1782,0.1268,0||-m 1 -i Fg=solid:0.1771,0.3818,0.9411,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0.1,0.2,0.8 rgbal=1"
+    # Luminance Match: a color brighter than the screen is scaled to its luminance for the alpha
+    # (0.5831 without it), but the screen subtraction uses the key; with Screen Range 0.5, a dark
+    # color is divided by 0.5 (alpha 0, 0.0769 without it)
+    "PIK luminance match|net.sf.openfx.PIK|general|float|mean=0.2683,0.2646,0.2665,0.7415||-i Fg=solid:0.31,0.348,0.6,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0.1,0.2,0.8 lmEnable=1"
+    "PIK screen range|net.sf.openfx.PIK|general|float|mean=0,0,0,0||-i Fg=solid:0,0,0.6,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0.1,0.2,0.8 lmEnable=1 level=0.5"
+    "PIK 1 luminance match|net.sf.openfx.PIK|general|float|mean=0.2683,0.2646,0.2665,0.5831||-m 1 -i Fg=solid:0.31,0.348,0.6,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0.1,0.2,0.8 lmEnable=1"
+    # Autolevels: on a blue screen, red is lowered to green for the alpha (1 without it); Magenta
+    # keeps red up to blue; on a green screen, Yellow keeps red, halving the part above green
+    "PIK autolevels|net.sf.openfx.PIK|general|float|mean=0.8592,0,0,0.6923||-i Fg=solid:0.89,0,0.2,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0.1,0.2,0.8 autolevels=1"
+    "PIK autolevels magenta|net.sf.openfx.PIK|general|float|mean=0.8438,0,0.2308,0.5385||-i Fg=solid:0.89,0,0.6,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0.1,0.2,0.8 autolevels=1 magenta=1"
+    "PIK autolevels green yellow|net.sf.openfx.PIK|general|float|mean=1.1777,0.5108,0.1438,0.8885||-i Fg=solid:1.2,0.6,0.155,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0.2,0.8,0.1 autolevels=1 yellow=1"
+    "PIK 1 autolevels|net.sf.openfx.PIK|general|float|mean=0.89,0,0.2,1||-m 1 -i Fg=solid:0.89,0,0.2,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0.1,0.2,0.8 autolevels=1"
     # PIK: a soft screen replace color with zero Rec.709 luminance (was 0/0 = NaN where alpha
     # is raised to 1 by Clip White, or a huge color with FMA contraction, e.g. on arm64): white
-    "PIK replace color lum 0|net.sf.openfx.PIK|general|float|comps=RGBA+mean=0.0045,0.0045,0.0045,1||-i Fg=solid:0,0,0.25,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0,0,1 screenClipMax=0.5 screenReplaceColor=0.072175,0,-0.2126729"
+    "PIK replace color lum 0|net.sf.openfx.PIK|general|float|comps=RGBA+mean=0.0045,0.0045,0.0045,1||-i Fg=solid:0,0,0.25,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0,0,1 screenClipMax=0.5 screenReplaceColor=0.072175,0,-0.2126729 rgbal=0"
     # Difference: RGB from B, alpha = gain * sum of the squared RGB differences - offset, in an RGBA
     # unpremultiplied output (issue #275: RGB inputs gave an RGB output with the matte in blue;
     # hostDemo's inputs are RGBA, so the RGB case is not tested: only the RGBA output, the alpha
@@ -756,27 +789,27 @@ tests=(
     # projects render the same. A partial key (Clip Black/White), a colored alpha bias and replace
     # colors, and an inside mask.
     "PIK 1 AP0 soft colors|net.sf.openfx.PIK|general|float|mean=0.3371,0.2247,1.0113,0.5||-m 1 -i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=solid:0.15,0.65,0.2,1 -i Bg=none screenType=0 -i InM=solid:0.5,0.5,0.5,0.5 -i OutM=none screenClipMin=0.1 screenClipMax=0.6 colorspace=2 alphaBias=0.2,0.8,0.3 screenReplaceColor=0.8,0.3,0.2 insideReplaceColor=0.3,0.2,0.9"
-    "PIK AP0 soft colors|net.sf.openfx.PIK|general|float|mean=0.4982,0.3321,1.4946,0.5||-i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=solid:0.15,0.65,0.2,1 -i Bg=none screenType=0 -i InM=solid:0.5,0.5,0.5,0.5 -i OutM=none screenClipMin=0.1 screenClipMax=0.6 colorspace=2 alphaBias=0.2,0.8,0.3 screenReplaceColor=0.8,0.3,0.2 insideReplaceColor=0.3,0.2,0.9"
+    "PIK AP0 soft colors|net.sf.openfx.PIK|general|float|mean=0.4982,0.3321,1.4946,0.5||-i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=solid:0.15,0.65,0.2,1 -i Bg=none screenType=0 -i InM=solid:0.5,0.5,0.5,0.5 -i OutM=none screenClipMin=0.1 screenClipMax=0.6 colorspace=2 alphaBias=0.2,0.8,0.3 screenReplaceColor=0.8,0.3,0.2 insideReplaceColor=0.3,0.2,0.9 rgbal=0"
     # the same with screenType=2 (Pick) and Rec. 2020
     "PIK 1 Rec.2020 soft colors|net.sf.openfx.PIK|general|float|mean=0.2435,0.2943,0.1309,0.52||-m 1 -i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=none -i Bg=none -i InM=solid:0.5,0.5,0.5,0.5 -i OutM=none screenType=2 color=0.1,0.9,0.15 screenClipMin=0.1 screenClipMax=0.6 colorspace=1 alphaBias=0.2,0.8,0.3 screenReplaceColor=0.8,0.3,0.2 insideReplaceColor=0.3,0.2,0.9"
-    "PIK Rec.2020 soft colors|net.sf.openfx.PIK|general|float|mean=0.2319,0.29,0.128,0.52||-i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=none -i Bg=none -i InM=solid:0.5,0.5,0.5,0.5 -i OutM=none screenType=2 color=0.1,0.9,0.15 screenClipMin=0.1 screenClipMax=0.6 colorspace=1 alphaBias=0.2,0.8,0.3 screenReplaceColor=0.8,0.3,0.2 insideReplaceColor=0.3,0.2,0.9"
+    "PIK Rec.2020 soft colors|net.sf.openfx.PIK|general|float|mean=0.2319,0.29,0.128,0.52||-i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=none -i Bg=none -i InM=solid:0.5,0.5,0.5,0.5 -i OutM=none screenType=2 color=0.1,0.9,0.15 screenClipMin=0.1 screenClipMax=0.6 colorspace=1 alphaBias=0.2,0.8,0.3 screenReplaceColor=0.8,0.3,0.2 insideReplaceColor=0.3,0.2,0.9 rgbal=0"
     # Rec. 709, or neutral (gray) replace colors: version 2 renders as version 1
-    "PIK Rec.709 soft colors|net.sf.openfx.PIK|general|float|mean=0.2518,0.2974,0.133,0.52||-i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=none -i Bg=none -i InM=solid:0.5,0.5,0.5,0.5 -i OutM=none screenType=2 color=0.1,0.9,0.15 screenClipMin=0.1 screenClipMax=0.6 colorspace=0 alphaBias=0.2,0.8,0.3 screenReplaceColor=0.8,0.3,0.2 insideReplaceColor=0.3,0.2,0.9"
-    "PIK AP0 gray soft colors|net.sf.openfx.PIK|general|float|mean=0.258,0.2649,0.2717,0.5||-i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=none -i Bg=none -i InM=solid:0.5,0.5,0.5,0.5 -i OutM=none screenType=2 color=0.1,0.9,0.15 screenClipMin=0.1 screenClipMax=0.6 colorspace=2 alphaBias=0.5,0.5,0.5 screenReplaceColor=0.7,0.7,0.7 insideReplaceColor=0.4,0.4,0.4"
+    "PIK Rec.709 soft colors|net.sf.openfx.PIK|general|float|mean=0.2518,0.2974,0.133,0.52||-i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=none -i Bg=none -i InM=solid:0.5,0.5,0.5,0.5 -i OutM=none screenType=2 color=0.1,0.9,0.15 screenClipMin=0.1 screenClipMax=0.6 colorspace=0 alphaBias=0.2,0.8,0.3 screenReplaceColor=0.8,0.3,0.2 insideReplaceColor=0.3,0.2,0.9 rgbal=0"
+    "PIK AP0 gray soft colors|net.sf.openfx.PIK|general|float|mean=0.258,0.2649,0.2717,0.5||-i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=none -i Bg=none -i InM=solid:0.5,0.5,0.5,0.5 -i OutM=none screenType=2 color=0.1,0.9,0.15 screenClipMin=0.1 screenClipMax=0.6 colorspace=2 alphaBias=0.5,0.5,0.5 screenReplaceColor=0.7,0.7,0.7 insideReplaceColor=0.4,0.4,0.4 rgbal=0"
     # ACES AP0: bluish replace colors have a tiny or negative AP0 luminance (0,0.1,1: 6.7e-4;
     # 0,0.099,1 and 0,0,1: negative), which gave huge or negated colors (means of 14.5 and -219):
     # they are normalized with their Rec. 709 luminance, as in version 1
-    "PIK AP0 bluish soft colors|net.sf.openfx.PIK|general|float|mean=0.0275,0.194,1.6536,0.5||-i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=none -i Bg=none -i InM=solid:0.5,0.5,0.5,0.5 -i OutM=none screenType=2 color=0.1,0.9,0.15 screenClipMin=0.1 screenClipMax=0.6 colorspace=2 screenReplaceColor=0,0.1,1 insideReplaceColor=0,0.099,1"
-    "PIK AP0 blue soft colors|net.sf.openfx.PIK|general|float|mean=0.0275,0.0343,3.2353,0.5||-i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=none -i Bg=none -i InM=solid:0.5,0.5,0.5,0.5 -i OutM=none screenType=2 color=0.1,0.9,0.15 screenClipMin=0.1 screenClipMax=0.6 colorspace=2 screenReplaceColor=0,0,1 insideReplaceColor=0,0,1"
+    "PIK AP0 bluish soft colors|net.sf.openfx.PIK|general|float|mean=0.0275,0.194,1.6536,0.5||-i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=none -i Bg=none -i InM=solid:0.5,0.5,0.5,0.5 -i OutM=none screenType=2 color=0.1,0.9,0.15 screenClipMin=0.1 screenClipMax=0.6 colorspace=2 screenReplaceColor=0,0.1,1 insideReplaceColor=0,0.099,1 rgbal=0"
+    "PIK AP0 blue soft colors|net.sf.openfx.PIK|general|float|mean=0.0275,0.0343,3.2353,0.5||-i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=none -i Bg=none -i InM=solid:0.5,0.5,0.5,0.5 -i OutM=none screenType=2 color=0.1,0.9,0.15 screenClipMin=0.1 screenClipMax=0.6 colorspace=2 screenReplaceColor=0,0,1 insideReplaceColor=0,0,1 rgbal=0"
     # Use Bg Luminance and Chroma: version 2 converts Bg with the Colorspace too (version 1:
     # always Rec. 709), so that Rec. 2020 differs and Rec. 709 is the same
     "PIK 1 Rec.2020 Bg lum/chroma|net.sf.openfx.PIK|general|float|mean=0.4303,0.392,0.2097,0.52||-m 1 -i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=none -i Bg=solid:0.6,0.3,0.2,1 -i InM=solid:0.5,0.5,0.5,0.5 -i OutM=none screenType=2 color=0.1,0.9,0.15 screenClipMin=0.1 screenClipMax=0.6 colorspace=1 ubl=1 ubc=1 alphaBias=0.2,0.8,0.3 screenReplaceColor=0.8,0.3,0.2 insideReplaceColor=0.3,0.2,0.9"
-    "PIK Rec.2020 Bg lum/chroma|net.sf.openfx.PIK|general|float|mean=0.4695,0.3811,0.1991,0.52||-i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=none -i Bg=solid:0.6,0.3,0.2,1 -i InM=solid:0.5,0.5,0.5,0.5 -i OutM=none screenType=2 color=0.1,0.9,0.15 screenClipMin=0.1 screenClipMax=0.6 colorspace=1 ubl=1 ubc=1 alphaBias=0.2,0.8,0.3 screenReplaceColor=0.8,0.3,0.2 insideReplaceColor=0.3,0.2,0.9"
-    "PIK Rec.709 Bg lum/chroma|net.sf.openfx.PIK|general|float|mean=0.5012,0.3865,0.2059,0.52||-i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=none -i Bg=solid:0.6,0.3,0.2,1 -i InM=solid:0.5,0.5,0.5,0.5 -i OutM=none screenType=2 color=0.1,0.9,0.15 screenClipMin=0.1 screenClipMax=0.6 colorspace=0 ubl=1 ubc=1 alphaBias=0.2,0.8,0.3 screenReplaceColor=0.8,0.3,0.2 insideReplaceColor=0.3,0.2,0.9"
+    "PIK Rec.2020 Bg lum/chroma|net.sf.openfx.PIK|general|float|mean=0.4695,0.3811,0.1991,0.52||-i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=none -i Bg=solid:0.6,0.3,0.2,1 -i InM=solid:0.5,0.5,0.5,0.5 -i OutM=none screenType=2 color=0.1,0.9,0.15 screenClipMin=0.1 screenClipMax=0.6 colorspace=1 ubl=1 ubc=1 alphaBias=0.2,0.8,0.3 screenReplaceColor=0.8,0.3,0.2 insideReplaceColor=0.3,0.2,0.9 rgbal=0"
+    "PIK Rec.709 Bg lum/chroma|net.sf.openfx.PIK|general|float|mean=0.5012,0.3865,0.2059,0.52||-i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=none -i Bg=solid:0.6,0.3,0.2,1 -i InM=solid:0.5,0.5,0.5,0.5 -i OutM=none screenType=2 color=0.1,0.9,0.15 screenClipMin=0.1 screenClipMax=0.6 colorspace=0 ubl=1 ubc=1 alphaBias=0.2,0.8,0.3 screenReplaceColor=0.8,0.3,0.2 insideReplaceColor=0.3,0.2,0.9 rgbal=0"
     # show=2 (Clean Plate) with a Pick screen: the screen color divided by the alpha bias, which
     # is always normalized with Rec. 709, so that all versions and colorspaces give the same output
     "PIK 1 AP1 clean plate|net.sf.openfx.PIK|general|float|mean=0.3182,0.7158,0.3182,1||-m 1 -i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0.1,0.9,0.15 colorspace=3 alphaBias=0.2,0.8,0.3 show=2"
-    "PIK AP1 clean plate|net.sf.openfx.PIK|general|float|mean=0.3182,0.7158,0.3182,1||-i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0.1,0.9,0.15 colorspace=3 alphaBias=0.2,0.8,0.3 show=2"
+    "PIK AP1 clean plate|net.sf.openfx.PIK|general|float|mean=0.3182,0.7158,0.3182,1||-i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0.1,0.9,0.15 colorspace=3 alphaBias=0.2,0.8,0.3 show=2 rgbal=0"
     # render scale 0.5 (the means are those of the full-scale renders), tiles
     # (--window: the same pixels as the full render), and a fractional time
     "Radial scale 0.5|net.sf.openfx.Radial|general|*|mean=0.231,0.231,0.231,0.231||-i Source=none -i Mask=none --scale 0.5"

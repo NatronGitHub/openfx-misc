@@ -48,7 +48,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              Output is then UnPremultiplied (issue #328);
 //              Process A is checked by default (it had no default, so nothing was drawn by default since
 //              the R/G/B/A checkboxes are honored); a missing Roto image is transparent black, not an error;
-//              add the Premultiply and Replace parameters (default off: the output is unchanged) (#283)
+//              add the Premultiply and Replace parameters (default off: the output is unchanged) (#283);
+//              add the Clip To parameter (#283): the output RoD is the union of the Source and Roto RoDs clipped
+//              to the chosen region; the default, Format, clips it to the Source format (the project without
+//              a Source), where the union was not clipped (the output is unchanged within the format)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -97,6 +100,27 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamReplace "replace"
 #define kParamReplaceLabel "Replace"
 #define kParamReplaceHint "Clear the drawn channels (R, G, B and A, as checked) of the Source to black before drawing into them."
+
+#define kParamClipType "clipType"
+#define kParamClipTypeLabel "Clip To"
+#define kParamClipTypeHint "The region the output is clipped to. The output is the union of the Source and the shapes, " \
+    "clipped to this region."
+#define kParamClipTypeOptionNone "No Clip", "Do not clip the output.", "none"
+#define kParamClipTypeOptionBBox "BBox", "Clip the output to the region of definition of the Source.", "bbox"
+#define kParamClipTypeOptionFormat "Format", "Clip the output to the format of the Source (the project format without a Source).", "format"
+#define kParamClipTypeOptionUnion "Union BBox+Format", "Clip the output to the union of the region of definition and the format of the Source.", "union"
+#define kParamClipTypeOptionIntersect "Intersect BBox+Format", "Clip the output to the intersection of the region of definition and the format of the Source.", "intersect"
+
+enum class ClipTypeEnum
+{
+    eNone = 0,
+    eBBox,
+    eFormat,
+    eUnion,
+    eIntersect,
+};
+
+#define kParamClipTypeDefault ClipTypeEnum::eFormat
 
 #ifdef OFX_EXTENSIONS_NATRON
 #define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentXY || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
@@ -362,6 +386,7 @@ public:
         , _processA(NULL)
         , _premult(NULL)
         , _replace(NULL)
+        , _clipType(NULL)
     {
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -383,7 +408,8 @@ public:
         assert(_processR && _processG && _processB && _processA);
         _premult = fetchBooleanParam(kParamPremult);
         _replace = fetchBooleanParam(kParamReplace);
-        assert(_premult && _replace);
+        _clipType = fetchChoiceParam(kParamClipType);
+        assert(_premult && _replace && _clipType);
     }
 
 private:
@@ -402,6 +428,12 @@ private:
     /** @brief true if the Output alpha is the shape alpha and the RGB are premultiplied by it */
     bool outputIsPremultipliedByShape() const;
 
+    /** @brief the format of the Source (the project without a Source), in canonical coordinates */
+    OfxRectD sourceFormat() const;
+
+    /** @brief the region the output is clipped to (Clip To), or false if it is not clipped */
+    bool clipRegion(double time, OfxRectD *region) const;
+
     template <int nComponents>
     void renderInternal(const RenderArguments &args, BitDepthEnum dstBitDepth);
 
@@ -419,6 +451,7 @@ private:
     BooleanParam* _processA;
     BooleanParam* _premult;
     BooleanParam* _replace;
+    ChoiceParam* _clipType;
 };
 
 
@@ -516,27 +549,35 @@ RotoPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
 
     return true;
 #else
-    // if source is not connected, use the Mask RoD (i.e. the default RoD)
-    // else use the union of Source and Mask RoD (Source is optional)
-    if ( !( _srcClip && _srcClip->isConnected() ) ) {
-        return false;
-    } else {
-        rod = _srcClip->getRegionOfDefinition(args.time);
-        OfxRectD rotoRod;
+    // the union of the Source and Roto RoDs (Source is optional), clipped to the Clip To region
+    OfxRectD rotoRod;
+    bool hasRotoRod = false;
+    if (_rotoClip && _rotoClip->isConnected()) {
         try {
             rotoRod = _rotoClip->getRegionOfDefinition(args.time);
+            hasRotoRod = true;
         } catch (...) {
             ///If an exception is thrown, that is because the RoD of the roto is NULL (i.e there isn't any shape)
             ///Don't fail getRegionOfDefinition, just take the RoD of the source instead so that in RGBA mode is still displays the source
-
-            ///image
-            return true;
         }
-
-        Coords::rectBoundingBox(rod, rotoRod, &rod);
-
-        return true;
     }
+    if ( _srcClip && _srcClip->isConnected() ) {
+        rod = _srcClip->getRegionOfDefinition(args.time);
+        if (hasRotoRod) {
+            Coords::rectBoundingBox(rod, rotoRod, &rod);
+        }
+    } else if (hasRotoRod) {
+        rod = rotoRod;
+    } else {
+        // the default RoD
+        return false;
+    }
+    OfxRectD region;
+    if ( clipRegion(args.time, &region) && !Coords::rectIntersection(rod, region, &rod) ) {
+        rod.x1 = rod.y1 = rod.x2 = rod.y2 = 0.;
+    }
+
+    return true;
 #endif
 }
 
@@ -596,6 +637,75 @@ RotoPlugin::render(const RenderArguments &args)
     }
 }
 
+OfxRectD
+RotoPlugin::sourceFormat() const
+{
+    OfxRectD format;
+#ifdef OFX_EXTENSIONS_NATRON
+    if ( _srcClip && _srcClip->isConnected() ) {
+        // kOfxImageClipPropFormat is in pixel coordinates, at render scale 1
+        OfxRectI formatPixel;
+        _srcClip->getFormat(formatPixel);
+        if ( !Coords::rectIsEmpty(formatPixel) ) {
+            const OfxPointD rs1 = {1., 1.};
+            Coords::toCanonical(formatPixel, rs1, _srcClip->getPixelAspectRatio(), &format);
+
+            return format;
+        }
+    }
+#endif
+    // no format: the project
+    const OfxPointD size = getProjectSize();
+    const OfxPointD offset = getProjectOffset();
+    format.x1 = offset.x;
+    format.y1 = offset.y;
+    format.x2 = offset.x + size.x;
+    format.y2 = offset.y + size.y;
+
+    return format;
+}
+
+// the region the output is clipped to (Clip To), in canonical coordinates; false if it is not clipped.
+// BBox clips to the Source RoD, and is no clip without a Source.
+bool
+RotoPlugin::clipRegion(double time,
+                       OfxRectD *region) const
+{
+    const bool hasSource = _srcClip && _srcClip->isConnected();
+    const auto clipType = static_cast<ClipTypeEnum>( _clipType->getValueAtTime(time) );
+    switch (clipType) {
+    case ClipTypeEnum::eNone:
+        return false;
+    case ClipTypeEnum::eBBox:
+        if (!hasSource) {
+            return false;
+        }
+        *region = _srcClip->getRegionOfDefinition(time);
+
+        return true;
+    case ClipTypeEnum::eFormat:
+        *region = sourceFormat();
+
+        return true;
+    case ClipTypeEnum::eUnion:
+        *region = sourceFormat();
+        if (hasSource) {
+            Coords::rectBoundingBox(*region, _srcClip->getRegionOfDefinition(time), region);
+        }
+
+        return true;
+    case ClipTypeEnum::eIntersect:
+        *region = sourceFormat();
+        if ( hasSource && !Coords::rectIntersection(*region, _srcClip->getRegionOfDefinition(time), region) ) {
+            region->x1 = region->y1 = region->x2 = region->y2 = 0.;
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
 bool
 RotoPlugin::isIdentity(const IsIdentityArguments &args,
                        Clip * &identityClip,
@@ -610,6 +720,16 @@ RotoPlugin::isIdentity(const IsIdentityArguments &args,
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
     if (srcComponents != dstComponents) {
         return false;
+    }
+    // a pass-through would keep the parts of the Source that Clip To removes
+    OfxRectD region;
+    if ( clipRegion(time, &region) ) {
+        const OfxRectD srcRoD = _srcClip->getRegionOfDefinition(time);
+        OfxRectD clipped;
+        if ( !Coords::rectIntersection(srcRoD, region, &clipped) ||
+             (clipped.x1 != srcRoD.x1) || (clipped.y1 != srcRoD.y1) || (clipped.x2 != srcRoD.x2) || (clipped.y2 != srcRoD.y2) ) {
+            return false;
+        }
     }
 
     bool processA;
@@ -835,6 +955,27 @@ RotoPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setDefault(false);
         param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    // Clip To (#283), between Premultiply and Replace as in the Draw node of the same name
+    {
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamClipType);
+        param->setLabel(kParamClipTypeLabel);
+        param->setHint(kParamClipTypeHint);
+        assert(param->getNOptions() == static_cast<int>(ClipTypeEnum::eNone));
+        param->appendOption(kParamClipTypeOptionNone);
+        assert(param->getNOptions() == static_cast<int>(ClipTypeEnum::eBBox));
+        param->appendOption(kParamClipTypeOptionBBox);
+        assert(param->getNOptions() == static_cast<int>(ClipTypeEnum::eFormat));
+        param->appendOption(kParamClipTypeOptionFormat);
+        assert(param->getNOptions() == static_cast<int>(ClipTypeEnum::eUnion));
+        param->appendOption(kParamClipTypeOptionUnion);
+        assert(param->getNOptions() == static_cast<int>(ClipTypeEnum::eIntersect));
+        param->appendOption(kParamClipTypeOptionIntersect);
+        param->setDefault( static_cast<int>(kParamClipTypeDefault) );
+        param->setAnimates(false);
         if (page) {
             page->addChild(*param);
         }

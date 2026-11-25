@@ -112,6 +112,7 @@ NAMES = {
                                color1="color"),
     "net.sf.openfx.Radial": dict(_OUTPUT, color1="color", **_AREA),
     "net.sf.openfx.Rectangle": dict(_OUTPUT, color1="color", **_AREA),
+    "net.sf.openfx.RotoPlugin": _OUTPUT,
     "net.sf.openfx.TransformPlugin": {"invert": "invert_matrix"},
     "net.sf.openfx.TransformMaskedPlugin": {"invert": "invert_matrix"},
     "net.sf.openfx.CornerPinPlugin": dict(
