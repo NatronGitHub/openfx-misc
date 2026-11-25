@@ -241,6 +241,15 @@ def nuke_script(case, result_path):
                     "images[%r]['box'].setValue(%r)"
                     % (name, list(image["box"]))]
     lines.append("n = nuke.nodes.%s()" % node_class)
+    # nuke.nodes skips the knob defaults (nuke.knobDefault, e.g. Nuke's
+    # knobdefaults.py), which createNode applies to the node a user
+    # creates: apply them to the node under test, before the case's knobs.
+    lines += [
+        "for _k in n.knobs():",
+        "    _d = nuke.knobDefault('%s.' + _k)" % node_class,
+        "    if _d is not None:",
+        "        n[_k].fromScript(_d)",
+    ]
     for i, name in enumerate(nuke_inputs):
         if name:
             lines.append("n.setInput(%d, images[%r])" % (i, name))

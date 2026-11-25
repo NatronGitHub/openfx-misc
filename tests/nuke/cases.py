@@ -2168,14 +2168,10 @@ CASES += [
     case("FrameBlend 6 frames (FrameBlend defaults)",
          ("FrameBlend", {"numframes": 6}), (ofx_id("FrameBlend"), {}),
          frames=[10], **TIME),
-    # nuke.nodes skips the knob defaults of Nuke's knobdefaults.py, which
-    # createNode (the node a user creates) applies: TimeBlur's are
-    # shutteroffset start and shuttercustomoffset 0 (else custom, -0.25).
-    case("TimeBlur defaults",
-         ("TimeBlur", {"shutteroffset": "start", "shuttercustomoffset": 0.}),
+    # (with the knob defaults: shutteroffset start, shuttercustomoffset 0)
+    case("TimeBlur defaults", ("TimeBlur", {}),
          (ofx_id("TimeBlur"), {}), frames=[10], **TIME),
-    case("TimeBlur defaults at fractional times",
-         ("TimeBlur", {"shutteroffset": "start", "shuttercustomoffset": 0.}),
+    case("TimeBlur defaults at fractional times", ("TimeBlur", {}),
          (ofx_id("TimeBlur"), {}), nuke_post=retime_post(0.5),
          frames=[21, 23], ofx_times=[10.5, 11.5], **TIME),
     case("TimeBlur divisions 4, shutter 1, centred",
