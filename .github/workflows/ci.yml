@@ -1,4 +1,4 @@
-name: Continous Integration tests
+name: Continuous Integration tests
 
 # Every change gets up to three CMake builds (Linux, Windows, then macOS) of the
 # release configuration (with the Test bundle), each installed and followed by a
