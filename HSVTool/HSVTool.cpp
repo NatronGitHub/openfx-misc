@@ -84,12 +84,17 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              colours are copied (the HSV round trip changed them by rounding, and a negative saturation
 //              in a range that includes it was set to 0); isIdentity no longer passes the source through
 //              when the render sets the alpha (Output Alpha other than Source, even with Mix 0 or outside the
-//              mask), clamps float images (Clamp Black, on by default, or Clamp White), or applies a gain
+//              mask), clamps float images (Clamp Black, on by default in version 1, or Clamp White), or applies a gain
 //              other than 1;
 //              (1.1 is unreleased, extended in place, issue #293) Set Saturation and Set Brightness parameters
 //              (default off): the adjustment is the value that the saturation or brightness is set to
-#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+// version 2.0: Clamp Black is off by default, so that the default node keeps negative values (issue #272);
+//              version 1.1 is kept, with Clamp Black on by default
+#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+
+// the first major version whose Clamp Black is off by default (issue #272)
+#define kVersionClampBlackOff 2
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -1865,15 +1870,19 @@ class HSVToolOverlayDescriptor
 {
 };
 
-mDeclarePluginFactory(HSVToolPluginFactory, {ofxsThreadSuiteCheck();}, {});
+mDeclarePluginFactoryVersioned(HSVToolPluginFactory, {ofxsThreadSuiteCheck();}, {});
 
+template<unsigned int majorVersion>
 void
-HSVToolPluginFactory::describe(ImageEffectDescriptor &desc)
+HSVToolPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsObsolete(true);
+    }
 
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
@@ -1898,9 +1907,10 @@ HSVToolPluginFactory::describe(ImageEffectDescriptor &desc)
 #endif
 }
 
+template<unsigned int majorVersion>
 void
-HSVToolPluginFactory::describeInContext(ImageEffectDescriptor &desc,
-                                        ContextEnum context)
+HSVToolPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
+                                                      ContextEnum context)
 {
     // Source clip only in the filter context
     // create the mandated source clip
@@ -2305,7 +2315,7 @@ HSVToolPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampBlack);
         param->setLabel(kParamClampBlackLabel);
         param->setHint(kParamClampBlackHint);
-        param->setDefault(true);
+        param->setDefault(majorVersion < kVersionClampBlackOff);
         param->setAnimates(true);
         param->setLayoutHint(eLayoutHintNoNewLine, 0);
         if (page) {
@@ -2380,14 +2390,18 @@ HSVToolPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
 } // HSVToolPluginFactory::describeInContext
 
+template<unsigned int majorVersion>
 ImageEffect*
-HSVToolPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                     ContextEnum /*context*/)
+HSVToolPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
+                                                   ContextEnum /*context*/)
 {
     return new HSVToolPlugin(handle);
 }
 
-static HSVToolPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static HSVToolPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
+// version 1: Clamp Black is on by default
+static HSVToolPluginFactory<1> p1(kPluginIdentifier, 1);
 mRegisterPluginFactoryInstance(p)
+mRegisterPluginFactoryInstance(p1)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

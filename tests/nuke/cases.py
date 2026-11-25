@@ -35,6 +35,10 @@ Cases: CASES is a list of dicts with
   "nuke_post" adds a time node (e.g. a Retime) that samples the node at
   those, maybe fractional, times (Nuke's sample() only takes whole frames);
 - "major": the plug-in major version hostDemo uses (default: the newest);
+- "nuke_warmup": sample the compared pixels of each frame once before the
+  compared samples (in Nuke, the first sample of a ColorCorrect with Mix
+  Luminance differs, whatever the pixel, and sampling that pixel again
+  is not enough);
 - "nuke_edges": compare Nuke's pixels outside its bounding box as sample()
   gives them (the edge pixels repeated), not as 0;
 - "region": the compared pixels, (x1, y1, x2, y2[, step]) or "project"
@@ -97,6 +101,11 @@ def _const(r, g, b, a):
 # left); each one gives the same values as the image's Nuke expressions.
 def _ramp(x, y):
     return -1. + 4. * _u(x), -.5 + 2.5 * _v(y), 1.5 - 2. * _u(x), 1.
+
+
+def _grey_ramp(x, y):
+    v = -.5 + 2. * (x + WIDTH * y) / (WIDTH * HEIGHT - 1.)
+    return v, v, v, 1.
 
 
 def _premult(x, y):
@@ -333,6 +342,12 @@ IMAGES = {
         "views": (("frame", "0", "0", "1"), ("0", "frame", "frame", "1")),
         "ofx": "default",
     },
+    # Greys from -0.5 (bottom left) to 1.5 (top right), row by row; opaque.
+    "grey_ramp": {
+        "nuke": ("-0.5 + 2 * (x + %d * y) / %d" % (WIDTH, WIDTH * HEIGHT - 1),)
+        * 3 + ("1",),
+        "py": _grey_ramp,
+    },
     # All hues, as "hues", but within [0.06, 0.94].
     "hues01": {
         "nuke": ("0.5 + (x - 15.5) / 48",
@@ -463,7 +478,8 @@ EDGE_ALPHA_ONLY = {"NatronOfxParamProcessR": 0, "NatronOfxParamProcessG": 0,
                    "NatronOfxParamProcessB": 0, "NatronOfxParamProcessA": 1}
 
 # ---------------------------------------------------------------- Color
-# Saturation outputs differ by up to 5e-4 here: tolerance 1e-3.
+# Saturation outputs differ by up to 8e-4 here (the Rec. 709 luminance
+# coefficients differ in the fourth decimal): tolerance 1e-3.
 SATURATION_TOLERANCE = 1e-3
 CASES += [
     case("Add defaults", ("Add", {}), (ofx_id("AddPlugin"), {}),
@@ -565,35 +581,72 @@ CASES += [
          (ofx_id("GradePlugin"), {"multiply": rgba(2.), "premult": 1}),
          input="Aa", region=(0, 9, WIDTH, HEIGHT),
          known=271),
+    # Clamp Black is off by default (#272); the obsolete major versions
+    # (ColorCorrect 2, ColorMatrix 2, Saturation 2, HSVTool 1) clamp by
+    # default, and match with it off.
     case("ColorCorrect defaults (negatives)", ("ColorCorrect", {}),
-         (ofx_id("ColorCorrectPlugin"), {}), input="ramp",
-         known=272),
-    case("ColorCorrect defaults, clamp black off", ("ColorCorrect", {}),
-         (ofx_id("ColorCorrectPlugin"), {"clampBlack": 0}), input="ramp"),
+         (ofx_id("ColorCorrectPlugin"), {}), input="ramp"),
+    case("ColorCorrect 2 defaults, clamp black off", ("ColorCorrect", {}),
+         (ofx_id("ColorCorrectPlugin"), {"clampBlack": 0}), input="ramp",
+         major=2),
     case("ColorCorrect contrast 2", ("ColorCorrect", {"contrast": 2.}),
+         (ofx_id("ColorCorrectPlugin"), {"MasterContrast": rgba(2.)}),
+         input="ramp", tolerance=1e-4),
+    case("ColorCorrect contrast 0.5, gamma 0.8 (negatives)",
+         ("ColorCorrect", {"contrast": .5, "gamma": .8}),
+         (ofx_id("ColorCorrectPlugin"), {"MasterContrast": rgba(.5),
+                                         "MasterGamma": rgba(.8)}),
+         input="ramp", tolerance=1e-4),
+    # Gamma 0 gives 1 for positive values and keeps the negative ones; a
+    # gamma below 0.001 is 0.001 (compared up to 1: beyond, the outputs
+    # are infinite in Nuke, FLT_MAX in openfx-misc).
+    case("ColorCorrect gamma 0, greys", ("ColorCorrect", {"gamma": 0.}),
+         (ofx_id("ColorCorrectPlugin"), {"MasterGamma": rgba(0.)}),
+         input="grey_ramp", tolerance=1e-4),
+    case("ColorCorrect gamma 1e-6, greys up to 1",
+         ("ColorCorrect", {"gamma": 1e-6}),
+         (ofx_id("ColorCorrectPlugin"), {"MasterGamma": rgba(1e-6)}),
+         input="grey_ramp", region=(0, 0, WIDTH, 24), tolerance=1e-3),
+    case("ColorCorrect gamma 0.01, greys up to 1",
+         ("ColorCorrect", {"gamma": .01}),
+         (ofx_id("ColorCorrectPlugin"), {"MasterGamma": rgba(.01)}),
+         input="grey_ramp", region=(0, 0, WIDTH, 24), tolerance=1e-4),
+    case("ColorCorrect contrast 2, gamma 0, negative red",
+         ("ColorCorrect", {"contrast": 2., "gamma": 0.}),
          (ofx_id("ColorCorrectPlugin"), {"MasterContrast": rgba(2.),
-                                         "clampBlack": 0}),
-         input="ramp", tolerance=1e-4,
-         known=289),
-    case("ColorCorrect contrast 2, positive values",
+                                         "MasterGamma": rgba(0.)}),
+         input="ramp", region=(0, 0, 8, HEIGHT), channels="r",
+         tolerance=1e-4),
+    case("ColorCorrect 2 contrast 2, positive values",
          ("ColorCorrect", {"contrast": 2.}),
          (ofx_id("ColorCorrectPlugin"), {"MasterContrast": rgba(2.),
                                          "clampBlack": 0}),
-         input="ramp", region=(8, 7, 24, HEIGHT), tolerance=1e-4),
+         input="ramp", region=(8, 7, 24, HEIGHT), tolerance=1e-4, major=2),
+    # The tone ranges are weighted by the luminance of the input; with
+    # colours, the weights differ by up to 0.012 (the Rec. 709 luminance
+    # coefficients differ in the fourth decimal).
     case("ColorCorrect shadows gain 2, highlights gain 4",
          ("ColorCorrect", {"shadows.gain": 2., "highlights.gain": 4.}),
          (ofx_id("ColorCorrectPlugin"), {"ShadowsGain": rgba(2.),
-                                         "HighlightsGain": rgba(4.),
-                                         "clampBlack": 0}),
+                                         "HighlightsGain": rgba(4.)}),
          input="ramp", tolerance=1e-4,
          known=289),
+    case("ColorCorrect shadows, midtones and highlights offsets, greys",
+         ("ColorCorrect", {"shadows.offset": Script("0.1 0 0 0"),
+                           "midtones.offset": Script("0 0.1 0 0"),
+                           "highlights.offset": Script("0 0 0.1 0")}),
+         (ofx_id("ColorCorrectPlugin"), {
+             "ShadowsOffset": [.1, 0., 0., 0.],
+             "MidtonesOffset": [0., .1, 0., 0.],
+             "HighlightsOffset": [0., 0., .1, 0.]}),
+         input="grey_ramp", tolerance=1e-4),
     case("ColorCorrect all master knobs",
          ("ColorCorrect", {"saturation": .5, "contrast": 1.5, "gamma": 1.2,
                            "gain": 1.1, "offset": .05}),
          (ofx_id("ColorCorrectPlugin"), {
              "MasterSaturation": rgba(.5), "MasterContrast": rgba(1.5),
              "MasterGamma": rgba(1.2), "MasterGain": rgba(1.1),
-             "MasterOffset": rgba(.05), "clampBlack": 0}),
+             "MasterOffset": rgba(.05)}),
          input="hues01", tolerance=SATURATION_TOLERANCE),
     case("ColorCorrect all master knobs, values outside [0, 1]",
          ("ColorCorrect", {"saturation": .5, "contrast": 1.5, "gamma": 1.2,
@@ -601,21 +654,42 @@ CASES += [
          (ofx_id("ColorCorrectPlugin"), {
              "MasterSaturation": rgba(.5), "MasterContrast": rgba(1.5),
              "MasterGamma": rgba(1.2), "MasterGain": rgba(1.1),
-             "MasterOffset": rgba(.05), "clampBlack": 0}),
-         input="hues", tolerance=1e-4,
-         known=289),
+             "MasterOffset": rgba(.05)}),
+         input="hues", tolerance=SATURATION_TOLERANCE),
     case("ColorCorrect midtones saturation 2, gamma 0.8",
          ("ColorCorrect", {"midtones.saturation": 2., "midtones.gamma": .8}),
          (ofx_id("ColorCorrectPlugin"), {"MidtonesSaturation": rgba(2.),
-                                         "MidtonesGamma": rgba(.8),
-                                         "clampBlack": 0}),
+                                         "MidtonesGamma": rgba(.8)}),
          input="hues", tolerance=1e-4,
          known=289),
+    case("ColorCorrect gain 2, mix luminance 1",
+         ("ColorCorrect", {"gain": 2., "mix_luminance": 1.}),
+         (ofx_id("ColorCorrectPlugin"), {"MasterGain": rgba(2.),
+                                         "mixLuminance": 1.}),
+         input="hues01", nuke_warmup=True, tolerance=1e-4),
+    case("ColorCorrect gain 2, offset -0.1, gamma 1.5, mix luminance 0.7",
+         ("ColorCorrect", {"gain": 2., "offset": -.1, "gamma": 1.5,
+                           "mix_luminance": .7}),
+         (ofx_id("ColorCorrectPlugin"), {
+             "MasterGain": rgba(2.), "MasterOffset": rgba(-.1),
+             "MasterGamma": rgba(1.5), "mixLuminance": .7}),
+         input="hues01", nuke_warmup=True, tolerance=1e-4),
+    case("ColorCorrect test, greys", ("ColorCorrect", {"test": True}),
+         (ofx_id("ColorCorrectPlugin"), {"test": 1}), input="grey_ramp",
+         tolerance=1e-4),
     case("ColorMatrix identity (negatives)",
          ("ColorMatrix", {"matrix": Script("{1 0 0} {0 1 0} {0 0 1}")}),
-         (ofx_id("ColorMatrixPlugin"), {}), input="ramp",
-         known=272),
-    case("ColorMatrix Rec.709 to XYZ, clamp black off",
+         (ofx_id("ColorMatrixPlugin"), {}), input="ramp"),
+    case("ColorMatrix Rec.709 to XYZ",
+         ("ColorMatrix", {"matrix": Script(
+             "{0.4124 0.3576 0.1805} {0.2126 0.7152 0.0722}"
+             " {0.0193 0.1192 0.9505}")}),
+         (ofx_id("ColorMatrixPlugin"), {
+             "outputRed": [.4124, .3576, .1805, 0.],
+             "outputGreen": [.2126, .7152, .0722, 0.],
+             "outputBlue": [.0193, .1192, .9505, 0.]}),
+         input="ramp", tolerance=1e-4),
+    case("ColorMatrix 2 Rec.709 to XYZ, clamp black off",
          ("ColorMatrix", {"matrix": Script(
              "{0.4124 0.3576 0.1805} {0.2126 0.7152 0.0722}"
              " {0.0193 0.1192 0.9505}")}),
@@ -623,60 +697,56 @@ CASES += [
              "outputRed": [.4124, .3576, .1805, 0.],
              "outputGreen": [.2126, .7152, .0722, 0.],
              "outputBlue": [.0193, .1192, .9505, 0.], "clampBlack": 0}),
-         input="ramp", tolerance=1e-4),
+         input="ramp", tolerance=1e-4, major=2),
     case("ColorMatrix invert",
          ("ColorMatrix", {"matrix": Script("{2 0 0} {0 1 0} {0 0 1}"),
                           "invert": True}),
          (ofx_id("ColorMatrixPlugin"), {"outputRed": [2., 0., 0., 0.],
-                                        "clampBlack": 0, "invert": 1}),
+                                        "invert": 1}),
          input="ramp"),
     case("Saturation 0.5", ("Saturation", {"saturation": 0.5}),
          (ofx_id("SaturationPlugin"), {"saturation": 0.5}), input="ramp",
-         tolerance=1e-4, known=272),
-    case("Saturation 0.5, clamp black off",
+         tolerance=SATURATION_TOLERANCE),
+    case("Saturation 2 0.5, clamp black off",
          ("Saturation", {"saturation": 0.5}),
          (ofx_id("SaturationPlugin"), {"saturation": 0.5, "clampBlack": 0}),
-         input="ramp", tolerance=SATURATION_TOLERANCE),
+         input="ramp", tolerance=SATURATION_TOLERANCE, major=2),
     case("Saturation 2 on (.9, .1, .1)", ("Saturation", {"saturation": 2.}),
          (ofx_id("SaturationPlugin"), {"saturation": 2.}), input="red",
-         tolerance=1e-4, known=272),
-    case("Saturation 2, clamp black off, hues",
+         tolerance=SATURATION_TOLERANCE),
+    case("Saturation 2, hues",
          ("Saturation", {"saturation": 2.}),
-         (ofx_id("SaturationPlugin"), {"saturation": 2., "clampBlack": 0}),
+         (ofx_id("SaturationPlugin"), {"saturation": 2.}),
          input="hues", tolerance=SATURATION_TOLERANCE),
     case("Saturation -1 (negative)", ("Saturation", {"saturation": -1.}),
-         (ofx_id("SaturationPlugin"), {"saturation": -1., "clampBlack": 0}),
+         (ofx_id("SaturationPlugin"), {"saturation": -1.}),
          input="orange", tolerance=SATURATION_TOLERANCE),
     case("Saturation mode Maximum, 0.3",
          ("Saturation", {"saturation": .3, "mode": "Maximum"}),
-         (ofx_id("SaturationPlugin"), {"saturation": .3, "clampBlack": 0,
+         (ofx_id("SaturationPlugin"), {"saturation": .3,
                                        "luminanceMath": "Max"}),
          input="hues", tolerance=1e-4),
     case("HSVTool defaults (negatives)", ("HSVTool", {}),
-         (ofx_id("HSVToolPlugin"), {}), input="ramp", channels="rgba",
-         known=272),
-    case("HSVTool defaults, clamp black off", ("HSVTool", {}),
+         (ofx_id("HSVToolPlugin"), {}), input="ramp", channels="rgba"),
+    case("HSVTool 1 defaults, clamp black off", ("HSVTool", {}),
          (ofx_id("HSVToolPlugin"), {"clampBlack": 0}), input="hues",
-         channels="rgba", tolerance=1e-4),
+         channels="rgba", tolerance=1e-4, major=1),
     case("HSVTool hue rotation 90, saturation -0.3, brightness 0.2",
          ("HSVTool", {"huerotation": 90., "saturation": -.3,
                       "brightness": .2}),
          (ofx_id("HSVToolPlugin"), {"hueRotation": 90.,
                                     "saturationAdjustment": -.3,
-                                    "brightnessAdjustment": .2,
-                                    "clampBlack": 0}),
+                                    "brightnessAdjustment": .2}),
          input="hues", tolerance=1e-4),
     case("HSVTool force saturation 0.2", ("HSVTool", {
         "setsaturation": True, "saturation": .2}),
          (ofx_id("HSVToolPlugin"), {"setSaturation": 1,
-                                    "saturationAdjustment": .2,
-                                    "clampBlack": 0}),
+                                    "saturationAdjustment": .2}),
          input="hues", tolerance=1e-4),
     case("HSVTool force brightness 0.5", ("HSVTool", {
         "setbrightness": True, "brightness": .5}),
          (ofx_id("HSVToolPlugin"), {"setBrightness": 1,
-                                    "brightnessAdjustment": .5,
-                                    "clampBlack": 0}),
+                                    "brightnessAdjustment": .5}),
          input="hues", tolerance=1e-4),
     case("Invert defaults", ("Invert", {}), (ofx_id("Invert"), {}),
          input="Aa", channels="rgba"),

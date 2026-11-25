@@ -47,8 +47,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 2.0: use kNatronOfxParamProcess* parameters
 // version 2.1: premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79);
 //              (2.1 is unreleased, extended in place, issue #291) Invert parameter (default off): apply the inverse of the matrix
-#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+// version 3.0: Clamp Black is off by default, so that the default node keeps negative values (issue #272);
+//              version 2.1 is kept, with Clamp Black on by default
+#define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+
+// the first major version whose Clamp Black is off by default (issue #272)
+#define kVersionClampBlackOff 3
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -106,7 +111,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamInvertHint "When checked, the inverse of the conversion is applied, so that a ColorMatrix with the same matrix and Invert checked undoes it. " \
     "The conversion is the 4x4 matrix, where the channels that are not processed (or not in the image) are left unchanged, as by the render without Invert. " \
     "If it is not invertible (or so close to singular that its inverse is meaningless), the render fails. " \
-    "Clamp Black, on by default, sets negative values to 0, so that a round trip through two ColorMatrix nodes does not give back negative values: uncheck it on both."
+    "Clamp Black sets negative values to 0: a round trip through two ColorMatrix nodes gives back negative values only if it is unchecked on both."
 
 #define kParamClampBlack "clampBlack"
 #define kParamClampBlackLabel "Clamp Black"
@@ -699,14 +704,18 @@ ColorMatrixPlugin::changedParam(const InstanceChangedArgs &args,
     }
 }
 
-mDeclarePluginFactory(ColorMatrixPluginFactory, {ofxsThreadSuiteCheck();}, {});
+mDeclarePluginFactoryVersioned(ColorMatrixPluginFactory, {ofxsThreadSuiteCheck();}, {});
+template<unsigned int majorVersion>
 void
-ColorMatrixPluginFactory::describe(ImageEffectDescriptor &desc)
+ColorMatrixPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
+    if (majorVersion < kPluginVersionMajor) {
+        desc.setIsObsolete(true);
+    }
 
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
@@ -731,9 +740,10 @@ ColorMatrixPluginFactory::describe(ImageEffectDescriptor &desc)
 #endif
 }
 
+template<unsigned int majorVersion>
 void
-ColorMatrixPluginFactory::describeInContext(ImageEffectDescriptor &desc,
-                                            ContextEnum context)
+ColorMatrixPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
+                                                          ContextEnum context)
 {
     // Source clip only in the filter context
     // create the mandated source clip
@@ -865,7 +875,7 @@ ColorMatrixPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampBlack);
         param->setLabel(kParamClampBlackLabel);
         param->setHint(kParamClampBlackHint);
-        param->setDefault(true);
+        param->setDefault(majorVersion < kVersionClampBlackOff);
         param->setAnimates(true);
         param->setLayoutHint(eLayoutHintNoNewLine, 0);
         if (page) {
@@ -899,14 +909,18 @@ ColorMatrixPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
 } // ColorMatrixPluginFactory::describeInContext
 
+template<unsigned int majorVersion>
 ImageEffect*
-ColorMatrixPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                         ContextEnum /*context*/)
+ColorMatrixPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
+                                                       ContextEnum /*context*/)
 {
     return new ColorMatrixPlugin(handle);
 }
 
-static ColorMatrixPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static ColorMatrixPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
+// version 2: Clamp Black is on by default
+static ColorMatrixPluginFactory<2> p2(kPluginIdentifier, 1);
 mRegisterPluginFactoryInstance(p)
+mRegisterPluginFactoryInstance(p2)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

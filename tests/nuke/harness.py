@@ -257,6 +257,18 @@ def nuke_script(case, result_path):
         "    for frame in %r:" % (case_frames(case),),
         "        nuke.frame(frame)",  # sample()'s frame argument is ignored
         "        b = out.bbox()",
+    ]
+    channels = "('rgba.red', 'rgba.green', 'rgba.blue', 'rgba.alpha')"
+    warmup = case.get("nuke_warmup")
+    if warmup:
+        # A first pass, whose values are kept apart: the first samples of a
+        # ColorCorrect with Mix Luminance differ (see cases.py).
+        lines += [
+            "        warm = [[out.sample(ch, x + 0.5, y + 0.5) for ch in %s]"
+            % channels,
+            "                for x, y in points]",
+        ]
+    lines += [
         "        bx, by, bw, bh = b.x(), b.y(), b.w(), b.h()",
         "        values = []",
         "        for x, y in points:",
@@ -264,8 +276,17 @@ def nuke_script(case, result_path):
         % bool(case.get("nuke_edges")),
         "            values.append([out.sample(ch, x + 0.5, y + 0.5)"
         " if inside else 0. for ch in",
-        "                           ('rgba.red', 'rgba.green', 'rgba.blue',"
-        " 'rgba.alpha')])",
+        "                           %s])" % channels,
+    ]
+    if warmup:
+        # In the log (kept with --keep): shows whether the warm-up is still
+        # needed (0 if the first pass gives the same values).
+        lines += [
+            "        print('warm-up: largest difference with the compared"
+            " values: %g' % max(abs(a - c) for w, v in zip(warm, values)"
+            " for a, c in zip(w, v)))",
+        ]
+    lines += [
         "        results['%s %s' % (frame, view)] = values",
         "with open(%r, 'w') as f:" % result_path,
         "    json.dump(results, f)",

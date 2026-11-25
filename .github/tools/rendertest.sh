@@ -671,6 +671,35 @@ tests=(
     "CopyRectangle v2 default|net.sf.openfx.CopyRectanglePlugin|general|*|mean=1,1,1,1||-m 2 -i A=solid:1,1,1,1 -i B=solid:0,0,0,0 -i Mask=none --frames 0 --window 100,288,101,289"
     # saturation 0: the Rec.709 luminance
     "ColorCorrect|net.sf.openfx.ColorCorrectPlugin|filter|*|mean=0.465,0.465,0.465,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none MasterSaturation=0,0,0,0"
+    # Clamp Black (issue #272) is off by default from ColorCorrect 3, ColorMatrix 3, Saturation 3 and
+    # HSVTool 2: the default node is an identity that keeps negative values; the obsolete versions
+    # (-m) clamp them by default
+    "ColorCorrect default negatives|net.sf.openfx.ColorCorrectPlugin|filter|float|identity+mean=-0.25,0.5,0.75,1||-i Source=solid:-0.25,0.5,0.75,1 -i Mask=none"
+    "ColorCorrect 2 default clamp black|net.sf.openfx.ColorCorrectPlugin|filter|float|notidentity+mean=0,0.5,0.75,1||-m 2 -i Source=solid:-0.25,0.5,0.75,1 -i Mask=none"
+    "ColorMatrix default negatives|net.sf.openfx.ColorMatrixPlugin|filter|float|identity+mean=-0.25,0.5,0.75,1||-i Source=solid:-0.25,0.5,0.75,1 -i Mask=none"
+    "ColorMatrix 2 default clamp black|net.sf.openfx.ColorMatrixPlugin|filter|float|notidentity+mean=0,0.5,0.75,1||-m 2 -i Source=solid:-0.25,0.5,0.75,1 -i Mask=none"
+    "Saturation default negatives|net.sf.openfx.SaturationPlugin|filter|float|identity+mean=-0.25,0.5,0.75,1||-i Source=solid:-0.25,0.5,0.75,1 -i Mask=none"
+    "Saturation 2 default clamp black|net.sf.openfx.SaturationPlugin|filter|float|notidentity+mean=0,0.5,0.75,1||-m 2 -i Source=solid:-0.25,0.5,0.75,1 -i Mask=none"
+    # ColorCorrect 3 Contrast (issue #289): a negative value is multiplied by 0.18^(1 - contrast),
+    # -0.25 / 0.18 for contrast 2; the positive ones are (v / 0.18)^2 * 0.18. ColorCorrect 2 keeps -0.25
+    "ColorCorrect contrast negatives|net.sf.openfx.ColorCorrectPlugin|filter|float|tol=1e-4+mean=-1.388889,1.388889,3.125,1||-i Source=solid:-0.25,0.5,0.75,1 -i Mask=none MasterContrast=2,2,2,2"
+    # Gamma alone keeps the negative values (versions 3 and 2; 0.5 squares the positive ones); with Contrast 2, Gamma 0.5 squares the
+    # factor: -0.25 / 0.18^2; Gamma 0 keeps them (the tests/nuke reference, the exponent 1 / gamma is 0);
+    # a small gamma would give -inf: it gives -FLT_MAX
+    "ColorCorrect gamma negatives|net.sf.openfx.ColorCorrectPlugin|filter|float|tol=1e-4+mean=-0.25,0.25,0.5625,1||-i Source=solid:-0.25,0.5,0.75,1 -i Mask=none MasterGamma=0.5,0.5,0.5,0.5"
+    "ColorCorrect 2 gamma negatives|net.sf.openfx.ColorCorrectPlugin|filter|float|tol=1e-4+mean=-0.25,0.25,0.5625,1||-m 2 -i Source=solid:-0.25,0.5,0.75,1 -i Mask=none MasterGamma=0.5,0.5,0.5,0.5 clampBlack=0"
+    "ColorCorrect contrast gamma negatives|net.sf.openfx.ColorCorrectPlugin|filter|float|tol=1e-3+mean=-7.716049,1.929012,9.765625,1||-i Source=solid:-0.25,0.5,0.75,1 -i Mask=none MasterContrast=2,2,2,2 MasterGamma=0.5,0.5,0.5,0.5"
+    "ColorCorrect contrast 2 gamma 0 negatives|net.sf.openfx.ColorCorrectPlugin|filter|float|mean=-2,-2,-2,1||-i Source=solid:-2,-2,-2,1 -i Mask=none MasterContrast=2,2,2,2 MasterGamma=0,0,0,0"
+    "ColorCorrect contrast 2 gamma 0.01 negatives|net.sf.openfx.ColorCorrectPlugin|filter|float|tol=1e33+mean=-3.402823e38,-3.402823e38,-3.402823e38,1||-i Source=solid:-2,-2,-2,1 -i Mask=none MasterContrast=2,2,2,2 MasterGamma=0.01,0.01,0.01,0.01 --frames 0 --window 0,0,1,1"
+    # ColorCorrect 3 Gamma on positive values (issue #289): Gamma 0 gives 1 (0 stays 0); a gamma below 0.001
+    # is 0.001: 0.999^1000, 1, 1.001^1000; beyond the float range, FLT_MAX (not inf). ColorCorrect 2: Gamma 0
+    # gives 0 below 1 and FLT_MAX above 1
+    "ColorCorrect gamma 0 positives|net.sf.openfx.ColorCorrectPlugin|filter|float|mean=0,1,1,1||-i Source=solid:0,0.5,2,1 -i Mask=none MasterGamma=0,0,0,0"
+    "ColorCorrect 2 gamma 0 positives|net.sf.openfx.ColorCorrectPlugin|filter|float|mean=0,0,1,1||-m 2 -i Source=solid:0,0.5,1,1 -i Mask=none MasterGamma=0,0,0,0 clampBlack=0"
+    "ColorCorrect 2 gamma 0 above 1|net.sf.openfx.ColorCorrectPlugin|filter|float|tol=1e33+mean=3.402823e38,3.402823e38,3.402823e38,1||-m 2 -i Source=solid:2,2,2,1 -i Mask=none MasterGamma=0,0,0,0 clampBlack=0 --frames 0 --window 0,0,1,1"
+    "ColorCorrect gamma 1e-6|net.sf.openfx.ColorCorrectPlugin|filter|float|tol=2e-3+mean=0.367695,1,2.716924,1||-i Source=solid:0.999,1,1.001,1 -i Mask=none MasterGamma=1e-6,1e-6,1e-6,1e-6"
+    "ColorCorrect gamma 0.001 above 1|net.sf.openfx.ColorCorrectPlugin|filter|float|tol=1e33+mean=3.402823e38,3.402823e38,3.402823e38,1||-i Source=solid:2,2,2,1 -i Mask=none MasterGamma=0.001,0.001,0.001,0.001 --frames 0 --window 0,0,1,1"
+    "ColorCorrect 2 contrast negatives|net.sf.openfx.ColorCorrectPlugin|filter|float|tol=1e-4+mean=-0.25,1.388889,3.125,1||-m 2 -i Source=solid:-0.25,0.5,0.75,1 -i Mask=none MasterContrast=2,2,2,2 clampBlack=0"
     # ColorMatrix Invert (issue #291, off by default) applies the inverse matrix: with R' = R + G and
     # B' = 2 B, the inverse gives R = R' - G' = 0.75 - 0.5 and B = B' / 2 = 0.25 / 2 (without
     # Invert: 1.25 and 0.5). The inverse of the identity is an identity.
@@ -780,17 +809,18 @@ tests=(
     "Roto clip to union|net.sf.openfx.RotoPlugin|general|*|bounds=350,0,370,4+mean=0,0,0,0.5||-i Source=rod:0,0,384,576 -i Roto=solid:1,1,1,0.5 clipType=3 --frames 0 --window 350,0,370,4"
     "Roto clip to bbox|net.sf.openfx.RotoPlugin|general|*|bounds=350,0,360,4+mean=0,0,0,0.5||-i Source=rod:0,0,384,576 -i Roto=solid:1,1,1,0.5 clipType=BBox --frames 0 --window 350,0,370,4"
     "Roto clip to intersect|net.sf.openfx.RotoPlugin|general|*|bounds=350,0,360,4+mean=0,0,0,0.5||-i Source=rod:0,0,384,576 -i Roto=solid:1,1,1,0.5 clipType=4 --frames 0 --window 350,0,370,4"
-    # ColorCorrect Mix Luminance 1: gain 2 doubles the color, and the same value is added to R, G and B so that
-    # the Rec. 709 luminance is the input one (0.4648756): 2 * (0.25,0.5,0.75) - 0.4648756
-    "ColorCorrect mix luminance|net.sf.openfx.ColorCorrectPlugin|filter|float|tol=1e-4+mean=0.0351244,0.5351244,1.0351244,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none MasterGain=2,2,2,2 mixLuminance=1"
-    # Mix Luminance 0.5: half of that shift, 2 * (0.25,0.5,0.75) - 0.4648756 / 2
-    "ColorCorrect mix luminance 0.5|net.sf.openfx.ColorCorrectPlugin|filter|float|tol=1e-4+mean=0.2675622,0.7675622,1.2675622,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none MasterGain=2,2,2,2 mixLuminance=0.5"
-    # ColorCorrect Test: the tone range of the input luminance, gray in the midtones (luminance 0.465),
-    # green half-way in the shadows ramp (0.045: shadows 0.5, midtones 0.5), magenta half-way in the
-    # highlights ramp (0.75: midtones 0.5, highlights 0.5)
-    "ColorCorrect test midtones|net.sf.openfx.ColorCorrectPlugin|filter|*|mean=0.5,0.5,0.5,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none test=1"
-    "ColorCorrect test shadows/midtones|net.sf.openfx.ColorCorrectPlugin|filter|float|mean=0,0.5,0,1||-i Source=solid:0.045,0.045,0.045,1 -i Mask=none test=1"
-    "ColorCorrect test midtones/highlights|net.sf.openfx.ColorCorrectPlugin|filter|*|mean=1,0.5,1,1||-i Source=solid:0.75,0.75,0.75,1 -i Mask=none test=1"
+    # ColorCorrect Mix Luminance 1 (issue #289): gain 2 doubles the color, and the same value is added to the
+    # sRGB-encoded R, G and B so that the Rec. 709 luminance of the encoded values is the input one (0.70369);
+    # the decoded values are (0.197154,0.516249,0.869185) (the tests/nuke reference)
+    "ColorCorrect mix luminance|net.sf.openfx.ColorCorrectPlugin|filter|float|tol=1e-4+mean=0.197154,0.516249,0.869185,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none MasterGain=2,2,2,2 mixLuminance=1"
+    # Mix Luminance 0.5: half of that shift of the encoded values
+    "ColorCorrect mix luminance 0.5|net.sf.openfx.ColorCorrectPlugin|filter|float|tol=1e-4+mean=0.328364,0.734999,1.159637,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none MasterGain=2,2,2,2 mixLuminance=0.5"
+    # ColorCorrect Test: the value of the tone range of the input luminance with the largest weight in red and
+    # blue (shadows 0, midtones 0.25, highlights 1), the sum of the values times the weights in green:
+    # midtones (luminance 0.465), shadows 0.741 and midtones 0.259 (0.03), midtones 0.352 and highlights 0.648 (0.8)
+    "ColorCorrect test midtones|net.sf.openfx.ColorCorrectPlugin|filter|*|mean=0.25,0.25,0.25,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none test=1"
+    "ColorCorrect test shadows/midtones|net.sf.openfx.ColorCorrectPlugin|filter|float|tol=1e-4+mean=0,0.064815,0,1||-i Source=solid:0.03,0.03,0.03,1 -i Mask=none test=1"
+    "ColorCorrect test midtones/highlights|net.sf.openfx.ColorCorrectPlugin|filter|*|mean=1,0.736,1,1||-i Source=solid:0.8,0.8,0.8,1 -i Mask=none test=1"
     # PLogLin: the undefined conversions pass the channels through (were 1/0 and log of inf)
     "PLogLin nGamma 0|net.sf.openfx.PLogLin|filter|*|mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none nGamma=0,0,0"
     "PLogLin linRef 0|net.sf.openfx.PLogLin|filter|*|mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none operation=1 linRef=0,0,0"
@@ -1117,12 +1147,14 @@ tests=(
     "KeyMix bbox A|net.sf.openfx.KeyMix|filter|*|mean=0.1667,0.1667,0.1667,1||-i A=file:autocrop.pfm -i Source=solid:0,0,0,1 -i Mask=solid:1,1,1,1 bbox=2 NatronOfxParamProcessA=0"
     "KeyMix bbox A no channel|net.sf.openfx.KeyMix|filter|*|identity+mean=0.1667,0.1667,0.1667,1||-i A=solid:1,1,1,1 -i Source=file:autocrop.pfm -i Mask=solid:1,1,1,1 bbox=2 NatronOfxParamProcessR=0 NatronOfxParamProcessG=0 NatronOfxParamProcessB=0 NatronOfxParamProcessA=0"
     # HSVTool (issue #322): the default Output Alpha (Hue, full range) sets alpha to 1, even with Mix
-    # 0; Clamp Black (on by default) clamps float images; a gain other than 1 adjusts (saturation
+    # 0; Clamp Black (on by default in HSVTool 1, issue #272) clamps float images; a gain other than 1 adjusts (saturation
     # 2/3 -> 0.5 here); outside the mask, a non-Source Output Alpha is 0. With Output Alpha = Source,
     # the alpha is the source alpha (it was 0), also with Premultiply.
     "HSVTool default alpha|net.sf.openfx.HSVToolPlugin|filter|*|notidentity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none"
     "HSVTool mix 0 alpha|net.sf.openfx.HSVToolPlugin|filter|*|notidentity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none mix=0"
-    "HSVTool clamp black|net.sf.openfx.HSVToolPlugin|filter|float|notidentity+mean=0,0.5,0.75,1||-i Source=solid:-0.25,0.5,0.75,1 -i Mask=none outputAlpha=0"
+    "HSVTool clamp black|net.sf.openfx.HSVToolPlugin|filter|float|notidentity+mean=0,0.5,0.75,1||-i Source=solid:-0.25,0.5,0.75,1 -i Mask=none outputAlpha=0 clampBlack=1"
+    "HSVTool 1 default clamp black|net.sf.openfx.HSVToolPlugin|filter|float|notidentity+mean=0,0.5,0.75,1||-m 1 -i Source=solid:-0.25,0.5,0.75,1 -i Mask=none outputAlpha=0"
+    "HSVTool default negatives|net.sf.openfx.HSVToolPlugin|filter|float|identity+mean=-0.25,0.5,0.75,1||-i Source=solid:-0.25,0.5,0.75,1 -i Mask=none outputAlpha=0"
     "HSVTool gain|net.sf.openfx.HSVToolPlugin|filter|*|notidentity+mean=0.375,0.5625,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none outputAlpha=0 clampBlack=0 saturationAdjustmentGain=0"
     "HSVTool out of mask|net.sf.openfx.HSVToolPlugin|filter|*|notidentity+mean=0.25,0.5,0.75,0||-i Source=solid:0.25,0.5,0.75,1 -i Mask=file:autocrop.pfm hueRotation=120 --frames 0 --window 100,100,200,200"
     # no adjustment, Output Alpha = Source: an identity (Clamp Black does not change byte images)
