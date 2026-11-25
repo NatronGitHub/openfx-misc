@@ -24,6 +24,7 @@
 
 #include <algorithm> // for std::max
 #include <cmath> // for std::floor, std::ceil
+#include <climits> // INT_MIN, INT_MAX
 #include <stdio.h> // for snprintf & _snprintf
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #  ifndef NOMINMAX
@@ -62,9 +63,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.1: a NULL Source image (disconnected input; render is called although isIdentity returned true,
 //              e.g. by hostDemo) renders black instead of crashing (SupportExt copyPixels);
 //              the sublabel shows the range as the host displays it (kOfxImageClipPropDisplayTimeOffset, display only);
-//              (#400) connecting the Source sets Frame Range to the input range only on Natron >= 2.6, and only
-//              if Frame Range was never set (a secret, saved flag) and is still (1,1): a host that loads values
-//              as user edits could replace a saved (1,1)
+//              (#400) connecting the Source sets Frame Range to the input range only if it was never set (a
+//              secret, saved flag) and is still (1,1), so that a host that loads values as user edits cannot
+//              replace a saved (1,1); Reset clears the flag if it gives (1,1); old projects behave as in 1.0
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -77,7 +78,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamFrameRange "frameRange"
 #define kParamFrameRangeLabel "Frame Range"
-#define kParamFrameRangeHint "Output frame range. On Natron 2.6 and later, connecting the Source sets it to the input frame range if it was never set."
+#define kParamFrameRangeHint "Output frame range. Connecting the Source sets it to the input frame range if it was never set."
 #define kParamFrameRangeDefaultMin 1
 #define kParamFrameRangeDefaultMax 1
 // Whether Frame Range was set: by the user (or loaded with a project), by Reset, or from the input range when the
@@ -146,7 +147,6 @@ private:
 
     void refreshSubLabel(int rangeMin, int rangeMax);
     void setFrameRangeToInputRange();
-    static bool hostSkipsChangedClipOnLoad();
     BeforeAfterEnum getSourceTime(double time, double *srcTime);
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
@@ -301,29 +301,24 @@ FrameRangePlugin::getTransform(const TransformArguments &args,
 #endif
 
 
-// Whether the host does not call the clip changed action while it loads a project, so that changedClip only
-// sees connections made by the user. The OFX spec counts "loading values from files or presets" as user edits
-// (kOfxChangeUserEdited, ofxCore.h), and an old project has no frameRangeInitialised to protect its Frame
-// Range: only Natron 2.6 and later are known to skip it. (The same test as FrameHold's.)
-bool
-FrameRangePlugin::hostSkipsChangedClipOnLoad()
-{
-    const ImageEffectHostDescription& host = *getImageEffectHostDescription();
-
-    return host.hostName == "fr.inria.Natron" &&
-           ( (host.versionMajor > 2) || ( (host.versionMajor == 2) && (host.versionMinor >= 6) ) );
-}
-
-// Set Frame Range to the input frame range (Reset, or the Source connected), and mark it as set.
+// Set Frame Range to the input frame range (Reset, or the Source connected). It is marked as set, unless it is
+// the default (1,1): then connecting the Source updates it again, as before the flag existed. An input range
+// that is not finite or does not fit an int (e.g. an infinite generator) leaves Frame Range unchanged.
 void
 FrameRangePlugin::setFrameRangeToInputRange()
 {
     const OfxRangeD range = _srcClip->getFrameRange();
-    const int min = static_cast<int>( std::floor(range.min) );
-    const int max = static_cast<int>( std::ceil(range.max) );
+    const double first = std::floor(range.min);
+    const double last = std::ceil(range.max);
+    if ( !(first >= INT_MIN && first <= INT_MAX && last >= INT_MIN && last <= INT_MAX) ) { // also false for NaN
+
+        return;
+    }
+    const int min = static_cast<int>(first);
+    const int max = static_cast<int>(last);
 
     _frameRange->setValue(min, max);
-    _frameRangeInitialised->setValue(true);
+    _frameRangeInitialised->setValue( !(min == kParamFrameRangeDefaultMin && max == kParamFrameRangeDefaultMax) );
     refreshSubLabel(min, max);
 }
 
@@ -335,13 +330,12 @@ FrameRangePlugin::changedClip(const InstanceChangedArgs &args,
     if ( (clipName != kOfxImageEffectSimpleSourceClipName) || (args.reason != eChangeUserEdit) ) {
         return;
     }
-    // When the Source is connected and Frame Range was never set, set it to the input range. Loading a
-    // project is a user edit too (ofxCore.h, kOfxChangeUserEdited), so this only runs on hosts that do not
-    // call changedClip while loading, and frameRangeInitialised keeps a Frame Range that was set (#400).
-    // Frame Range must also still be its default, (1,1): an old project has no flag, and a value set from
-    // a script, an expression or a link does not set it.
-    if ( hostSkipsChangedClipOnLoad() && _srcClip && _srcClip->isConnected() &&
-         !_frameRangeInitialised->getValue() ) {
+    // When the Source is connected and Frame Range was never set and is still the default (1,1), set it to
+    // the input range, on all hosts (as in version 1.0). Loading a project is a user edit too (ofxCore.h,
+    // kOfxChangeUserEdited: "loading values from files or presets"), so a host could call this while it
+    // loads a project: frameRangeInitialised, saved with the project, keeps a Frame Range that was set, even
+    // to (1,1) (#400). Old projects have no flag, and behave as in version 1.0.
+    if ( _srcClip && _srcClip->isConnected() && !_frameRangeInitialised->getValue() ) {
         int min, max;
         _frameRange->getValue(min, max);
         if ( (min == kParamFrameRangeDefaultMin) && (max == kParamFrameRangeDefaultMax) ) {

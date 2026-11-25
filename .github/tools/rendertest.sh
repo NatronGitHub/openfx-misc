@@ -560,11 +560,19 @@ tests=(
     # starts at pixel 93 (enclosing), and the window 0-100 of the ramp ((x + 0.5) / 720) renders the pixels 93
     # to 99, whose mean is 96.5 / 720 = 0.134 (pixels 0 to 99 without shrinking: 0.069)
     "AdjustRoD shrink|net.sf.openfx.AdjustRoDPlugin|filter|*|mean=0.134,0.134,0.134,0.134||-i Source=ramp addPixels=-100,-100 boundary=0 --frames 0 --window 0,288,100,289"
-    "AdjustRoD shrink Nearest|net.sf.openfx.AdjustRoDPlugin|filter|*|mean=0.134,0.134,0.134,0.134||-i Source=ramp addPixels=-100,-100 boundary=1 --frames 0 --window 0,288,100,289"
+    # mixed signs, shrunk in x and enlarged by 100 in y: in the added rows (out of the Source), Nearest repeats
+    # the edge row of the shrunk image (the same mean), Black is transparent black
+    "AdjustRoD shrink Nearest added rows|net.sf.openfx.AdjustRoDPlugin|filter|*|mean=0.134,0.134,0.134,0.134||-i Source=ramp addPixels=-100,100 boundary=1 --frames 0 --window 0,-50,100,-49"
+    "AdjustRoD shrink Black added rows|net.sf.openfx.AdjustRoDPlugin|filter|*|mean=0,0,0,0||-i Source=ramp addPixels=-100,100 boundary=0 --frames 0 --window 0,-50,100,-49"
     # Crop Softness Curve (#298), softness 4 at the row 102 of a crop from y = 100: the pixel centre is at
     # d = 2.5, t = d / 4 = 0.625; Smooth (the default): 1 - 2 (1 - t)^2 = 0.71875; Linear: t = 0.625
     "Crop softness Smooth|net.sf.openfx.CropPlugin|filter|*|mean=0.719,0.719,0.719,0.719||-i Source=solid:1,1,1,1 bottomLeft=100,100 size=400,300 softness=4 --frames 0 --window 300,102,301,103"
     "Crop softness Linear|net.sf.openfx.CropPlugin|filter|*|mean=0.625,0.625,0.625,0.625||-i Source=solid:1,1,1,1 bottomLeft=100,100 size=400,300 softness=4 softnessCurve=0 --frames 0 --window 300,102,301,103"
+    # a fractional edge, y = 100.99, without Black Outside: the row 100 is in the RoD (enclosing), but its centre
+    # is outside the crop rectangle (d = -0.49, t = -0.49 with softness 1): black. Smooth gave 2 t^2 = 0.48,
+    # Linear a negative value (undefined in byte and short)
+    "Crop softness fractional edge|net.sf.openfx.CropPlugin|filter|*|mean=0,0,0,0||-i Source=solid:1,1,1,1 bottomLeft=100,100.99 size=400,300 softness=1 --frames 0 --window 300,100,301,101"
+    "Crop softness fractional edge Linear|net.sf.openfx.CropPlugin|filter|*|mean=0,0,0,0||-i Source=solid:1,1,1,1 bottomLeft=100,100.99 size=400,300 softness=1 softnessCurve=0 --frames 0 --window 300,100,301,101"
     # CopyRectangle Softness Curve (#282), white A over transparent B, softness 4, at the row 101 of a
     # rectangle from y = 100: d = 1 pixel, t = 0.25; Linear (the default): 0.25; Smooth: 2 t^2 = 0.125
     "CopyRectangle softness Linear|net.sf.openfx.CopyRectanglePlugin|general|*|mean=0.25,0.25,0.25,0.25||-i A=solid:1,1,1,1 -i B=solid:0,0,0,0 -i Mask=none bottomLeft=100,100 size=400,300 softness=4 --frames 0 --window 300,101,301,102"
@@ -1081,6 +1089,8 @@ tests=(
     # set, so that connecting the Source never replaces it (only done on Natron >= 2.6)
     "FrameRange set|net.sf.openfx.FrameRange|general|float|value:frameRange=10,20+value:frameRangeInitialised=1||-s frameRange=10,20 --frames 15"
     "FrameRange Reset|net.sf.openfx.FrameRange|general|float|value:frameRange=0,25+value:frameRangeInitialised=1||-s reset --frames 15"
+    # (hostDemo never sends the clip changed action, so the update on connect is not exercised here: the range
+    # stays at its default, not marked as set)
     "FrameRange default|net.sf.openfx.FrameRange|general|float|value:frameRange=1,1+value:frameRangeInitialised=0||--frames 1"
     # TimeOffset Mode (#306), on the same default input, offset 5 at t = 10.5: Fractional Time (the default)
     # shows the input at 5.5; Whole Frames rounds 10.5 down to 10, and shows frame 5

@@ -105,7 +105,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamFilterOptionNone "None", "Do not interpolate, ask for images with fractional time to the input effect. Useful if the input effect can interpolate itself. The time is not rounded: the input decides which image it gives at a fractional time (e.g. an image sequence reader may round it).", "none"
 #define kParamFilterOptionNearest "Nearest", "Pick input image with nearest integer time. Half frames are rounded as Nearest Rounding says (by default up: 1.5 gives frame 2).", "nearest"
 #define kParamFilterOptionLinear "Linear", "Blend the two nearest images with linear interpolation.", "linear"
-#define kParamFilterOptionBox "Box", "Average the input frames covered by the output frame (from half a frame before it to half a frame after it, mapped to the input time), each weighted by the part of it that is covered (input frame n covers the times from n-0.5 to n+0.5). At speed 1, this is the input frame; faster speeds blend several frames (motion blur), at most " STRINGISE(kBoxMaxFrames) " frames plus a partial frame at each end. At the ends of the input frame range, the frames outside it are read according to Before/After, so the first and last frames fade (to black, or to what the input gives there) unless Before/After is Hold. In the Retimer context, where the host only gives the source time of the current frame, Box reads the nearest frame.", "box"
+#define kParamFilterOptionBox "Box", "Average the input frames covered by the output frame (from half a frame before it to half a frame after it, mapped to the input time), each weighted by the part of it that is covered (input frame n covers the times from n-0.5 to n+0.5). At speed 1, this is the input frame; faster speeds blend several frames (motion blur), at most " STRINGISE(kBoxMaxFrames) " frames plus a partial frame at each end. At the ends of the input frame range, the frames outside it are read according to Before/After, so the first and last frames fade (to black, or to what the input gives there) unless Before/After is Hold. In the Retimer context, where the host only gives the source time of the current frame, Box reads the nearest frame. Half frames are always rounded up (Nearest Rounding only applies to the Nearest filter).", "box"
 
 enum FilterEnum
 {
@@ -124,7 +124,7 @@ enum FilterEnum
 
 #define kParamNearestRounding "nearestRounding"
 #define kParamNearestRoundingLabel "Nearest Rounding"
-#define kParamNearestRoundingHint "How the Nearest filter rounds a source time half-way between two frames."
+#define kParamNearestRoundingHint "How the Nearest filter rounds a source time half-way between two frames. Only used by the Nearest filter (disabled with the other filters)."
 #define kParamNearestRoundingOptionHalfUp "Half Up", "Half frames are rounded up: source time 1.5 gives frame 2.", "halfup"
 #define kParamNearestRoundingOptionHalfDown "Half Down", "Half frames are rounded down: source time 1.5 gives frame 1.", "halfdown"
 
@@ -273,6 +273,7 @@ public:
         _before = fetchChoiceParam(kParamBefore);
         _after = fetchChoiceParam(kParamAfter);
         assert(_filter && _nearestRounding && _before && _after);
+        updateNearestRoundingEnabled();
     }
 
     /* Override the render */
@@ -292,6 +293,13 @@ public:
     virtual bool getTimeDomain(OfxRangeD &range) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
+    virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+
+    // Nearest Rounding is only used by the Nearest filter
+    void updateNearestRoundingEnabled()
+    {
+        _nearestRounding->setEnabled(static_cast<FilterEnum>( _filter->getValue() ) == eFilterNearest);
+    }
 
     /* set up and run a processor */
     void setupAndProcess(ImageBlenderBase &, const RenderArguments &args, const SourceFrames &frames);
@@ -582,6 +590,15 @@ RetimePlugin::renderBox(const RenderArguments &args,
     writer.setDstImg( dst.get() );
     writer.setRenderWindow(window, args.renderScale);
     writer.process();
+}
+
+void
+RetimePlugin::changedParam(const InstanceChangedArgs & /*args*/,
+                           const std::string &paramName)
+{
+    if (paramName == kParamFilter) {
+        updateNearestRoundingEnabled();
+    }
 }
 
 // figure the source frame we should be retiming from at the given output time

@@ -72,6 +72,9 @@ enum RoundingModeEnum
 
 #define kParamRoundingModeDefault eRoundingModeFractional
 
+// Whole Frames: times within this of the next whole frame round to it
+#define kWholeFrameEpsilon 1e-6
+
 #define kParamTimeOffset "timeOffset"
 #define kParamTimeOffsetLabel "Time Offset (Frames)"
 #define kParamTimeOffsetHint "Offset in frames (frame f from the input will be at f+offset)"
@@ -153,9 +156,10 @@ TimeOffsetPlugin::TimeOffsetPlugin(OfxImageEffectHandle handle)
 double
 TimeOffsetPlugin::getSourceTime(double t) const
 {
-    // Whole Frames: the time is rounded down first (the offset is a whole number of frames)
+    // Whole Frames: the time is rounded down first (the offset is a whole number of frames), with a small
+    // tolerance so that a time computed with rounding errors (e.g. 10.9999999 for 11) is not one frame early
     const bool whole = static_cast<RoundingModeEnum>( _roundingMode->getValue() ) == eRoundingModeWhole; // no animation
-    double sourceTime = (whole ? std::floor(t) : t) - _time_offset->getValueAtTime(t); // no animation
+    double sourceTime = (whole ? std::floor(t + kWholeFrameEpsilon) : t) - _time_offset->getValueAtTime(t); // no animation
 
     if (!_srcClip || !_srcClip->isConnected()) {
         return sourceTime;
@@ -326,7 +330,7 @@ TimeOffsetPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
-    // roundingMode (first, as in the TimeOffset node of other compositing software)
+    // roundingMode (first)
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamRoundingMode);
         param->setLabel(kParamRoundingModeLabel);

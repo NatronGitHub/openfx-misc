@@ -129,13 +129,19 @@ rampSmooth(double t)
     }
 }
 
-// the fade factor at t = d / softness in [0,1)
+// the fade factor at distance d (in [0, softness)) from the edge pixel. Linear divides in float, as the
+// versions without Softness Curve did, so that its output is bit-identical to theirs
 static inline
 float
 softnessRamp(SoftnessCurveEnum curve,
-             double t)
+             int d,
+             double softness)
 {
-    return static_cast<float>( (curve == eSoftnessCurveLinear) ? t : rampSmooth(t) );
+    if (curve == eSoftnessCurveLinear) {
+        return d / static_cast<float>(softness);
+    }
+
+    return static_cast<float>( rampSmooth(d / softness) );
 }
 
 class CopyRectangleProcessorBase
@@ -238,7 +244,7 @@ private:
             bool yInRectangle = y >= _rectangle.y1 && y < _rectangle.y2;
             if (yInRectangle) {
                 ///apply softness only within the rectangle
-                yMultiplier = yDistance < _softness ? softnessRamp(_softnessCurve, yDistance / _softness) : 1.f;
+                yMultiplier = yDistance < _softness ? softnessRamp(_softnessCurve, yDistance, _softness) : 1.f;
             } else {
                 yMultiplier = 1.f;
             }
@@ -251,7 +257,7 @@ private:
 
                 if (xInRectangle) {
                     ///apply softness only within the rectangle
-                    xMultiplier = xDistance < _softness ? softnessRamp(_softnessCurve, xDistance / _softness) : 1.f;
+                    xMultiplier = xDistance < _softness ? softnessRamp(_softnessCurve, xDistance, _softness) : 1.f;
                 } else {
                     xMultiplier = 1.f;
                 }

@@ -46,7 +46,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 1.1: a Softness Curve parameter (#298): Linear fades linearly over the softness distance; the default,
-//              Smooth, is the old curve
+//              Smooth, is the old curve. With Softness and without Black Outside, the edge pixels whose centre is
+//              outside the crop rectangle (fractional edges, render scale < 1, PAR != 1) are black: the fade
+//              factor is clamped to [0,1] (Smooth gave 2t^2 > 0 for the negative t there)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -104,12 +106,20 @@ rampSmooth(double t)
     }
 }
 
-// the fade factor at t = d / softness in [0,1)
+// the fade factor at t = d / softness, clamped to [0,1]: t < 0 for the pixels whose centre is outside the
+// crop rectangle (with fractional edges), which are black
 static inline
 double
 softnessRamp(SoftnessCurveEnum curve,
              double t)
 {
+    if (t <= 0.) {
+        return 0.;
+    }
+    if (t >= 1.) {
+        return 1.;
+    }
+
     return (curve == eSoftnessCurveLinear) ? t : rampSmooth(t);
 }
 

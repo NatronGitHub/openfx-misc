@@ -200,7 +200,7 @@ AdjustRoDPlugin::setupAndCopy(PixelProcessorFilterBase & processor,
     // set the images
     processor.setDstImg( dst.get() );
     const int boundary = _boundary->getValueAtTime(time);
-    double w, h;
+    double w = 0., h = 0.;
     _size->getValueAtTime(time, w, h);
     if ( (w < 0) || (h < 0) ) {
         // shrunk: only the Source pixels in the output RoD are shown, and the border conditions apply from
@@ -269,7 +269,7 @@ AdjustRoDPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
     if ( Coords::rectIsEmpty(srcRod) || Coords::rectIsEmpty(args.regionOfInterest) ) {
         return;
     }
-    double w, h;
+    double w = 0., h = 0.;
     _size->getValueAtTime(args.time, w, h);
 
     OfxRectD paddedRoD = adjustedRoD(srcRod, w, h);
@@ -314,7 +314,7 @@ AdjustRoDPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
     if ( Coords::rectIsEmpty(srcRod) ) {
         return false;
     }
-    double w, h;
+    double w = 0., h = 0.;
     _size->getValueAtTime(args.time, w, h);
 
     rod = adjustedRoD(srcRod, w, h);
@@ -380,7 +380,7 @@ AdjustRoDPlugin::isIdentity(const IsIdentityArguments &args,
                             double & /*identityTime*/
                             , int& /*view*/, std::string& /*plane*/)
 {
-    double w, h;
+    double w = 0., h = 0.;
 
     _size->getValueAtTime(args.time, w, h);
     if ( (w == 0) && (h == 0) ) {
