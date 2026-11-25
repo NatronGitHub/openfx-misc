@@ -16,9 +16,12 @@ name: Continous Integration tests
 # Frugal CI (NatronGitHub runners are shared by all repos): one run per change.
 # Pushes are built only on master, RB-* and tags (not the final release tags,
 # which release.yml builds); feature branches are built
-# through their pull request (not twice). Draft pull requests get the Linux and
-# Windows builds, so that branches are tested here rather than on a developer's
-# machine; macOS waits until the PR is marked ready. Superseded runs are
+# through their pull request (not twice). Draft pull requests run no CI: their jobs
+# show as "skipped", which means not run, not passed. Marking a PR ready runs CI
+# (ready_for_review); by convention, the author rebases it on master first and puts it
+# back to draft by hand if CI fails. A branch can still be tested on demand with
+# workflow_dispatch, but that also builds macOS and uploads the bundles, and is grouped
+# by branch, not by PR: cancel it before marking the PR ready. Superseded runs are
 # cancelled, except for tags. Jobs time out.
 on:
   push:
@@ -90,7 +93,7 @@ jobs:
     # passed. Merging only requires Linux and Windows; macOS is informative here
     # and is also built weekly (nightly.yml).
     needs: [build_linux, build_windows]
-    # scarce runners: not for draft pull requests (Linux and Windows are built)
+    # not for draft pull requests: no job runs on drafts; CI runs when the PR is marked ready
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     timeout-minutes: 30
     # GitHub-hosted arm64 (Apple silicon) runner. The plugins are built with
@@ -161,6 +164,8 @@ jobs:
 
   build_linux:
     name: Build Ubuntu 24.04
+    # no CI on draft pull requests (see the header)
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     timeout-minutes: 20
     runs-on: ubuntu-24.04
     steps:
@@ -230,6 +235,8 @@ jobs:
 
   build_windows:
     name: Build Windows (MSYS2 UCRT64)
+    # no CI on draft pull requests (see the header)
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     timeout-minutes: 30
     runs-on: windows-2022
     defaults:
@@ -308,6 +315,8 @@ jobs:
   # Windows.
   build_windows_msvc_arm64x:
     name: Build Windows MSVC Arm64X
+    # no CI on draft pull requests (see the header)
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     timeout-minutes: 45
     runs-on: windows-2025
     steps:
