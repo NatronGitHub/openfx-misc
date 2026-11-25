@@ -3436,7 +3436,7 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const InstanceChangedArgs &a
             const unsigned int nclip = (lowClipped ? nmin[c] : 0) + (highClipped ? nmax[c] : 0);
             // nSamples > 0 here, so the percentage below has no division by zero
             if (nclip > kAnalysisClipFractionMax * nSamples) {
-                problems << "- " << (int)(100. * nclip / nSamples + 0.5) << "% of the " << rgbName[c]
+                problems << "- " << (int)(100. * nclip / nSamples + 0.5) << " percent of the " << rgbName[c]
                          << " values are clipped (at ";
                 if (lowClipped) {
                     problems << (vmin[c] == 0.f ? 0.f : vmin[c]) << (highClipped ? " and " : ""); // no "-0"

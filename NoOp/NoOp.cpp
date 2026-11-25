@@ -37,6 +37,13 @@
 #include <process.h> // _getpid
 #include <share.h> // _SH_DENYRW
 #include <sys/stat.h> // _S_IREAD, _S_IWRITE
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h> // WideCharToMultiByte
 #else
 #include <fcntl.h> // open
 #include <unistd.h> // write, close, unlink, getpid
@@ -94,7 +101,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamHostInfoLabel "Host Info..."
 #define kParamHostInfoHint "Display what the OpenFX host supports (host name and version, properties, suites), " \
     "in the format of openfx-misc's README-hosts.txt. The same text is also saved to OFXHostInfo-<hostName>.txt " \
-    "in the temporary directory (TMPDIR or /tmp, or %TEMP% on Windows)."
+    "in the temporary directory (TMPDIR or /tmp, or the TEMP folder on Windows)."
 
 #define kParamForceCopy "forceCopy"
 #define kParamForceCopyLabel "Force Copy"
@@ -907,11 +914,30 @@ winGetEnv(const wchar_t* name)
 #endif
 }
 
+// a wide string as UTF-8, to show it to the user; empty if it can't be converted
+static std::string
+winToUtf8(const std::wstring& w)
+{
+    if ( w.empty() ) {
+        return std::string();
+    }
+    const int n = WideCharToMultiByte(CP_UTF8, 0, w.data(), (int)w.size(), NULL, 0, NULL, NULL);
+    if (n <= 0) {
+        return std::string();
+    }
+    std::string ret( (std::size_t)n, '\0' );
+    if (WideCharToMultiByte(CP_UTF8, 0, w.data(), (int)w.size(), &ret[0], n, NULL, NULL) != n) {
+        return std::string();
+    }
+
+    return ret;
+}
+
 #endif
 
 // Save the host info text to OFXHostInfo-<hostName>.txt in the user's temporary directory, because
 // some hosts truncate messages or show them in a small dialog. Best effort, never throws: returns
-// the file name to show the user, or an empty string if the file could not be written (then no
+// the path to show the user, or an empty string if the file could not be written (then no
 // file, not even a partial one, is left behind).
 // The temporary directory may be shared (/tmp, with TMPDIR unset on Linux), and another user may
 // have planted a FIFO, a symbolic or hard link, or a file of their own at the final name: the text
@@ -994,7 +1020,21 @@ saveHostInfo(const std::string& hostName,
         return std::string();
     }
 
-    return "%TEMP%\\" + fileName;
+    // the expanded path, without percent signs: a host may read the message as a printf format (#66)
+    const std::string shown = winToUtf8(path);
+    if ( shown.empty() ) {
+        return fileName + " in the TEMP folder";
+    }
+    std::string noPercent;
+    for (std::size_t i = 0; i < shown.size(); ++i) {
+        if (shown[i] == '%') { // percent-ok: replaces the percent signs of the path
+            noPercent += "(percent)";
+        } else {
+            noPercent += shown[i];
+        }
+    }
+
+    return noPercent;
 #else
     const char* dir = std::getenv("TMPDIR");
     std::string path = (dir && *dir) ? dir : "/tmp";

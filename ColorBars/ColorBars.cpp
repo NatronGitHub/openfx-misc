@@ -51,7 +51,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "See also: https://learn.foundry.com/nuke/content/reference_guide/image_nodes/colorbars.html"
 #define kPluginDescriptionV1 \
     "Generate an image with SMPTE RP 219:2002 color bars (version 1, obsolete: version 2 draws the SMPTE bars of the ColorBars node of the same name, in linear RGB, and has a PAL option).\n" \
-    "Bar Intensity is in IRE (75 by default, i.e. 75% bars), and alpha is opaque (1).\n" \
+    "Bar Intensity is in IRE (75 by default, i.e. 75 percent bars), and alpha is opaque (1).\n" \
     "The output of this plugin is broadcast-safe if \"Output IRE\" is unchecked. Be careful that colorbars are defined in a nonlinear colorspace. In order to get linear RGB, this plug-in should be combined with a transformation from the video space to linear.\n" \
     "See also: https://web.archive.org/web/20220807183203/http://www.opticalenquiry.com/nuke/index.php?title=Constant,_CheckerBoard,_ColorBars,_ColorWheel"
 

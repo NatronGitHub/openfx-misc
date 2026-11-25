@@ -266,7 +266,7 @@ static const char* help_string =
     "  modify the path to locate them by adding the directory containing the\n"
     "  dependency (usually the same as the plugin location) to\n"
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
-    "  the global %PATH%.\n"
+    "  the global PATH environment variable.\n"
 #endif
 #if defined(__linux__)
     "  the environment variable LD_LIBRARY_PATH\n"
@@ -612,7 +612,7 @@ fetchHostDescription(int nth)
     }
     {
         int supportsMultipleClipDepths = 0;
-        st = gPropHost[nth]->propGetInt(host, kOfxImageEffectHostPropIsBackground, 0, &supportsMultipleClipDepths);
+        st = gPropHost[nth]->propGetInt(host, kOfxImageEffectPropSupportsMultipleClipDepths, 0, &supportsMultipleClipDepths);
         hostDesc.supportsMultipleClipDepths = (st == kOfxStatOK) && supportsMultipleClipDepths != 0;
     }
     {

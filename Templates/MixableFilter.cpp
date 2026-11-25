@@ -573,7 +573,8 @@ MixableFilterPluginFactory::describe(ImageEffectDescriptor &desc)
 
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
-    desc.addSupportedContext(eContextPaint);
+    // not the Paint context: it mandates a "Brush" clip (ofxImageEffectContexts.rst), and this effect
+    // has no mask (#66)
     desc.addSupportedBitDepth(eBitDepthUByte);
     desc.addSupportedBitDepth(eBitDepthUShort);
     desc.addSupportedBitDepth(eBitDepthFloat);
