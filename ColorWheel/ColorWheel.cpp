@@ -46,6 +46,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "\n" \
     "See also: https://web.archive.org/web/20220807183203/http://www.opticalenquiry.com/nuke/index.php?title=Constant,_CheckerBoard,_ColorBars,_ColorWheel"
 #define kPluginIdentifier "net.sf.openfx.ColorWheel"
+// history:
+// 1.0 initial version
+//     (no version change) the area params come after the wheel controls, as in the ColorWheel parameter
+//     order (#382). Params are identified by name, so saved projects are unchanged.
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -587,7 +591,9 @@ ColorWheelPluginFactory::describeInContext(ImageEffectDescriptor &desc,
 
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
-    generatorDescribeInContext(page, desc, *dstClip, eGeneratorExtentDefault, ePixelComponentRGBA, true, context);
+    // the ColorWheel parameter order: format, channels, the wheel controls, then the area (#382)
+    generatorDescribeFormat(page, desc, eGeneratorExtentDefault);
+    generatorDescribeOutputComponents(page, desc, *dstClip, ePixelComponentRGBA);
 
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamCenterSaturation);
@@ -655,6 +661,10 @@ ColorWheelPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
+
+    generatorDescribeArea(page, desc);
+    generatorDescribeFrameRange(page, desc, context);
+    generatorDescribeEnd(page, desc);
 } // ColorWheelPluginFactory::describeInContext
 
 ImageEffect*

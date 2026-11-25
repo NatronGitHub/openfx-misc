@@ -24,6 +24,7 @@
 #include <cmath>
 #include <climits>
 #include <cfloat>
+#include <algorithm> // std::min, std::max
 
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
@@ -43,12 +44,17 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Image"
 #define kPluginDescription \
     "Generate an image with SMPTE RP 219:2002 color bars.\n" \
+    "Bar Intensity is in IRE (75 by default, i.e. 75% bars), and alpha is opaque (1). Check PAL to draw the EBU bars (ITU-R BT.471) instead, without the SMPTE-specific patches.\n" \
     "The output of this plugin is broadcast-safe if \"Output IRE\" is unchecked. Be careful that colorbars are defined in a nonlinear colorspace. In order to get linear RGB, this plug-in should be combined with a transformation from the video space to linear.\n" \
     "See also: https://web.archive.org/web/20220807183203/http://www.opticalenquiry.com/nuke/index.php?title=Constant,_CheckerBoard,_ColorBars,_ColorWheel"
 
 #define kPluginIdentifier "net.sf.openfx.ColorBars"
+// history:
+// 1.0 initial version
+// 1.1 the PAL param draws the EBU bars (off by default, so the output is unchanged); the description
+//     gives the intensity unit and the alpha (#286).
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsByte true
 #define kSupportsUShort true
@@ -69,6 +75,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamBarIntensityHint "Bar Intensity, in IRE unit."
 #define kParamBarIntensityDefault 75
 
+#define kParamPAL "PAL"
+#define kParamPALLabel "PAL"
+#define kParamPALHint "When checked, draw the EBU color bars of ITU-R BT.471 used in PAL video: eight full-height bars (white at 100 IRE, then yellow, cyan, green, magenta, red and blue at Bar Intensity, then black) instead of the SMPTE RP 219 pattern."
+
 #define kParamOutputIRE "outputIRE"
 #define kParamOutputIRELabel "Output IRE"
 #define kParamOutputIREHint "When checked, the output is scaled so that 0 is black, the max value is white, and the superblack (under the middle of the magenta bar) has a negative value."
@@ -84,6 +94,7 @@ class ColorBarsProcessorBase
 {
 protected:
     double _barIntensity;
+    bool _pal;
     bool _outputIRE;
     OfxRectI _rod; // in pixel coordinates
 
@@ -92,6 +103,7 @@ public:
     ColorBarsProcessorBase(ImageEffect &instance)
         : ImageProcessor(instance)
         , _barIntensity(kParamBarIntensityDefault)
+        , _pal(false)
         , _outputIRE(false)
         , _rod()
     {
@@ -99,10 +111,12 @@ public:
     }
 
     void setValues(const double barIntensity,
+                   const bool pal,
                    const bool outputIRE,
                    const OfxRectI& rod)
     {
         _barIntensity = barIntensity;
+        _pal = pal;
         _outputIRE = outputIRE;
         _rod = rod;
     }
@@ -137,7 +151,18 @@ private:
             int yhd = (y - _rod.y1) * 1080 / (_rod.y2 - _rod.y1);
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
                 int xhd = (x - _rod.x1) * 1920 / (_rod.x2 - _rod.x1);
-                if (yhd < 270) { // bottom row (pluge)
+                if (_pal) { // EBU bars: white, yellow, cyan, green, magenta, red, blue, black
+                    // which of R, G, B each bar has
+                    static constexpr bool ebu[8][3] = {
+                        {true, true, true}, {true, true, false}, {false, true, true}, {false, true, false},
+                        {true, false, true}, {true, false, false}, {false, false, true}, {false, false, false}
+                    };
+                    const int bar = (std::min)( 7, (std::max)(0, xhd / 240) );
+                    const float on = (bar == 0) ? 100.f : static_cast<float>(_barIntensity);
+                    for (int c = 0; c < 3; ++c) {
+                        ire[c] = ebu[bar][c] ? on : 0.f;
+                    }
+                } else if (yhd < 270) { // bottom row (pluge)
                     if (xhd < 240) {            //  15 IRE
                         ire[0] = ire[1] = ire[2] =  15;
                     } else if (xhd < 548) {     //   0 IRE (black)
@@ -258,8 +283,9 @@ public:
         _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert( _srcClip && (!_srcClip->isConnected() || OFX_COMPONENTS_OK(_srcClip->getPixelComponents())) );
         _barIntensity = fetchDoubleParam(kParamBarIntensity);
+        _pal = fetchBooleanParam(kParamPAL);
         _outputIRE = fetchBooleanParam(kParamOutputIRE);
-        assert(_barIntensity && _outputIRE);
+        assert(_barIntensity && _pal && _outputIRE);
     }
 
 private:
@@ -276,6 +302,7 @@ private:
 
 private:
     DoubleParam* _barIntensity;
+    BooleanParam* _pal;
     BooleanParam* _outputIRE;
     Clip* _srcClip;
 };
@@ -334,8 +361,9 @@ ColorBarsPlugin::setupAndProcess(ColorBarsProcessorBase &processor,
     OfxRectI rod_pixel;
     Coords::toPixelEnclosing(rod, args.renderScale, dst->getPixelAspectRatio(), &rod_pixel);
     double barIntensity = _barIntensity->getValueAtTime(time);
+    bool pal = _pal->getValueAtTime(time);
     bool outputIRE = _outputIRE->getValueAtTime(time);
-    processor.setValues(barIntensity, outputIRE, rod_pixel);
+    processor.setValues(barIntensity, pal, outputIRE, rod_pixel);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -465,6 +493,15 @@ ColorBarsPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setDefault(kParamBarIntensityDefault);
         param->setRange(0., 100.);
         param->setDisplayRange(0., 100.);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPAL);
+        param->setLabel(kParamPALLabel);
+        param->setHint(kParamPALHint);
+        param->setDefault(false);
         if (page) {
             page->addChild(*param);
         }
