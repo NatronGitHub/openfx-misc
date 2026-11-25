@@ -103,6 +103,7 @@ rampSmooth(double t)
     }
 }
 
+// TODO: move to SupportExt (the same as CopyRectangle's)
 // smoothstep(t) = 3t^2 - 2t^3 for t in [0,1], 0 below, 1 above
 static inline
 double

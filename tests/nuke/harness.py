@@ -90,6 +90,26 @@ def case_frames(case):
     return [int(f) for f in frames]
 
 
+def case_ofx_times(case):
+    """The times hostDemo renders, one per frame of case_frames(case).
+
+    They are the frames, unless the case has "ofx_times": then the Nuke side
+    samples each whole frame through a time node of "nuke_post" (e.g. a
+    Retime) that asks the node for the matching, maybe fractional, time.
+
+    Raises:
+        CaseError: "ofx_times" does not have one time per frame.
+    """
+    frames = case_frames(case)
+    times = case.get("ofx_times")
+    if times is None:
+        return [float(f) for f in frames]
+    if len(times) != len(frames):
+        raise CaseError("ofx_times must have one time per frame: %r, %r"
+                        % (times, frames))
+    return [float(t) for t in times]
+
+
 def case_views(case):
     """The views to compare: a list of "left" or "right"."""
     return case.get("views", ["left"])
@@ -456,7 +476,7 @@ def ofx_command(prefix, case, work, case_dir):
     x1, y1, x2, y2, _ = case_region(case)
     command += ["-p", plugin, "-c", context, "-d", "float",
                 "--format", "pfm", "--frames",
-                ",".join("%d" % f for f in case_frames(case)),
+                ",".join("%.12g" % t for t in case_ofx_times(case)),
                 "--window", "%d,%d,%d,%d" % (x1, y1, x2, y2),
                 "--report", "report.json", "-o", "out"]
     if "major" in case:
@@ -727,5 +747,10 @@ def run_case(nuke, prefix, case, work):
         (max abs difference, where), as compare().
     """
     ofx_results = run_ofx(prefix, case, work)
+    if "ofx_times" in case:
+        # compare each Nuke frame with the hostDemo render at its time
+        frame_of = dict(zip(case_ofx_times(case), case_frames(case)))
+        ofx_results = {(float(frame_of.get(t, t)), view): values
+                       for (t, view), values in ofx_results.items()}
     nuke_results = run_nuke(nuke, case, work)
     return compare(case, nuke_results, ofx_results)

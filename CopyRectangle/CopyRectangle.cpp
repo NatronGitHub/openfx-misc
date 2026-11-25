@@ -104,6 +104,14 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamSoftnessHint "Size of the fade from B to A around the edges of the rectangle, in canonical coordinates (pixels at render scale 1, times the pixel aspect ratio in x). Along each axis, A is mixed over B by smoothstep((d + 1/2) / (Softness + 1)), where d is the distance in pixels from the pixel centre to the nearest edge (the fade starts half a pixel outside the rectangle); at the top and right edges, the last pixel of the fade is A; in x, only the pixels from the left edge, rounded up, to the right edge, rounded up, are in the rectangle; in the corners, the two factors are multiplied."
 #define kParamSoftnessHintV2 "Size of the fade around edges of the rectangle to apply, in pixels: at d pixels from the nearest edge pixel, A is mixed over B by d / Softness; in the corners, the two factors are multiplied."
 
+// The major versions, whose softness differs (see the History)
+enum class CopyRectangleVersion
+{
+    e2 = 2, // integer rectangle, linear fade
+    e3 = 3, // fractional rectangle, smoothstep fade
+};
+
+// TODO: move to SupportExt (the same as Crop's)
 // smoothstep(t) = 3t^2 - 2t^3 for t in [0,1], 0 below, 1 above
 static inline
 double
@@ -183,13 +191,14 @@ protected:
     bool _doMasking;
     double _mix;
     bool _maskInvert;
-    bool _v3; // version 3: fractional rectangle, smoothstep falloff
+    const CopyRectangleVersion _version;
     OfxRectD _rectangleCanonical; // version 3
     double _softnessCanonical; // version 3
     double _par;
 
 public:
-    CopyRectangleProcessorBase(ImageEffect &instance)
+    CopyRectangleProcessorBase(ImageEffect &instance,
+                               CopyRectangleVersion version)
         : ImageProcessor(instance)
         , _srcImgA(NULL)
         , _srcImgB(NULL)
@@ -198,7 +207,7 @@ public:
         , _doMasking(false)
         , _mix(1.)
         , _maskInvert(false)
-        , _v3(true)
+        , _version(version)
         , _softnessCanonical(0.)
         , _par(1.)
     {
@@ -242,13 +251,11 @@ public:
                      double softness,
                      double par)
     {
-        _v3 = true;
         _rectangleCanonical = rectangle;
         _softnessCanonical = softness;
         _par = par;
     }
 
-    void setV2() { _v3 = false; }
 };
 
 
@@ -259,8 +266,9 @@ class CopyRectangleProcessor
     : public CopyRectangleProcessorBase
 {
 public:
-    CopyRectangleProcessor(ImageEffect &instance)
-        : CopyRectangleProcessorBase(instance)
+    CopyRectangleProcessor(ImageEffect &instance,
+                           CopyRectangleVersion version)
+        : CopyRectangleProcessorBase(instance, version)
     {
     }
 
@@ -268,7 +276,7 @@ private:
     void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
         assert(nComponents == 1 || nComponents == 3 || nComponents == 4);
-        if (_v3) {
+        if (_version >= CopyRectangleVersion::e3) {
             processV3(procWindow, rs);
 
             return;
@@ -388,9 +396,9 @@ class CopyRectanglePlugin
 public:
     /** @brief ctor */
     CopyRectanglePlugin(OfxImageEffectHandle handle,
-                        unsigned int majorVersion)
+                        CopyRectangleVersion version)
         : ImageEffect(handle)
-        , _majorVersion(majorVersion)
+        , _version(version)
         , _dstClip(NULL)
         , _srcClipA(NULL)
         , _srcClipB(NULL)
@@ -455,7 +463,7 @@ private:
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    const unsigned int _majorVersion;
+    const CopyRectangleVersion _version;
     Clip *_dstClip;
     Clip *_srcClipA;
     Clip *_srcClipB;
@@ -573,12 +581,10 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor,
     double mix;
     _mix->getValueAtTime(args.time, mix);
     processor.setValues(rectanglePixel, softness, processR, processG, processB, processA, mix);
-    if (_majorVersion >= 3) {
+    if (_version >= CopyRectangleVersion::e3) {
         double softnessCanonical;
         _softness->getValueAtTime(args.time, softnessCanonical);
         processor.setValuesV3(rectangle, softnessCanonical, par);
-    } else {
-        processor.setV2();
     }
 
     // Call the base class process member, this will call the derived templated process code
@@ -598,7 +604,7 @@ CopyRectanglePlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args
     OfxRectD rectangle;
 
     getRectanglecanonical(args.time, rectangle);
-    if (_majorVersion >= 3) {
+    if (_version >= CopyRectangleVersion::e3) {
         // the fade starts half a pixel outside the rectangle
         const double par = _srcClipA->getPixelAspectRatio();
         rectangle.x1 -= 0.5 * par;
@@ -644,17 +650,17 @@ CopyRectanglePlugin::renderInternal(const RenderArguments &args,
 {
     switch (dstBitDepth) {
     case eBitDepthUByte: {
-        CopyRectangleProcessor<unsigned char, nComponents, 255> fred(*this);
+        CopyRectangleProcessor<unsigned char, nComponents, 255> fred(*this, _version);
         setupAndProcess(fred, args);
         break;
     }
     case eBitDepthUShort: {
-        CopyRectangleProcessor<unsigned short, nComponents, 65535> fred(*this);
+        CopyRectangleProcessor<unsigned short, nComponents, 65535> fred(*this, _version);
         setupAndProcess(fred, args);
         break;
     }
     case eBitDepthFloat: {
-        CopyRectangleProcessor<float, nComponents, 1> fred(*this);
+        CopyRectangleProcessor<float, nComponents, 1> fred(*this, _version);
         setupAndProcess(fred, args);
         break;
     }
@@ -779,7 +785,7 @@ ImageEffect*
 CopyRectanglePluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                                          ContextEnum /*context*/)
 {
-    return new CopyRectanglePlugin(handle, majorVersion);
+    return new CopyRectanglePlugin(handle, (majorVersion >= 3) ? CopyRectangleVersion::e3 : CopyRectangleVersion::e2);
 }
 
 static void

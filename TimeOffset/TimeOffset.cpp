@@ -67,6 +67,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamRoundingModeOptionWhole "Whole Frames", "Truncate Time Offset toward zero to a whole number of frames (e.g. 5.7 gives 5, -5.5 gives -5).", "whole"
 #define kParamRoundingModeOptionFractional "Fractional Time", "Use the exact Time Offset, which may ask the input for times between frames (the frame range is still offset by the truncated value).", "fractional"
 
+// The major versions (see the History)
+enum class TimeOffsetVersion
+{
+    e1 = 1, // an integer offset
+    e2 = 2, // a fractional offset, and Mode
+};
+
 enum RoundingModeEnum
 {
     eRoundingModeWhole = 0,
@@ -94,7 +101,7 @@ class TimeOffsetPlugin
 {
 public:
     /** @brief ctor */
-    TimeOffsetPlugin(OfxImageEffectHandle handle);
+    TimeOffsetPlugin(OfxImageEffectHandle handle, TimeOffsetVersion version);
 
 private:
     /* Override the render */
@@ -126,7 +133,8 @@ private:
     BooleanParam  *_clip;
 };
 
-TimeOffsetPlugin::TimeOffsetPlugin(OfxImageEffectHandle handle)
+TimeOffsetPlugin::TimeOffsetPlugin(OfxImageEffectHandle handle,
+                                   TimeOffsetVersion version)
     : ImageEffect(handle)
     , _dstClip(NULL)
     , _srcClip(NULL)
@@ -144,8 +152,7 @@ TimeOffsetPlugin::TimeOffsetPlugin(OfxImageEffectHandle handle)
                            _srcClip->getPixelComponents() == ePixelComponentRGB ||
                            _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
 
-    if ( paramExists(kParamRoundingMode) ) {
-        // version 2
+    if (version >= TimeOffsetVersion::e2) {
         _roundingMode = fetchChoiceParam(kParamRoundingMode);
         _time_offset_v2 = fetchDoubleParam(kParamTimeOffset);
     } else {
@@ -439,7 +446,7 @@ ImageEffect*
 TimeOffsetPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                                       ContextEnum /*context*/)
 {
-    return new TimeOffsetPlugin(handle);
+    return new TimeOffsetPlugin(handle, (majorVersion >= 2) ? TimeOffsetVersion::e2 : TimeOffsetVersion::e1);
 }
 
 static TimeOffsetPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);

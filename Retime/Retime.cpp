@@ -58,7 +58,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "RetimeOFX"
 #define kPluginGrouping "Time"
 #define kPluginDescription "Change the timing of the input clip.\n" \
-    "In the general context (e.g. in Natron), the output frame range starts with the input frame range, and lasts as long as it takes to play the input frame range at the given Speed (e.g. twice as long at speed 0.5), forwards, or backwards with Reverse input. It is the input frame range if the speed is 0 or negative, or so small that the output would last more than 1000 times the input or 100000 frames. An animated speed, or one driven by an expression, is integrated numerically over at most that many frames, which may take a moment with slow expressions. On hosts without parametric parameters, the Duration parameter sets it instead.\n" \
+    "In the general context (e.g. in Natron), the output frame range (from version 2; version 1 keeps the input frame range) starts with the input frame range, and lasts as long as it takes to play the input frame range at the given Speed (e.g. twice as long at speed 0.5), forwards, or backwards with Reverse input. It is the input frame range if the speed is 0 or negative, or so small that the output would last more than 1000 times the input or 100000 frames. An animated speed, or one driven by an expression, is integrated numerically over at most that many frames, which may take a moment with slow expressions. On hosts without parametric parameters, the Duration parameter sets it instead.\n" \
     "The Before and After parameters set what is read when the source frame falls outside the frame range of the input clip: the input frame itself (Original), the first or last frame (Hold), transparent black (Black), or frames repeated from the input range (Loop, Bounce).\n" \
     "Before and After refer to the source frame range, not to the output: when the input is played backwards (Reverse input, or a negative speed or warp slope), Before sets what is shown at the end of the output.\n" \
     "See also: https://web.archive.org/web/20220627032808/http://www.opticalenquiry.com/nuke/index.php?title=Retime"
@@ -68,16 +68,15 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.0: initial version
 // version 1.1: a NULL Source image (disconnected input; render is called although isIdentity returned true,
 //              e.g. by hostDemo) renders black instead of crashing (SupportExt copyPixels);
-//              (#309, in the current minor version, not released yet) in the general context, the time
-//              domain (output frame range) follows the speed: it ends where the integrated speed covers the
-//              input frame range (it was the input frame range at any speed), except with the Duration
-//              parameter (hosts without parametric parameters), which still sets it. In old projects, this
-//              also changes what the nodes downstream see as their input frame range (e.g. Write,
-//              FrameRange, FrameHold, the Before/After of another Retime). The Box filter was added (the
-//              default filter is still Linear in version 1).
-// version 2.0: the Nearest filter rounds half frames down (source time 1.5 gives frame 1; it gave frame 2); the
-//              default filter is Box, and Before and After default to Hold (#309). Version 1 is kept, obsolete,
-//              for old projects.
+//              (#309, not released yet) the Box filter, and the Before and After parameters (default Original,
+//              the behaviour without them), were added; the time domain is still the input frame range (or
+//              set by Duration on hosts without parametric parameters), as in Natron 2.5, so that old projects
+//              and the nodes downstream see the same frame range.
+// version 2.0: in the general context, the time domain (output frame range) follows the speed: it ends where
+//              the integrated speed covers the input frame range (version 1: the input frame range at any
+//              speed), except with the Duration parameter, which still sets it; the Nearest filter rounds half
+//              frames down (source time 1.5 gives frame 1; it gave frame 2); the default filter is Box, and
+//              Before and After default to Hold (#309). Version 1 is kept, obsolete, for old projects.
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 #define kPluginVersionMinorV1 1 // the minor version of the obsolete version 1
@@ -110,6 +109,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamFilterOptionNearestV1 "Nearest", "Pick input image with nearest integer time. Half frames are rounded up (e.g. 1.5 gives frame 2).", "nearest"
 #define kParamFilterOptionLinear "Linear", "Blend the two nearest images with linear interpolation.", "linear"
 #define kParamFilterOptionBox "Box", "Average the input frames covered by the output frame (from half a frame before it to half a frame after it, mapped to the input time), each weighted by the part of it that is covered (input frame n covers the times from n-0.5 to n+0.5). At speed 1, this is the input frame; faster speeds blend several frames (motion blur), at most " STRINGISE(kBoxMaxFrames) " frames plus a partial frame at each end. At the ends of the input frame range, the frames outside it are read according to Before/After, so the first and last frames fade (to black, or to what the input gives there) unless Before/After is Hold. In the Retimer context, where the host only gives the source time of the current frame, Box reads the nearest frame. Half frames are always rounded up.", "box"
+
+// The major versions, whose behaviours differ (see the History)
+enum class RetimeVersion
+{
+    e1 = 1,
+    e2 = 2,
+};
 
 enum FilterEnum
 {
@@ -216,13 +222,13 @@ private:
     ChoiceParam  *_filter;   /**< @brief how images are interpolated (or not). */
     ChoiceParam  *_before;
     ChoiceParam  *_after;
-    const bool _nearestHalfDown; /**< @brief version 2: the Nearest filter rounds half frames down */
+    const RetimeVersion _version; /**< @brief the major version: Nearest rounding, time domain */
 
 public:
     /** @brief ctor */
     RetimePlugin(OfxImageEffectHandle handle,
                  bool supportsParametricParameter,
-                 bool nearestHalfDown)
+                 RetimeVersion version)
         : ImageEffect(handle)
         , _dstClip(NULL)
         , _srcClip(NULL)
@@ -234,7 +240,7 @@ public:
         , _filter(NULL)
         , _before(NULL)
         , _after(NULL)
-        , _nearestHalfDown(nearestHalfDown)
+        , _version(version)
     {
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -631,7 +637,7 @@ RetimePlugin::getSourceFrames(double time,
         frames->from = sourceTime;
     } else if (filter == eFilterNearest) {
         // the nearest whole frame; at a half frame, the previous one (version 2) or the next one (version 1)
-        frames->from = _nearestHalfDown ? std::ceil(sourceTime - 0.5) : std::floor(sourceTime + 0.5);
+        frames->from = (_version >= RetimeVersion::e2) ? std::ceil(sourceTime - 0.5) : std::floor(sourceTime + 0.5);
     } else {
         assert(filter == eFilterLinear);
         frames->blended = true;
@@ -969,6 +975,10 @@ RetimePlugin::getTimeDomain(OfxRangeD &range)
 
         return true;
     }
+    // Version 1 (as in Natron 2.5): the input time domain
+    if (_version < RetimeVersion::e2) {
+        return false;
+    }
     // From the speed: the output starts with the input (the speed is integrated from there) and ends
     // when the input frame range has been played (forwards, or backwards). The warp curve maps that
     // part of the output, from 0 to 1 on its X axis, so it does not change the range.
@@ -1287,7 +1297,7 @@ RetimePluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                                !(hostDescription.hostName == "uk.co.thefoundry.nuke" &&
                                                  8 <= hostDescription.versionMajor && hostDescription.versionMajor <= 11) );  // Nuke 8-11.1 are known to *not* support Parametric
 
-    return new RetimePlugin(handle, supportsParametricParameter, /*nearestHalfDown=*/ majorVersion >= 2);
+    return new RetimePlugin(handle, supportsParametricParameter, (majorVersion >= 2) ? RetimeVersion::e2 : RetimeVersion::e1);
 }
 
 static RetimePluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);

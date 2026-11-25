@@ -88,6 +88,35 @@ enum BoundaryEnum
     //eBoundaryPeriodic,
 };
 
+// How Add Pixels is used: as is (version 1), or as whole pixels, truncated toward zero (version 2)
+enum class AmountRounding
+{
+    eExact,
+    eWholePixels,
+};
+
+// Version 2: a canonical x coordinate of the RoD near c whose pixel (floor(c / par) for a lower edge, ceil for an
+// upper one) is exactly pixel, so that the host gets whole pixels: (n * par) / par may be 92.999... for n = 93.
+static double
+canonicalEdgeX(double c,
+               double par,
+               double pixel,
+               bool lower)
+{
+    for (int i = 0; i < 8; ++i) {
+        const double p = lower ? std::floor(c / par) : std::ceil(c / par);
+        if (p < pixel) {
+            c = std::nextafter(c, DBL_MAX);
+        } else if (p > pixel) {
+            c = std::nextafter(c, -DBL_MAX);
+        } else {
+            break;
+        }
+    }
+
+    return c;
+}
+
 // The output RoD: the Source RoD enlarged by (w,h) on each side, or shrunk if they are negative. Along an axis
 // shrunk by more than half its size, the RoD is empty, at the centre of the Source RoD.
 static OfxRectD
@@ -119,9 +148,9 @@ class AdjustRoDPlugin
 public:
     /** @brief ctor */
     AdjustRoDPlugin(OfxImageEffectHandle handle,
-                    bool wholePixels)
+                    AmountRounding amountRounding)
         : ImageEffect(handle)
-        , _wholePixels(wholePixels)
+        , _amountRounding(amountRounding)
         , _dstClip(NULL)
         , _srcClip(NULL)
         , _size(NULL)
@@ -160,9 +189,11 @@ private:
 
     // the amounts added on each side (canonical, negative to shrink)
     void getAmounts(double time, double* w, double* h) const;
+    // version 2: the amounts in whole pixels at render scale 1 (x, then y)
+    OfxPointI getPixelAmounts(double time) const;
 
 private:
-    const bool _wholePixels; // version 2: the amounts are whole pixels, truncated toward zero
+    const AmountRounding _amountRounding; // from the major version
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
     Clip *_srcClip;
@@ -217,9 +248,22 @@ AdjustRoDPlugin::setupAndCopy(PixelProcessorFilterBase & processor,
     if ( (w < 0) || (h < 0) ) {
         // shrunk: only the Source pixels in the output RoD are shown, and the border conditions apply from
         // its edge. The host may give a larger Source image: use the part of it in the shrunk RoD.
-        const OfxRectD shownRod = adjustedRoD(_srcClip->getRegionOfDefinition(time), (std::min)(w, 0.), (std::min)(h, 0.));
+        const OfxRectD srcRod = _srcClip->getRegionOfDefinition(time);
+        const OfxRectD shownRod = adjustedRoD(srcRod, (std::min)(w, 0.), (std::min)(h, 0.));
         OfxRectI shownPixel;
-        Coords::toPixelEnclosing(shownRod, args.renderScale, src->getPixelAspectRatio(), &shownPixel);
+        if (_amountRounding == AmountRounding::eWholePixels) {
+            // whole pixels: shrink the Source RoD in pixels, without converting the amounts back
+            const OfxPointI n = getPixelAmounts(time);
+            Coords::toPixelEnclosing(srcRod, args.renderScale, src->getPixelAspectRatio(), &shownPixel);
+            const int sx = (n.x < 0) ? static_cast<int>( std::floor(-n.x * args.renderScale.x) ) : 0;
+            const int sy = (n.y < 0) ? static_cast<int>( std::floor(-n.y * args.renderScale.y) ) : 0;
+            shownPixel.x1 += sx;
+            shownPixel.x2 -= sx;
+            shownPixel.y1 += sy;
+            shownPixel.y2 -= sy;
+        } else {
+            Coords::toPixelEnclosing(shownRod, args.renderScale, src->getPixelAspectRatio(), &shownPixel);
+        }
         OfxRectI bounds;
         if ( Coords::rectIsEmpty(shownRod) || !Coords::rectIntersection(shownPixel, src->getBounds(), &bounds) || Coords::rectIsEmpty(bounds) ) {
             fillBlack( *this, args.renderWindow, args.renderScale, dst.get() );
@@ -241,21 +285,36 @@ AdjustRoDPlugin::setupAndCopy(PixelProcessorFilterBase & processor,
 
 // Version 2: whole pixels at render scale 1, truncated toward zero: Add Pixels is in canonical coordinates, so
 // the x amount is divided by the pixel aspect ratio (as a float: e.g. 16 at PAR 768/720 gives 14 pixels, not 15).
+OfxPointI
+AdjustRoDPlugin::getPixelAmounts(double time) const
+{
+    double w = 0., h = 0.;
+
+    _size->getValueAtTime(time, w, h);
+    const double par = ( _srcClip && _srcClip->isConnected() ) ? _srcClip->getPixelAspectRatio() : 1.;
+    const double parf = (par > 0.) ? static_cast<double>( static_cast<float>(par) ) : 1.;
+    // clamped to a range where the int conversions are defined
+    const double nx = (std::max)( -1e9, (std::min)( 1e9, std::trunc(w / parf) ) );
+    const double ny = (std::max)( -1e9, (std::min)( 1e9, std::trunc(h) ) );
+    const OfxPointI n = { static_cast<int>(nx), static_cast<int>(ny) };
+
+    return n;
+}
+
 void
 AdjustRoDPlugin::getAmounts(double time,
                             double* w,
                             double* h) const
 {
-    _size->getValueAtTime(time, *w, *h);
-    if (!_wholePixels) {
+    if (_amountRounding == AmountRounding::eExact) {
+        _size->getValueAtTime(time, *w, *h);
+
         return;
     }
+    const OfxPointI n = getPixelAmounts(time);
     const double par = ( _srcClip && _srcClip->isConnected() ) ? _srcClip->getPixelAspectRatio() : 1.;
-    if (par > 0.) {
-        const double parf = static_cast<float>(par);
-        *w = std::trunc(*w / parf) * par;
-    }
-    *h = std::trunc(*h);
+    *w = n.x * ( (par > 0.) ? par : 1. );
+    *h = n.y;
 }
 
 // Along one axis: the part of the Source range [s1,s2) that Nearest border conditions need to
@@ -349,6 +408,15 @@ AdjustRoDPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
     getAmounts(args.time, &w, &h);
 
     rod = adjustedRoD(srcRod, w, h);
+    if ( (_amountRounding == AmountRounding::eWholePixels) && !Coords::rectIsEmpty(rod) ) {
+        // whole pixels: the RoD in pixels must be the Source's, plus the amount
+        const double par = _srcClip->getPixelAspectRatio();
+        if (par > 0.) {
+            const OfxPointI n = getPixelAmounts(args.time);
+            rod.x1 = canonicalEdgeX(rod.x1, par, std::floor(srcRod.x1 / par) - n.x, true);
+            rod.x2 = canonicalEdgeX(rod.x2, par, std::ceil(srcRod.x2 / par) + n.x, false);
+        }
+    }
 
     return true;
 }
@@ -471,7 +539,7 @@ ImageEffect*
 AdjustRoDPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                        ContextEnum /*context*/)
 {
-    return new AdjustRoDPlugin(handle, /*wholePixels=*/ majorVersion >= 2);
+    return new AdjustRoDPlugin(handle, (majorVersion >= 2) ? AmountRounding::eWholePixels : AmountRounding::eExact);
 }
 
 template<unsigned int majorVersion>
