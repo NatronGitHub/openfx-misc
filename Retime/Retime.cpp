@@ -273,7 +273,7 @@ public:
         _before = fetchChoiceParam(kParamBefore);
         _after = fetchChoiceParam(kParamAfter);
         assert(_filter && _nearestRounding && _before && _after);
-        updateNearestRoundingEnabled();
+        updateNearestRoundingEnabled( timeLineGetTime() );
     }
 
     /* Override the render */
@@ -295,10 +295,10 @@ public:
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
     virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
-    // Nearest Rounding is only used by the Nearest filter
-    void updateNearestRoundingEnabled()
+    // Nearest Rounding is only used by the Nearest filter (Filter may be animated: its value at time)
+    void updateNearestRoundingEnabled(double time)
     {
-        _nearestRounding->setEnabled(static_cast<FilterEnum>( _filter->getValue() ) == eFilterNearest);
+        _nearestRounding->setEnabled(static_cast<FilterEnum>( _filter->getValueAtTime(time) ) == eFilterNearest);
     }
 
     /* set up and run a processor */
@@ -593,11 +593,11 @@ RetimePlugin::renderBox(const RenderArguments &args,
 }
 
 void
-RetimePlugin::changedParam(const InstanceChangedArgs & /*args*/,
+RetimePlugin::changedParam(const InstanceChangedArgs &args,
                            const std::string &paramName)
 {
     if (paramName == kParamFilter) {
-        updateNearestRoundingEnabled();
+        updateNearestRoundingEnabled(args.time);
     }
 }
 

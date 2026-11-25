@@ -65,7 +65,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              the sublabel shows the range as the host displays it (kOfxImageClipPropDisplayTimeOffset, display only);
 //              (#400) connecting the Source sets Frame Range to the input range only if it was never set (a
 //              secret, saved flag) and is still (1,1), so that a host that loads values as user edits cannot
-//              replace a saved (1,1); Reset clears the flag if it gives (1,1); old projects behave as in 1.0
+//              replace a saved range; a range of (1,1) (set, reset or Reset) clears the flag; old projects behave as in 1.0
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -370,11 +370,13 @@ FrameRangePlugin::changedParam(const InstanceChangedArgs &args,
         setFrameRangeToInputRange();
     }
     if ( (paramName == kParamFrameRange) && (args.reason == eChangeUserEdit) ) {
-        // a value set by the user (or loaded with a project) is never replaced on connect
-        if ( !_frameRangeInitialised->getValue() ) {
-            _frameRangeInitialised->setValue(true);
+        // a value set by the user (or loaded with a project) is never replaced on connect, unless it is the
+        // default (1,1) (e.g. the parameter was reset by the host): then the update on connect comes back
+        const OfxPointI range = _frameRange->getValue();
+        const bool initialised = !(range.x == kParamFrameRangeDefaultMin && range.y == kParamFrameRangeDefaultMax);
+        if (_frameRangeInitialised->getValue() != initialised) {
+            _frameRangeInitialised->setValue(initialised);
         }
-        OfxPointI range = _frameRange->getValue();
         refreshSubLabel(range.x, range.y);
     }
 }
