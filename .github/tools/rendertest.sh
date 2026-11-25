@@ -178,6 +178,8 @@ pfm("vramp.pfm", 720, 576, lambda x, y, c: (y + 0.5) / 576.)
 # impulse.pfm: a 64x48 PF, black except a white pixel at (32,24) (for the "max" check of a blur);
 # delta.pfm: a 1x1 PF kernel (for the "conv" check of an output that must be its input)
 pfm("impulse.pfm", 64, 48, lambda x, y, c: 1. if (x, y) == (32, 24) else 0.)
+# impulse3.pfm: impulse.pfm times 3 (a difference above 1 for Sharpen and Soften, #313)
+pfm("impulse3.pfm", 64, 48, lambda x, y, c: 3. if (x, y) == (32, 24) else 0.)
 pfm("delta.pfm", 1, 1, lambda x, y, c: 1.)
 # diffa.pfm, diffb.pfm: 64x48 PF solid colours (0.25,0.5,0.75) and (0.5,0.5,0.25), for Difference
 # with opaque inputs (#opaque)
@@ -982,6 +984,44 @@ tests=(
     "ErodeBlur small|eu.cimg.ErodeBlur|filter|float|notidentity+mean=0.5,0.5,0.5,0.4286||-i Source=solid:0.5,0.5,0.5,0.5 -i Mask=none size=0.25"
     "CImgBlur alpha threshold|net.sf.cimg.CImgBlur|filter|float|notidentity+mean=0.25,0.5,0.75,0||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none alphaThreshold=0.6 filter=2"
     "CImgBlur size 0|net.sf.cimg.CImgBlur|filter|float|identity+mean=0.25,0.5,0.75,0.5||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none alphaThreshold=0.6"
+    # Blur, Laplacian, Sharpen and Soften 5 (#312, #313): the default FIR Gaussian, w(i) = 2^(-(2i/size)^2) for
+    # |i| <= 1.5*size, normalized; on the impulse, blurred in y only (x size 0): the centre is w(0), 1/1.125 for
+    # size 1, 0.093968 for size 10. Below size 2/3 the FIR Gaussian does nothing (an identity); the IIR Gaussian
+    # of version 4 blurs from size 0.24. Sharpen and Soften 5 add Amount times the difference d = 1 - w(0),
+    # with its magnitude reduced by the Minimum and clamped to the Maximum; version 4 adds Amount times d.
+    "CImgBlur FIR impulse|net.sf.cimg.CImgBlur|filter|float|tol=1e-4+mean=0.093968,0.093968,0.093968,1||-i Source=file:impulse.pfm -i Mask=none uniform=0 size=0,10 --frames 0 --window 32,24,33,25"
+    "CImgBlur FIR small|net.sf.cimg.CImgBlur|filter|float|identity+mean=0.25,0.5,0.75,0.5||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none size=0.5,0.5"
+    "CImgBlur 4 small|net.sf.cimg.CImgBlur|filter|float|notidentity+mean=0.25,0.5,0.75,0.5||-m 4 -i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none size=0.5,0.5"
+    "CImgBlur FIR tile|net.sf.cimg.CImgBlur|filter|float|nonconst+tile||-i Source=checker:8 -i Mask=none size=5,5 expandRoD=0 --frames 0 --window 100,100,300,250"
+    "CImgBlur FIR tile derivatives|net.sf.cimg.CImgBlur|filter|float|nonconst+tile||-i Source=checker:8 -i Mask=none size=4,4 orderX=1 orderY=2 expandRoD=0 --frames 0 --window 100,100,300,250"
+    "CImgLaplacian FIR impulse|net.sf.cimg.CImgLaplacian|filter|float|tol=1e-4+mean=0.11111,0.11111,0.11111,0||-i Source=file:impulse.pfm -i Mask=none uniform=0 size=0,1 --frames 0 --window 32,24,33,25"
+    # below size 2/3, the FIR Gaussian does not blur: Laplacian 5 is 0 everywhere, while Laplacian 4 (IIR) is not
+    "CImgLaplacian FIR small|net.sf.cimg.CImgLaplacian|filter|float|tol=1e-6+max=0,0,0,0||-i Source=file:impulse.pfm -i Mask=none size=0.5,0.5"
+    "CImgLaplacian 4 small|net.sf.cimg.CImgLaplacian|filter|float|nonconst||-m 4 -i Source=file:impulse.pfm -i Mask=none size=0.5,0.5"
+    "CImgSharpen FIR impulse|net.sf.cimg.CImgSharpen|filter|float|tol=1e-4+mean=1.11111,1.11111,1.11111,1||-i Source=file:impulse.pfm -i Mask=none uniform=0 size=0,1 --frames 0 --window 32,24,33,25"
+    "CImgSharpen maximum|net.sf.cimg.CImgSharpen|filter|float|tol=1e-4+mean=1.05,1.05,1.05,1||-i Source=file:impulse.pfm -i Mask=none uniform=0 size=0,1 maximum=0.05 --frames 0 --window 32,24,33,25"
+    "CImgSharpen minimum|net.sf.cimg.CImgSharpen|filter|float|tol=1e-4+mean=1.01111,1.01111,1.01111,1||-i Source=file:impulse.pfm -i Mask=none uniform=0 size=0,1 minimum=0.1 --frames 0 --window 32,24,33,25"
+    "CImgSharpen 4 box|net.sf.cimg.CImgSharpen|filter|float|tol=1e-4+mean=1.66667,1.66667,1.66667,1||-m 4 -i Source=file:impulse.pfm -i Mask=none uniform=0 size=0,3 filter=2 --frames 0 --window 32,24,33,25"
+    # a difference of 3 - 1 = 2 (box of 3 on a peak of 3): clamped to the Maximum 1 in version 5, not in version 4
+    "CImgSharpen box above 1|net.sf.cimg.CImgSharpen|filter|float|tol=1e-4+mean=4,4,4,1||-i Source=file:impulse3.pfm -i Mask=none uniform=0 size=0,3 filter=2 --frames 0 --window 32,24,33,25"
+    "CImgSharpen 4 box above 1|net.sf.cimg.CImgSharpen|filter|float|tol=1e-4+mean=5,5,5,1||-m 4 -i Source=file:impulse3.pfm -i Mask=none uniform=0 size=0,3 filter=2 --frames 0 --window 32,24,33,25"
+    # the default FIR Gaussian does not blur below size 2/3 (an identity); the IIR Gaussian of version 4 does
+    "CImgSharpen FIR small|net.sf.cimg.CImgSharpen|filter|float|identity+mean=0.25,0.5,0.75,0.5||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none size=0.5,0.5"
+    "CImgSharpen 4 small|net.sf.cimg.CImgSharpen|filter|float|notidentity||-m 4 -i Source=file:impulse.pfm -i Mask=none size=0.5,0.5"
+    "CImgSharpen maximum 0|net.sf.cimg.CImgSharpen|filter|float|identity+mean=0.25,0.5,0.75,0.5||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none maximum=0"
+    "CImgSoften FIR impulse|net.sf.cimg.CImgSoften|filter|float|tol=1e-4+mean=0.94444,0.94444,0.94444,1||-i Source=file:impulse.pfm -i Mask=none uniform=0 size=0,1 --frames 0 --window 32,24,33,25"
+    "CImgSoften 4 box|net.sf.cimg.CImgSoften|filter|float|tol=1e-4+mean=0.66667,0.66667,0.66667,1||-m 4 -i Source=file:impulse.pfm -i Mask=none uniform=0 size=0,3 filter=2 --frames 0 --window 32,24,33,25"
+    "CImgSoften box above 1|net.sf.cimg.CImgSoften|filter|float|tol=1e-4+mean=2.5,2.5,2.5,1||-i Source=file:impulse3.pfm -i Mask=none uniform=0 size=0,3 filter=2 --frames 0 --window 32,24,33,25"
+    "CImgSoften 4 box above 1|net.sf.cimg.CImgSoften|filter|float|tol=1e-4+mean=2,2,2,1||-m 4 -i Source=file:impulse3.pfm -i Mask=none uniform=0 size=0,3 filter=2 --frames 0 --window 32,24,33,25"
+    "CImgSoften FIR small|net.sf.cimg.CImgSoften|filter|float|identity+mean=0.25,0.5,0.75,0.5||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none size=0.5,0.5"
+    "CImgSoften 4 small|net.sf.cimg.CImgSoften|filter|float|notidentity||-m 4 -i Source=file:impulse.pfm -i Mask=none size=0.5,0.5"
+    # ErodeCImg and DilateCImg 3: the default size is 0 (an identity); version 2 erodes or dilates by 1.
+    # DilateCImg size (1, 2) spreads the impulse at (32, 24) to (31, 22).
+    "CImgDilate defaults|net.sf.cimg.CImgDilate|filter|float|identity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none"
+    "CImgDilate 2 defaults|net.sf.cimg.CImgDilate|filter|float|notidentity+changed:Source||-m 2 -i Source=checker:8 -i Mask=none"
+    "CImgDilate size 1,2|net.sf.cimg.CImgDilate|filter|float|mean=1,1,1,1||-i Source=file:impulse.pfm -i Mask=none size=1,2 --frames 0 --window 31,22,32,23"
+    "CImgErode defaults|net.sf.cimg.CImgErode|filter|float|identity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none"
+    "CImgErode 2 defaults|net.sf.cimg.CImgErode|filter|float|notidentity+changed:Source||-m 2 -i Source=checker:8 -i Mask=none"
     # EdgeExtend merges the image over its blurred version even when the size is too small to blur:
     # A over A is not A where alpha < 1 (5 slices: alpha 1 - 0.5^32, RGB 0.5 * alpha), not an identity (issue #337)
     "EdgeExtend small|eu.cimg.EdgeExtend|filter|float|notidentity+mean=0.5,1,1.5,1||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none edgeExtendSize=0.1"

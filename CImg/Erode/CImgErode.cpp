@@ -26,7 +26,10 @@
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
 
-static CImgErodeDilatePluginFactory<false> p(kErodePluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static CImgErodeDilatePluginFactory<false, kPluginVersionMajor> p(kErodePluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+// version 2 (default size 1), kept for backward compatibility
+static CImgErodeDilatePluginFactory<false, kPluginVersionMajorOld> pOld(kErodePluginIdentifier, kPluginVersionMinorOld);
+mRegisterPluginFactoryInstance(pOld)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

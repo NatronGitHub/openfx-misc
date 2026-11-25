@@ -27,6 +27,8 @@
 #include <climits>
 #include <cfloat> // DBL_MAX, FLT_EPSILON
 #include <algorithm>
+#include <new> // std::bad_alloc
+#include <vector>
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #include <windows.h>
 #endif
@@ -53,9 +55,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
     "Blur input stream or compute derivatives.\n" \
-    "The blur filter can be a quasi-Gaussian, a Gaussian, a box, a triangle or a quadratic filter.\n" \
+    "The blur filter can be a FIR Gaussian, a quasi-Gaussian, a Gaussian, a box, a triangle or a quadratic filter.\n" \
     "\n" \
-    "Note that the Gaussian filter [1] is implemented as an IIR (infinite impulse response) filter [2][3], whereas most compositing software implement the Gaussian as a FIR (finite impulse response) filter by cropping the Gaussian impulse response. Consequently, when blurring a white dot on black background, it produces very small values very far away from the dot. The quasi-Gaussian filter is also IIR.\n" \
+    "The default filter (from version 5) is the FIR Gaussian, a FIR (finite impulse response) filter that crops the Gaussian impulse response [1] at 1.5 times the size, as most compositing software do; its size is the full width at half maximum. The Gaussian filter is implemented as an IIR (infinite impulse response) filter [2][3], the default before version 5: when blurring a white dot on black background, it gives a slightly lower peak and very small values very far away from the dot. The quasi-Gaussian filter is also IIR.\n" \
     "\n" \
     "A very common process in compositing to expand colors on the edge of a matte is to use the premult-blur-unpremult combination [4][5]. The very small values produced by the IIR Gaussian filter produce undesirable artifacts after unpremult. For this process, the FIR quadratic filter (or the faster triangle or box filters) should be preferred over the IIR Gaussian filter.\n" \
     "\n" \
@@ -128,6 +130,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDescriptionSharpen \
     "Sharpen the input stream by enhancing its Laplacian.\n" \
     "The effects adds the Laplacian (as computed by the Laplacian plugin) times the 'Amount' parameter to the input stream.\n" \
+    "From version 5, the magnitude of the Laplacian is first reduced by 'Minimum' (smaller values are ignored) and clamped to 'Maximum'.\n" \
     "Uses the 'vanvliet' and 'deriche' functions from the CImg library.\n" \
     "CImg is a free, open-source library distributed under the CeCILL-C " \
     "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
@@ -137,6 +140,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDescriptionSoften \
     "Soften the input stream by reducing its Laplacian.\n" \
     "The effects subtracts the Laplacian (as computed by the Laplacian plugin) times the 'Amount' parameter from the input stream.\n" \
+    "From version 5, the magnitude of the Laplacian is first reduced by 'Minimum' (smaller values are ignored) and clamped to 'Maximum'.\n" \
     "Uses the 'vanvliet' and 'deriche' functions from the CImg library.\n" \
     "CImg is a free, open-source library distributed under the CeCILL-C " \
     "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
@@ -233,7 +237,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79);
 //              (5.0 is unreleased, extended in place, issue #314) Prewitt filter (appended to the Filter menu) and
 //              Threshold parameter (default 0: no edge is removed)
+// Blur, Laplacian, Sharpen and Soften version 5.0: FIR Gaussian filter, the default (the IIR Gaussian has a
+//              lower peak and a longer tail, issue #312); Sharpen and Soften: Minimum and Maximum parameters,
+//              defaults 0 and 1 (issue #313); version 4 is kept for backward compatibility
 #define kPluginVersionMajorEdgeDetect 5
+#define kPluginVersionMajorFIR 5 // Blur, Laplacian, Sharpen, Soften
 #define kPluginVersionMinorOld 1 // version 3, kept for backward compatibility
 #define kPluginVersionMinorEdgeExtend 1
 #define kPluginVersionMajor 4 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
@@ -263,9 +271,18 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamSharpenAmountHint "Amount of sharpening to apply."
 #define kParamSoftenAmountHint "Amount of softening to apply."
 
+#define kParamSharpenSoftenMinimum "minimum"
+#define kParamSharpenSoftenMinimumLabel "Minimum"
+#define kParamSharpenSoftenMinimumHint "Differences between the image and its blurred version (the Laplacian) whose magnitude is below this value are ignored; the magnitude of the others is reduced by this value before it is multiplied by the Amount."
+#define kParamSharpenSoftenMinimumDefault 0.
+#define kParamSharpenSoftenMaximum "maximum"
+#define kParamSharpenSoftenMaximumLabel "Maximum"
+#define kParamSharpenSoftenMaximumHint "Largest magnitude of the difference (after the Minimum is subtracted) that is multiplied by the Amount: larger differences are clamped to this value."
+#define kParamSharpenSoftenMaximumDefault 1.
+
 #define kParamSize "size"
 #define kParamSizeLabel "Size"
-#define kParamSizeHint "Size (diameter) of the filter kernel, in pixel units (>=0). The standard deviation of the corresponding Gaussian is size/2.4. No blur is applied if size < 0.24 (Gaussian and quasi-Gaussian) or <= 1 (box, triangle and quadratic)."
+#define kParamSizeHint "Size (diameter) of the filter kernel, in pixel units (>=0). The standard deviation of the corresponding Gaussian is size/2.4 (size/2.3548 for the FIR Gaussian, whose full width at half maximum is the size). No blur is applied if size < 0.24 (Gaussian and quasi-Gaussian), < 2/3 (FIR Gaussian) or <= 1 (box, triangle and quadratic)."
 #define kParamSizeDefault 0.
 #define kParamSizeDefaultLaplacian 3.
 
@@ -360,7 +377,9 @@ enum ColorspaceEnum
 #define kParamFilterOptionBox "Box", "Box filter - FIR (finite support / impulsional response).", "box"
 #define kParamFilterOptionTriangle "Triangle", "Triangle/tent filter - FIR (finite support / impulsional response).", "triangle"
 #define kParamFilterOptionQuadratic "Quadratic", "Quadratic filter - FIR (finite support / impulsional response).", "quadratic"
+#define kParamFilterOptionGaussianFIR "FIR Gaussian", "Gaussian filter sampled at the pixel centers, whose full width at half maximum is the size, cropped at 1.5*size - FIR (finite support / impulsional response).", "firgaussian"
 #define kParamFilterDefault eFilterGaussian
+#define kParamFilterDefaultFIR eFilterGaussianFIR // Blur, Laplacian, Sharpen, Soften version 5
 #define kParamFilterDefaultBloom eFilterQuasiGaussian
 #define kParamFilterDefaultEdgeExtend eFilterQuasiGaussian
 enum FilterEnum
@@ -370,7 +389,155 @@ enum FilterEnum
     eFilterBox,
     eFilterTriangle,
     eFilterQuadratic,
+    eFilterGaussianFIR, // Blur, Laplacian, Sharpen, Soften version 5 only
 };
+
+// the (quasi-)Gaussian filters, IIR or FIR
+inline bool
+filterIsGaussian(FilterEnum filter)
+{
+    return filter == eFilterQuasiGaussian || filter == eFilterGaussian || filter == eFilterGaussianFIR;
+}
+
+// the radius (in pixels) of the FIR Gaussian of the given size: the kernel is cropped at 1.5*size
+inline int
+firGaussianRadius(double size)
+{
+    const double r = 1.5 * size;
+    if ( !(r >= 1.) ) { // also false for NaN
+        return 0;
+    }
+
+    return static_cast<int>( std::floor( (std::min)(r, static_cast<double>(INT_MAX / 4)) ) );
+}
+
+// the axis along which a separable filter is applied
+enum class Axis
+{
+    eX,
+    eY,
+};
+
+// FIR Gaussian filter along one axis, followed by `order` (0, 1 or 2) centered finite differences.
+// The kernel is w(i) = 2^(-(2i/size)^2), normalized, for |i| <= 1.5*size: its full width at half
+// maximum is the size. Out of the image, the values are 0 (Dirichlet) or the nearest pixel (Neumann).
+// The lines are processed in parallel (OpenMP, if enabled), by blocks: aborted() is called by the calling
+// thread between two blocks, and the function returns false if it returned true (the image is then
+// partly filtered).
+template <typename Aborted>
+bool
+firGaussian(cimg_library::CImg<cimgpix_t>& img,
+            double size,
+            int order,
+            Axis axis,
+            bool neumann,
+            Aborted aborted)
+{
+    const int radius = firGaussianRadius(size);
+    if ( (radius == 0 && order == 0) || img.is_empty() ) {
+        return true;
+    }
+    std::vector<double> kernel(radius + 1);
+    if (radius > 0) {
+        double sum = 0.;
+        for (int i = 0; i <= radius; ++i) {
+            const double u = 2. * i / size;
+            kernel[i] = std::pow(2., -u * u);
+            sum += (i == 0) ? kernel[i] : 2. * kernel[i];
+        }
+        for (double& k : kernel) {
+            k /= sum;
+        }
+    }
+    const long w = img.width(), h = img.height(), d = img.depth(), s = img.spectrum();
+    // line l starts at first(l), its samples are stride apart, and it has n samples
+    const long n = (axis == Axis::eX) ? w : h;
+    const long stride = (axis == Axis::eX) ? 1 : w;
+    const long nLines = (axis == Axis::eX) ? h * d * s : w * d * s;
+    cimgpix_t* const data = img.data();
+    auto first = [&](long l) -> cimgpix_t* {
+        return (axis == Axis::eX) ? data + l * w : data + (l % w) + (l / w) * w * h;
+    };
+    const long pad = (std::max)(radius, 1); // the derivatives need one sample on each side
+    const long block = 256; // lines between two calls to aborted()
+#if defined(_OPENMP) && defined(cimg_use_openmp)
+    const int nThreads = (std::max)(1, omp_get_max_threads());
+#else
+    const int nThreads = 1;
+#endif
+    // one line per thread, with `pad` samples on each side for the boundary values, allocated here:
+    // an exception must not leave the parallel region
+    std::vector<std::vector<double> > lines;
+    try {
+        lines.assign( nThreads, std::vector<double>(n + 2 * pad) );
+    } catch (const std::bad_alloc&) {
+        throw OFX::Exception::Suite(kOfxStatErrMemory);
+    }
+    for (long l0 = 0; l0 < nLines; l0 += block) {
+        if ( aborted() ) {
+            return false;
+        }
+        const long l1 = (std::min)(l0 + block, nLines);
+        cimg_pragma_openmp(parallel num_threads(nThreads))
+        {
+#if defined(_OPENMP) && defined(cimg_use_openmp)
+            std::vector<double>& line = lines[omp_get_thread_num()];
+#else
+            std::vector<double>& line = lines[0];
+#endif
+            cimg_pragma_openmp(for)
+            for (long l = l0; l < l1; ++l) {
+                cimgpix_t* const p = first(l);
+                auto load = [&]() {
+                    for (long i = 0; i < n; ++i) {
+                        line[pad + i] = p[i * stride];
+                    }
+                    const double left = neumann ? line[pad] : 0.;
+                    const double right = neumann ? line[pad + n - 1] : 0.;
+                    for (long i = 0; i < pad; ++i) {
+                        line[i] = left;
+                        line[pad + n + i] = right;
+                    }
+                };
+                load();
+                if (radius > 0) {
+                    const double* const c = line.data() + pad;
+                    for (long i = 0; i < n; ++i) {
+                        double v = kernel[0] * c[i];
+                        for (int k = 1; k <= radius; ++k) {
+                            v += kernel[k] * (c[i - k] + c[i + k]);
+                        }
+                        p[i * stride] = static_cast<cimgpix_t>(v);
+                    }
+                }
+                if (order > 0) {
+                    if (radius > 0) {
+                        load();
+                    }
+                    const double* const c = line.data() + pad;
+                    for (long i = 0; i < n; ++i) {
+                        const double v = (order == 1) ? (c[i + 1] - c[i - 1]) / 2. : c[i + 1] - 2. * c[i] + c[i - 1];
+                        p[i * stride] = static_cast<cimgpix_t>(v);
+                    }
+                }
+            }
+        }
+    }
+
+    return true;
+}
+
+// The value Sharpen and Soften (version 5) multiply by the Amount: the difference d between the image
+// and its blurred version, with its magnitude reduced by the minimum and clamped to the maximum.
+inline double
+sharpenSoftenDelta(double d,
+                   double minimum,
+                   double maximum)
+{
+    const double m = (std::min)( (std::max)(std::abs(d) - minimum, 0.), maximum );
+
+    return (d < 0.) ? -m : m;
+}
 
 #define kParamEdgeDetectFilter "filter"
 #define kParamEdgeDetectFilterLabel "Filter"
@@ -1041,6 +1208,8 @@ struct CImgBlurParams
     double erodeSize;
     double erodeBlur;
     double sharpenSoftenAmount;
+    double sharpenSoftenMinimum; // version 5
+    double sharpenSoftenMaximum; // version 5
     int orderX;
     int orderY;
     double bloomRatio;
@@ -1072,6 +1241,51 @@ enum BlurPluginEnum
     eBlurPluginEdgeExtend,
     eBlurPluginEdgeDetect,
 };
+
+// the latest major version of each plug-in
+inline int
+latestMajorVersion(BlurPluginEnum blurPlugin)
+{
+    switch (blurPlugin) {
+    case eBlurPluginBlur:
+    case eBlurPluginLaplacian:
+    case eBlurPluginSharpen:
+    case eBlurPluginSoften:
+        return kPluginVersionMajorFIR;
+    case eBlurPluginEdgeDetect:
+        return kPluginVersionMajorEdgeDetect;
+    case eBlurPluginChromaBlur:
+    case eBlurPluginBloom:
+    case eBlurPluginErodeBlur:
+    case eBlurPluginEdgeExtend:
+        break;
+    }
+
+    return kPluginVersionMajor;
+}
+
+// true if the plug-in version has the FIR Gaussian filter (the default) and, for Sharpen and Soften,
+// the Minimum and Maximum parameters: Blur, Laplacian, Sharpen and Soften from version 5
+inline bool
+hasFIRGaussian(BlurPluginEnum blurPlugin,
+               int majorVersion)
+{
+    switch (blurPlugin) {
+    case eBlurPluginBlur:
+    case eBlurPluginLaplacian:
+    case eBlurPluginSharpen:
+    case eBlurPluginSoften:
+        return majorVersion >= kPluginVersionMajorFIR;
+    case eBlurPluginChromaBlur:
+    case eBlurPluginBloom:
+    case eBlurPluginErodeBlur:
+    case eBlurPluginEdgeExtend:
+    case eBlurPluginEdgeDetect:
+        break;
+    }
+
+    return false;
+}
 
 /*
 The convolution of the step edge with the triangle filter of width s is:
@@ -1185,7 +1399,11 @@ public:
                                                         kDefaultUnpremult)
         , _blurPlugin(blurPlugin)
         , _edgeDetectRMSSignFix(blurPlugin == eBlurPluginEdgeDetect && majorVersion >= 5)
+        , _sharpenSoftenMinMax( (blurPlugin == eBlurPluginSharpen || blurPlugin == eBlurPluginSoften) &&
+                                hasFIRGaussian(blurPlugin, majorVersion) )
         , _sharpenSoftenAmount(NULL)
+        , _sharpenSoftenMinimum(NULL)
+        , _sharpenSoftenMaximum(NULL)
         , _size(NULL)
         , _erodeSize(NULL)
         , _erodeBlur(NULL)
@@ -1216,6 +1434,13 @@ public:
             _sharpenSoftenAmount = fetchDoubleParam(kParamSharpenSoftenAmount);
         } else {
             assert( !paramExists(kParamSharpenSoftenAmount) );
+        }
+        if (_sharpenSoftenMinMax) {
+            _sharpenSoftenMinimum = fetchDoubleParam(kParamSharpenSoftenMinimum);
+            _sharpenSoftenMaximum = fetchDoubleParam(kParamSharpenSoftenMaximum);
+            assert(_sharpenSoftenMinimum && _sharpenSoftenMaximum);
+        } else {
+            assert( !paramExists(kParamSharpenSoftenMinimum) && !paramExists(kParamSharpenSoftenMaximum) );
         }
         if (_blurPlugin == eBlurPluginErodeBlur) {
             _erodeSize  = fetchDoubleParam(kParamErodeSize);
@@ -1360,6 +1585,9 @@ public:
             assert(!_sharpenSoftenAmount);
             params.sharpenSoftenAmount = 0.;
         }
+        // version 5 of Sharpen and Soften; the earlier versions do not reduce or clamp the difference
+        params.sharpenSoftenMinimum = _sharpenSoftenMinimum ? _sharpenSoftenMinimum->getValueAtTime(time) : 0.;
+        params.sharpenSoftenMaximum = _sharpenSoftenMaximum ? _sharpenSoftenMaximum->getValueAtTime(time) : DBL_MAX;
 
         if (_blurPlugin == eBlurPluginErodeBlur) {
             params.erodeSize = _erodeSize->getValueAtTime(time);
@@ -1600,10 +1828,8 @@ public:
         }
         *dstRoD = srcRoD;
         if ( params.expandRoD && !Coords::rectIsEmpty(srcRoD) ) {
-            if ( (params.filter == eFilterQuasiGaussian) || (params.filter == eFilterGaussian) ) {
-                float sigmax = (float)(sx / 2.4);
-                float sigmay = (float)(sy / 2.4);
-                if ( (sigmax < 0.1) && (sigmay < 0.1) && (params.orderX == 0) && (params.orderY == 0) ) {
+            if ( filterIsGaussian(params.filter) ) {
+                if ( gaussianIsNoOp(params.filter, sx, params.orderX, sy, params.orderY, 1.) ) {
                     return false; // identity
                 }
                 int delta_pixX = (std::max)( 3, (int)std::ceil(sx * 1.5) );
@@ -1680,10 +1906,8 @@ public:
             sx *= scale;
             sy *= scale;
         }
-        if ( (params.filter == eFilterQuasiGaussian) || (params.filter == eFilterGaussian) ) {
-            float sigmax = (float)(sx / 2.4);
-            float sigmay = (float)(sy / 2.4);
-            if ( (sigmax < 0.1) && (sigmay < 0.1) && (params.orderX == 0) && (params.orderY == 0) ) {
+        if ( filterIsGaussian(params.filter) ) {
+            if ( gaussianIsNoOp(params.filter, sx, params.orderX, sy, params.orderY, 1.) ) {
                 *roi = rect;
 
                 return;
@@ -1872,7 +2096,7 @@ public:
                 scale = ipow(params.bloomRatio, i);
             }
 
-            bool blurred = blur(params.filter,
+            const BlurResult blurred = blur(params.filter,
                                 sx, params.orderX,
                                 sy, params.orderY,
                                 scale, (bool)params.boundary_i,
@@ -1896,7 +2120,10 @@ public:
                 cimg_blur *= scale;
             }
 
-            if ( !blurred && (_blurPlugin != eBlurPluginBloom) && (_blurPlugin != eBlurPluginEdgeExtend) && (_blurPlugin != eBlurPluginLaplacian) ) {
+            if (blurred == BlurResult::eAborted) {
+                return;
+            }
+            if ( (blurred == BlurResult::eSkipped) && (_blurPlugin != eBlurPluginBloom) && (_blurPlugin != eBlurPluginEdgeExtend) && (_blurPlugin != eBlurPluginLaplacian) ) {
                 return;
             }
 
@@ -1914,6 +2141,15 @@ public:
         if (_blurPlugin == eBlurPluginLaplacian) {
             cimg *= -1;
             cimg += cimg0;
+        } else if (_sharpenSoftenMinMax) { // Sharpen and Soften version 5
+            // version 5: image + amount * (the difference between the image and its blurred version, with its
+            // magnitude reduced by the Minimum and clamped to the Maximum)
+            const cimgpix_t* src = cimg0.data();
+            cimg_for(cimg, ptr, cimgpix_t) {
+                const double a = *src++;
+                *ptr = static_cast<cimgpix_t>( a + params.sharpenSoftenAmount *
+                                               sharpenSoftenDelta(a - *ptr, params.sharpenSoftenMinimum, params.sharpenSoftenMaximum) );
+            }
         } else if (_blurPlugin == eBlurPluginSharpen || _blurPlugin == eBlurPluginSoften) {
             cimg *= -params.sharpenSoftenAmount;
             cimg0 *= 1. + params.sharpenSoftenAmount;
@@ -2057,7 +2293,10 @@ public:
             // clamp changes the float images (the only depth supported) that are not in [0,1].
             return false;
         }
-        if ( (_blurPlugin == eBlurPluginSharpen || _blurPlugin == eBlurPluginSoften) && params.sharpenSoftenAmount == 0. ) {
+        // Sharpen and Soften: no change if the Amount is 0, or (version 5) if the Maximum is 0 (the reduced
+        // difference is then 0)
+        if ( (_blurPlugin == eBlurPluginSharpen || _blurPlugin == eBlurPluginSoften) &&
+             ( params.sharpenSoftenAmount == 0. || (_sharpenSoftenMinMax && params.sharpenSoftenMaximum == 0.) ) ) {
             return true;
         }
         double sx, sy;
@@ -2080,7 +2319,7 @@ public:
             sy *= scale;
         }
         bool ret = false;
-        if ( (params.filter == eFilterQuasiGaussian) || (params.filter == eFilterGaussian) ) {
+        if ( filterIsGaussian(params.filter) ) {
             // Note that before commit https://github.com/dtschump/CImg/commit/2e01be63
             // the Gaussian filter still returned identity for size < 1.2 (nsigma < 0.5).
             // Now it uses  the Deriche filter, which is a good approximation.
@@ -2104,7 +2343,7 @@ public:
     // describeInContext function for plugin factories
     static void describeInContext(ImageEffectDescriptor& desc, ContextEnum context, int majorVersion, int minorVersion, BlurPluginEnum blurPlugin = eBlurPluginBlur);
 
-    // true if blur() does not modify the image and returns false: a (quasi-)Gaussian blur with a
+    // true if blur() does not modify the image and returns BlurResult::eSkipped: a (quasi-)Gaussian blur with a
     // tiny sigma, except for Bloom, EdgeExtend and Laplacian (render() then returns early, except for
     // these). Used by blur() and isIdentity().
     bool blurIsSkipped(FilterEnum filter,
@@ -2123,8 +2362,11 @@ public:
                                double sy, int orderY,
                                double scale)
     {
-        if ( (filter != eFilterQuasiGaussian) && (filter != eFilterGaussian) ) {
+        if ( !filterIsGaussian(filter) ) {
             return false;
+        }
+        if (filter == eFilterGaussianFIR) {
+            return firGaussianRadius(sx * scale) == 0 && firGaussianRadius(sy * scale) == 0 && orderX == 0 && orderY == 0;
         }
         const float sigmax = static_cast<float>(sx * scale / 2.4);
         const float sigmay = static_cast<float>(sy * scale / 2.4);
@@ -2132,15 +2374,30 @@ public:
         return (sigmax < 0.1) && (sigmay < 0.1) && (orderX == 0) && (orderY == 0);
     }
 
-    // returns true if the image was actually modified
-    bool blur(FilterEnum filter,
+    // what blur() did
+    enum class BlurResult
+    {
+        eBlurred, // the image was filtered
+        eSkipped, // the filter does nothing at this size: the image is unchanged
+        eAborted, // the render was aborted: the image may be partly filtered
+    };
+
+    BlurResult blur(FilterEnum filter,
               double sx, int orderX,
               double sy, int orderY,
               double scale, bool boundary,
               cimg_library::CImg<cimgpix_t>& cimg_blur)
     {
         if ( blurIsSkipped(filter, sx, orderX, sy, orderY, scale) ) {
-            return false;
+            return BlurResult::eSkipped;
+        }
+        if (filter == eFilterGaussianFIR) {
+            auto aborted = [this]() { return abort(); };
+
+            const bool done = firGaussian(cimg_blur, sx * scale, orderX, Axis::eX, boundary, aborted) &&
+                              firGaussian(cimg_blur, sy * scale, orderY, Axis::eY, boundary, aborted);
+
+            return done ? BlurResult::eBlurred : BlurResult::eAborted;
         }
         if ( (filter == eFilterQuasiGaussian) || (filter == eFilterGaussian) ) {
             float sigmax = (float)(sx * scale / 2.4);
@@ -2153,16 +2410,16 @@ public:
                 vanvliet(cimg_blur, /*cimg_blur.vanvliet(*/ sigmay, orderY, 'y', boundary);
 #             else
                 cimg_blur.vanvliet(sigmax, orderX, 'x', boundary);
-                if ( abort() ) { return false; }
+                if ( abort() ) { return BlurResult::eAborted; }
                 cimg_blur.vanvliet(sigmay, orderY, 'y', boundary);
 #             endif
             } else {
                 cimg_blur.deriche(sigmax, orderX, 'x', boundary);
-                if ( abort() ) { return false; }
+                if ( abort() ) { return BlurResult::eAborted; }
                 cimg_blur.deriche(sigmay, orderY, 'y', boundary);
             }
 
-            return true;
+            return BlurResult::eBlurred;
         } else if ( (filter == eFilterBox) || (filter == eFilterTriangle) || (filter == eFilterQuadratic) ) {
             int iter = ( filter == eFilterBox ? 1 :
                         (filter == eFilterTriangle ? 2 : 3) );
@@ -2178,19 +2435,19 @@ public:
 
 #         ifdef cimgblur_internal_boxfilter
             boxfilter(cimg_blur, /*cimg_blur.boxfilter(*/ static_cast<float>(sx * scale), orderX, 'x', boundary, iter);
-            if ( abort() ) { return false; }
+            if ( abort() ) { return BlurResult::eAborted; }
             boxfilter(cimg_blur, /*cimg_blur.boxfilter(*/ static_cast<float>(sy * scale), orderY, 'y', boundary, iter);
 #         else
             cimg_blur.boxfilter(static_cast<float>(sx * scale), orderX, 'x', boundary, iter);
-            if ( abort() ) { return false; }
+            if ( abort() ) { return BlurResult::eAborted; }
             cimg_blur.boxfilter(static_cast<float>(sy * scale), orderY, 'y', boundary, iter);
 #         endif
 
-            return true;
+            return BlurResult::eBlurred;
         }
         assert(false);
 
-        return false;
+        return BlurResult::eSkipped;
     }
 
     void renderEdgeDetect(const RenderArguments &args,
@@ -2228,11 +2485,13 @@ public:
                 scheme = 3;
             }
             // blur cimg, then compute gradients
-            blur(params.filter, // should be box
-                 sx, 0,
-                 sy, 0,
-                 1., (bool)params.boundary_i,
-                 cimg);
+            if (blur(params.filter, // should be box
+                     sx, 0,
+                     sy, 0,
+                     1., (bool)params.boundary_i,
+                     cimg) == BlurResult::eAborted) {
+                return;
+            }
             if (params.edgeDetectFilter == eEdgeDetectFilterPrewitt) {
                 grad = prewittGradient(cimg);
             } else {
@@ -2246,16 +2505,19 @@ public:
         } else {
             // compute gradients
             grad.assign(cimg, cimg);
-            blur(params.filter,
-                 sx, 1,
-                 sy, 0,
-                 1., (bool)params.boundary_i,
-                 grad[0]);
-            blur(params.filter,
-                 sx, 0,
-                 sy, 1,
-                 1., (bool)params.boundary_i,
-                 grad[1]);
+            // a skipped blur leaves the image unchanged (it never happens with a derivative)
+            if (blur(params.filter,
+                     sx, 1,
+                     sy, 0,
+                     1., (bool)params.boundary_i,
+                     grad[0]) == BlurResult::eAborted ||
+                blur(params.filter,
+                     sx, 0,
+                     sy, 1,
+                     1., (bool)params.boundary_i,
+                     grad[1]) == BlurResult::eAborted) {
+                return;
+            }
         }
 
         if ( abort() ) { return; }
@@ -2304,6 +2566,7 @@ public:
                 break;
             case eFilterGaussian:
             case eFilterQuasiGaussian:
+            case eFilterGaussianFIR: // not an EdgeDetect filter
                 if (sx / 2.4 >= 0.1) {
                     grad[0] *= 2. * OFXS_PI * (sx/2.4) * (1. /* should be sx */ /2.4);
                 }
@@ -2597,7 +2860,10 @@ private:
     // params
     const BlurPluginEnum _blurPlugin;
     const bool _edgeDetectRMSSignFix; // EdgeDetect versions < 5 never flipped the gradient sign in RMS mode
+    const bool _sharpenSoftenMinMax; // Sharpen and Soften version 5: Minimum and Maximum parameters
     DoubleParam *_sharpenSoftenAmount;
+    DoubleParam *_sharpenSoftenMinimum;
+    DoubleParam *_sharpenSoftenMaximum;
     Double2DParam *_size;
     DoubleParam *_erodeSize;
     DoubleParam *_erodeBlur;
@@ -2631,7 +2897,7 @@ CImgBlurPlugin::describe(ImageEffectDescriptor& desc,
                          int /*minorVersion*/,
                          BlurPluginEnum blurPlugin)
 {
-    if ( majorVersion < ( (blurPlugin == eBlurPluginEdgeDetect) ? kPluginVersionMajorEdgeDetect : kPluginVersionMajor ) ) {
+    if ( majorVersion < latestMajorVersion(blurPlugin) ) {
         desc.setIsObsolete(true);
     }
     // basic labels
@@ -2769,6 +3035,25 @@ CImgBlurPlugin::describeInContext(ImageEffectDescriptor& desc,
         if (page) {
             page->addChild(*param);
         }
+    }
+    if ( (blurPlugin == eBlurPluginSharpen || blurPlugin == eBlurPluginSoften) && hasFIRGaussian(blurPlugin, majorVersion) ) {
+        // Minimum and Maximum (version 5): any value, as in the reference (a negative Maximum gives a
+        // constant change of -Maximum against the sign of the difference)
+        auto defineMinMax = [&](const char* name, const char* label, const char* hint, double defaultValue) {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(name);
+            param->setLabel(label);
+            param->setHint(hint);
+            param->setRange(-DBL_MAX, DBL_MAX);
+            param->setDisplayRange(0., 1.);
+            param->setDefault(defaultValue);
+            if (page) {
+                page->addChild(*param);
+            }
+        };
+        defineMinMax(kParamSharpenSoftenMinimum, kParamSharpenSoftenMinimumLabel, kParamSharpenSoftenMinimumHint,
+                     kParamSharpenSoftenMinimumDefault);
+        defineMinMax(kParamSharpenSoftenMaximum, kParamSharpenSoftenMaximumLabel, kParamSharpenSoftenMaximumHint,
+                     kParamSharpenSoftenMaximumDefault);
     }
     if (blurPlugin == eBlurPluginSharpen ||
         blurPlugin == eBlurPluginSoften) {
@@ -3009,7 +3294,11 @@ CImgBlurPlugin::describeInContext(ImageEffectDescriptor& desc,
         param->appendOption(kParamFilterOptionTriangle);
         assert(param->getNOptions() == eFilterQuadratic && param->getNOptions() == 4);
         param->appendOption(kParamFilterOptionQuadratic);
-        if (blurPlugin == eBlurPluginBloom) {
+        if ( hasFIRGaussian(blurPlugin, majorVersion) ) {
+            assert(param->getNOptions() == eFilterGaussianFIR && param->getNOptions() == 5);
+            param->appendOption(kParamFilterOptionGaussianFIR);
+            param->setDefault( (int)kParamFilterDefaultFIR );
+        } else if (blurPlugin == eBlurPluginBloom) {
             param->setDefault( (int)kParamFilterDefaultBloom );
         } else if (blurPlugin == eBlurPluginEdgeExtend) {
             param->setDefault( (int)kParamFilterDefaultEdgeExtend );
@@ -3167,7 +3456,7 @@ ImageEffect*
 CImgBlurPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                                     ContextEnum /*context*/)
 {
-    return new CImgBlurPlugin(handle);
+    return new CImgBlurPlugin(handle, eBlurPluginBlur, majorVersion);
 }
 
 //
@@ -3195,7 +3484,7 @@ ImageEffect*
 CImgLaplacianPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                                          ContextEnum /*context*/)
 {
-    return new CImgBlurPlugin(handle, eBlurPluginLaplacian);
+    return new CImgBlurPlugin(handle, eBlurPluginLaplacian, majorVersion);
 }
 
 //
@@ -3307,7 +3596,7 @@ ImageEffect*
 CImgSharpenPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                                        ContextEnum /*context*/)
 {
-    return new CImgBlurPlugin(handle, eBlurPluginSharpen);
+    return new CImgBlurPlugin(handle, eBlurPluginSharpen, majorVersion);
 }
 
 //
@@ -3335,7 +3624,7 @@ ImageEffect*
 CImgSoftenPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                                       ContextEnum /*context*/)
 {
-    return new CImgBlurPlugin(handle, eBlurPluginSoften);
+    return new CImgBlurPlugin(handle, eBlurPluginSoften, majorVersion);
 }
 
 //
@@ -3408,14 +3697,24 @@ mRegisterPluginFactoryInstance(oldp4)
 // EdgeDetect version 4 is kept for backward compatibility (RMS gradient direction)
 static CImgEdgeDetectPluginFactory<kPluginVersionMajor> oldp9(kPluginIdentifierEdgeDetect, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(oldp9)
+// Blur, Laplacian, Sharpen and Soften version 4 are kept for backward compatibility (IIR Gaussian default,
+// no Minimum and Maximum in Sharpen and Soften)
+static CImgBlurPluginFactory<kPluginVersionMajor> old4p1(kPluginIdentifier, kPluginVersionMinor);
+static CImgLaplacianPluginFactory<kPluginVersionMajor> old4p2(kPluginIdentifierLaplacian, kPluginVersionMinor);
+static CImgSharpenPluginFactory<kPluginVersionMajor> old4p6(kPluginIdentifierSharpen, kPluginVersionMinor);
+static CImgSoftenPluginFactory<kPluginVersionMajor> old4p7(kPluginIdentifierSoften, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(old4p1)
+mRegisterPluginFactoryInstance(old4p2)
+mRegisterPluginFactoryInstance(old4p6)
+mRegisterPluginFactoryInstance(old4p7)
 
-static CImgBlurPluginFactory<kPluginVersionMajor> p1(kPluginIdentifier, kPluginVersionMinor);
-static CImgLaplacianPluginFactory<kPluginVersionMajor> p2(kPluginIdentifierLaplacian, kPluginVersionMinor);
+static CImgBlurPluginFactory<kPluginVersionMajorFIR> p1(kPluginIdentifier, 0);
+static CImgLaplacianPluginFactory<kPluginVersionMajorFIR> p2(kPluginIdentifierLaplacian, 0);
 static CImgChromaBlurPluginFactory<kPluginVersionMajor> p3(kPluginIdentifierChromaBlur, kPluginVersionMinor);
 static CImgBloomPluginFactory<kPluginVersionMajor> p4(kPluginIdentifierBloom, kPluginVersionMinor);
 static CImgErodeBlurPluginFactory<kPluginVersionMajor> p5(kPluginIdentifierErodeBlur, kPluginVersionMinor);
-static CImgSharpenPluginFactory<kPluginVersionMajor> p6(kPluginIdentifierSharpen, kPluginVersionMinor);
-static CImgSoftenPluginFactory<kPluginVersionMajor> p7(kPluginIdentifierSoften, kPluginVersionMinor);
+static CImgSharpenPluginFactory<kPluginVersionMajorFIR> p6(kPluginIdentifierSharpen, 0);
+static CImgSoftenPluginFactory<kPluginVersionMajorFIR> p7(kPluginIdentifierSoften, 0);
 static CImgEdgeExtendPluginFactory<kPluginVersionMajor> p8(kPluginIdentifierEdgeExtend, kPluginVersionMinorEdgeExtend);
 static CImgEdgeDetectPluginFactory<kPluginVersionMajorEdgeDetect> p9(kPluginIdentifierEdgeDetect, 0);
 mRegisterPluginFactoryInstance(p1)
