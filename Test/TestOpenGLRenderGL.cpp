@@ -41,19 +41,19 @@ bool
 TestOpenGLPlugin::openGLContextIsCurrent()
 {
 #if defined(__APPLE__)
-    return CGLGetCurrentContext() != NULL;
+    return CGLGetCurrentContext() != nullptr;
 #elif defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
-    return wglGetCurrentContext() != NULL;
+    return wglGetCurrentContext() != nullptr;
 #else
-    if (glXGetCurrentContext() != NULL) {
+    if (glXGetCurrentContext() != nullptr) {
         return true;
     }
     // The host may use EGL instead of GLX: look eglGetCurrentContext up at runtime,
     // so that the plugin does not depend on libEGL (it is only found if the host loaded it).
-    typedef void* (*EGLGetCurrentContextFunc)(void);
-    EGLGetCurrentContextFunc eglGetCurrentContextPtr = (EGLGetCurrentContextFunc)dlsym(RTLD_DEFAULT, "eglGetCurrentContext");
+    using EGLGetCurrentContextFunc = void* (*)();
+    const auto eglGetCurrentContextPtr = reinterpret_cast<EGLGetCurrentContextFunc>( dlsym(RTLD_DEFAULT, "eglGetCurrentContext") );
 
-    return eglGetCurrentContextPtr && eglGetCurrentContextPtr() != NULL;
+    return eglGetCurrentContextPtr && eglGetCurrentContextPtr() != nullptr;
 #endif
 }
 #endif

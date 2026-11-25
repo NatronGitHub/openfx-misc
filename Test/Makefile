@@ -19,6 +19,7 @@ include $(TOP_SRCDIR)/Makefile.master
 
 CXXFLAGS_EXTRA = ${CXXFLAGS_MESA}
 LDFLAGS_EXTRA = ${LDFLAGS_MESA}
+# -ldl (dlsym, before glibc 2.34) comes from SYSLIBS in openfx's Makefile.master
 
 $(OBJECTPATH)/TestOpenGL.o: TestOpenGL.cpp TestOpenGL.h
 

@@ -232,6 +232,16 @@ TestOpenGLPlugin::render(const RenderArguments &args)
         // calls then crash Resolve (as in Shadertoy, issue #69): use OSMesa there, if available,
         // or fail.
         openGLRender = openGLContextIsCurrent();
+#ifndef HAVE_OSMESA
+        // Defensive: without OSMesa, describe() refuses the plugin on hosts that don't advertise
+        // OpenGL render support, so this only matters if a Resolve version advertises it.
+        if (!openGLRender) {
+            setPersistentMessage(Message::eMessageError, "", "No OpenGL context is available for rendering (e.g. on the DaVinci Resolve Fusion page). "
+                                 "Use a TestOpenGL plugin built with OSMesa CPU rendering.");
+            throwSuiteStatusException(kOfxStatFailed);
+        }
+        clearPersistentMessage(); // the "No OpenGL context" error above, if a previous render set it
+#endif
     }
 
     // do the rendering
