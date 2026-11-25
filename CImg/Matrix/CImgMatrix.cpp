@@ -358,7 +358,6 @@ CImgMatrixPluginFactory<dim>::describeInContext(ImageEffectDescriptor& desc,
             for (int j = 0; j < dim; ++j) {
                 DoubleParamDescriptor* param = desc.defineDoubleParam(std::string(kParamMatrix) + (char)('1' + i) + (char)('1' + j));
                 param->setLabelAndHint(kParamMatrixCoeffLabel);
-                param->setRange(-DBL_MAX, DBL_MAX);
                 param->setDisplayRange(-1., 1.);
                 param->setDefault(0.);
                 if (j < dim - 1) {

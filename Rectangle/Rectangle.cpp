@@ -1694,7 +1694,6 @@ RectanglePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &d
         param->setHint(kParamAngleHint);
         param->setDoubleType(eDoubleTypeAngle);
         param->setDefault(0.);
-        param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(-180., 180.);
         param->setIncrement(0.1);
         if (page) {

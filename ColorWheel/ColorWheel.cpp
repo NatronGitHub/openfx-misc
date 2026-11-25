@@ -655,7 +655,6 @@ ColorWheelPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamRotateLabel);
         param->setHint(kParamRotateHint);
         param->setDefault(kParamRotateDefault);
-        param->setRange(-DBL_MAX, DBL_MAX);
         param->setDisplayRange(-180., 180.);
         if (page) {
             page->addChild(*param);

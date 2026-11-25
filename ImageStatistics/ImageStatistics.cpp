@@ -2185,7 +2185,6 @@ ImageStatisticsPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setDoubleType(eDoubleTypeXYAbsolute);
         ofxsSetDefaultCoordinateSystemNormalised(*param); // see ofxsNormalisedDefaults.h (#236)
         param->setDefault(0., 0.);
-        param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
         param->setIncrement(1.);
         param->setHint(kParamRectangleInteractBtmLeftHint);
@@ -2269,7 +2268,6 @@ ImageStatisticsPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setHint(kParamFrameRangeHint);
         param->setDimensionLabels("first", "last");
         param->setDefault(1, 1);
-        param->setRange(INT_MIN, INT_MIN, INT_MAX, INT_MAX);
         param->setDisplayRange(1, 1, 100, 100);
         param->setAnimates(false);
         param->setEvaluateOnChange(false);
@@ -2816,7 +2814,6 @@ ImageStatisticsPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->setHint(kParamAutoCropBtmLeftHint);
             param->setDoubleType(eDoubleTypeXYAbsolute); // canonical coordinates
             param->setDefault(0., 0.);
-            param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
             param->setIncrement(1.);
             param->setDigits(2); // fractional if the pixel aspect ratio is not 1

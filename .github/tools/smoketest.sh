@@ -31,11 +31,19 @@
 #                     must say host.profile "ofx14", and the "ofx14:" entries of the lists
 #                     below are used (they are ignored otherwise; e.g. a plug-in that needs
 #                     an optional OFX 1.4 feature that hostDemo lacks in this mode)
+#   --ofx11           run hostDemo as an OFX 1.1 host modelled on VEGAS Pro (hostDemo --ofx11:
+#                     only the OFX 1.1 host properties and suites, no interact suite, no
+#                     kOfxParamPropDefaultCoordinateSystem, byte and float depths, one clip PAR,
+#                     no tiles, no multi-resolution, persistent messages refused, one view;
+#                     issue #66). As --ofx14: one view per frame, host.profile "ofx11", and the
+#                     "ofx11:" entries of the lists below. The short depth is not rendered, and
+#                     the OPENGL plug-ins are skipped (--ofx11 refuses --opengl-describe).
+#                     --ofx14 and --ofx11 can't be combined
 # Environment: HOSTDEMO (the hostDemo binary, default PREFIX/bin/hostDemo),
 # CXX (to build ofxload.cpp, default c++), CMAKE_ARGS (--supportext),
 # SMOKETEST_TIMEOUT (seconds per describe or render, default 120),
 # SMOKETEST_DEBUG=1 (a debug build: also use the "debug:" entries of the lists below; an
-# entry can be "debug:ofx14:..."),
+# entry can be "debug:ofx14:..." or "debug:ofx11:..."),
 # SMOKETEST_BUNDLES (the expected bundles, see BUNDLES below; e.g. "Misc:0" for a build
 # with -DBUILD_CIMG_PLUGINS=OFF -DBUILD_SHADERTOY=OFF -DBUILD_TESTING=OFF),
 # SMOKETEST_XPASS_OK=1 (accept the known bugs that were fixed: an XFAIL entry that passes
@@ -47,7 +55,7 @@
 #
 # Each render is one hostDemo run (--no-std-paths --no-cache: only the bundle of
 # the plug-in is in OFX_PLUGIN_PATH), at t=0 and 1 (both views: hostDemo is
-# built with the OFX_EXTENSIONS_* of the plug-ins; one view with --ofx14), on the PAL SD project
+# built with the OFX_EXTENSIONS_* of the plug-ins; one view with --ofx14 or --ofx11), on the PAL SD project
 # (720x576), with the outputs in float PFM files. The inputs are: ramp for the
 # first input clip, checker:16 for the second one, a solid colour for the
 # others; the optional clips of generators (plug-ins with a generator context)
@@ -108,7 +116,8 @@ BUNDLES=(Misc:171 CImg:40 Shadertoy:1 Test:6)
 # shellcheck disable=SC2206
 [ -z "$SMOKETEST_BUNDLES" ] || BUNDLES=($SMOKETEST_BUNDLES)
 # The plug-ins that are not tested: "identifier regex|reason" (the whole identifier; a
-# "debug:" reason is only used in debug builds, an "ofx14:" one only with --ofx14; these
+# "debug:" reason is only used in debug builds, an "ofx14:" one only with --ofx14, an "ofx11:"
+# one only with --ofx11; these
 # prefixes, which can be combined, only work at the start of the reason or description
 # field of the SKIP, IDENTITY and XFAIL lists).
 SKIP=(
@@ -199,8 +208,8 @@ SMOKETEST_TIMEOUT=${SMOKETEST_TIMEOUT:-120}
 watchdog() {
     local log=$1 bundle=$2 host=()
     shift 2
-    # --ofx14: an OFX 1.4 host
-    [ "$SMOKETEST_OFX14" != 1 ] || host=(--ofx14)
+    # --ofx14 or --ofx11: an OFX 1.4 or OFX 1.1 host
+    [ "$SMOKETEST_PROFILE" = default ] || host=("--$SMOKETEST_PROFILE")
     status=0
     ( OFX_PLUGIN_PATH=$SMOKETEST_WORK/path/$bundle exec perl -e 'alarm shift; exec @ARGV or die "$!\n"' \
           "$SMOKETEST_TIMEOUT" "$HOSTDEMO" --no-std-paths --no-cache --quiet "${host[@]}" "$@" ) > "$log" 2>&1 || status=$?
@@ -257,7 +266,7 @@ fi
 
 usage() { sed -n '/^# Usage/,/^# Linux and macOS/p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-1}"; }
 top=$(cd "$(dirname "$0")/../.." && pwd)
-supportext='' build='' out='' only='' quick=0 ofx14=0 prefix='' jobs=$(getconf _NPROCESSORS_ONLN 2> /dev/null || echo 2)
+supportext='' build='' out='' only='' quick=0 profile=default prefix='' jobs=$(getconf _NPROCESSORS_ONLN 2> /dev/null || echo 2)
 while [ $# -gt 0 ]; do
     case "$1" in
         --supportext) supportext=$2; shift ;;
@@ -265,7 +274,9 @@ while [ $# -gt 0 ]; do
         --out) out=$2; shift ;;
         --only) only=$2; shift ;;
         --quick) quick=1 ;;
-        --ofx14) ofx14=1 ;;
+        --ofx14|--ofx11)
+            [ "$profile" = default ] || [ "$profile" = "${1#--}" ] || { echo "--ofx14 and --ofx11 can't be combined"; usage; }
+            profile=${1#--} ;;
         -j) jobs=$2; shift ;;
         -h|--help) usage 0 ;;
         -*) echo "unknown option $1"; usage ;;
@@ -303,7 +314,11 @@ plugins=$prefix/OFX/Plugins
 HOSTDEMO=${HOSTDEMO:-$prefix/bin/hostDemo}
 case "$HOSTDEMO" in /*) ;; *) HOSTDEMO=$PWD/$HOSTDEMO ;; esac
 [ -x "$HOSTDEMO" ] || { echo "hostDemo not found: $HOSTDEMO (configure with -DOFX_BUILD_HOSTDEMO=ON, or set HOSTDEMO)"; exit 1; }
-echo "hostDemo: $HOSTDEMO$([ "$ofx14" = 0 ] || echo " --ofx14 (an OFX 1.4 host)")"
+case "$profile" in
+    ofx14) echo "hostDemo: $HOSTDEMO --ofx14 (an OFX 1.4 host)" ;;
+    ofx11) echo "hostDemo: $HOSTDEMO --ofx11 (an OFX 1.1 host)" ;;
+    *) echo "hostDemo: $HOSTDEMO" ;;
+esac
 echo "bundles: $plugins"
 
 # The plug-ins: ofxload prints the identifier and version of each plug-in of a binary.
@@ -392,7 +407,10 @@ EOF
 # says so: both name the option in an "Error:" line, a capable one only says that the dummy
 # plug-in is not found. Without it, the plug-ins of OPENGL are skipped.
 gl_ok=1
-if ( cd "$work" && OFX_PLUGIN_PATH=$work/path/none "$HOSTDEMO" --no-std-paths --no-cache --quiet \
+if [ "$profile" = ofx11 ]; then
+    gl_ok=0
+    echo "note: hostDemo --ofx11 refuses --opengl-describe: the OPENGL plug-ins are skipped"
+elif ( cd "$work" && OFX_PLUGIN_PATH=$work/path/none "$HOSTDEMO" --no-std-paths --no-cache --quiet \
          --opengl-describe -p smoketest.probe --describe probe.json 2>&1 ) | grep -q '^Error: .*opengl-describe'; then
     gl_ok=0
     echo "note: $HOSTDEMO has no --opengl-describe (or no OpenGL render suite): the OPENGL plug-ins are skipped"
@@ -418,7 +436,7 @@ EOF
 
 # Describe each plug-in (in parallel). A worker that fails (xargs exit status 123)
 # leaves no status file: its plug-ins fail below.
-export HOSTDEMO SMOKETEST_WORK=$work SMOKETEST_TIMEOUT SMOKETEST_OFX14=$ofx14
+export HOSTDEMO SMOKETEST_WORK=$work SMOKETEST_TIMEOUT SMOKETEST_PROFILE=$profile
 [ -z "$out" ] || export SMOKETEST_KEEP=1
 failed_workers=
 tr '\n' '\0' < "$work/plugins.txt" | xargs -r -0 -n 1 -P "$jobs" "$0" --describe-job ||
@@ -427,17 +445,18 @@ tr '\n' '\0' < "$work/plugins.txt" | xargs -r -0 -n 1 -P "$jobs" "$0" --describe
 # The render jobs, one per line: "name|bundle|id|major|context|depth|Clip=spec;...|
 # PARAMS entry number|hostDemo argument;...|differs:N entry number" (the last three are
 # empty for a default render)
-python3 -I - "$work" "$quick" "${SMOKETEST_DEBUG:-0}" "$ofx14" "$gl_ok" > "$work/jobs.txt" 2> "$work/describe-results.txt" << 'EOF' ||
+python3 -I - "$work" "$quick" "${SMOKETEST_DEBUG:-0}" "$profile" "$gl_ok" > "$work/jobs.txt" 2> "$work/describe-results.txt" << 'EOF' ||
 import json, os, re, sys
-work, quick, debug, ofx14 = sys.argv[1], sys.argv[2] == "1", sys.argv[3] == "1", sys.argv[4] == "1"
+work, quick, debug, profile = sys.argv[1], sys.argv[2] == "1", sys.argv[3] == "1", sys.argv[4]
 gl_ok = sys.argv[5] == "1"
 def entries(name):
     return [l.rstrip("\n") for l in open(os.path.join(work, name)) if l.strip()]
 def only_in(desc):
-    # (keep, desc): the "debug:" entries are only used in debug builds, the "ofx14:" ones with --ofx14
+    # (keep, desc): the "debug:" entries are only used in debug builds, the "ofx14:" ones with
+    # --ofx14, the "ofx11:" ones with --ofx11
     keep = True
-    while desc.startswith(("debug:", "ofx14:")):
-        keep = keep and (debug if desc.startswith("debug:") else ofx14)
+    while desc.startswith(("debug:", "ofx14:", "ofx11:")):
+        keep = keep and (debug if desc.startswith("debug:") else desc[:5] == profile)
         desc = desc[6:]
     return keep, desc
 skip = []
@@ -477,7 +496,8 @@ for line in open(os.path.join(work, "plugins.txt")):
     bundle, pid, major = line.split()
     reason = next((r for rx, r in skip if re.fullmatch(rx, pid)), None)
     if reason is None and pid in opengl and not gl_ok:
-        reason = "OpenGL only, and this hostDemo has no --opengl-describe: " + opengl[pid]
+        reason = ("OpenGL only, and hostDemo --ofx11 refuses --opengl-describe: " if profile == "ofx11" else
+                  "OpenGL only, and this hostDemo has no --opengl-describe: ") + opengl[pid]
     tag = "%s v%s" % (pid, major)
     if reason:
         print("SKIP|%s|%s||%s" % (tag, pid, reason), file=sys.stderr)
@@ -563,6 +583,9 @@ for line in open(os.path.join(work, "plugins.txt")):
         ins = ";".join("%s=%s" % i for i in inputs.items())
         ds = sorted(set(depths[p] for p in c["flags"]["supportedPixelDepths"] if p in depths),
                     key=["byte", "short", "float"].index)
+        if profile == "ofx11":
+            # the --ofx11 host only has byte and float (hostDemo refuses -d short)
+            ds = [d for d in ds if d != "short"]
         info[ctx] = (ins, ds)
         if skipped:
             continue
@@ -609,19 +632,20 @@ mode=full
 [ -z "$only" ] || mode=only
 [ -z "$SMOKETEST_BUNDLES" ] || mode=$mode-partial
 status=0
-python3 -I - "$work" "${SMOKETEST_DEBUG:-0}" "$mode" "${SMOKETEST_XPASS_OK:-0}" "$ofx14" << 'EOF' || status=$?
+python3 -I - "$work" "${SMOKETEST_DEBUG:-0}" "$mode" "${SMOKETEST_XPASS_OK:-0}" "$profile" << 'EOF' || status=$?
 import json, os, re, sys
 work, debug, mode, xpass_ok = sys.argv[1], sys.argv[2] == "1", sys.argv[3], sys.argv[4] == "1"
-ofx14 = sys.argv[5] == "1"
+profile = sys.argv[5]
 # stale entries are only a warning with SMOKETEST_BUNDLES (a partial build) or SMOKETEST_XPASS_OK
 lenient = mode.endswith("partial") or xpass_ok
 def entries(name):
     return [l.rstrip("\n") for l in open(os.path.join(work, name)) if l.strip()]
 def debug_only(desc):
-    # (keep, desc): the "debug:" entries are only used in debug builds, the "ofx14:" ones with --ofx14
+    # (keep, desc): the "debug:" entries are only used in debug builds, the "ofx14:" ones with
+    # --ofx14, the "ofx11:" ones with --ofx11
     keep = True
-    while desc.startswith(("debug:", "ofx14:")):
-        keep = keep and (debug if desc.startswith("debug:") else ofx14)
+    while desc.startswith(("debug:", "ofx14:", "ofx11:")):
+        keep = keep and (debug if desc.startswith("debug:") else desc[:5] == profile)
         desc = desc[6:]
     return keep, desc
 xfail = []
@@ -659,9 +683,9 @@ DESCRIBED = "described only, OpenGL render needed (OPENGL)"
 notes = {"identity": set(), "empty RoD": set(), NOREF: set(), DESCRIBED: set()}
 # hostDemo is built with the OFX_EXTENSIONS_* of the plug-ins (-DOFX_BUILD_HOSTDEMO=ON):
 # it always renders both views of a stereo frame (the report has no view count), except
-# with --ofx14 (one view, outputs without the l/r suffix)
-VIEWS = 1 if ofx14 else 2
-PROFILE = "ofx14" if ofx14 else "default"
+# with --ofx14 and --ofx11 (one view, outputs without the l/r suffix)
+VIEWS = 1 if profile in ("ofx14", "ofx11") else 2
+PROFILE = profile
 
 
 def note(tag, res):
@@ -869,7 +893,7 @@ for line in open(os.path.join(work, "jobs.txt")):
         for l in log.strip().splitlines()[-15:]:
             print("  | " + l)
         print("  | (cd %s && OFX_PLUGIN_PATH=<%s bundle dir> hostDemo --no-std-paths --no-cache%s -p %s -m %s -c %s -d %s%s%s)"
-              % (name, bundle, " --ofx14" if ofx14 else "", pid, major, ctx, depth, "".join(" -i " + i for i in inputs.split(";") if i),
+              % (name, bundle, "" if profile == "default" else " --" + profile, pid, major, ctx, depth, "".join(" -i " + i for i in inputs.split(";") if i),
                  "".join(" " + w for w in pwords.split(";") if w)))
 times.sort(reverse=True)
 print()

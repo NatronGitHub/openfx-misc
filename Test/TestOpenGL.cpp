@@ -514,7 +514,6 @@ TestOpenGLPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         // say we are a angle parameter
         param->setDoubleType(eDoubleTypeAngle);
         param->setDefault(0.);
-        param->setRange(-DBL_MAX, DBL_MAX);
         param->setDisplayRange(-180., 180.);
         param->setIncrement(1.);
         if (page) {
@@ -528,7 +527,6 @@ TestOpenGLPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         // say we are a angle parameter
         param->setDoubleType(eDoubleTypeAngle);
         param->setDefault(0.);
-        param->setRange(-DBL_MAX, DBL_MAX);
         param->setDisplayRange(-180., 180.);
         param->setIncrement(1.);
         if (page) {
@@ -542,7 +540,6 @@ TestOpenGLPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         // say we are a angle parameter
         param->setDoubleType(eDoubleTypeAngle);
         param->setDefault(0.);
-        param->setRange(-DBL_MAX, DBL_MAX);
         param->setDisplayRange(-180., 180.);
         param->setIncrement(1.);
         if (page) {

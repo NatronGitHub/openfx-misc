@@ -543,7 +543,6 @@ SpriteSheetPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     {
         IntParamDescriptor* param = desc.defineIntParam(kParamFrameOffset);
         param->setLabelAndHint(kParamFrameOffsetLabel);
-        param->setRange(INT_MIN, INT_MAX);
         param->setDefault(1);
         if (page) {
             page->addChild(*param);

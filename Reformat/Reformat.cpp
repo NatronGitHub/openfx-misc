@@ -975,7 +975,6 @@ ReformatPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &de
         param->setDoubleType(eDoubleTypeScale);
         //param->setDimensionLabels("w","h");
         param->setDefault(1, 1);
-        param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX);
         param->setDisplayRange(0.1, 0.1, 10, 10);
         param->setIncrement(0.01);
         param->setUseHostNativeOverlayHandle(false);

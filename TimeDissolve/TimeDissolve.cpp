@@ -535,8 +535,6 @@ TimeDissolvePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamInLabel);
         param->setHint(kParamInHint);
         param->setDefault(1);
-        param->setRange(INT_MIN, INT_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
-        param->setDisplayRange(INT_MIN, INT_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         if (page) {
             page->addChild(*param);
         }
@@ -546,16 +544,13 @@ TimeDissolvePluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamOutLabel);
         param->setHint(kParamOutHint);
         param->setDefault(10);
-        param->setRange(INT_MIN, INT_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(INT_MIN, INT_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         if (page) {
             page->addChild(*param);
         }
     }
-    const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-    const bool supportsParametricParameter = ( hostDescription.supportsParametricParameter &&
-                                               !(hostDescription.hostName == "uk.co.thefoundry.nuke" &&
-                                                 8 <= hostDescription.versionMajor && hostDescription.versionMajor <= 11) );  // Nuke 8-11.1 are known to *not* support Parametric
+    // false in Nuke 8 to 11.1, whose parametric suite is broken (Support, NatronGitHub/openfx#351)
+    const bool supportsParametricParameter = getImageEffectHostDescription()->supportsParametricParameter;
     if (supportsParametricParameter) {
         ParametricParamDescriptor* param = desc.defineParametricParam(kParamCurve);
         assert(param);
@@ -591,10 +586,8 @@ ImageEffect*
 TimeDissolvePluginFactory::createInstance(OfxImageEffectHandle handle,
                                           ContextEnum /*context*/)
 {
-    const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-    const bool supportsParametricParameter = ( hostDescription.supportsParametricParameter &&
-                                               !(hostDescription.hostName == "uk.co.thefoundry.nuke" &&
-                                                 8 <= hostDescription.versionMajor && hostDescription.versionMajor <= 11) );  // Nuke 8-11.1 are known to *not* support Parametric
+    // false in Nuke 8 to 11.1, whose parametric suite is broken (Support, NatronGitHub/openfx#351)
+    const bool supportsParametricParameter = getImageEffectHostDescription()->supportsParametricParameter;
 
     return new TimeDissolvePlugin(handle, supportsParametricParameter);
 }

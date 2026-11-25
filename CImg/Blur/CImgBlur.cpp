@@ -3043,7 +3043,6 @@ CImgBlurPlugin::describeInContext(ImageEffectDescriptor& desc,
             DoubleParamDescriptor *param = desc.defineDoubleParam(name);
             param->setLabel(label);
             param->setHint(hint);
-            param->setRange(-DBL_MAX, DBL_MAX);
             param->setDisplayRange(0., 1.);
             param->setDefault(defaultValue);
             if (page) {
@@ -3061,7 +3060,6 @@ CImgBlurPlugin::describeInContext(ImageEffectDescriptor& desc,
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSharpenSoftenAmount);
             param->setLabel(kParamSharpenSoftenAmountLabel);
             param->setHint(blurPlugin == eBlurPluginSharpen ? kParamSharpenAmountHint : kParamSoftenAmountHint);
-            param->setRange(-DBL_MAX, DBL_MAX);
             param->setDisplayRange(0., 1.);
             param->setDefault(blurPlugin == eBlurPluginSharpen ? 1. : 0.5);
             if (page) {
@@ -3074,7 +3072,6 @@ CImgBlurPlugin::describeInContext(ImageEffectDescriptor& desc,
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamErodeSize);
             param->setLabel(kParamErodeSizeLabel);
             param->setHint(kParamErodeSizeHint);
-            param->setRange(-DBL_MAX, DBL_MAX);
             param->setDisplayRange(-100, 100);
             param->setDefault(-1);
             param->setDigits(1);
@@ -3161,7 +3158,6 @@ CImgBlurPlugin::describeInContext(ImageEffectDescriptor& desc,
                 param->setDefault(kParamSizeDefault, kParamSizeDefault);
             }
             param->setDoubleType(eDoubleTypeXY);
-            param->setDefaultCoordinateSystem(eCoordinatesCanonical); // Nuke defaults to Normalized for XY and XYAbsolute!
             param->setDigits(1);
             param->setIncrement(0.1);
             param->setLayoutHint(eLayoutHintNoNewLine, 1);
@@ -3344,7 +3340,6 @@ CImgBlurPlugin::describeInContext(ImageEffectDescriptor& desc,
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEdgeDetectErode);
             param->setLabel(kParamEdgeDetectErodeLabel);
             param->setHint(kParamEdgeDetectErodeHint);
-            param->setRange(-DBL_MAX, DBL_MAX);
             param->setDisplayRange(-10, 10);
             param->setDefault(0);
             param->setDigits(1);

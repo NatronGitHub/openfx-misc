@@ -2477,8 +2477,6 @@ defineIntSub(ImageEffectDescriptor &desc,
 
     param->setLabel(label + nb);
     param->setHint(hint);
-    param->setRange(INT_MIN, INT_MAX);
-    param->setDisplayRange(INT_MIN, INT_MAX);
     param->setDefault(defaultValue);
     param->setEvaluateOnChange(isExtraParam);
     param->setAnimates(isExtraParam);
@@ -2516,8 +2514,6 @@ defineDoubleSub(ImageEffectDescriptor &desc,
 
     param->setLabel(label + nb);
     param->setHint(hint);
-    param->setRange(-DBL_MAX, DBL_MAX);
-    param->setDisplayRange(-DBL_MAX, DBL_MAX);
     param->setDefault(defaultValue);
     param->setDoubleType(eDoubleTypePlain);
     param->setEvaluateOnChange(isExtraParam);
@@ -2556,8 +2552,6 @@ defineDouble2DSub(ImageEffectDescriptor &desc,
 
     param->setLabel(label + nb);
     param->setHint(hint);
-    param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX);
-    param->setDisplayRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX);
     param->setDefault(defaultValue, defaultValue);
     param->setDoubleType(eDoubleTypePlain);
     param->setEvaluateOnChange(isExtraParam);
@@ -2713,7 +2707,6 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamMousePositionLabel);
         param->setHint(kParamMousePositionHint);
         param->setDoubleType(eDoubleTypeXYAbsolute);
-        param->setDefaultCoordinateSystem(eCoordinatesCanonical); // Nuke defaults to Normalized for XY and XYAbsolute!
         param->setUseHostNativeOverlayHandle(true);
         param->setAnimates(true);
         if (page) {
@@ -2725,7 +2718,6 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamMouseClickLabel);
         param->setHint(kParamMouseClickHint);
         param->setDoubleType(eDoubleTypeXYAbsolute);
-        param->setDefaultCoordinateSystem(eCoordinatesCanonical); // Nuke defaults to Normalized for XY and XYAbsolute!
         param->setDefault(1.,1.);
         param->setUseHostNativeOverlayHandle(true);
         param->setAnimates(true);

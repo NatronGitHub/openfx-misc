@@ -6,7 +6,7 @@ name: Continous Integration tests
 # headless render test (.github/tools/rendertest.sh, with openfx's hostDemo,
 # built with -DOFX_BUILD_HOSTDEMO=ON) and a smoke test that renders every plug-in
 # (.github/tools/smoketest.sh), then again in an OFX 1.4 host (smoketest.sh
-# --ofx14); nightly.yml runs the first two on macOS too. Windows renders
+# --ofx14) and in an OFX 1.1 host (--ofx11); nightly.yml runs the first two on macOS too. Windows renders
 # the FFT convolution test only (a pocketfft deadlock at plug-in unload, openfx-gmic#94).
 # macOS runs only after Linux and Windows pass, and is informative: a red or missing
 # macOS check does not block merging (macOS arm64 runners are scarce).
@@ -222,6 +222,12 @@ jobs:
         # view): every plug-in must also work without OFX 1.5 and the extensions.
         timeout-minutes: 10
         run: .github/tools/smoketest.sh --quick --ofx14 install
+      - name: Smoke test (hostDemo --ofx11, all plug-ins)
+        # The same in an OFX 1.1 host modelled on VEGAS Pro (hostDemo --ofx11: the OFX 1.1
+        # host properties and suites, no default coordinate system, byte and float only,
+        # one view; issue #66).
+        timeout-minutes: 10
+        run: .github/tools/smoketest.sh --quick --ofx11 install
       - name: Collect bundles
         if: env.UPLOAD_ARTIFACTS == 'true'
         # Not Test: it is installed (BUILD_TESTING=ON) for the load test, but it is for

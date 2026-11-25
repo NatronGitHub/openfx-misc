@@ -794,10 +794,8 @@ void
 HueCorrectPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                                            ContextEnum context)
 {
-    const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-    const bool supportsParametricParameter = ( hostDescription.supportsParametricParameter &&
-                                               !(hostDescription.hostName == "uk.co.thefoundry.nuke" &&
-                                                 8 <= hostDescription.versionMajor && hostDescription.versionMajor <= 11) );  // Nuke 8-11.1 are known to *not* support Parametric
+    // false in Nuke 8 to 11.1, whose parametric suite is broken (Support, NatronGitHub/openfx#351)
+    const bool supportsParametricParameter = getImageEffectHostDescription()->supportsParametricParameter;
 
     if (!supportsParametricParameter) {
         throwHostMissingSuiteException(kOfxParametricParameterSuite);

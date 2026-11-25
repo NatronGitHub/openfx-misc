@@ -428,7 +428,6 @@ CameraParam::define(ImageEffectDescriptor &desc,
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(prefix + kParamCameraWindowRoll);
         param->setLabelAndHint(kParamCameraWindowRollLabel);
-        param->setRange(-DBL_MAX, DBL_MAX);
         param->setDisplayRange(-45, 45);
         param->setDoubleType(eDoubleTypeAngle);
         if (group) {
@@ -1271,7 +1270,6 @@ PosMatParam::define(ImageEffectDescriptor &desc,
     {
         Double3DParamDescriptor* param = desc.defineDouble3DParam(prefix + kParamPosMatTranslate);
         param->setLabelAndHint(labelPrefix + kParamPosMatTranslateLabel);
-        param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
         param->setDisplayRange(-10., -10., -10., 10., 10., 10.);
         param->setDefault(0, 0, (type == ePosMatCard) ? -1 : 0.);
         if (group) {
@@ -1284,7 +1282,6 @@ PosMatParam::define(ImageEffectDescriptor &desc,
     {
         Double3DParamDescriptor* param = desc.defineDouble3DParam(prefix + kParamPosMatRotate);
         param->setLabelAndHint(labelPrefix + kParamPosMatRotateLabel);
-        param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
         param->setDisplayRange(-180., -180., -180., 180., 180., 180.);
         param->setDefault(0., 0., 0.);
         param->setDoubleType(eDoubleTypeAngle);
@@ -1298,7 +1295,6 @@ PosMatParam::define(ImageEffectDescriptor &desc,
     {
         Double3DParamDescriptor* param = desc.defineDouble3DParam(prefix + kParamPosMatScale);
         param->setLabelAndHint(labelPrefix + kParamPosMatScaleLabel);
-        param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
         param->setDisplayRange(0.01, 0.01, 0.01, 10., 10., 10.);
         param->setDefault(1., 1., 1.);
         param->setDoubleType(eDoubleTypeScale);
@@ -1312,7 +1308,6 @@ PosMatParam::define(ImageEffectDescriptor &desc,
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(prefix + kParamPosMatUniformScale);
         param->setLabelAndHint(labelPrefix + kParamPosMatUniformScaleLabel);
-        param->setRange(-DBL_MAX, DBL_MAX);
         param->setDisplayRange(0.01, 10.);
         param->setDefault(1.);
         param->setDoubleType(eDoubleTypeScale);
@@ -1326,7 +1321,6 @@ PosMatParam::define(ImageEffectDescriptor &desc,
     {
         Double3DParamDescriptor* param = desc.defineDouble3DParam(prefix + kParamPosMatSkew);
         param->setLabelAndHint(labelPrefix + kParamPosMatSkewLabel);
-        param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
         param->setDisplayRange(-1., -1., -1., 1., 1., 1.);
         param->setDefault(0., 0., 0.);
         if (group) {
@@ -1339,7 +1333,6 @@ PosMatParam::define(ImageEffectDescriptor &desc,
     {
         Double3DParamDescriptor* param = desc.defineDouble3DParam(prefix + kParamPosMatPivot);
         param->setLabelAndHint(labelPrefix + kParamPosMatPivotLabel);
-        param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
         param->setDisplayRange(-10., -10., -10., 10., 10., 10.);
         param->setDefault(0., 0., 0.);
         if (group) {
@@ -1377,7 +1370,6 @@ PosMatParam::define(ImageEffectDescriptor &desc,
             for (int j = 0; j < 4; ++j) {
                 DoubleParamDescriptor* param = desc.defineDoubleParam(prefix + kParamPosMatMatrix + (char)('1' + i) + (char)('1' + j));
                 param->setLabelAndHint(labelPrefix + kParamPosMatMatrixLabel);
-                param->setRange(-DBL_MAX, DBL_MAX);
                 param->setDisplayRange(-1., 1.);
                 param->setDefault(i == j ? 1. : (i == 2 && j == 3) ? -1. : 0.);
                 if (j < 3) {
@@ -2298,7 +2290,6 @@ Card3DPluginFactory::describeInContext(ImageEffectDescriptor &desc,
             param->setDoubleType(eDoubleTypeXYAbsolute);
             ofxsSetDefaultCoordinateSystemNormalised(*param); // see ofxsNormalisedDefaults.h (#236)
             param->setDefault(0., 0.);
-            param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
             param->setIncrement(1.);
             param->setLayoutHint(eLayoutHintNoNewLine, 1);

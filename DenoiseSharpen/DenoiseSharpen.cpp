@@ -3803,7 +3803,6 @@ DenoiseSharpenPluginFactory::describeInContext(ImageEffectDescriptor &desc,
                 gHostSupportsDefaultCoordinateSystem = false; // no multithread here, see kParamDefaultsNormalised
             }
             param->setDefault(0.1, 0.1);
-            param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
             param->setIncrement(1.);
             param->setHint("Coordinates of the bottom left corner of the analysis rectangle. This rectangle is intersected with the AnalysisMask input, if connected.");

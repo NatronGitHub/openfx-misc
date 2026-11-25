@@ -1452,7 +1452,6 @@ ColorCorrectPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor
             param->setHint(kParamRangeHint);
             param->setDefault(0., 1.);
             param->setDoubleType(eDoubleTypePlain);
-            param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0., 0., 1., 1.);
             param->setUseHostNativeOverlayHandle(false);
             param->setAnimates(true);
@@ -1460,10 +1459,8 @@ ColorCorrectPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor
                 ranges->addChild(*param);
             }
         }
-        const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-        const bool supportsParametricParameter = ( hostDescription.supportsParametricParameter &&
-                                                  !(hostDescription.hostName == "uk.co.thefoundry.nuke" &&
-                                                    8 <= hostDescription.versionMajor && hostDescription.versionMajor <= 11) );  // Nuke 8-11.1 are known to *not* support Parametric
+        // false in Nuke 8 to 11.1, whose parametric suite is broken (Support, NatronGitHub/openfx#351)
+        const bool supportsParametricParameter = getImageEffectHostDescription()->supportsParametricParameter;
         if (supportsParametricParameter) {
             ParametricParamDescriptor* param = desc.defineParametricParam(kParamColorCorrectToneRanges);
             assert(param);
@@ -1579,10 +1576,8 @@ ImageEffect*
 ColorCorrectPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                                         ContextEnum /*context*/)
 {
-    const ImageEffectHostDescription &hostDescription = *getImageEffectHostDescription();
-    const bool supportsParametricParameter = ( hostDescription.supportsParametricParameter &&
-                                               !(hostDescription.hostName == "uk.co.thefoundry.nuke" &&
-                                                 8 <= hostDescription.versionMajor && hostDescription.versionMajor <= 11) );  // Nuke 8-11.1 are known to *not* support Parametric
+    // false in Nuke 8 to 11.1, whose parametric suite is broken (Support, NatronGitHub/openfx#351)
+    const bool supportsParametricParameter = getImageEffectHostDescription()->supportsParametricParameter;
 
     return new ColorCorrectPlugin(handle, supportsParametricParameter, majorVersion);
 }

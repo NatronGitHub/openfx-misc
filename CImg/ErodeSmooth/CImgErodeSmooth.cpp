@@ -633,7 +633,6 @@ CImgErodeSmoothPluginFactory::describeInContext(ImageEffectDescriptor& desc,
         param->setHint(kParamRangeHint);
         param->setDefault(0., 1.);
         param->setDoubleType(eDoubleTypePlain);
-        param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(0., 0., 1., 1.);
         param->setAnimates(true);
         if (page) {
@@ -648,7 +647,6 @@ CImgErodeSmoothPluginFactory::describeInContext(ImageEffectDescriptor& desc,
         param->setDisplayRange(-100, -100, 100, 100);
         param->setDefault(kParamSizeDefault, kParamSizeDefault);
         param->setDoubleType(eDoubleTypeXY);
-        param->setDefaultCoordinateSystem(eCoordinatesCanonical); // Nuke defaults to Normalized for XY and XYAbsolute!
         param->setDigits(1);
         param->setIncrement(0.1);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
