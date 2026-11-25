@@ -328,27 +328,23 @@ If you use the Roto plugin in any other host than [Natron](http://natron.inria.f
 
 ### The default parameters are too small on DaVinci Resolve
 
-This is because Resolve does not support the `kOfxParamPropDefaultCoordinateSystem` property. A solution was implemented in CornerPin (look for the comment "Some hosts (e.g. Resolve) may not support normalized defaults"), but the following plugins still have to be fixed:
+This is because Resolve does not support the `kOfxParamPropDefaultCoordinateSystem` property, and gives the plugin the normalised default as is (e.g. a size of 1x1 pixels instead of the project size). Two workarounds exist:
 
-- CopyRectangle
-- Crop
-- HSVTool
-- ImageStatistics
-- ofxsGenerator
-- ofxsPositionInteract
-- ofxsTransformInteract
-- Position
-- TestPosition
-- TrackerPM
+- SupportExt's `ofxsNormalisedDefaults.h` (`ofxsSetDefaultCoordinateSystemNormalised()` in describe, `ofxsDenormaliseUntouchedDefault()` in the constructor), used by Card3D, CopyRectangle, Distortion, ImageStatistics, NoOp, Position and TrackerPM. New code should use it.
+- the older secret boolean parameter (`kParamDefaultsNormalised`, look for the comment "Some hosts (e.g. Resolve) may not support normalized defaults"), used by CornerPin, DenoiseSharpen, HSVTool and SupportExt's ofxsGenerator (thus Crop, Rectangle, Radial and the other generators).
 
-### ColorLookup does not work on Nuke 8/9, DaVinci Resolve...
+Two more normalised defaults are being converted: Transform's Center (fixed by NatronGitHub/openfx-supportext#218, effective with the SupportExt bump in #418) and ZDefocusCImg's Focus Point (fixed by #416).
 
-Although Nuke 8 & 9 claim via OpenFX that they support parametric parameters (i.e. adjustable parametric curves), these don't work (at least on OS X, and maybe on other platforms). The plugin appears in the plugin list, but cannot be instanciated. Nothing seems to happen, and the following message appears on the console (on OS X):
+### ColorLookup does not work on Nuke 8 to 11, DaVinci Resolve...
+
+Although Nuke 8 to 11 (11.1 is the last version known to be broken) claim via OpenFX that they support parametric parameters (i.e. adjustable parametric curves), these don't work (at least on OS X, and maybe on other platforms). A plugin that uses them appears in the plugin list, but cannot be instantiated. Nothing seems to happen, and the following message appears on the console (on OS X):
 
     Exception thrown
       basic_string::_S_construct NULL not valid
 
 The same happens with other plugins using parametric parameters, such as TuttleHistogramKeyer.
+
+openfx-misc therefore treats these versions as hosts without parametric parameters: ColorLookup and HueCorrect are not available in their contexts (describeInContext reports the parametric parameter suite as missing), and ColorCorrect, Retime and TimeDissolve work without their curves.
 
 Parametric parameters work in older versions of Nuke (at least in Nuke 6 & 7).
 
@@ -356,7 +352,7 @@ DaVinci Resolve does not support parametric parameters.
 
 Please [file an issue](https://github.com/NatronGitHub/openfx-misc/issues) if you think openfx-misc is doing something wrong, or you know of other hosts which have problems with parametric paremeters.
 
-Although ColorCorrect uses parametric parameters, it can still be instanciated on Nuke 8 & 9 and on DaVinci Resolve, but the curve ranges are not adjustable (shadows are decreasing linearly from 0 to 0.09, and highlights are increasing linearly from 0.5 to 1.0).
+Although ColorCorrect uses parametric parameters, it can still be instantiated on Nuke 8 to 11 and on DaVinci Resolve, but the curve ranges are not adjustable (shadows are decreasing linearly from 0 to 0.09, and highlights are increasing linearly from 0.5 to 1.0).
 
 
 ### Retime output does not contain motion blur, where is the "box" filter and the "shutter" parameter?

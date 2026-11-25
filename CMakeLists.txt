@@ -731,7 +731,7 @@ if(BUILD_TESTING)
     Test/TestRender.cpp Test/TestPosition.cpp Test/TestGroups.cpp Test/TestHostBehaviour.cpp
     Test/TestOpenGL.cpp Test/TestOpenGLRenderGL.cpp Test/TestOpenGLRenderMesa.cpp)
   supportext_add_sources(Test COMPONENTS THREADS TRANSFORM3X3) # + SHUTTER, as Test/Makefile
-  target_link_libraries(Test PRIVATE OpenGL::GL)
+  target_link_libraries(Test PRIVATE OpenGL::GL ${CMAKE_DL_LIBS}) # dl: eglGetCurrentContext lookup (TestOpenGL)
   target_include_directories(Test PRIVATE ${OFXMISC_GLEXT_INCLUDE_DIR}) # MSVC: GL/glext.h
   ofx_deploy_bundle(Test)
 endif()

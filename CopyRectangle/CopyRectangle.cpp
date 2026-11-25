@@ -30,6 +30,7 @@
 #include "ofxsNormalisedDefaults.h"
 #include "ofxsRectangleInteract.h"
 #include "ofxsMaskMix.h"
+#include "ofxsRGBAProcessing.h"
 #include "ofxsMacros.h"
 #include "ofxsThreadSuite.h"
 
@@ -685,12 +686,7 @@ CopyRectanglePlugin::isIdentity(const IsIdentityArguments &args,
         return true;
     }
 
-    // In Sony Catalyst Edit, clipGetRegionOfDefinition returns the RoD in pixels instead of canonical coordinates.
-    // In hosts that do not support multiResolution (e.g. Sony Catalyst Edit), all inputs have the same RoD anyway.
-    OfxRectI maskRoD;
-    if ( getImageEffectHostDescription()->supportsMultiResolution &&
-         ofxsMaskGetRoDPixel(_maskClip, _maskApply, _maskInvert, args.time, args.renderScale, &maskRoD) &&
-         !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
+    if ( ofxsMaskRoDExcludesRenderWindow(args, _maskClip, _maskApply, _maskInvert) ) {
         // effect is identity if the renderWindow doesn't intersect the mask RoD
         identityClip = _srcClipB;
 
