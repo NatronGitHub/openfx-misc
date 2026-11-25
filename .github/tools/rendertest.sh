@@ -486,6 +486,14 @@ hostdemo() {
 # fails otherwise, it is a FAIL; if it passes (XPASS), the test fails too, so
 # that the entry is updated when the bug is fixed. A "debug:" known bug (a
 # failed assertion) is only expected in debug builds.
+# ContactSheet (filter context): hostDemo connects every clip that has no -i, so the inputs
+# after the last one of a test are disconnected with -i N=none (Center Rows depends on the last
+# connected input). The clips of inputs 10 to 15 are named 01, 11, 21, 31, 41 and 51: the
+# plug-in's unsignedToString() writes the digits in reverse order (a bug, to be fixed separately,
+# which will rename them here)
+cs_none10="01 11 21 31 41 51"
+cs_none2=$(for i in $(seq 2 9) $cs_none10; do printf -- ' -i %s=none' "$i"; done)
+cs_none3=$(for i in $(seq 3 9) $cs_none10; do printf -- ' -i %s=none' "$i"; done)
 tests=(
     # generators. The byte and short outputs of Constant are sRGB and Rec.709:
     # 1 and 0 are the same in all three.
@@ -1180,6 +1188,20 @@ tests=(
     # clip 1 (its frame 22, then 25) is weighted by 0.8 at frame 23 and 0.2 at frame 26
     "AppendClip dissolve 4 first|net.sf.openfx.AppendClip|general|float|mean=17.665,0.1,0.1,1||-i 1=default -i 2=solid:0.5,0.5,0.5,1 crossDissolve=4 --frames 23"
     "AppendClip dissolve 4 last|net.sf.openfx.AppendClip|general|float|mean=5.390,0.4,0.4,1||-i 1=default -i 2=solid:0.5,0.5,0.5,1 crossDissolve=4 --frames 26"
+    # ContactSheet, 2x2 cells of 32x32 pixels (#305). The 720x576 inputs fit the width of a cell,
+    # at its bottom left: the 8x8 windows are inside the image of a cell. Two inputs, top to
+    # bottom: they fill the top row, and the bottom row is empty; with Center Rows, the row of
+    # images is in the middle (y 16 to 48)
+    "ContactSheet top row|net.sf.openfx.ContactSheetOFX|filter|float|mean=0.5,0.5,0.5,1||-i Source=solid:1,1,1,1 -i 1=solid:0.5,0.5,0.5,1${cs_none2} resolution=64,64 rowsColumns=2,2 rowOrder=0 --frames 0 --window 36,36,44,44"
+    "ContactSheet bottom row empty|net.sf.openfx.ContactSheetOFX|filter|float|mean=0,0,0,0||-i Source=solid:1,1,1,1 -i 1=solid:0.5,0.5,0.5,1${cs_none2} resolution=64,64 rowsColumns=2,2 rowOrder=0 --frames 0 --window 4,4,12,12"
+    "ContactSheet Center Rows|net.sf.openfx.ContactSheetOFX|filter|float|mean=1,1,1,1||-i Source=solid:1,1,1,1 -i 1=solid:0.5,0.5,0.5,1${cs_none2} resolution=64,64 rowsColumns=2,2 rowOrder=0 centerRows=1 --frames 0 --window 4,20,12,28"
+    "ContactSheet Center Rows right|net.sf.openfx.ContactSheetOFX|filter|float|mean=0.5,0.5,0.5,1||-i Source=solid:1,1,1,1 -i 1=solid:0.5,0.5,0.5,1${cs_none2} resolution=64,64 rowsColumns=2,2 rowOrder=0 centerRows=1 --frames 0 --window 36,20,44,28"
+    # Snake, bottom to top: inputs 0 and 1 in the bottom row from left to right, input 2 at the
+    # right of the second row
+    "ContactSheet Snake|net.sf.openfx.ContactSheetOFX|filter|float|mean=0.25,0.25,0.25,1||-i Source=solid:1,1,1,1 -i 1=solid:0.5,0.5,0.5,1 -i 2=solid:0.25,0.25,0.25,1${cs_none3} resolution=64,64 rowsColumns=2,2 colOrder=2 --frames 0 --window 36,36,44,44"
+    # the first row goes from left to right (RightLeft would put input 1, 0.5, at the bottom left)
+    "ContactSheet Snake first row|net.sf.openfx.ContactSheetOFX|filter|float|mean=1,1,1,1||-i Source=solid:1,1,1,1 -i 1=solid:0.5,0.5,0.5,1 -i 2=solid:0.25,0.25,0.25,1${cs_none3} resolution=64,64 rowsColumns=2,2 colOrder=2 --frames 0 --window 4,4,12,12"
+    "ContactSheet Snake empty|net.sf.openfx.ContactSheetOFX|filter|float|mean=0,0,0,0||-i Source=solid:1,1,1,1 -i 1=solid:0.5,0.5,0.5,1 -i 2=solid:0.25,0.25,0.25,1${cs_none3} resolution=64,64 rowsColumns=2,2 colOrder=2 --frames 0 --window 4,36,12,44"
     "AppendClip dissolve 4 after|net.sf.openfx.AppendClip|general|*|identity+mean=0.5,0.5,0.5,1||-i 1=default -i 2=solid:0.5,0.5,0.5,1 crossDissolve=4 --frames 27"
 )
 
