@@ -97,6 +97,12 @@ def case_ofx_times(case):
     samples each whole frame through a time node of "nuke_post" (e.g. a
     Retime) that asks the node for the matching, maybe fractional, time.
 
+    Args:
+        case: a case dict (cases.py).
+
+    Returns:
+        A list of times (float), one per frame.
+
     Raises:
         CaseError: "ofx_times" does not have one time per frame.
     """
@@ -750,7 +756,11 @@ def run_case(nuke, prefix, case, work):
     if "ofx_times" in case:
         # compare each Nuke frame with the hostDemo render at its time
         frame_of = dict(zip(case_ofx_times(case), case_frames(case)))
-        ofx_results = {(float(frame_of.get(t, t)), view): values
+        unmatched = sorted(t for t, _ in ofx_results if t not in frame_of)
+        if unmatched:
+            raise CaseError("hostDemo rendered times not in ofx_times: %r"
+                            % (unmatched,))
+        ofx_results = {(float(frame_of[t]), view): values
                        for (t, view), values in ofx_results.items()}
     nuke_results = run_nuke(nuke, case, work)
     return compare(case, nuke_results, ofx_results)

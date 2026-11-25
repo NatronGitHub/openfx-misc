@@ -1391,6 +1391,26 @@ CASES += [
 # ------------------------------------------------------------------ Time
 # "frame" has red = the frame number; hostDemo's clips have frames 0-25.
 TIME = {"input": "frame", "channels": "rgba", "tolerance": 1e-4}
+
+
+def retime_post(speed):
+    """A "nuke_post" that samples the node through a Retime.
+
+    Args:
+        speed: the Retime speed: Nuke frame f samples the node at the time
+            f * speed (filter none, input and output ranges from 0).
+
+    Returns:
+        The Python lines, for `nuke -t`.
+    """
+    return "\n".join([
+        "n = nuke.nodes.Retime(inputs=[n])",
+        "for _k, _v in (('input.first', 0), ('input.last', 40),",
+        "               ('output.first', 0), ('speed', %r),"
+        % speed,
+        "               ('filter', 'none')):",
+        "    n[_k].setValue(_v)"])
+
 CASES += [
     case("TimeOffset 5", ("TimeOffset", {"time_offset": 5}),
          (ofx_id("timeOffset"), {"timeOffset": 5}),
@@ -1411,18 +1431,21 @@ CASES += [
     case("TimeOffset 5 at fractional times, whole frames",
          ("TimeOffset", {"time_offset": 5}),
          (ofx_id("timeOffset"), {"timeOffset": 5}),
-         nuke_post='n = nuke.nodes.Retime(inputs=[n])\nfor _k, _v in (("input.first", 0), ("input.last", 40), ("output.first", 0),\n               ("speed", 0.25), ("filter", "none")):\n    n[_k].setValue(_v)', frames=[41, 42, 43], ofx_times=[10.25, 10.5, 10.75],
+         nuke_post=retime_post(0.25),
+         frames=[41, 42, 43], ofx_times=[10.25, 10.5, 10.75],
          **TIME),
     case("TimeOffset 5.5 at fractional times, whole frames",
          ("TimeOffset", {"time_offset": 5.5}),
          (ofx_id("timeOffset"), {"timeOffset": 5.5}),
-         nuke_post='n = nuke.nodes.Retime(inputs=[n])\nfor _k, _v in (("input.first", 0), ("input.last", 40), ("output.first", 0),\n               ("speed", 0.5), ("filter", "none")):\n    n[_k].setValue(_v)', frames=[21, 23], ofx_times=[10.5, 11.5], **TIME),
+         nuke_post=retime_post(0.5),
+         frames=[21, 23], ofx_times=[10.5, 11.5], **TIME),
     case("TimeOffset 5.5 at fractional times, fractional time",
          ("TimeOffset", {"time_offset": 5.5,
                          "rounding_mode": "Fractional time"}),
          (ofx_id("timeOffset"), {"timeOffset": 5.5,
                                  "roundingMode": "Fractional Time"}),
-         nuke_post='n = nuke.nodes.Retime(inputs=[n])\nfor _k, _v in (("input.first", 0), ("input.last", 40), ("output.first", 0),\n               ("speed", 0.5), ("filter", "none")):\n    n[_k].setValue(_v)', frames=[21, 23], ofx_times=[10.5, 11.5], **TIME),
+         nuke_post=retime_post(0.5),
+         frames=[21, 23], ofx_times=[10.5, 11.5], **TIME),
     case("TimeOffset 5, reverse input",
          ("TimeOffset", {"time_offset": 5, "reverse_input": True}),
          (ofx_id("timeOffset"), {"timeOffset": 5, "reverseInput": 1}),
