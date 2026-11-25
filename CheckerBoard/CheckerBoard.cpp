@@ -43,7 +43,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Image"
 #define kPluginDescription \
     "Generate an image with a checkerboard.\n" \
-    "The boxes start from the Grid Origin: the center of the image (the default), or its bottom-left corner. Counting boxes from there, Color 0 fills box (0,0) and every other box and row, Color 1 box (1,0), Color 2 box (1,1) and Color 3 box (0,1). The box size is rounded to the nearest pixel, so the board at a lower render scale (e.g. a proxy) may not match the full-size one. The center lines always go through the center of the image.\n" \
+    "The boxes start from the Grid Origin: the center of the image (the default), or its bottom-left corner. Counting boxes from there, Color 0 fills box (0,0) and every other box and row, Color 1 box (1,0), Color 2 box (1,1) and Color 3 box (0,1). The box size is rounded to the nearest pixel (at full size). The center lines always go through the center of the image.\n" \
     "A frame range may be specified for operators that need it.\n" \
     "See also: https://learn.foundry.com/nuke/content/reference_guide/image_nodes/checkerboard.html"
 #define kPluginDescriptionV1 \
@@ -57,8 +57,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //     (no version change) removed the XY render branch: Output never declares XY, so the generator
 //     never offers it and a conforming host never gives it; other components give kOfxStatErrFormat
 //     (issue #226). Output is unchanged.
-// 2.0 the box size is rounded to the nearest pixel (at the render scale, after the pixel aspect
-//     ratio), and the center lines are 3 pixels wide by default, as in the CheckerBoard node of the
+// 2.0 the box size is rounded to the nearest pixel (at full size, after the pixel aspect ratio,
+//     then scaled by the render scale), and the center lines are 3 pixels wide by default, as in the CheckerBoard node of the
 //     same name. The Grid Origin param: the boxes may start from the bottom-left corner instead of
 //     the center (the default). With Extent Default and Source connected, Bottom Left starts from
 //     the Source RoD (the output RoD); Center uses the project, as in 1.0 (#285).
@@ -88,18 +88,22 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamColor0 "color0"
 #define kParamColor0Label "Color 0"
 #define kParamColor0Hint "Color to fill box (0,0) from the Grid Origin (with Center, the box on the top-right of the image center) and every other box and row."
+#define kParamColor0HintV1 "Color to fill the box on the top-right of the image center and every other box and row."
 
 #define kParamColor1 "color1"
 #define kParamColor1Label "Color 1"
 #define kParamColor1Hint "Color to fill box (1,0) from the Grid Origin (with Center, the box on the top-left of the image center) and every other box and row."
+#define kParamColor1HintV1 "Color to fill the box on the top-left of the image center and every other box and row."
 
 #define kParamColor2 "color2"
 #define kParamColor2Label "Color 2"
 #define kParamColor2Hint "Color to fill box (1,1) from the Grid Origin (with Center, the box on the bottom-left of the image center) and every other box and row."
+#define kParamColor2HintV1 "Color to fill the box on the bottom-left of the image center and every other box and row."
 
 #define kParamColor3 "color3"
 #define kParamColor3Label "Color 3"
 #define kParamColor3Hint "Color to fill box (0,1) from the Grid Origin (with Center, the box on the bottom-right of the image center) and every other box and row."
+#define kParamColor3HintV1 "Color to fill the box on the bottom-right of the image center and every other box and row."
 
 #define kParamGridOrigin "gridOrigin"
 #define kParamGridOriginLabel "Grid Origin"
@@ -197,14 +201,14 @@ public:
         if (pixelAspectRatio == 0) {
             pixelAspectRatio = 1.;
         }
-        _boxSize.x = boxSize.x * renderScale.x / pixelAspectRatio;
-        _boxSize.y = boxSize.y * renderScale.y;
         if (boxSizeRounding == BoxSizeEnum::eRounded) {
-            _boxSize.x = std::round(_boxSize.x);
-            _boxSize.y = std::round(_boxSize.y);
+            // whole pixels at full size, then scaled, so that the grid is the same at any render scale
+            _boxSize.x = (std::max)( 1., std::round(boxSize.x / pixelAspectRatio) ) * renderScale.x;
+            _boxSize.y = (std::max)( 1., std::round(boxSize.y) ) * renderScale.y;
+        } else {
+            _boxSize.x = (std::max)(1., boxSize.x * renderScale.x / pixelAspectRatio);
+            _boxSize.y = (std::max)(1., boxSize.y * renderScale.y);
         }
-        _boxSize.x = (std::max)(1., _boxSize.x);
-        _boxSize.y = (std::max)(1., _boxSize.y);
         _color0 = color0;
         _color1 = color1;
         _color2 = color2;
@@ -699,7 +703,7 @@ CheckerBoardPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor0);
         param->setLabel(kParamColor0Label);
-        param->setHint(kParamColor0Hint);
+        param->setHint(majorVersion >= 2 ? kParamColor0Hint : kParamColor0HintV1);
         param->setDefault(0.1, 0.1, 0.1, 1.0);
         param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
         param->setDisplayRange(0, 0, 0, 0, 1, 1, 1, 1);
@@ -713,7 +717,7 @@ CheckerBoardPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor1);
         param->setLabel(kParamColor1Label);
-        param->setHint(kParamColor1Hint);
+        param->setHint(majorVersion >= 2 ? kParamColor1Hint : kParamColor1HintV1);
         param->setDefault(0.5, 0.5, 0.5, 1.0);
         param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
         param->setDisplayRange(0, 0, 0, 0, 1, 1, 1, 1);
@@ -727,7 +731,7 @@ CheckerBoardPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor2);
         param->setLabel(kParamColor2Label);
-        param->setHint(kParamColor2Hint);
+        param->setHint(majorVersion >= 2 ? kParamColor2Hint : kParamColor2HintV1);
         param->setDefault(0.1, 0.1, 0.1, 1.0);
         param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
         param->setDisplayRange(0, 0, 0, 0, 1, 1, 1, 1);
@@ -741,7 +745,7 @@ CheckerBoardPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor3);
         param->setLabel(kParamColor3Label);
-        param->setHint(kParamColor3Hint);
+        param->setHint(majorVersion >= 2 ? kParamColor3Hint : kParamColor3HintV1);
         param->setDefault(0.5, 0.5, 0.5, 1.0);
         param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
         param->setDisplayRange(0, 0, 0, 0, 1, 1, 1, 1);

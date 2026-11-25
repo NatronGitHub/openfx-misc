@@ -25,6 +25,8 @@
 #include <climits>
 #include <cfloat>
 #include <algorithm> // std::min, std::max
+#include <array>
+#include <string>
 
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
@@ -44,7 +46,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginGrouping "Image"
 #define kPluginDescription \
     "Generate an image with SMPTE color bars, in linear RGB (no alpha: 0 if the output is RGBA).\n" \
-    "The top two thirds have seven bars at Bar Intensity (0.5 by default): gray, yellow, cyan, green, magenta, red and blue. Below them, a strip of reversed blue, magenta, cyan and gray patches alternates with black. The bottom quarter has the -I, white, +Q and black patches and the black-level steps (PLUGE).\n" \
+    "The top two thirds have seven bars at Bar Intensity (0 to 1 on the slider, 0.5 by default): gray, yellow, cyan, green, magenta, red and blue. Below them, a strip of blue, magenta, cyan and gray patches, alternating with black. The bottom quarter has the -I, white, +Q and black patches and the black-level steps (PLUGE), which vanish in 8-bit output.\n" \
     "PAL removes the NTSC-specific patches: the seven bars fill the image.\n" \
     "See also: https://learn.foundry.com/nuke/content/reference_guide/image_nodes/colorbars.html"
 #define kPluginDescriptionV1 \
@@ -80,7 +82,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamBarIntensity "barIntensity"
 #define kParamBarIntensityLabel "Bar Intensity"
 #define kParamBarIntensityHint "Bar Intensity, in IRE unit."
-#define kParamBarIntensityHintV2 "Intensity of the bars and of the patches below them (linear). The bottom patches do not change."
+#define kParamBarIntensityHintV2 "Intensity of the bars and of the strip below them (linear, 0 to 1 on the slider). The bottom patches do not change."
 #define kParamBarIntensityDefault 75
 #define kParamBarIntensityDefaultV2 0.5
 
@@ -98,12 +100,20 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
 #endif
 
+namespace ColorBars2 {
+enum class PatternEnum
+{
+    eNTSC, // the bars, the strip and the bottom patches
+    ePAL,  // the NTSC-specific patches removed: the bars fill the image
+};
+} // namespace ColorBars2
+
 class ColorBarsProcessorBase
     : public ImageProcessor
 {
 protected:
     double _barIntensity;
-    bool _pal; // version 2
+    ColorBars2::PatternEnum _pattern; // version 2
     bool _outputIRE; // version 1
     OfxRectI _rod; // in pixel coordinates
 
@@ -112,7 +122,7 @@ public:
     ColorBarsProcessorBase(ImageEffect &instance)
         : ImageProcessor(instance)
         , _barIntensity(kParamBarIntensityDefault)
-        , _pal(false)
+        , _pattern(ColorBars2::PatternEnum::eNTSC)
         , _outputIRE(false)
         , _rod()
     {
@@ -120,12 +130,12 @@ public:
     }
 
     void setValues(const double barIntensity,
-                   const bool pal,
+                   const ColorBars2::PatternEnum pattern,
                    const bool outputIRE,
                    const OfxRectI& rod)
     {
         _barIntensity = barIntensity;
-        _pal = pal;
+        _pattern = pattern;
         _outputIRE = outputIRE;
         _rod = rod;
     }
@@ -277,55 +287,70 @@ private:
 //   (PLUGE: below black, black and above black), each 1/3 of a bar wide, then black.
 // With PAL, the seven bars fill the image.
 namespace ColorBars2 {
+using RGB = std::array<float, 3>;
+
 // the colors of the bars, in units of the bar intensity
-constexpr float kBars[7][3] = {
-    {1, 1, 1}, {1, 1, 0}, {0, 1, 1}, {0, 1, 0}, {1, 0, 1}, {1, 0, 0}, {0, 0, 1}
+constexpr int kNBars = 7;
+constexpr RGB kBars[kNBars] = {
+    {{1, 1, 1}}, {{1, 1, 0}}, {{0, 1, 1}}, {{0, 1, 0}}, {{1, 0, 1}}, {{1, 0, 0}}, {{0, 0, 1}}
 };
 // the strip under the bars, in units of the bar intensity
-constexpr float kStrip[7][3] = {
-    {0, 0, 1}, {0, 0, 0}, {1, 0, 1}, {0, 0, 0}, {0, 1, 1}, {0, 0, 0}, {1, 1, 1}
+constexpr RGB kStrip[kNBars] = {
+    {{0, 0, 1}}, {{0, 0, 0}}, {{1, 0, 1}}, {{0, 0, 0}}, {{0, 1, 1}}, {{0, 0, 0}}, {{1, 1, 1}}
 };
 // the bottom patches (linear RGB, whatever the bar intensity)
-constexpr float kMinusI[3] = {0.f, 0.0048f, 0.048f};
+constexpr RGB kMinusI = {{0.f, 0.0048f, 0.048f}};
 constexpr float kWhite = 0.9911f;
-constexpr float kPlusQ[3] = {0.0168f, 0.f, 0.1144f};
+constexpr RGB kPlusQ = {{0.0168f, 0.f, 0.1144f}};
 constexpr float kPluge = 0.003035f;
 
+// The heights, as fractions of the image height: the bottom patches are below
+// kBottomNum / kBottomDen, the strip below kStripNum / kStripDen.
+constexpr long long kBottomNum = 49;
+constexpr long long kBottomDen = 192;
+constexpr long long kStripNum = 49;
+constexpr long long kStripDen = 144;
+// The bottom patches, in units of 1/kBottomUnits of the width (1/12 of a bar): each limit is the
+// end of a patch.
+constexpr long long kBottomUnits = 12 * kNBars;
+constexpr long long kMinusIEnd = 15;
+constexpr long long kWhiteEnd = 30;
+constexpr long long kPlusQEnd = 45;
+constexpr long long kBlackEnd = 60;
+constexpr long long kBelowBlackEnd = 64;
+constexpr long long kPlugeBlackEnd = 68;
+constexpr long long kAboveBlackEnd = 72;
+
 // The color of pixel (x, y) of a w x h image (x, y from its bottom-left corner).
-inline void
+inline RGB
 color(long long x,
       long long y,
       long long w,
       long long h,
       float intensity,
-      bool pal,
-      float rgb[3])
+      PatternEnum pattern)
 {
-    if (!pal && (y * 192 < 49 * h)) { // the bottom patches, in units of 1/12 of a bar
-        const long long u = x * 84;
-        float v[3] = {0.f, 0.f, 0.f};
-        if (u < 15 * w) {
-            v[0] = kMinusI[0]; v[1] = kMinusI[1]; v[2] = kMinusI[2];
-        } else if (u < 30 * w) {
-            v[0] = v[1] = v[2] = kWhite;
-        } else if (u < 45 * w) {
-            v[0] = kPlusQ[0]; v[1] = kPlusQ[1]; v[2] = kPlusQ[2];
-        } else if ( (60 * w <= u) && (u < 64 * w) ) {
-            v[0] = v[1] = v[2] = -kPluge;
-        } else if ( (68 * w <= u) && (u < 72 * w) ) {
-            v[0] = v[1] = v[2] = kPluge;
-        }
-        for (int c = 0; c < 3; ++c) {
-            rgb[c] = v[c];
+    const bool ntsc = (pattern == PatternEnum::eNTSC);
+    if ( ntsc && (y * kBottomDen < kBottomNum * h) ) {
+        const long long u = x * kBottomUnits;
+        if (u < kMinusIEnd * w) {
+            return kMinusI;
+        } else if (u < kWhiteEnd * w) {
+            return RGB{{kWhite, kWhite, kWhite}};
+        } else if (u < kPlusQEnd * w) {
+            return kPlusQ;
+        } else if ( (kBlackEnd * w <= u) && (u < kBelowBlackEnd * w) ) {
+            return RGB{{-kPluge, -kPluge, -kPluge}};
+        } else if ( (kPlugeBlackEnd * w <= u) && (u < kAboveBlackEnd * w) ) {
+            return RGB{{kPluge, kPluge, kPluge}};
         }
 
-        return;
+        return RGB{{0.f, 0.f, 0.f}};
     }
-    const int bar = static_cast<int>( (std::min)( 6LL, (std::max)(0LL, x * 7 / w) ) );
-    const float (&k)[3] = (!pal && (y * 144 < 49 * h)) ? kStrip[bar] : kBars[bar];
-    for (int c = 0; c < 3; ++c) {
-        rgb[c] = k[c] * intensity;
-    }
+    const int bar = static_cast<int>( (std::min)( static_cast<long long>(kNBars - 1), (std::max)(0LL, x * kNBars / w) ) );
+    const RGB& k = ( ntsc && (y * kStripDen < kStripNum * h) ) ? kStrip[bar] : kBars[bar];
+
+    return RGB{{k[0] * intensity, k[1] * intensity, k[2] * intensity}};
 }
 } // namespace ColorBars2
 
@@ -354,13 +379,12 @@ private:
             if ( _effect.abort() ) {
                 break;
             }
-            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+            PIX *dstPix = static_cast<PIX *>( _dstImg->getPixelAddress(procWindow.x1, y) );
             if (!dstPix) {
                 continue;
             }
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
-                float rgb[3];
-                ColorBars2::color(x - _rod.x1, y - _rod.y1, w, h, intensity, _pal, rgb);
+                const ColorBars2::RGB rgb = ColorBars2::color(x - _rod.x1, y - _rod.y1, w, h, intensity, _pattern);
                 for (int c = 0; c < 3; ++c) {
                     if (max == 1) { // float: linear, unclamped
                         dstPix[c] = static_cast<PIX>(rgb[c]);
@@ -483,9 +507,9 @@ ColorBarsPlugin::setupAndProcess(ColorBarsProcessorBase &processor,
     OfxRectI rod_pixel;
     Coords::toPixelEnclosing(rod, args.renderScale, dst->getPixelAspectRatio(), &rod_pixel);
     double barIntensity = _barIntensity->getValueAtTime(time);
-    const bool pal = _pal && _pal->getValueAtTime(time);
+    const ColorBars2::PatternEnum pattern = (_pal && _pal->getValueAtTime(time)) ? ColorBars2::PatternEnum::ePAL : ColorBars2::PatternEnum::eNTSC;
     const bool outputIRE = _outputIRE && _outputIRE->getValueAtTime(time);
-    processor.setValues(barIntensity, pal, outputIRE, rod_pixel);
+    processor.setValues(barIntensity, pattern, outputIRE, rod_pixel);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -554,8 +578,14 @@ ColorBarsPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 
     GeneratorPlugin::getClipPreferences(clipPreferences);
     if (_majorVersion >= 2) {
-        // version 2 has no alpha (0 in an RGBA output): the colors are not premultiplied by it
-        clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
+        // version 2 has no alpha: an RGB output is opaque ("the image is opaque and so has no
+        // premultiplication state", ofxImageEffect.h); in an RGBA output alpha is 0, and the colors
+        // are not premultiplied by it
+        std::string components;
+        if (_outputComponents) {
+            _outputComponents->getOption(_outputComponents->getValue(), components);
+        }
+        clipPreferences.setOutputPremultiplication(components == kParamGeneratorOutputComponentsOptionRGBA ? eImageUnPreMultiplied : eImageOpaque);
     }
 }
 

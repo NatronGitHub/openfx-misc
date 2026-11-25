@@ -523,6 +523,30 @@ tests=(
     # the obsolete version 1 (Natron 2.5.0)
     "CheckerBoard 1|net.sf.openfx.CheckerBoardPlugin|general|*|nonconst||-m 1 -i Source=none"
     "ColorBars 1|net.sf.openfx.ColorBars|general|*|nonconst+comps=RGBA||-m 1 -i Source=none"
+    # windows that tell the versions apart (#285, #286). CheckerBoard 2 rounds the box size to whole
+    # pixels at full size: 50/(768/720) = 46.875 pixels (version 1) or 47 (version 2), so pixel x=31
+    # is 7.02 boxes left of the centre (360) in version 1 (box -8: Color 0) and 7 in version 2 (box
+    # -7: Color 1)
+    "CheckerBoard 1 box 50, not rounded|net.sf.openfx.CheckerBoardPlugin|general|*|mean=1,0,0,1||-m 1 -i Source=none boxSize=50,50 lineWidth=0 centerlineWidth=0 color0=1,0,0,1 color1=0,1,0,1 --frames 0 --window 31,300,32,301"
+    "CheckerBoard box 50, rounded|net.sf.openfx.CheckerBoardPlugin|general|*|mean=0,1,0,1||-i Source=none boxSize=50,50 lineWidth=0 centerlineWidth=0 color0=1,0,0,1 color1=0,1,0,1 --frames 0 --window 31,300,32,301"
+    # at render scale 0.5, the rounded boxes are 23.5 pixels wide (47 at full size, so the grid does
+    # not drift): pixel x=39 is 6 boxes left of the centre (180), box -6, Color 0 (23.4375 without
+    # rounding would give box -7)
+    "CheckerBoard box 50, rounded, scale 0.5|net.sf.openfx.CheckerBoardPlugin|general|*|mean=1,0,0,1||-i Source=none boxSize=50,50 lineWidth=0 centerlineWidth=0 color0=1,0,0,1 color1=0,1,0,1 --scale 0.5 --frames 0 --window 39,150,40,151"
+    # Bottom Left with box 10: boxes of 9 (rounded) x 10 pixels from the corner, each window is one box
+    "CheckerBoard bottom left box 10, box (0,0)|net.sf.openfx.CheckerBoardPlugin|general|*|mean=1,0,0,1||-i Source=none gridOrigin=1 boxSize=10,10 lineWidth=0 color0=1,0,0,1 color1=0,1,0,1 color2=0,0,1,1 color3=1,1,0,1 --frames 0 --window 0,0,9,10"
+    "CheckerBoard bottom left box 10, box (1,0)|net.sf.openfx.CheckerBoardPlugin|general|*|mean=0,1,0,1||-i Source=none gridOrigin=1 boxSize=10,10 lineWidth=0 color0=1,0,0,1 color1=0,1,0,1 color2=0,0,1,1 color3=1,1,0,1 --frames 0 --window 9,0,18,10"
+    # the center line: 3 pixels wide by default in version 2 (x 359..361), 1 in version 1 (x 360);
+    # next to it, the default boxes (gray 0.5 in version 2 at x=362, 0.1 in version 1 at x=359)
+    "CheckerBoard centre line|net.sf.openfx.CheckerBoardPlugin|general|*|mean=1,1,0,1||-i Source=none --frames 0 --window 359,10,362,11"
+    "CheckerBoard next to the centre line|net.sf.openfx.CheckerBoardPlugin|general|float|mean=0.5,0.5,0.5,1||-i Source=none --frames 0 --window 362,10,363,11"
+    "CheckerBoard 1 centre line|net.sf.openfx.CheckerBoardPlugin|general|*|mean=1,1,0,1||-m 1 -i Source=none --frames 0 --window 360,10,361,11"
+    "CheckerBoard 1 next to the centre line|net.sf.openfx.CheckerBoardPlugin|general|float|mean=0.1,0.1,0.1,1||-m 1 -i Source=none --frames 0 --window 359,10,360,11"
+    # ColorBars 1: the 40 IRE panel (top left), opaque, in video range (0.0625 + 0.85546875 * 0.4)
+    "ColorBars 1 40 IRE|net.sf.openfx.ColorBars|general|float|comps=RGBA+mean=0.405,0.405,0.405,1||-m 1 -i Source=none --frames 0 --window 10,400,30,420"
+    # ColorBars 2 defaults: the -I patch and the white patch at the bottom (linear, alpha 0)
+    "ColorBars -I|net.sf.openfx.ColorBars|general|float|tol=1e-4+mean=0,0.0048,0.048,0||-i Source=none --frames 0 --window 0,0,20,20"
+    "ColorBars white|net.sf.openfx.ColorBars|general|float|tol=1e-4+mean=0.9911,0.9911,0.9911,0||-i Source=none --frames 0 --window 140,0,160,20"
     "ColorWheel|net.sf.openfx.ColorWheel|general|*|nonconst||-i Source=none"
     "Rand|net.sf.openfx.Noise|general|*|nonconst||-i Source=none"
     "Rectangle|net.sf.openfx.Rectangle|general|*|nonconst||-i Source=none -i Mask=none bottomLeft=100,100 size=300,200"
