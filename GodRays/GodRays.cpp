@@ -51,6 +51,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              edge colour, not about 4x the edge value (garbage).
 // SupportExt#183, also in the current minor versions: the Mask checkbox works on hosts where the mask
 //              always looks connected (DaVinci Resolve).
+// #66, also in the current minor versions: on hosts that ignore normalised defaults (OFX 1.1, e.g.
+//              VEGAS), the default center is the project centre, not the bottom left corner.
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 // 1.1: a Gamma of magnitude below 1e-8 (e.g. 0) interpolates the colors geometrically, the limit of the "gamma"
@@ -580,6 +582,16 @@ public:
              !_scaleUniform->getValue() &&
              ( _scaleUniform->getNumKeys() == 0) ) {
             _scaleUniform->setIsSecretAndDisabled(true);
+        }
+        // Hosts that ignore normalised defaults (OFX 1.1 hosts such as VEGAS) give the default
+        // center (0.5, 0.5) as is: move it to the project centre (#66). The host may send
+        // instanceChanged for that setValue(), which changedParam() would take as a center edit and
+        // stop the re-centring on a new source: keep Center Changed as it was. Last, since
+        // setValue() may call changedParam().
+        const bool centerChanged = _centerChanged->getValue();
+        ofxsTransformDenormaliseDefaults(*this, /*oldParams=*/true);
+        if (_centerChanged->getValue() != centerChanged) {
+            _centerChanged->setValue(centerChanged);
         }
     }
 

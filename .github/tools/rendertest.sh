@@ -902,6 +902,13 @@ tests=(
     # R is not drawn: the red of Color 0 does not count
     "Radial premultiply replace red color0 R off|net.sf.openfx.Radial|general|*|premult=PreMultiplied||-i Source=file:autocrop.pfm#opaque -i Mask=none bottomLeft=10,8 size=32,16 color0=1,0,0,0 premultiply=1 replace=1 NatronOfxParamProcessR=0"
     "Transform scale 0.5|net.sf.openfx.TransformPlugin|filter|float|mean=0.31,0.31,0.31,0.31||-i Source=checker:32 rotate=30 scale=0.8,0.8 --scale 0.5"
+    # Hosts without normalised defaults (OFX 1.1, e.g. VEGAS; hostDemo --no-normalised-defaults):
+    # the default center (0.5, 0.5) is moved to the middle of the 768x576 (canonical) project, not
+    # left at the bottom left corner (issue #66, SupportExt ofxsTransformDenormaliseDefaults)
+    "Transform center, no normalised defaults|net.sf.openfx.TransformPlugin|filter|float|value:center=384,288||-i Source=checker:32 rotate=30 --frames 0 --no-normalised-defaults"
+    "TransformMasked center, no normalised defaults|net.sf.openfx.TransformMaskedPlugin|general|float|value:center=384,288||-i Source=checker:32 -i Mask=none rotate=30 --frames 0 --no-normalised-defaults"
+    "DirBlur center, no normalised defaults|net.sf.openfx.DirBlur|general|float|value:center=384,288||-i Source=checker:32 -i Mask=none rotate=30 --frames 0 --no-normalised-defaults"
+    "GodRays center, no normalised defaults|net.sf.openfx.GodRays|filter|float|value:center=384,288||-i Source=checker:32 rotate=30 --frames 0 --no-normalised-defaults"
     # CornerPin "Set to input format" (#270): the "from" points are the input format (hostDemo's
     # PAL SD, 768x576 canonical; the project on OFX 1.4 hosts, the same here), not its RoD (rod:);
     # "Set to input rod" still copies the RoD

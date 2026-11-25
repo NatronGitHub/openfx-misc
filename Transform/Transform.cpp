@@ -74,6 +74,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //                of definition (SupportExt#207).
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+// #66, also in the current minor versions: on hosts that ignore normalised defaults (OFX 1.1, e.g.
+//      VEGAS), the default center is the project centre, not the bottom left corner.
 // 1.1 (Transform, TransformMasked, DirBlur) (unreleased, fixed in place): the Lanczos4, Lanczos6 and Sinc4 filters (appended options) and the
 //      Prefilter Downscaling checkbox (after Black Outside, off) (issue #270); the default output is unchanged.
 
@@ -134,6 +136,16 @@ public:
              !_scaleUniform->getValue() &&
              ( _scaleUniform->getNumKeys() == 0) ) {
             _scaleUniform->setIsSecretAndDisabled(true);
+        }
+        // Hosts that ignore normalised defaults (OFX 1.1 hosts such as VEGAS) give the default
+        // center (0.5, 0.5) as is: move it to the project centre (#66). The host may send
+        // instanceChanged for that setValue(), which changedParam() would take as a center edit and
+        // stop the re-centring on a new source: keep Center Changed as it was. Last, since
+        // setValue() may call changedParam().
+        const bool centerChanged = _centerChanged->getValue();
+        ofxsTransformDenormaliseDefaults(*this, /*oldParams=*/true);
+        if (_centerChanged->getValue() != centerChanged) {
+            _centerChanged->setValue(centerChanged);
         }
     }
 
