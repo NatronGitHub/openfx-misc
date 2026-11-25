@@ -1053,6 +1053,18 @@ KeyerPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         }
     }
 
+    // invert (added in version 1.1, issue #280; off, so that existing projects render the same), before the keyer mode (#380)
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamInvert);
+        param->setLabel(kParamInvertLabel);
+        param->setHint(kParamInvertHint);
+        param->setDefault(false);
+        param->setAnimates(true);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
     // keyer mode
     {
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamKeyerMode);
@@ -1231,18 +1243,6 @@ KeyerPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         assert(param->getNOptions() == (int)eSourceAlphaNormal);
         param->appendOption(kParamSourceAlphaOptionNormal);
         param->setDefault( (int)eSourceAlphaIgnore );
-        param->setAnimates(true);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-
-    // invert (last: added in version 1.1, issue #280; off, so that existing projects render the same)
-    {
-        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamInvert);
-        param->setLabel(kParamInvertLabel);
-        param->setHint(kParamInvertHint);
-        param->setDefault(false);
         param->setAnimates(true);
         if (page) {
             page->addChild(*param);

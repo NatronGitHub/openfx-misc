@@ -204,6 +204,24 @@ CImgFilterPluginHelperBase::describeInContextBegin(bool sourceIsOptional,
                                                    bool processAlpha,
                                                    bool processIsSecret)
 {
+    PageParamDescriptor *page = describeInContextClips(sourceIsOptional, desc, context,
+                                                       supportsRGBA, supportsRGB, supportsXY, supportsAlpha,
+                                                       supportsTiles);
+    describeProcessParams(desc, page, processRGB, processAlpha, processIsSecret);
+
+    return page;
+} // CImgFilterPluginHelperBase::describeInContextBegin
+
+PageParamDescriptor*
+CImgFilterPluginHelperBase::describeInContextClips(bool sourceIsOptional,
+                                                   ImageEffectDescriptor &desc,
+                                                   ContextEnum context,
+                                                   bool supportsRGBA,
+                                                   bool supportsRGB,
+                                                   bool supportsXY,
+                                                   bool supportsAlpha,
+                                                   bool supportsTiles)
+{
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(ePixelComponentNone); // we have our own channel selector
 #endif
@@ -258,8 +276,16 @@ CImgFilterPluginHelperBase::describeInContextBegin(bool sourceIsOptional,
     maskClip->setIsMask(true);
 
     // create the params
-    PageParamDescriptor *page = desc.definePageParam("Controls");
+    return desc.definePageParam("Controls");
+} // CImgFilterPluginHelperBase::describeInContextClips
 
+void
+CImgFilterPluginHelperBase::describeProcessParams(ImageEffectDescriptor &desc,
+                                                  PageParamDescriptor* page,
+                                                  bool processRGB,
+                                                  bool processAlpha,
+                                                  bool processIsSecret)
+{
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
         param->setLabel(kParamProcessRLabel);
@@ -303,10 +329,7 @@ CImgFilterPluginHelperBase::describeInContextBegin(bool sourceIsOptional,
             page->addChild(*param);
         }
     }
-
-
-    return page;
-} // CImgFilterPluginHelperBase::describeInContextBegin
+} // CImgFilterPluginHelperBase::describeProcessParams
 
 void
 CImgFilterPluginHelperBase::describeInContextEnd(ImageEffectDescriptor &desc,

@@ -1345,6 +1345,17 @@ ZDefocusPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         }
     }
     {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamFocus);
+        param->setLabel(kParamFocusLabel);
+        param->setHint(kParamFocusHint);
+        param->setRange(-DBL_MAX, DBL_MAX);
+        param->setDisplayRange(0., 100.);
+        param->setDefault(0.);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamUseFocusPoint);
         param->setLabel(kParamUseFocusPointLabel);
         param->setHint(kParamUseFocusPointHint);
@@ -1371,23 +1382,21 @@ ZDefocusPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         }
     }
     {
-        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamFocus);
-        param->setLabel(kParamFocusLabel);
-        param->setHint(kParamFocusHint);
-        param->setRange(-DBL_MAX, DBL_MAX);
-        param->setDisplayRange(0., 100.);
-        param->setDefault(0.);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-    {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamDepthOfFocus);
         param->setLabel(kParamDepthOfFocusLabel);
         param->setHint(kParamDepthOfFocusHint);
         param->setRange(0., DBL_MAX);
         param->setDisplayRange(0., 10.);
         param->setDefault(0.);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamBlurInside);
+        param->setLabel(kParamBlurInsideLabel);
+        param->setHint(kParamBlurInsideHint);
+        param->setDefault(true);
         if (page) {
             page->addChild(*param);
         }
@@ -1444,15 +1453,6 @@ ZDefocusPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamFillBackground);
         param->setLabel(kParamFillBackgroundLabel);
         param->setHint(kParamFillBackgroundHint);
-        param->setDefault(true);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-    {
-        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamBlurInside);
-        param->setLabel(kParamBlurInsideLabel);
-        param->setHint(kParamBlurInsideHint);
         param->setDefault(true);
         if (page) {
             page->addChild(*param);

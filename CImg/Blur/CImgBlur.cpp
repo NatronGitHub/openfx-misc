@@ -2672,15 +2672,40 @@ CImgBlurPlugin::describeInContext(ImageEffectDescriptor& desc,
         }
     }
 
-    PageParamDescriptor *page = CImgBlurPlugin::describeInContextBegin(desc, context,
+    PageParamDescriptor *page = CImgBlurPlugin::describeInContextClips(desc, context,
                                                                             kSupportsRGBA,
                                                                             (blurPlugin == eBlurPluginEdgeExtend) ? false : kSupportsRGB,
                                                                             (blurPlugin == eBlurPluginEdgeExtend || blurPlugin == eBlurPluginChromaBlur) ? false : kSupportsXY,
                                                                             (blurPlugin == eBlurPluginEdgeExtend || blurPlugin == eBlurPluginChromaBlur) ? false : kSupportsAlpha,
-                                                                            kSupportsTiles,
-                                                                            processRGB,
-                                                                            processAlpha,
-                                                                            /*processIsSecret=*/ (blurPlugin == eBlurPluginEdgeExtend));
+                                                                            kSupportsTiles);
+    // EdgeDetect: the edge detection filter comes before the channels (#388)
+    if (blurPlugin == eBlurPluginEdgeDetect) {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamEdgeDetectFilter);
+        param->setLabel(kParamEdgeDetectFilterLabel);
+        param->setHint(kParamEdgeDetectFilterHint);
+        assert(param->getNOptions() == eEdgeDetectFilterSimple);
+        param->appendOption(kParamEdgeDetectFilterOptionSimple);
+        assert(param->getNOptions() == eEdgeDetectFilterSobel);
+        param->appendOption(kParamEdgeDetectFilterOptionSobel);
+        assert(param->getNOptions() == eEdgeDetectFilterRotationInvariant);
+        param->appendOption(kParamEdgeDetectFilterOptionRotationInvariant);
+        assert(param->getNOptions() == eEdgeDetectFilterQuasiGaussian);
+        param->appendOption(kParamEdgeDetectFilterOptionQuasiGaussian);
+        assert(param->getNOptions() == eEdgeDetectFilterGaussian);
+        param->appendOption(kParamEdgeDetectFilterOptionGaussian);
+        assert(param->getNOptions() == eEdgeDetectFilterBox);
+        param->appendOption(kParamEdgeDetectFilterOptionBox);
+        assert(param->getNOptions() == eEdgeDetectFilterTriangle);
+        param->appendOption(kParamEdgeDetectFilterOptionTriangle);
+        assert(param->getNOptions() == eEdgeDetectFilterQuadratic);
+        param->appendOption(kParamEdgeDetectFilterOptionQuadratic);
+        param->setDefault( (int)kParamEdgeDetectFilterDefault );
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    CImgBlurPlugin::describeProcessParams(desc, page, processRGB, processAlpha,
+                                          /*processIsSecret=*/ (blurPlugin == eBlurPluginEdgeExtend));
     if (blurPlugin == eBlurPluginSharpen ||
         blurPlugin == eBlurPluginSoften) {
         {
@@ -2900,31 +2925,7 @@ CImgBlurPlugin::describeInContext(ImageEffectDescriptor& desc,
             page->addChild(*param);
         }
     }
-    if (blurPlugin == eBlurPluginEdgeDetect) {
-        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamEdgeDetectFilter);
-        param->setLabel(kParamEdgeDetectFilterLabel);
-        param->setHint(kParamEdgeDetectFilterHint);
-        assert(param->getNOptions() == eEdgeDetectFilterSimple);
-        param->appendOption(kParamEdgeDetectFilterOptionSimple);
-        assert(param->getNOptions() == eEdgeDetectFilterSobel);
-        param->appendOption(kParamEdgeDetectFilterOptionSobel);
-        assert(param->getNOptions() == eEdgeDetectFilterRotationInvariant);
-        param->appendOption(kParamEdgeDetectFilterOptionRotationInvariant);
-        assert(param->getNOptions() == eEdgeDetectFilterQuasiGaussian);
-        param->appendOption(kParamEdgeDetectFilterOptionQuasiGaussian);
-        assert(param->getNOptions() == eEdgeDetectFilterGaussian);
-        param->appendOption(kParamEdgeDetectFilterOptionGaussian);
-        assert(param->getNOptions() == eEdgeDetectFilterBox);
-        param->appendOption(kParamEdgeDetectFilterOptionBox);
-        assert(param->getNOptions() == eEdgeDetectFilterTriangle);
-        param->appendOption(kParamEdgeDetectFilterOptionTriangle);
-        assert(param->getNOptions() == eEdgeDetectFilterQuadratic);
-        param->appendOption(kParamEdgeDetectFilterOptionQuadratic);
-        param->setDefault( (int)kParamEdgeDetectFilterDefault );
-        if (page) {
-            page->addChild(*param);
-        }
-    } else if (blurPlugin == eBlurPluginBlur ||
+    if (blurPlugin == eBlurPluginBlur ||
         blurPlugin == eBlurPluginLaplacian ||
         blurPlugin == eBlurPluginSharpen ||
         blurPlugin == eBlurPluginSoften ||
