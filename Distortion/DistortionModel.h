@@ -139,7 +139,10 @@ public:
                         double cy,
                         double squeeze,
                         double ax,
-                        double ay);
+                        double ay,
+                        double twist = 0., // degrees
+                        double scaleX = 1.,
+                        double scaleY = 1.);
 
     virtual ~DistortionModelNuke() {};
 
@@ -159,6 +162,10 @@ private:
     double _squeeze;
     double _ax;
     double _ay;
+    double _twistCos; // the cosine and sine of the twist
+    double _twistSin;
+    double _scaleX;
+    double _scaleY;
 };
 
 

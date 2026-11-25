@@ -467,6 +467,12 @@ LENS_ANAMORPHIC = {"lens": "Anamorphic", "anamorphicSqueeze": 2,
                    "distortionDenominatorY00": .05}
 OFX_LENS_ANAMORPHIC = {"k1": .1, "anamorphicSqueeze": 2,
                        "asymmetricDistortion": [.1, .05]}
+# version 5: Twist and Scale too (with all the other params of the model)
+LENS_TWIST = dict(LENS_ANAMORPHIC, distortionDenominator1=.05,
+                  centre=[.1, .2], anamorphicTwist=20,
+                  anamorphicScale=[1.2, .9])
+OFX_LENS_TWIST = dict(OFX_LENS_ANAMORPHIC, k2=.05, center=[.1, .2],
+                      anamorphicTwist=20, anamorphicScale=[1.2, .9])
 
 
 def lens_map(layer):
@@ -1656,6 +1662,16 @@ CASES += [
                                          outputMode="STMap")),
          nuke_post=lens_map("backward"),
          input="ramp", region=INNER, channels="rg", tolerance=1e-5),
+    case("LensDistortion STMap distort, twist 20, scale 1.2,0.9",
+         ("LensDistortion2", dict(LENS_TWIST, output="STMap")),
+         (ofx_id("LensDistortion"), dict(OFX_LENS_TWIST, direction="Distort",
+                                         outputMode="STMap")),
+         nuke_post=lens_map("backward"),
+         input="ramp", region=INNER, channels="rg", tolerance=1e-5),
+    case("LensDistortion twist 20, scale 1.2,0.9, redistort",
+         ("LensDistortion2", dict(LENS_TWIST, output="Redistort")),
+         (ofx_id("LensDistortion"), dict(OFX_LENS_TWIST, direction="Distort")),
+         input="ramp", region=INNER, channels="rgba", tolerance=2e-3),
 ]
 for _steps in (1, 2, 3, 5):
     CASES.append(case(
@@ -2372,7 +2388,10 @@ KNOWN = {
     302: [
         "LensDistortion k1 0.1 (default: undistort)",
         "LensDistortion k1 -0.1, undistort",
-        "LensDistortion STMap undistort, k1 0.1, k2 0.05, center 0.1,0.2"],
+        "LensDistortion STMap undistort, k1 0.1, k2 0.05, center 0.1,0.2",
+        # the map matches (see the STMap case), but where it minifies (Scale
+        # 1.2), the reference's Cubic resampling differs by up to 0.1 pixel
+        "LensDistortion twist 20, scale 1.2,0.9, redistort"],
     352: [
         "IDistort, alpha 0.5, premultiplied",
         "STMap uv = rgb, premultiplied, alpha 0.5",

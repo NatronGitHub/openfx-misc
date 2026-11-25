@@ -331,7 +331,10 @@ DistortionModelNuke::DistortionModelNuke(const OfxRectD& format,
                                          double cy,
                                          double squeeze,
                                          double ax,
-                                         double ay)
+                                         double ay,
+                                         double twist,
+                                         double scaleX,
+                                         double scaleY)
 : _par( nonZero(par) )
 , _k1(k1)
 , _k2(k2)
@@ -340,6 +343,10 @@ DistortionModelNuke::DistortionModelNuke(const OfxRectD& format,
 , _squeeze(squeeze)
 , _ax(ax)
 , _ay(ay)
+, _twistCos( std::cos(twist * OFXS_PI / 180.) )
+, _twistSin( std::sin(twist * OFXS_PI / 180.) )
+, _scaleX(scaleX)
+, _scaleY(scaleY)
 {
     double fx = (format.x2 - format.x1) / 2.;
     double fy = (format.y2 - format.y1) / 2.;
@@ -352,6 +359,8 @@ DistortionModelNuke::DistortionModelNuke(const OfxRectD& format,
 // The "Nuke" distortion model. With x = xd - cx, y = yd - cy and r^2 = x^2 + y^2:
 //   xu = x / (1 + (k1*r^2 + k2*r^4 + ax*y^2) / squeeze) + cx
 //   yu = y / (1 + k1*r^2 + k2*r^4 + ay*x^2) + cy
+// (DistortionModelNuke::undistort applies it in the frame rotated by the twist, then the anamorphic
+// scale, then rotates back, as the tests/nuke reference)
 // this function undistorts positions, but is also used to distort the image.
 // Similar to the function distortNuke in Obq_LensDistortion.h
 static inline void
@@ -395,12 +404,22 @@ undistort_nuke(double xd,
 void
 DistortionModelNuke::undistort(double xd, double yd, double* xu, double *yu) const
 {
-    double xdn = _par * (xd - _xSrcCenter) / _f;
-    double ydn = (yd - _ySrcCenter) / _f;
+    // relative to the distortion center, in the frame of the anamorphic axes, which the twist rotates
+    const double x = _par * (xd - _xSrcCenter) / _f - _cx;
+    const double y = (yd - _ySrcCenter) / _f - _cy;
+    const double xt = _twistCos * x + _twistSin * y;
+    const double yt = -_twistSin * x + _twistCos * y;
     double sx, sy;
-    undistort_nuke(xdn, ydn,
-                   _k1, _k2, _cx, _cy, _squeeze, _ax, _ay,
+    undistort_nuke(xt, yt,
+                   _k1, _k2, 0., 0., _squeeze, _ax, _ay,
                    &sx, &sy);
+    // the anamorphic scale, then back from the twisted frame
+    sx *= _scaleX;
+    sy *= _scaleY;
+    const double xr = _twistCos * sx - _twistSin * sy;
+    const double yr = _twistSin * sx + _twistCos * sy;
+    sx = xr + _cx;
+    sy = yr + _cy;
     sx /= _par;
     sx *= _f;
     sx += _xSrcCenter;

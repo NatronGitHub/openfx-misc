@@ -201,7 +201,8 @@ constexpr int kPluginVersionUVSquarePixels = 3;
 //              release builds and the rendered pixels are unchanged
 // version 5.0 (#302): Direction defaults to Undistort, as in the tests/nuke reference (version 4.1, obsolete,
 //              keeps Distort). The Nuke model matches the tests/nuke reference (its K1 and K2 are the
-//              reference's first and second radial denominator coefficients).
+//              reference's first and second radial denominator coefficients); new Twist and Scale
+//              parameters of the Nuke model (anamorphic lens), with defaults that keep the output.
 #define kPluginVersionLensDistortionMajor 5 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionLensDistortionMinor 0 // Increment this when you have fixed a bug or made it faster.
 #define kPluginVersionLensDistortionMinorV4 1 // the minor version of the obsolete versions 2, 3 and 4
@@ -423,6 +424,12 @@ enum OutputModeEnum {
 
 #define kParamSqueeze "anamorphicSqueeze"
 #define kParamSqueezeLabel "Squeeze", "Nuke: Anamorphic squeeze (only for anamorphic lens)."
+
+#define kParamTwist "anamorphicTwist"
+#define kParamTwistLabel "Twist", "Nuke: Anamorphic twist, in degrees: the rotation of the axes of Squeeze, Asymmetric and Scale (only for anamorphic lens; version 5 and later)."
+
+#define kParamAnamorphicScale "anamorphicScale"
+#define kParamAnamorphicScaleLabel "Scale", "Nuke: Anamorphic scale of the undistorted positions, along the axes of Twist, about the distortion center (only for anamorphic lens; version 5 and later)."
 
 #define kParamAsymmetric "asymmetricDistortion"
 #define kParamAsymmetricLabel "Asymmetric", "Nuke: Asymmetric distortion (only for anamorphic lens)."
@@ -2104,6 +2111,8 @@ public:
         , _k2(NULL)
         , _center(NULL)
         , _squeeze(NULL)
+        , _twist(nullptr)
+        , _anamorphicScale(nullptr)
         , _asymmetric(NULL)
         , _pfFile(NULL)
         , _pfReload(NULL)
@@ -2266,6 +2275,11 @@ public:
             _squeeze = fetchDoubleParam(kParamSqueeze);
             _asymmetric = fetchDouble2DParam(kParamAsymmetric);
             assert(_k1 && _k2 && _center && _squeeze && _asymmetric);
+            if ( paramExists(kParamTwist) ) {
+                _twist = fetchDoubleParam(kParamTwist);
+                _anamorphicScale = fetchDouble2DParam(kParamAnamorphicScale);
+                assert(_twist && _anamorphicScale);
+            }
 
             // PFBarrel
             _pfFile = fetchStringParam(kParamPFFile);
@@ -2472,6 +2486,8 @@ private:
     DoubleParam* _k2;
     Double2DParam* _center;
     DoubleParam* _squeeze;
+    DoubleParam* _twist; // version 5 and later, else nullptr
+    Double2DParam* _anamorphicScale; // version 5 and later, else nullptr
     Double2DParam* _asymmetric;
 
     // PFBarrel
@@ -2720,6 +2736,11 @@ DistortionPlugin::getDistortionModel(const OfxRectD& format, const OfxPointD& re
         double squeeze = (std::max)(0.001, _squeeze->getValueAtTime(time));
         double ax, ay;
         _asymmetric->getValueAtTime(time, ax, ay);
+        const double twist = _twist ? _twist->getValueAtTime(time) : 0.;
+        double scaleX = 1., scaleY = 1.;
+        if (_anamorphicScale) {
+            _anamorphicScale->getValueAtTime(time, scaleX, scaleY);
+        }
         return new DistortionModelNuke(format,
                                        par,
                                        k1,
@@ -2728,7 +2749,10 @@ DistortionPlugin::getDistortionModel(const OfxRectD& format, const OfxPointD& re
                                        cy,
                                        squeeze,
                                        ax,
-                                       ay);
+                                       ay,
+                                       twist,
+                                       scaleX,
+                                       scaleY);
         break;
     }
     case eDistortionModelPFBarrel: {
@@ -3713,7 +3737,11 @@ DistortionPlugin::isIdentity(const IsIdentityArguments &args,
             double k2 = _k2->getValueAtTime(time);
             double ax, ay;
             _asymmetric->getValueAtTime(time, ax, ay);
-            identity = (k1 == 0.) && (k2 == 0.) && (ax == 0.) && (ay == 0.);
+            double scaleX = 1., scaleY = 1.;
+            if (_anamorphicScale) {
+                _anamorphicScale->getValueAtTime(time, scaleX, scaleY);
+            }
+            identity = (k1 == 0.) && (k2 == 0.) && (ax == 0.) && (ay == 0.) && (scaleX == 1.) && (scaleY == 1.);
             break;
         }
         case eDistortionModelPFBarrel: {
@@ -4435,6 +4463,10 @@ DistortionPlugin::updateVisibility()
         _center->setIsSecretAndDisabled(distortionModel != eDistortionModelNuke);
         _squeeze->setIsSecretAndDisabled(distortionModel != eDistortionModelNuke);
         _asymmetric->setIsSecretAndDisabled(distortionModel != eDistortionModelNuke);
+        if (_twist) {
+            _twist->setIsSecretAndDisabled(distortionModel != eDistortionModelNuke);
+            _anamorphicScale->setIsSecretAndDisabled(distortionModel != eDistortionModelNuke);
+        }
 
         _pfFile->setIsSecretAndDisabled(distortionModel != eDistortionModelPFBarrel);
         if (_pfReload) {
@@ -5079,6 +5111,31 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
             param->setDisplayRange(0., 1.);
             if (page) {
                 page->addChild(*param);
+            }
+        }
+        if (majorVersion >= kPluginVersionLensDistortionUndistortDefault) {
+            // version 5: Twist and Scale, after Squeeze as in the tests/nuke reference
+            {
+                DoubleParamDescriptor *param = desc.defineDoubleParam(kParamTwist);
+                param->setLabelAndHint(kParamTwistLabel);
+                param->setDefault(0.);
+                param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+                param->setDisplayRange(-90., 90.);
+                if (page) {
+                    page->addChild(*param);
+                }
+            }
+            {
+                Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamAnamorphicScale);
+                param->setLabelAndHint(kParamAnamorphicScaleLabel);
+                param->setDefault(1., 1.);
+                param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+                param->setDisplayRange(0.5, 0.5, 2., 2.);
+                param->setDoubleType(eDoubleTypeScale);
+                param->setUseHostNativeOverlayHandle(false);
+                if (page) {
+                    page->addChild(*param);
+                }
             }
         }
         {
