@@ -59,13 +59,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // 1.0: Original version
 // 2.0: With Alpha-only images, the A checkbox (instead of the R checkbox) controls the alpha channel
-// 1.1 and 2.0 (2.0 is unreleased, fixed in place): in the filter context, the B input is the mandated Source
+// 1.1 and 2.0: in the filter context, the B input is the mandated Source
 //      clip (it had no Source clip), and Source is not remapped there (Output has the components of Source);
 //      the general context is unchanged (issue #217)
-// 1.1 and 2.0 (unreleased, fixed in place): isIdentity no longer returns B where the render window misses
+// 1.1 and 2.0: isIdentity no longer returns B where the render window misses
 //      the A RoD: there, the output is B * (1 - mask * mix), not B; it returns B without a mask (Mask
 //      disconnected or Apply Mask off), where the render gives B (issue #321)
-// 1.1 and 2.0 (unreleased, added in place): Bounding Box parameter (Union, B, A), Union by default, which
+// 1.1 and 2.0: Bounding Box parameter (Union, B, A), Union by default, which
 //      is the previous output bounding box (issue #278); where isIdentity returns B (Mix 0, no A channel,
 //      no Mask or Apply Mask off), the RoD is B's (it was the union with A when no A channel was
 //      processed or Apply Mask was off; the pixels are the same)

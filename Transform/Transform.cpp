@@ -58,7 +58,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History (Transform, TransformMasked, DirBlur):
 // version 1.0: initial version
 // version 1.1: the inverse of a transform matrix with huge entries (e.g. a concatenated source transform) no longer overflows to NaN or 0 (SupportExt #81)
-// SupportExt#179, in the current minor versions (not released yet, so no further bump): with the Box
+// SupportExt#179, in the current minor versions: with the Box
 //              filter, the thin band just outside the source image is black (Black Outside) or the
 //              edge colour, not about 4x the edge value (garbage).
 // SupportExt#183-#185, #205 and #207, also in the current minor versions:
@@ -79,7 +79,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              the image centre, which changes the output.
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
-// 1.1 (Transform, TransformMasked, DirBlur) (unreleased, fixed in place): the Lanczos4, Lanczos6 and Sinc4 filters (appended options) and the
+// 1.1 (Transform, TransformMasked, DirBlur): the Lanczos4, Lanczos6 and Sinc4 filters (appended options) and the
 //      Prefilter Downscaling checkbox (after Black Outside, off) (issue #270); the default output is unchanged.
 
 #define kParamSrcClipChanged "srcClipChanged"

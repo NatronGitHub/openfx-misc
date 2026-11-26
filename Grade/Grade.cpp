@@ -70,7 +70,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 2.1: gamma <= 0 gives FLT_MAX instead of +inf above 1 (NaN after premultiplying by alpha = 0),
 //              and the results of a small gamma are capped to FLT_MAX;
 //              Normalize with no analyzed pixel leaves the black and white points unchanged;
-//              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79)
+//              non-finite colours are premultiplied and unpremultiplied to finite values (SupportExt #73, #79)
 // version 3.0: above 1, the gamma curve is continued by its tangent at 1 (output = 1 + (x - 1) / gamma), as in Nuke's Grade.
 //              Version 2 (obsolete, same code) keeps the power curve above 1, so that existing projects render the same.
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.

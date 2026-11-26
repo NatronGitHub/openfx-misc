@@ -81,11 +81,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 2.0: use kNatronOfxParamProcess* parameters
 // version 2.1: antialiased render
 // version 2.2: add angle parameter, fix rendering to an Alpha-only output
-// version 2.2 (unreleased, fixed in place): not a pass-through when Process A is checked and Source is Opaque,
+// version 2.2: not a pass-through when Process A is checked and Source is Opaque,
 //              since the Output is then UnPremultiplied (issue #328);
 //              add the Premultiply, Replace and Invert parameters (default off: the output is unchanged) (#288);
 //              add the Falloff parameter, the curve of the Softness (default Quadratic: the output is unchanged) (#288)
-// version 3.0 (unreleased): the Softness is computed at the pixel center (it was the pixel corner nearest to the
+// version 3.0: the Softness is computed at the pixel center (it was the pixel corner nearest to the
 //              center), with no other antialiasing, and Falloff is Smooth by default (it was Quadratic): the soft edge
 //              matches the tests/nuke reference (#288). Version 2 is kept, obsolete, with its output.
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.

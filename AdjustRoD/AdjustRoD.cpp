@@ -46,7 +46,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // 1.2 a NULL Source image (disconnected, or fetchImage failed) renders black instead of crashing;
 //     with Nearest border conditions, ask for the Source edge pixels even where the render window
 //     is out of the Source RoD (it got no Source image there);
-//     (#299, in the same unreleased minor version) negative amounts shrink the region of definition (the range
+//     (#299) negative amounts shrink the region of definition (the range
 //     started at 0); the pixels outside the shrunk region follow the border conditions, from its edge
 // 2.0 the default amount is 25 (it was 0, a no-op); the amounts are whole pixels, truncated toward zero (in x,
 //     Add Pixels divided by the pixel aspect ratio) (#299). Version 1 is kept, obsolete, for old projects.

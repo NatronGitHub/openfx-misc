@@ -47,7 +47,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "This plugin concatenates transforms upstream."
 
 #define kPluginIdentifier "net.sf.openfx.GodRays"
-// SupportExt#179, in the current minor versions (not released yet, so no further bump): with the Box
+// SupportExt#179, in the current minor versions: with the Box
 //              filter, the thin band just outside the source image is black (Black Outside) or the
 //              edge colour, not about 4x the edge value (garbage).
 // SupportExt#183, also in the current minor versions: the Mask checkbox works on hosts where the mask

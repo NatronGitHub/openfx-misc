@@ -41,7 +41,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginMirrorIdentifier "net.sf.openfx.Mirror"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
-// 1.1: (unreleased) the Mirror Around parameter: mirror around the input format (issue #301), or around the input
+// 1.1: the Mirror Around parameter: mirror around the input format (issue #301), or around the input
 //      region of definition (the default, as in 1.0)
 
 #define kSupportsTiles 1

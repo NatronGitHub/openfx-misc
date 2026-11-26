@@ -94,11 +94,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              Output is unchanged.
 //              With Process A and an opaque Source, Source is mapped to RGBA like the output, so that an
 //              RGB Source is not read as RGBA (out of bounds) (#254).
-// version 2.2 (unreleased, fixed in place): not a pass-through when Process A is checked and Source is Opaque,
+// version 2.2: not a pass-through when Process A is checked and Source is Opaque,
 //              since the Output is then UnPremultiplied (issue #328);
 //              add the Premultiply, Replace and Invert parameters (default off: the output is unchanged) (#288);
 //              add the Falloff parameter, the curve of the Softness (default Quadratic: the output is unchanged) (#288)
-// version 3.0 (unreleased): the Softness spans one more pixel, from the pixel center (it antialiases the edge), and
+// version 3.0: the Softness spans one more pixel, from the pixel center (it antialiases the edge), and
 //              Falloff is Smooth by default (it was Quadratic): the soft edge matches the tests/nuke reference (#288).
 //              With a Softness, rounded corners (Corner Radius) use the same curve and pixel-center distance, to the
 //              corner ellipse, continuous with the straight edges (whose Softness does not change with the radius);

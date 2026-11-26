@@ -54,7 +54,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              (SupportExt copyPixels)
 // version 2.0: isIdentity returns the 'from' input outside the mask, as render does; a NULL Source
 //              image renders black instead of crashing
-// version 1.1 and 2.0 (unreleased, fixed in place): in the transition context, the components of the
+// version 1.1 and 2.0: in the transition context, the components of the
 //              SourceFrom and SourceTo clips are not set any more (the plug-in "cannot change any of the pixel
 //              preferences of any of the clips" there); the general context is unchanged (issue #217)
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
