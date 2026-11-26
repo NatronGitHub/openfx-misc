@@ -19,6 +19,7 @@
 
 #include "DistortionModel.h"
 
+#include <cassert>
 #include <cmath>
 #include <cfloat> // DBL_EPSILON
 #include <algorithm> // max
@@ -323,24 +324,19 @@ DistortionModelDistort::undistortConverged(double xd,
     return undistortNewton(xd, yd, xu, yu, true);
 }
 
-DistortionModelNuke::DistortionModelNuke(const OfxRectD& format,
-                                         double par,
-                                         double k1,
-                                         double k2,
-                                         double cx,
-                                         double cy,
-                                         double squeeze,
-                                         double ax,
-                                         double ay)
+DistortionModelNukeRadial::DistortionModelNukeRadial(const OfxRectD& format,
+                                                     double par,
+                                                     const DistortionModelNukeParams& params)
 : _par( nonZero(par) )
-, _k1(k1)
-, _k2(k2)
-, _cx(cx)
-, _cy(cy)
-, _squeeze(squeeze)
-, _ax(ax)
-, _ay(ay)
+, _k1(params.k1)
+, _k2(params.k2)
+, _cx(params.cx)
+, _cy(params.cy)
+, _squeeze(params.squeeze)
+, _ax(params.ax)
+, _ay(params.ay)
 {
+    assert(params.squeeze >= 0.001);
     double fx = (format.x2 - format.x1) / 2.;
     double fy = (format.y2 - format.y1) / 2.;
     _f = nonZero( (std::max)(fx, fy) ); // TODO: distortion scaling param for LensDistortion?
@@ -348,10 +344,25 @@ DistortionModelNuke::DistortionModelNuke(const OfxRectD& format,
     _ySrcCenter = (format.y1 + format.y2) / 2.;
 }
 
+void
+DistortionModelNukeRadial::toNormalised(double x, double y, double* xn, double* yn) const
+{
+    *xn = _par * (x - _xSrcCenter) / _f;
+    *yn = (y - _ySrcCenter) / _f;
+}
+
+void
+DistortionModelNukeRadial::fromNormalised(double xn, double yn, double* x, double* y) const
+{
+    *x = xn / _par * _f + _xSrcCenter;
+    *y = yn * _f + _ySrcCenter;
+}
 
 // The "Nuke" distortion model. With x = xd - cx, y = yd - cy and r^2 = x^2 + y^2:
 //   xu = x / (1 + (k1*r^2 + k2*r^4 + ax*y^2) / squeeze) + cx
 //   yu = y / (1 + k1*r^2 + k2*r^4 + ay*x^2) + cy
+// (DistortionModelNuke::undistort applies it in the frame rotated by the twist, then the anamorphic
+// scale, then rotates back, as the tests/nuke reference)
 // this function undistorts positions, but is also used to distort the image.
 // Similar to the function distortNuke in Obq_LensDistortion.h
 static inline void
@@ -393,7 +404,7 @@ undistort_nuke(double xd,
 // (xd,yd) = 0,0 at the bottom left of the bottomleft pixel
 
 void
-DistortionModelNuke::undistort(double xd, double yd, double* xu, double *yu) const
+DistortionModelNukeRadial::undistort(double xd, double yd, double* xu, double *yu) const
 {
     double xdn = _par * (xd - _xSrcCenter) / _f;
     double ydn = (yd - _ySrcCenter) / _f;
@@ -409,6 +420,113 @@ DistortionModelNuke::undistort(double xd, double yd, double* xu, double *yu) con
 
     *xu = sx;
     *yu = sy;
+}
+
+DistortionModelNuke::DistortionModelNuke(const OfxRectD& format,
+                                         double par,
+                                         const DistortionModelNukeParams& params)
+: _radial(format, par, params)
+, _linear( (params.twist != 0.) || (params.scaleX != 1.) || (params.scaleY != 1.) )
+, _cx(params.cx)
+, _cy(params.cy)
+, _twistCos( std::cos(params.twist * OFXS_PI / 180.) )
+, _twistSin( std::sin(params.twist * OFXS_PI / 180.) )
+, _scaleX(params.scaleX)
+, _scaleY(params.scaleY)
+{
+    assert(params.scaleX >= 0.001 && params.scaleY >= 0.001);
+}
+
+void
+DistortionModelNuke::toOffset(double x, double y, double* vx, double* vy) const
+{
+    _radial.toNormalised(x, y, vx, vy);
+    *vx -= _cx;
+    *vy -= _cy;
+}
+
+void
+DistortionModelNuke::fromOffset(double vx, double vy, double* x, double* y) const
+{
+    _radial.fromNormalised(vx + _cx, vy + _cy, x, y);
+}
+
+void
+DistortionModelNuke::rotate(double vx, double vy, bool inverse, double* rx, double* ry) const
+{
+    const double s = inverse ? -_twistSin : _twistSin;
+    *rx = _twistCos * vx - s * vy;
+    *ry = s * vx + _twistCos * vy;
+}
+
+void
+DistortionModelNuke::undistort(double xd, double yd, double* xu, double *yu) const
+{
+    const DistortionModel& radial = _radial;
+    if (!_linear) {
+        radial.undistort(xd, yd, xu, yu);
+
+        return;
+    }
+    // R(twist) S radial(R(-twist) (p - c)), relative to the center c
+    double vx, vy, tx, ty, x, y;
+    toOffset(xd, yd, &vx, &vy);
+    rotate(vx, vy, true, &tx, &ty);
+    fromOffset(tx, ty, &x, &y);
+    radial.undistort(x, y, &x, &y);
+    toOffset(x, y, &vx, &vy);
+    rotate(vx * _scaleX, vy * _scaleY, false, &tx, &ty);
+    fromOffset(tx, ty, xu, yu);
+}
+
+bool
+DistortionModelNuke::distortLinear(double xu, double yu, double* xd, double *yd, bool converged) const
+{
+    const DistortionModel& radial = _radial;
+    if (!_linear) {
+        if (converged) {
+            return radial.distortConverged(xu, yu, xd, yd);
+        }
+        radial.distort(xu, yu, xd, yd);
+
+        return true;
+    }
+    // the inverse: R(twist) radial^-1(S^-1 R(-twist) (p - c)), the linear part in closed form
+    double vx, vy, tx, ty, x, y;
+    toOffset(xu, yu, &vx, &vy);
+    rotate(vx, vy, true, &tx, &ty);
+    fromOffset(tx / _scaleX, ty / _scaleY, &x, &y);
+    bool ok = true;
+    if (converged) {
+        ok = radial.distortConverged(x, y, &x, &y);
+    } else {
+        radial.distort(x, y, &x, &y);
+    }
+    toOffset(x, y, &vx, &vy);
+    rotate(vx, vy, false, &tx, &ty);
+    fromOffset(tx, ty, xd, yd);
+
+    return ok;
+}
+
+void
+DistortionModelNuke::distort(double xu, double yu, double* xd, double *yd) const
+{
+    (void)distortLinear(xu, yu, xd, yd, false);
+}
+
+bool
+DistortionModelNuke::distortConverged(double xu, double yu, double* xd, double *yd) const
+{
+    return distortLinear(xu, yu, xd, yd, true);
+}
+
+bool
+DistortionModelNuke::undistortConverged(double xd, double yd, double* xu, double *yu) const
+{
+    undistort(xd, yd, xu, yu);
+
+    return true;
 }
 
 

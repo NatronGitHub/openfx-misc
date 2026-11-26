@@ -127,21 +127,37 @@ private:
     bool undistortNewton(double xd, double yd, double* xu, double *yu, bool checkResidual) const;
 };
 
-class DistortionModelNuke
+// the parameters of the "Nuke" model (the NukeX Classic model of the tests/nuke reference), in units of half
+// the largest format dimension; preconditions (I.5): squeeze, scaleX and scaleY are at least 0.001
+struct DistortionModelNukeParams
+{
+    double k1 = 0.; // the first and second radial coefficients
+    double k2 = 0.;
+    double cx = 0.; // the offset of the distortion center from the format center
+    double cy = 0.;
+    double squeeze = 1.; // anamorphic squeeze, >= 0.001
+    double ax = 0.; // asymmetric distortion
+    double ay = 0.;
+    double twist = 0.; // the rotation of the anamorphic axes, in degrees
+    double scaleX = 1.; // the anamorphic scale, along the twisted axes, >= 0.001
+    double scaleY = 1.;
+};
+
+// the radial and anamorphic part of the "Nuke" model, without the twist and the scale (distort is solved
+// by Newton)
+class DistortionModelNukeRadial
 : public DistortionModelUndistort
 {
 public:
-    DistortionModelNuke(const OfxRectD& format,
-                        double par,
-                        double k1,
-                        double k2,
-                        double cx,
-                        double cy,
-                        double squeeze,
-                        double ax,
-                        double ay);
+    DistortionModelNukeRadial(const OfxRectD& format,
+                              double par,
+                              const DistortionModelNukeParams& params);
 
-    virtual ~DistortionModelNuke() {};
+    virtual ~DistortionModelNukeRadial() {};
+
+    // pixel positions from and to the model's normalised coordinates (relative to the format center)
+    void toNormalised(double x, double y, double* xn, double* yn) const;
+    void fromNormalised(double xn, double yn, double* x, double* y) const;
 
 private:
     // function used to undistort a point or distort an image
@@ -159,6 +175,45 @@ private:
     double _squeeze;
     double _ax;
     double _ay;
+};
+
+// The "Nuke" model: the radial part (DistortionModelNukeRadial) in the frame of the anamorphic axes, rotated
+// by the twist about the distortion center, followed by the anamorphic scale along those axes:
+//   undistort(p) = c + R(twist) S radial(R(-twist) (p - c)) (in normalised coordinates),
+// so that distort, the inverse, undoes the linear part in closed form around the radial part's Newton solver.
+class DistortionModelNuke
+: public DistortionModel
+{
+public:
+    DistortionModelNuke(const OfxRectD& format,
+                        double par,
+                        const DistortionModelNukeParams& params);
+
+    virtual ~DistortionModelNuke() {};
+
+    virtual void distort(double xu, double yu, double* xd, double *yd) const OVERRIDE FINAL;
+    virtual void undistort(double xd, double yd, double* xu, double *yu) const OVERRIDE FINAL;
+    virtual bool distortConverged(double xu, double yu, double* xd, double *yd) const OVERRIDE FINAL;
+    virtual bool undistortConverged(double xd, double yd, double* xu, double *yu) const OVERRIDE FINAL;
+    virtual bool distortIsNumerical() const OVERRIDE FINAL { return true; }
+
+private:
+    // a pixel position to its normalised offset from the distortion center, and back
+    void toOffset(double x, double y, double* vx, double* vy) const;
+    void fromOffset(double vx, double vy, double* x, double* y) const;
+    // R(twist) v, or R(-twist) v (inverse)
+    void rotate(double vx, double vy, bool inverse, double* rx, double* ry) const;
+    // distort (converged: distortConverged)
+    bool distortLinear(double xu, double yu, double* xd, double *yd, bool converged) const;
+
+    DistortionModelNukeRadial _radial;
+    bool _linear; // twist or scale: the linear part is not the identity
+    double _cx;
+    double _cy;
+    double _twistCos; // the cosine and sine of the twist
+    double _twistSin;
+    double _scaleX;
+    double _scaleY;
 };
 
 
