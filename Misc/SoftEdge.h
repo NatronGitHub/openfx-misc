@@ -28,6 +28,13 @@
 namespace OFX {
 namespace SoftEdge {
 
+/// t^2 (3 - 2t), the smoothstep polynomial, for t in (0, 1).
+inline double
+smoothstepInUnit(double t)
+{
+    return t * t * (3. - 2. * t);
+}
+
 /// smoothstep: 0 for t <= 0, 1 for t >= 1, t^2 (3 - 2t) between (a NaN stays NaN).
 inline double
 smoothstep(double t)
@@ -39,7 +46,7 @@ smoothstep(double t)
         return 1.;
     }
 
-    return t * t * (3. - 2. * t);
+    return smoothstepInUnit(t);
 }
 
 /// Two parabolas, 2t^2 for t < 1/2 then 1 - 2(1 - t)^2; not clamped. The softness of the older
@@ -66,6 +73,28 @@ enum class FalloffEnum
     eFalloffSmooth,
 };
 
+/// The clamped curves (all but Quadratic) for t in (0, 1).
+inline double
+clampedFalloffInUnit(FalloffEnum curve,
+                     double t)
+{
+    switch (curve) {
+    case FalloffEnum::eFalloffLinear:
+
+        return t;
+    case FalloffEnum::eFalloffSmooth0:
+
+        return t * t * (2. - t);
+    case FalloffEnum::eFalloffSmooth1:
+
+        return t * ( 1. + t * (1. - t) );
+    case FalloffEnum::eFalloffSmooth:
+    default:
+
+        return smoothstepInUnit(t);
+    }
+}
+
 /// The weight at the distance t across the soft edge (0 at the outer edge, 1 at the inner one).
 /// Quadratic is rampSmooth(), not clamped; the other curves are clamped to [0, 1] (NaN gives 0),
 /// and Smooth0, Smooth1 and Smooth are those of ofxsRamp (the Ramp plug-in).
@@ -82,27 +111,17 @@ falloff(FalloffEnum curve,
     if (t >= 1.) {
         return 1.;
     }
-    switch (curve) {
-    case FalloffEnum::eFalloffLinear:
 
-        return t;
-    case FalloffEnum::eFalloffSmooth0:
-
-        return t * t * (2. - t);
-    case FalloffEnum::eFalloffSmooth1:
-
-        return t * ( 1. + t * (1. - t) );
-    case FalloffEnum::eFalloffSmooth:
-    default:
-
-        return smoothstep(t);
-    }
+    return clampedFalloffInUnit(curve, t);
 }
 
 /// The weight of a pixel whose center is at the distance d inside the edge (negative outside), for a
 /// soft edge of width softness and a half pixel halfPixel (in the same units): the falloff curve of
 /// (d + halfPixel) / (softness + 2 halfPixel), so that the edge is also antialiased over one pixel;
-/// 0 outside of the edge (also for a NaN distance) and 1 inside.
+/// 0 outside of the edge (also for a NaN distance) and 1 inside. Used by Radial and Rectangle 3.
+/// Crop, CopyRectangle and DiscBlades compute the same t but call smoothstep() on it: with Smooth,
+/// this gives the same weight except for a NaN t, which gives 0 here and NaN there, so they keep
+/// smoothstep() to keep their output.
 inline double
 softEdgeWeight(FalloffEnum curve,
                double d,
@@ -117,8 +136,11 @@ softEdgeWeight(FalloffEnum curve,
     if (t >= 1.) {
         return 1.;
     }
+    if (curve == FalloffEnum::eFalloffQuadratic) {
+        return rampSmooth(t);
+    }
 
-    return falloff(curve, t);
+    return clampedFalloffInUnit(curve, t);
 }
 } // namespace SoftEdge
 } // namespace OFX
