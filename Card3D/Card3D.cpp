@@ -2082,8 +2082,6 @@ Card3DPluginFactory::describe(ImageEffectDescriptor &desc)
     desc.setPluginDescription(kPluginDescription);
 
     Transform3x3Describe(desc, false);
-
-    //ofxsSetOverlayInteractDescriptorV2(desc, new TransformOverlayDescriptorOldParamsV2);
 }
 
 
