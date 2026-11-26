@@ -127,6 +127,41 @@ out=$(cd "$out" && pwd)
 work=$(mktemp -d "${TMPDIR:-/tmp}/package-release.XXXXXX")
 trap 'rm -rf "$work"' EXIT
 
+# mingw_paragraph: the README paragraph of the MSYS2 (MinGW) Windows bundles (readme, testing_readme)
+mingw_paragraph() {
+    cat << 'EOF'
+
+The bundles are 64-bit, for Windows 10 or later, with the MinGW runtime linked
+statically (no extra DLL is needed): the licenses of the MinGW-w64 runtime and
+winpthreads are in LICENSES/.
+EOF
+}
+
+# licenses_section: the "Licenses" section of the README (readme, testing_readme)
+licenses_section() {
+    cat << 'EOF'
+Licenses
+--------
+openfx-misc is free software, under the GNU General Public License, version 2
+or later: see LICENSE.txt. The bundles also contain third-party code, whose
+licenses are in LICENSES/: openfx's Support library (BSD 3-clause) in every
+bundle, freeglut's text renderer and pixman's blend modes
+(MIT) in Misc.ofx, CImg (CeCILL-C) and pocketfft (BSD 3-clause) in
+CImg.ofx, and, in LICENSES/<bundle>/, those of the libraries linked statically
+into a bundle or bundled with it (e.g. Mesa and LLVM in the OSMesa Shadertoy),
+which are also in <bundle>.ofx.bundle/Contents/Resources/licenses/.
+Misc.ofx also contains code first published under other licences, compatible
+with the GPL and distributed under the GPL as part of Misc.ofx (see the
+sources): Misc/randomGenerator.cpp (the MT19937 generator of Makoto Matsumoto
+and Takuji Nishimura, GNU Library General Public License, version 2 or later)
+and the Yadif mode of Deinterlace/Deinterlace.cpp (from FFmpeg's
+libavfilter/vf_yadif.c, Michael Niedermayer, GNU Lesser General Public License,
+version 2.1 or later). Distortion's PFBarrel (.pfb) file reader contains code
+"Copyright (C) 2011 The Pixel Farm Ltd", distributed under the GPL as part of
+Misc.ofx.
+EOF
+}
+
 # readme NAME CONTENTS: the README.txt of the download NAME, whose bundles are described by CONTENTS
 readme() {
     cat << EOF
@@ -170,12 +205,7 @@ bundle (<bundle>.ofx.bundle/Libraries).
 EOF
             ;;
         Windows)
-            if [ -z "$msvc" ]; then cat << 'EOF'
-
-The bundles are 64-bit, for Windows 10 or later, with the MinGW runtime linked
-statically (no extra DLL is needed): the licenses of the MinGW-w64 runtime and
-winpthreads are in LICENSES/.
-EOF
+            if [ -z "$msvc" ]; then mingw_paragraph
             else
                 cat << 'EOF'
 
@@ -219,26 +249,8 @@ EOF
 
 Natron already includes all these plug-ins: Natron users don't need them.
 
-Licenses
---------
-openfx-misc is free software, under the GNU General Public License, version 2
-or later: see LICENSE.txt. The bundles also contain third-party code, whose
-licenses are in LICENSES/: openfx's Support library (BSD 3-clause) in every
-bundle, freeglut's text renderer and pixman's blend modes
-(MIT) in Misc.ofx, CImg (CeCILL-C) and pocketfft (BSD 3-clause) in
-CImg.ofx, and, in LICENSES/<bundle>/, those of the libraries linked statically
-into a bundle or bundled with it (e.g. Mesa and LLVM in the OSMesa Shadertoy),
-which are also in <bundle>.ofx.bundle/Contents/Resources/licenses/.
-Misc.ofx also contains code first published under other licences, compatible
-with the GPL and distributed under the GPL as part of Misc.ofx (see the
-sources): Misc/randomGenerator.cpp (the MT19937 generator of Makoto Matsumoto
-and Takuji Nishimura, GNU Library General Public License, version 2 or later)
-and the Yadif mode of Deinterlace/Deinterlace.cpp (from FFmpeg's
-libavfilter/vf_yadif.c, Michael Niedermayer, GNU Lesser General Public License,
-version 2.1 or later). Distortion's PFBarrel (.pfb) file reader contains code
-"Copyright (C) 2011 The Pixel Farm Ltd", distributed under the GPL as part of
-Misc.ofx.
 EOF
+    licenses_section
 }
 
 # package NAME CONTENTS BUNDLE...: the download NAME, with the BUNDLE directories (*.ofx.bundle)
@@ -378,7 +390,8 @@ CI run: $run}
 Unzip the archive into a directory listed in OFX_PLUGIN_PATH. It contains:
 - Misc.ofx.bundle: the Misc plug-ins
 - CImg.ofx.bundle: the CImg plug-ins
-- Shadertoy.ofx.bundle: Shadertoy, OpenGL only
+- Shadertoy.ofx.bundle: Shadertoy, OpenGL only (no OSMesa: it renders only in
+  hosts with OpenGL rendering; here for load tests)
 - openfx-misc-testing/: this README.txt, LICENSE.txt and LICENSES/
 EOF
     case "$os" in
@@ -389,21 +402,13 @@ is bundled: the bundles need the system's glibc, libstdc++ and libgcc_s, the
 OpenGL library (libGL.so.1) and GCC's OpenMP runtime (libgomp.so.1).
 EOF
             ;;
-        Windows) cat << 'EOF'
-
-Built with MSYS2 UCRT64 (64-bit, Windows 10 or later), without OpenMP, with the
-MinGW runtime linked statically (no extra DLL is needed): the licenses of the
-MinGW-w64 runtime and winpthreads are in LICENSES/.
-EOF
+        Windows)
+            printf '\n%s\n' "Built with MSYS2 UCRT64, without OpenMP."
+            mingw_paragraph
             ;;
     esac
-    cat << 'EOF'
-
-Licenses: openfx-misc is free software, under the GNU General Public License,
-version 2 or later: see LICENSE.txt. The licenses of the third-party code in
-the bundles (openfx's Support library, freeglut's text renderer and pixman's
-blend modes in Misc.ofx, CImg and pocketfft in CImg.ofx) are in LICENSES/.
-EOF
+    echo
+    licenses_section
 }
 
 if [ -n "$testing" ]; then

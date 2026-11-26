@@ -90,9 +90,9 @@ env:
     (github.ref_type == 'tag' && startsWith(github.ref_name, 'Natron-') &&
     (contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha'))) }}
   # Natron's testing bundles (see the header) are uploaded for pushes and manual runs on master
-  # only: never for pull requests, other branches or tags.
+  # of this repository only: never for pull requests, other branches, tags or forks.
   NATRON_TESTING: >-
-    ${{ github.ref == 'refs/heads/master' &&
+    ${{ github.repository == 'NatronGitHub/openfx-misc' && github.ref == 'refs/heads/master' &&
     (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
 
 defaults:
@@ -244,8 +244,12 @@ jobs:
       - name: Natron's testing bundles
         if: env.NATRON_TESTING == 'true'
         # Misc, CImg and Shadertoy at the root, as Natron unzips them, and openfx-misc-testing/
-        # (README.txt and the licenses): README.md's "Natron's testing bundles".
+        # (README.txt and the licenses): README.md's "Natron's testing bundles". The artifact
+        # name says ubuntu_24: fail if the runner image is another Ubuntu.
         run: |
+          # shellcheck source=/dev/null
+          . /etc/os-release
+          [ "$ID" = ubuntu ] && [ "$VERSION_ID" = 24.04 ] || { echo "::error::not Ubuntu 24.04: $PRETTY_NAME"; exit 1; }
           .github/tools/package-release.sh --natron-testing --platform linux-x86_64 --out NatronTesting \
               --full install/OFX/Plugins --shadertoy-gl install/OFX/Plugins
       - name: Upload Natron's testing bundles

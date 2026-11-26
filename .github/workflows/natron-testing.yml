@@ -13,9 +13,15 @@ name: Natron testing bundles
 # of the latest ci.yml run of master that has them (they are kept 7 days: after that, run ci.yml
 # on master first). See .github/tools/publish-natron-testing.sh.
 #
-# workflow_run runs this file from the default branch, with the write token: it only reads the
-# artifacts of ci.yml runs of this repository's master (the script checks the run), never those
-# of pull requests or forks.
+# workflow_run runs this file from the default branch, with the write token. The trigger alone
+# does not prove where a run comes from (its branch filter matches a fork's master too): the job
+# condition below, then publish-natron-testing.sh, which reads the run from the API, check that it
+# is a ci.yml run of this repository's master (a push or a manual run), never a pull request or a
+# fork's. Skipped runs (conclusion "skipped") are not published.
+#
+# Publishing waits for the whole ci.yml run, macOS and the Arm64X build included (about 25
+# minutes after the push). The two assets may come from different commits: a job that failed
+# keeps its asset from an earlier run.
 on:
   workflow_run:
     workflows: [Continous Integration tests]
@@ -44,6 +50,7 @@ jobs:
       ((github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master') ||
       (github.event_name == 'workflow_run' &&
       github.event.workflow_run.head_branch == 'master' &&
+      github.event.workflow_run.conclusion != 'skipped' &&
       github.event.workflow_run.head_repository.full_name == github.repository &&
       (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch')))
     runs-on: ubuntu-24.04
@@ -53,7 +60,8 @@ jobs:
       actions: read # the artifacts of the ci.yml run
     steps:
       - name: Checkout (the script)
-        uses: actions/checkout@v5
+        # pinned by SHA (this job has a write token), as in release.yml
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           persist-credentials: false
           sparse-checkout: .github/tools
