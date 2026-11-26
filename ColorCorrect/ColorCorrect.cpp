@@ -56,24 +56,21 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
 // version 2.1: add range params
-// version 2.2: gamma = 0 gives its limit (0 below 1, 1 at 1, FLT_MAX above 1) instead of dividing by zero,
-//              and the results of a small gamma are capped to FLT_MAX;
-//              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79);
-//              a NaN value no longer converts NaN to int for the curve lookup (undefined behaviour) (#178);
-//              add the Mix Luminance and Test parameters (default 0 and off: the output is unchanged) (#289);
-//              (2.2 is unreleased, fixed in place, #289) Mix Luminance works on sRGB-encoded values, and the Test
-//              colours are those of the dominant tone range (red and blue) and of the weighted tone ranges (green)
-// version 3.0: Clamp Black is off by default, so that the default node keeps negative values (#272), and
-//              Contrast and Gamma multiply negative values by (0.18^(1 - contrast))^(1 / gamma) instead of leaving
-//              them unchanged, Gamma 0 gives 1 for positive values, and a gamma in (0, 0.001) is 0.001 (#289);
-//              version 2.2 is kept, with the former defaults and output
+// version 2.2: gamma = 0 gives its limit (0 below 1, 1 at 1, FLT_MAX above 1) instead of dividing by zero, and
+//              the results of a small gamma are capped to FLT_MAX; non-finite colours are premultiplied and
+//              unpremultiplied to finite values (SupportExt #73, #79); a NaN value no longer converts NaN to int
+//              for the curve lookup (#178); add the Mix Luminance and Test parameters (default 0 and off) (#289)
+// version 3.0: Clamp Black is off by default (#272); Contrast and Gamma also change the negative values, and
+//              Gamma 0 and the small gammas follow the reference (#289, see contrastGammaV3()). Version 2.2 is
+//              kept, obsolete.
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinorV2 2 // the minor version of the obsolete version 2
 
 // the first major version whose Clamp Black is off by default (issue #272)
-#define kVersionClampBlackOff 3
+static constexpr unsigned kVersionClampBlackOff = 3;
 // the first major version whose Contrast and Gamma follow the tests/nuke reference outside (0, 1] (issue #289)
-#define kVersionContrastGamma 3
+static constexpr unsigned kVersionContrastGamma = 3;
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -200,13 +197,12 @@ struct ColorControlGroup
     ColorControlValues offset;
 };
 
-// how Contrast and Gamma treat the values outside (0, 1], and the small gammas
+// how Contrast and Gamma treat the values outside (0, 1], and the small gammas (see contrastGammaV2() and
+// contrastGammaV3())
 enum class ContrastGammaEnum
 {
-    eVersion2, // negative values unchanged; Gamma 0 gives 0 below 1, 1 at 1, FLT_MAX above 1
-    eVersion3, // the tests/nuke reference: negative values multiplied by (0.18^(1 - contrast))^(1 / gamma),
-               // Gamma 0 gives 1 for positive values and keeps the negative ones, a gamma in (0, 0.001) is
-               // 0.001; the results are capped to the float range, and infinite or NaN values are kept
+    eVersion2,
+    eVersion3, // since kVersionContrastGamma
 };
 
 template<bool processR, bool processG, bool processB, bool processA>
@@ -300,36 +296,51 @@ private:
         // talking to the people making light meters.
 
         if ( processR && (c.r != 1. || gm.r != 1.) ) {
-            r = contrastGammaFunc(r, c.r, gm.r);
+            r = contrastGammaOf(r, c.r, gm.r);
         }
         if ( processG && (c.g != 1. || gm.g != 1.) ) {
-            g = contrastGammaFunc(g, c.g, gm.g);
+            g = contrastGammaOf(g, c.g, gm.g);
         }
         if ( processB && (c.b != 1. || gm.b != 1.) ) {
-            b = contrastGammaFunc(b, c.b, gm.b);
+            b = contrastGammaOf(b, c.b, gm.b);
         }
         if ( processA && (c.a != 1. || gm.a != 1.) ) {
-            a = contrastGammaFunc(a, c.a, gm.a);
+            a = contrastGammaOf(a, c.a, gm.a);
         }
     }
 
-    // Contrast then Gamma: ((v / 0.18)^contrast * 0.18)^(1 / gamma) for v > 0, see ContrastGammaEnum for
-    // the other values and version 3
-    double contrastGammaFunc(double v,
-                             double contrast,
-                             double gamma) const
+    // Contrast and Gamma of one channel value, by the version
+    double contrastGammaOf(double v,
+                           double contrast,
+                           double gamma) const
     {
-        if (contrastGamma == ContrastGammaEnum::eVersion2) {
-            if (v > 0) {
-                if (contrast != 1.) {
-                    v = std::pow(v / 0.18, contrast) * 0.18;
-                }
-                // pow may underflow to 0, which Gamma keeps
-                return (v > 0 && gamma != 1.) ? gammaFunc(v, gamma) : v;
-            }
+        return (contrastGamma == ContrastGammaEnum::eVersion2) ? contrastGammaV2(v, contrast, gamma) : contrastGammaV3(v, contrast, gamma);
+    }
 
-            return v;
+    // Version 2: Contrast then Gamma, ((v / 0.18)^contrast * 0.18)^(1 / gamma), for v > 0; the other values are
+    // unchanged; Gamma 0 gives 0 below 1, 1 at 1, FLT_MAX above 1 (see gammaFunc())
+    static double contrastGammaV2(double v,
+                                  double contrast,
+                                  double gamma)
+    {
+        if (v > 0) {
+            if (contrast != 1.) {
+                v = std::pow(v / 0.18, contrast) * 0.18;
+            }
+            // pow may underflow to 0, which Gamma keeps
+            return (v > 0 && gamma != 1.) ? gammaFunc(v, gamma) : v;
         }
+
+        return v;
+    }
+
+    // Version 3, the tests/nuke reference: as version 2 for v > 0, negative values are multiplied by
+    // (0.18^(1 - contrast))^(1 / gamma), Gamma 0 gives 1 for positive values and keeps the negative ones, a gamma
+    // in (0, 0.001) is 0.001; the results are capped to the float range, and infinite or NaN values are kept
+    static double contrastGammaV3(double v,
+                                  double contrast,
+                                  double gamma)
+    {
         if ( !std::isfinite(v) || (v == 0.) ) {
             return v;
         }
@@ -689,9 +700,13 @@ private:
         }
     }
 
-    // the Test color of the tone range weights, as in the tests/nuke reference: each range has a value,
-    // 0 (shadows), 0.25 (midtones) and 1 (highlights); red and blue are the value of the range with the
-    // largest weight, green is the sum of the values times the weights
+    // the Test values of the tone ranges, as in the tests/nuke reference
+    static constexpr double kTestShadows = 0.;
+    static constexpr double kTestMidtones = 0.25;
+    static constexpr double kTestHighlights = 1.;
+
+    // the Test color of the tone range weights: red and blue are the Test value of the range with the
+    // largest weight, green is the sum of the Test values times the weights
     static void testColor(double s_scale,
                           double h_scale,
                           double *r,
@@ -701,13 +716,13 @@ private:
         const double s = ofxsClamp(s_scale, 0, 1);
         const double h = ofxsClamp(h_scale, 0, 1);
         const double m = ofxsClamp(1. - s - h, 0, 1);
-        *r = *b = (h >= m && h >= s) ? 1. : (m >= s ? 0.25 : 0.);
-        *g = 0.25 * m + h;
+        *r = *b = (h >= m && h >= s) ? kTestHighlights : (m >= s ? kTestMidtones : kTestShadows);
+        *g = kTestMidtones * m + kTestHighlights * h;
     }
 
     // the sRGB encoding (IEC 61966-2-1), whose linear part also encodes the negative values: SupportExt's
     // to_func_srgb and from_func_srgb (ofxsLut.h) clamp the negative values to 0, and work in float
-    // TODO: move to SupportExt
+    // TODO: move toSRGB() and fromSRGB() to SupportExt (ofxsLut.h), as double versions that keep the negative values
     static double toSRGB(double v)
     {
         return v <= 0.0031308 ? 12.92 * v : 1.055 * std::pow(v, 1. / 2.4) - 0.055;
@@ -1263,9 +1278,7 @@ ColorCorrectPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
-    if (majorVersion < kPluginVersionMajor) {
-        desc.setIsObsolete(true);
-    }
+    desc.setIsObsolete(majorVersion < kPluginVersionMajor);
 
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
@@ -1584,8 +1597,8 @@ ColorCorrectPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle han
 
 static ColorCorrectPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 // version 2: Clamp Black is on by default, and Contrast leaves negative values unchanged
-static ColorCorrectPluginFactory<2> p2(kPluginIdentifier, 2);
+static ColorCorrectPluginFactory<2> p_v2(kPluginIdentifier, kPluginVersionMinorV2);
 mRegisterPluginFactoryInstance(p)
-mRegisterPluginFactoryInstance(p2)
+mRegisterPluginFactoryInstance(p_v2)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
