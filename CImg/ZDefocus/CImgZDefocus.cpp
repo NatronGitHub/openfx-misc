@@ -265,28 +265,28 @@ public:
     BlurModel(DepthTypeEnum depthType,
               double focus,
               double depthOfFocus,
-              double size,
-              double maxSize,
+              double radius,
+              double maxRadius,
               int slices)
         : _depthType( unnegatedDepthType(depthType) ) // a negated type is the type of -v, with -focus
         , _focus(_depthType.sign * focus)
         , _halfDoF(depthOfFocus / 2)
-        , _size(size)
-        , _maxSize(maxSize)
+        , _radius(radius)
+        , _maxRadius(maxRadius)
         , _slices(slices)
     {
     }
 
     float sliceCoordinate(double v) const
     {
-        if ( !(_maxSize > 0.) ) {
+        if ( !(_maxRadius > 0.) ) {
             return 0.f;
         }
         const double blur = blurRadius(_depthType.sign * v);
         if ( std::isnan(blur) ) {
             return 0.f;
         }
-        const double q = blur * _slices / _maxSize;
+        const double q = blur * _slices / _maxRadius;
 
         return static_cast<float>( (std::max)( static_cast<double>(-_slices), (std::min)(static_cast<double>(_slices), q) ) );
     }
@@ -316,14 +316,14 @@ private:
         }
         const double d = (std::max)(0., std::abs(s) - _halfDoF);
 
-        return _size * ( (s < 0.) ? -d : d );
+        return _radius * ( (s < 0.) ? -d : d );
     }
 
     SignedDepthType _depthType; // never a negated type
     double _focus;
     double _halfDoF;
-    double _size;
-    double _maxSize;
+    double _radius;
+    double _maxRadius;
     int _slices;
 };
 

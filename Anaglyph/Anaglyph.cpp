@@ -66,7 +66,6 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "The red view is shifted to the left by half this amount, " \
     "and the cyan view is shifted to the right by half this amount (in pixels)." // rounded up // rounded down
 
-
 // Base class for the RGBA and the Alpha processor
 class AnaglyphBase
     : public ImageProcessor

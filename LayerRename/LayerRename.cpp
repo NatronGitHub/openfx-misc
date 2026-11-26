@@ -166,7 +166,7 @@ struct PlaneCandidate
     MultiPlane::ImagePlaneDesc desc;
     std::string name;
     std::string newName;
-    bool rename; // false: the plane keeps its name
+    bool rename{}; // false: the plane keeps its name
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -347,7 +347,7 @@ LayerRenamePlugin::getPlaneRenames(double time) const
     taken.insert(kColorPlaneName);
     taken.insert(kFnOfxImagePlaneColour);
     const std::vector<PlaneCandidate> candidates =
-        planeCandidates(planes, srcNComps, renameColor, match, find, replace, reValid ? &re : NULL, taken);
+        planeCandidates(planes, srcNComps, renameColor, match, find, replace, reValid ? &re : nullptr, taken);
     assignPlaneNames(candidates, taken, result);
 
     return result;
