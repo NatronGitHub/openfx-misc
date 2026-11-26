@@ -149,7 +149,7 @@ sleep(const unsigned int milliseconds)
    - if t == startTime, the buffer is locked and marked as dirty, with date t+1, then unlocked
  * if t > startTime:
    - the buffer is locked, and if it doesn't have date t, then either the render fails, a black image is rendered, or the buffer is used anyway, depending on the user-chosen strategy
-   - if it is marked as dirty, it is unlocked, then locked and read again after a delay (polling, rather than a condition variable, lets each iteration check abort()). The delay starts at 10ms, and is multiplied by two at each unsuccessful lock. abort() is checked at each iteration.
+   - if it is marked as dirty, it is unlocked, then locked and read again after a delay (polling, rather than a condition variable, lets each iteration check abort()). The delay starts at 5 ms, and is multiplied by two at each unsuccessful lock. abort() is checked at each iteration.
    - when the buffer is locked and clean, it is copied to output and unlocked
    - the buffer is re-locked for writing, and marked as dirty, with date t+1, then unlocked
 
@@ -159,7 +159,7 @@ sleep(const unsigned int milliseconds)
    - the RoD is empty
  * if t > startTime:
    - the buffer is locked, and if it doesn't have date t, then either getRoD fails, a black image with an empty RoD is rendered, or the RoD from buffer is used anyway, depending on the user-chosen strategy
-   - if it is marked as dirty ,it is unlocked, then locked and read again after a delay (polling, rather than a condition variable, lets each iteration check abort()). The delay starts at 10ms, and is multiplied by two at each unsuccessful lock. abort() is checked at each iteration.
+   - if it is marked as dirty ,it is unlocked, then locked and read again after a delay (polling, rather than a condition variable, lets each iteration check abort()). The delay starts at 5 ms, and is multiplied by two at each unsuccessful lock. abort() is checked at each iteration.
    - when the buffer is locked and clean, the buffer's RoD is returned and it is unlocked
 
 
@@ -623,7 +623,7 @@ TimeBufferReadPlugin::render(const RenderArguments &args)
             break;
         }
     }
-    //   - if it is marked as dirty, it is unlocked, then locked and read again after a delay (polling, rather than a condition variable, lets each iteration check abort()). The delay starts at 10ms, and is multiplied by two at each unsuccessful lock. abort() is checked at each iteration.
+    //   - if it is marked as dirty, it is unlocked, then locked and read again after a delay (polling, rather than a condition variable, lets each iteration check abort()). The delay starts at 5 ms, and is multiplied by two at each unsuccessful lock. abort() is checked at each iteration.
     switch ( waitForCleanBuffer(timeBuffer, guard) ) {
     case eWaitAborted:
 
@@ -727,7 +727,7 @@ TimeBufferReadPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &a
             break;
         }
     }
-    // - if it is marked as dirty ,it is unlocked, then locked and read again after a delay (polling, rather than a condition variable, lets each iteration check abort()). The delay starts at 10ms, and is multiplied by two at each unsuccessful lock. abort() is checked at each iteration.
+    // - if it is marked as dirty ,it is unlocked, then locked and read again after a delay (polling, rather than a condition variable, lets each iteration check abort()). The delay starts at 5 ms, and is multiplied by two at each unsuccessful lock. abort() is checked at each iteration.
     if ( waitForCleanBuffer(timeBuffer, guard) != eWaitClean ) {
         return false; // aborted, or timed out with Black: use default behavior
     }
