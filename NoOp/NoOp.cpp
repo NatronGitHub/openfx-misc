@@ -705,14 +705,15 @@ saveHostInfo(const std::string& hostName,
 #ifdef _WIN32
     // temp_directory_path() is %TMP%, %TEMP% or %USERPROFILE% (GetTempPath2W), per-user: no other user can
     // plant a file there. Text mode writes CRLF (Notepad).
+    namespace fs = std::filesystem;
+    fs::path tmpPath; // empty until the new file is named
     try {
-        namespace fs = std::filesystem;
         std::error_code ec;
         const fs::path path = fs::temp_directory_path(ec) / fileName;
         if (ec) {
             return std::string();
         }
-        fs::path tmpPath = path;
+        tmpPath = path;
         tmpPath += suffix.str();
         std::ofstream out(tmpPath);
         out << text;
@@ -730,6 +731,11 @@ saveHostInfo(const std::string& hostName,
 
         return std::string( u8.begin(), u8.end() );
     } catch (...) {
+        if ( !tmpPath.empty() ) {
+            std::error_code ec;
+            fs::remove(tmpPath, ec); // no partial file (a no-op after the rename)
+        }
+
         return std::string();
     }
 #else
