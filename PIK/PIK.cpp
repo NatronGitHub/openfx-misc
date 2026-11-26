@@ -109,6 +109,7 @@
 #include <algorithm>
 
 #include "ofxsProcessing.H"
+#include "ofxsCopier.h" // fillBlack
 #include "ofxsMacros.h"
 #include "ofxsMaskMix.h"
 #include "ofxsLut.h"
@@ -183,7 +184,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              range. A NaN Pick colour component is 0 (it picked Blue). The output for finite
 //              inputs is unchanged where its computation did not overflow.
 // versions 1.1 and 2.0: Clean Plate output with C disconnected (and a screen type other than Pick) is not a
-//              pass-through of the disconnected C: the render reports that C is required (issue #328)
+//              pass-through of the disconnected C: it is transparent black (issue #328)
 // version 2.0: Luminance Match (with Screen Range), Autolevels (with the Yellow, Cyan and Magenta overrides) and
 //              RGBA Legal are implemented (issue #281); RGBA Legal is on by default, as in the IBKGizmo keyer, so
 //              that the alpha is at least the luminance of the screen-subtracted color (the alpha was 0 in
@@ -407,7 +408,7 @@ enum ColorspaceEnum
     "What image to output."
 #define kParamOutputModeOptionSource "Source", "The PFg input (or Fg input, if PFg is not connected).", "source"
 #define kParamOutputModeOptionSourceAlpha "Source Alpha", "The Alpha channel from the PFg input (or Fg input, if PFg is not connected), displayed as luminance.", "sourcealpha"
-#define kParamOutputModeOptionCleanPlate "Clean Plate", "The clean plate from the C input (or the screen color, if C is not connected).", "cleanplate"
+#define kParamOutputModeOptionCleanPlate "Clean Plate", "The clean plate from the C input; if C is not connected, the screen color with the Pick screen type, else transparent black.", "cleanplate"
 #define kParamOutputModeOptionScreenMatte "Screen Matte", "The screen matte after keying and screen matte processing, but before applying the inside and outside mask, displayed as luminance.", "screenmatte"
 #define kParamOutputModeOptionInsideMask "Inside Mask", "The inside mask, displayed as luminance.", "insidemask"
 #define kParamOutputModeOptionOutsideMask "Outside Mask", "The outside mask, displayed as luminance.", "outsidemask"
@@ -2112,6 +2113,13 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     } else if (getc) {
+        if ( (outputMode == eOutputModeCleanPlate) && !( _cClip && _cClip->isConnected() ) ) {
+            // the clean plate of a disconnected C is transparent black, as the clean plate generator of
+            // the tests/nuke reference renders without an input (issue #328)
+            fillBlack( *this, args.renderWindow, args.renderScale, dst.get() );
+
+            return;
+        }
         setPersistentMessage(Message::eMessageError, "", "Clean plate (C input) is required but not available or not connected");
         throwSuiteStatusException(kOfxStatFailed);
     }
@@ -2276,8 +2284,8 @@ PIKPlugin::isIdentity(const IsIdentityArguments &args,
     }
     if (outputModeEnum == eOutputModeCleanPlate) {
         ScreenTypeEnum screenType = (ScreenTypeEnum)_screenType->getValueAtTime(time);
-        // with C disconnected, render() shows the "Clean plate (C input) is required" error, instead of
-        // passing a disconnected clip through (issue #328)
+        // with C disconnected, render() gives transparent black, instead of passing a disconnected
+        // clip through (issue #328)
         if ( (screenType != eScreenTypePick) && _cClip && _cClip->isConnected() ) {
             identityClip = _cClip;
             identityTime = time;

@@ -950,6 +950,31 @@ for _op in MERGE_MASKABLE_OPERATORS + ["over"]:
         (ofx_id("MergePlugin"), {"operation": _op, "screenAlpha": 1}),
         nuke_inputs=["Ba01", "Aa01"], clips={"Source": "Ba01", "A": "Aa01"},
         channels="rgba", tolerance=1e-4))
+# A disconnected (#328): the checked output channels are B's where B's
+# checkbox is on, else 0; the unchecked output channels are B's.
+_B_NONE = {"BChannelsR": 0, "BChannelsG": 0, "BChannelsB": 0, "BChannelsA": 0}
+_OUT_ALPHA = {"OutputChannelsR": 0, "OutputChannelsG": 0, "OutputChannelsB": 0}
+for _major in (None, 2, 1):
+    _version = "" if _major is None else " %d" % _major
+    _kw = {} if _major is None else {"major": _major}
+    CASES += [
+        case("Merge%s over, A disconnected, B channels none" % _version,
+             ("Merge2", {"Bchannels": "none"}),
+             (ofx_id("MergePlugin"), dict(_B_NONE)),
+             nuke_inputs=["Ba01"], clips={"Source": "Ba01"},
+             channels="rgba", **_kw),
+        case("Merge%s over, A disconnected, B channels rgb" % _version,
+             ("Merge2", {"Bchannels": "rgb"}),
+             (ofx_id("MergePlugin"), {"BChannelsA": 0}),
+             nuke_inputs=["Ba01"], clips={"Source": "Ba01"},
+             channels="rgba", **_kw),
+        case("Merge%s over, A disconnected, output alpha, B channels none"
+             % _version,
+             ("Merge2", {"Bchannels": "none", "output": "alpha"}),
+             (ofx_id("MergePlugin"), dict(_B_NONE, **_OUT_ALPHA)),
+             nuke_inputs=["Ba01"], clips={"Source": "Ba01"},
+             channels="rgba", **_kw),
+    ]
 CASES += [
     case("Merge over, mask and mix 0.5",
          ("Merge2", dict(MASKED, mix=.5)), (ofx_id("MergePlugin"),
@@ -2276,6 +2301,16 @@ CASES += [
          **dict(VIEWS, input=None)),
 ]
 
+# The clean plate without a C input is transparent black, as the
+# reference's clean plate generator without an input (#328). (After the
+# IBKGizmoV3 cases: the first case of a plug-in gives the node whose knob
+# order test_param_order.py compares.)
+CASES.append(case(
+    "PIK Clean Plate, C disconnected (IBKColourV3, no input)",
+    ("IBKColourV3", {"screen_type": "blue"}),
+    (ofx_id("PIK"), {"screenType": "C-Blue", "show": "Clean Plate"}),
+    nuke_inputs=[None], clips={"Source": "hues01"}, channels="rgba"))
+
 # ---------------------------------------------------------- ContactSheet
 # ContactSheet 2 makes square output pixels where the host supports multiple
 # clip PARs; hostDemo does not, and gives the output the PAR of the inputs:
@@ -2309,8 +2344,8 @@ for _center in (False, True):
         row_order="TopBottom"))
 CASES += [
     # cells of 20x20 with a gap of 4: the 32x32 images are scaled by 0.5.
-    # Not compared: the right margin (x 60 to 64, outside the cells), which
-    # is black here and differs at x 63 (not reproduced, by decision).
+    # Not compared: the right margin (x 60 to 64, outside the cells): the
+    # reference repeats edge pixels there, and ContactSheet does not.
     _contact_sheet("2x3 cells, gap 4, scale 0.5", 64, 44, 2, 3,
                    ["ramp", None, "checker", "checker", "ramp"], gap=4,
                    region=(0, 0, 60, 44)),

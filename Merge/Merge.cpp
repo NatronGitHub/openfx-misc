@@ -159,6 +159,10 @@ enum MergePluginEnum
 //      context, used by Natron, is unchanged.
 // 1.1 and 2.1 (unreleased, fixed in place): with Alpha-only images, B is not passed through when B's R checkbox,
 //      which controls the alpha in these versions, is unchecked (issue #328).
+// 1.1, 2.1 and 3.0 (unreleased, fixed in place, issue #328): with A disconnected (and an operator that gives B
+//      with B alone, or any operator in version 1), the output channels are B's channels whose B checkbox is on,
+//      else 0, and the unchecked output channels are B's (B was copied whole, and the unchecked output channels
+//      were 0); Mask and Mix apply.
 // 3.0 (unreleased, fixed in place): in the general context, the time domain is the frame range of B, or of
 //      A with the new "Range From" parameter (default B), instead of the host default (issue #277).
 //      Rendered images are unchanged. Versions 1 and 2 keep the host default, with no parameter.
@@ -876,9 +880,19 @@ private:
                 // one A input, even if none is connected.
                 // This behavior was introduced in version 2.0.
                 if ( _srcImgAs.size() == 0 && ( isIdentityForBOnlyVersioned(f, _majorVersion) || _majorVersion == 1 ) ) {
+                    // B alone: the output channels are B's channels whose checkbox is on, else 0, as in the
+                    // tests/nuke reference; the other channels are B's (issue #328: B was copied whole, and
+                    // the unchecked output channels were 0)
                     const PIX *srcPixB = (const PIX *)  (_srcImgB ? _srcImgB->getPixelAddress(x, y) : 0);
                     for (int c = 0; c < nComponents; ++c) {
-                        dstPix[c] = (_outputChannels[nComponents > 1 ? c : 3] && srcPixB) ? srcPixB[c] : 0;
+                        const bool bChannel = _bChannels[alphaFromA ? 3 : c];
+                        tmpPix[c] = (bChannel && srcPixB) ? static_cast<float>(srcPixB[c]) : 0.f;
+                    }
+                    ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPixB, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
+                    for (int c = 0; c < nComponents; ++c) {
+                        if (!_outputChannels[nComponents > 1 ? c : 3]) {
+                            dstPix[c] = srcPixB ? srcPixB[c] : 0;
+                        }
                     }
                 } else {
                     // process the first connected A input first
