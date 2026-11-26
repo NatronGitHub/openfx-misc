@@ -69,10 +69,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginIdentifier    "net.sf.cimg.CImgZDefocus"
 // History:
-// version 1.0: initial version. Before its first release (#266): the documented blur formula,
-//              Disparity with Offset, Direct and negated depth types, Size and Maximum Size as
-//              radii, the documented Depth of Focus, a truncated Gaussian, a tighter disc edge,
-//              soft slices, Fill Background, Blur Inside, and the documented defaults.
+// version 1.0: initial version (#266)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -194,10 +191,6 @@ enum ApertureEnum
     eApertureCustom,
 };
 
-// Size and Maximum Size are blur radii: the kernel diameter, which the blurs use, is twice the
-// radius.
-constexpr double kRadiusToDiameter = 2.;
-
 // custom kernel pixels below this fraction of the kernel maximum are outside of the bokeh
 constexpr double kKernelThreshold = 1e-3;
 
@@ -216,13 +209,13 @@ constexpr double kGaussianFFTCost = 100.; // measured with pocketfft on 1920x108
 // is truncated to |dx|, |dy| <= r.
 constexpr double kGaussianSigmaPerRadius = 0.35355339059327376; // 1/sqrt(8)
 
-// Number of pixels read on each side of a pixel to blur it with a kernel of diameter sizePixels
-// (the kernel half-size), for all the apertures. Used for the render window padding, which must
-// be the same in render() and getRegionsOfInterest(), and for the slice bounding boxes.
+// Number of pixels read on each side of a pixel to blur it with a kernel of radius radiusPixels,
+// for all the apertures. Used for the render window padding, which must be the same in render()
+// and getRegionsOfInterest(), and for the slice bounding boxes.
 int
-blurPadding(double sizePixels)
+blurPadding(double radiusPixels)
 {
-    return static_cast<int>( std::ceil(sizePixels / 2) ) + 1;
+    return static_cast<int>( std::ceil(radiusPixels) ) + 1;
 }
 
 // Whether the render scale is reduced (proxy). These renders, as the draft renders, use the
@@ -233,15 +226,15 @@ isProxyScale(const OfxPointD& renderScale)
     return (renderScale.x < 1.) || (renderScale.y < 1.);
 }
 
-// The render window padding, in pixels at the render scale: the kernel half-size of the
-// maximum blur size (a kernel diameter). render() and getRegionsOfInterest() must use the same padding.
+// The render window padding, in pixels at the render scale, for the maximum blur radius (Maximum
+// Size). render() and getRegionsOfInterest() must use the same padding.
 OfxPointI
-renderPadding(double maxSize,
+renderPadding(double maxRadius,
               const OfxPointD& renderScale)
 {
-    const double size = (std::max)(0., maxSize);
+    const double radius = (std::max)(0., maxRadius);
 
-    return { blurPadding(size * renderScale.x), blurPadding(size * renderScale.y) };
+    return { blurPadding(radius * renderScale.x), blurPadding(radius * renderScale.y) };
 }
 
 // Pixel aspect ratio of a clip, falling back to 1 if the host returns an invalid value.
@@ -401,6 +394,38 @@ truncatedGaussianKernel(double sigma,
     return k;
 }
 
+// The costs, in direct convolution taps, of convolving img by a kernel directly, at directTaps
+// taps per pixel, and with the FFT, at fftCost taps per pixel of the padded FFT image of area
+// fftArea. Each caller has its own cost model (FFT size and cost) and comparison.
+struct ConvolutionCost
+{
+    double direct;
+    double fft;
+};
+
+ConvolutionCost
+convolutionCost(const CImg<cimgpix_t>& img,
+                double directTaps,
+                double fftArea,
+                double fftCost)
+{
+    return { directTaps * img.width() * img.height(), fftCost * fftArea };
+}
+
+// In-place convolution of all channels of img by the centered kernel k times scale, with the FFT.
+void
+convolveAllChannelsFFT(CImg<cimgpix_t>& img,
+                       const CImg<cimgpix_t>& k,
+                       double scale,
+                       const ImageEffect& effect)
+{
+    std::vector<int> chans( img.spectrum() );
+    for (int c = 0; c < img.spectrum(); ++c) {
+        chans[c] = c;
+    }
+    cimgConvolveFFT( img, chans, k, scale, -(k.width() / 2), -(k.height() / 2), effect );
+}
+
 // In-place separable Gaussian blur of all channels of img, of standard deviations (sigmaX,
 // sigmaY), truncated to |dx| <= halfX and |dy| <= halfY, with zero boundary conditions (as the
 // other apertures). Large kernels use the FFT, whose cost does not depend on the kernel size,
@@ -424,16 +449,13 @@ truncatedGaussianBlur(CImg<cimgpix_t>& img,
     // about kGaussianFFTCost taps per pixel of the padded FFT image
     const double fftArea = static_cast<double>( cimgFFTSize( static_cast<unsigned int>(img.width() + kx.width() - 1) ) ) *
                            cimgFFTSize( static_cast<unsigned int>(img.height() + ky.height() - 1) );
-    if ( static_cast<double>( kx.width() + ky.height() ) * img.width() * img.height() > kGaussianFFTCost * fftArea ) {
+    const ConvolutionCost cost = convolutionCost(img, kx.width() + ky.height(), fftArea, kGaussianFFTCost);
+    if (cost.direct > cost.fft) {
         CImg<cimgpix_t> k( kx.width(), ky.height() );
         cimg_forXY(k, x, y) {
             k(x, y) = kx(x) * ky(0, y);
         }
-        std::vector<int> chans( img.spectrum() );
-        for (int c = 0; c < img.spectrum(); ++c) {
-            chans[c] = c;
-        }
-        cimgConvolveFFT( img, chans, k, 1., -(k.width() / 2), -(k.height() / 2), effect );
+        convolveAllChannelsFFT(img, k, 1., effect);
 
         return;
     }
@@ -539,14 +561,17 @@ discBlur(CImg<cimgpix_t>& img,
 } // discBlur
 
 // In-place blur of all channels of a planar image by the custom aperture kernel, scaled so that
-// its larger dimension is the blur size (sx, sy in pixels). Pixels outside of the image are zero.
+// its larger dimension is the blur diameter (for the radii rx, ry in pixels). Pixels outside of
+// the image are zero.
 void
 customBlur(CImg<cimgpix_t>& img,
            const CImg<cimgpix_t>& kernel,
-           double sx,
-           double sy,
+           double rx,
+           double ry,
            const ImageEffect& effect)
 {
+    const double sx = 2 * rx;
+    const double sy = 2 * ry;
     const int kw = kernel.width();
     const int kh = kernel.height();
     const double scale = 1. / (std::max)(kw, kh);
@@ -567,7 +592,8 @@ customBlur(CImg<cimgpix_t>& img,
     // pixel of the zero-padded power-of-two image (measured with CImg 3.x without FFTW).
     const double fftArea = static_cast<double>( cimg::nearest_pow2( static_cast<unsigned int>(img.width() + k.width() - 1) ) ) *
                            cimg::nearest_pow2( static_cast<unsigned int>(img.height() + k.height() - 1) );
-    if ( static_cast<double>( k.size() ) * img.width() * img.height() < 100. * fftArea ) {
+    const ConvolutionCost cost = convolutionCost( img, static_cast<double>( k.size() ), fftArea, 100. );
+    if (cost.direct < cost.fft) {
         const CImg<cimgpix_t> kn = k / static_cast<cimgpix_t>(sum);
         for (int c = 0; c < img.spectrum() && !effect.abort(); ++c) {
             img.get_shared_channel(c).convolve(kn, 0); // zero boundary conditions, centered kernel
@@ -575,11 +601,7 @@ customBlur(CImg<cimgpix_t>& img,
 
         return;
     }
-    std::vector<int> chans( img.spectrum() );
-    for (int c = 0; c < img.spectrum(); ++c) {
-        chans[c] = c;
-    }
-    cimgConvolveFFT( img, chans, k, 1. / sum, -(k.width() / 2), -(k.height() / 2), effect );
+    convolveAllChannelsFFT(img, k, 1. / sum, effect);
 } // customBlur
 
 // The Blur Inside kernel: a separable [a, b, a] of variance 2a = 0.25 (a standard deviation of
@@ -605,27 +627,27 @@ insideBlur(CImg<cimgpix_t>& img,
     }
 }
 
-// In-place blur of all channels of img by the aperture, with a blur size of (sx, sy) pixels.
+// In-place blur of all channels of img by the aperture, with the blur radii (rx, ry) in pixels.
 // The custom kernel is only used by eApertureCustom. Returns false if the effect was aborted.
 bool
 apertureBlur(CImg<cimgpix_t>& img,
              ApertureEnum aperture,
              const CImg<cimgpix_t>& kernel,
-             double sx,
-             double sy,
+             double rx,
+             double ry,
              const ImageEffect& effect)
 {
     switch (aperture) {
     case eApertureCustom:
-        customBlur(img, kernel, sx, sy, effect);
+        customBlur(img, kernel, rx, ry, effect);
         break;
     case eApertureDisc:
         // a pixel at distance d from the center has the weight clamp(r - d, 0, 1) for a radius r:
         // the disc of discBlur() with a radius of r - 0.5
-        discBlur(img, sx / 2 - 0.5, sy / 2 - 0.5, effect);
+        discBlur(img, rx - 0.5, ry - 0.5, effect);
         break;
     case eApertureGaussian:
-        gaussianBlur(img, sx / 2, sy / 2, effect);
+        gaussianBlur(img, rx, ry, effect);
         break;
     }
 
@@ -837,6 +859,72 @@ writeOutput(const CImg<cimgpix_t>& result,
     }
 }
 
+// What the blurs of the slices of a render share (see render()).
+struct SliceContext
+{
+    const CImg<cimgpix_t>& img; // the premultiplied Source, within the processed region
+    const CImg<float>& sliceCoord; // the slice coordinate of each pixel of img
+    OfxRectI procBox; // the processed region, in img coordinates: {0, 0, width, height}
+    LayerChannels channels;
+    ApertureEnum aperture;
+    const CImg<cimgpix_t>& kernel; // the custom aperture kernel
+    OfxPointD renderScale;
+    bool fillBackground;
+    bool blurInside;
+};
+
+// Blur slice k, whose pixels are within box, with the blur radii (in pixels) radius, and merge
+// it over result (see render()). layer is a work buffer. Returns false if the effect was aborted.
+bool
+blurAndMergeSlice(const SliceContext& ctx,
+                  int k,
+                  const OfxPointD& radius,
+                  const OfxRectI& box,
+                  CImg<cimgpix_t>& layer,
+                  CImg<cimgpix_t>& result,
+                  const ImageEffect& effect)
+{
+    const LayerChannels& channels = ctx.channels;
+    // Only process the slice bounding box, grown by the kernel radius (where the blurred slice is
+    // non-zero) and by the kernel radius again (the pixels read to blur it, used by the
+    // normalization), so that small slices are cheap.
+    const int hx = blurPadding(radius.x);
+    const int hy = blurPadding(radius.y);
+    OfxRectI crop = {box.x1 - 2 * hx, box.y1 - 2 * hy, box.x2 + 2 * hx, box.y2 + 2 * hy};
+    Coords::rectIntersection(crop, ctx.procBox, &crop);
+    // The layer channels: the premultiplied slice image, the slice mask, the all-ones image,
+    // and, to fill the background hidden by the slices in front of the focal plane, the
+    // premultiplied background behind the slice and its mask. They are blurred together.
+    // With Blur Inside, the in-focus pixels (q = 0) are left out of slice 0, and blurred below.
+    const bool fill = ctx.fillBackground && (k > 0);
+    const bool inside = ctx.blurInside && (k == 0);
+    layer.assign(crop.x2 - crop.x1, crop.y2 - crop.y1, 1, fill ? channels.fillCount() : channels.sliceCount(), 0.f);
+    setWeightedImage(layer, 0, ctx.img, ctx.sliceCoord, crop,
+                     [k, inside](float q) { return (inside && q == 0.f) ? 0.f : sliceWeight(q, k); });
+    layer.get_shared_channel( channels.ones() ).fill(1.f);
+    if (fill) {
+        setWeightedImage(layer, channels.behind(), ctx.img, ctx.sliceCoord, crop, [k](float q) { return behindWeight(q, k); });
+    }
+    if ( !apertureBlur(layer, ctx.aperture, ctx.kernel, radius.x, radius.y, effect) ) {
+        return false;
+    }
+    if (fill) {
+        // a fraction of the mask of a single pixel, whose blurred mask is 1/(kernel area)
+        const double kernelArea = (std::max)(1., OFXS_PI * radius.x * radius.y);
+        fillHiddenBackground( result, layer, crop, channels, static_cast<float>(kFillMinPixelMask / kernelArea) );
+    }
+    mergeOver(result, layer, crop, channels);
+    if (inside) {
+        layer.assign(crop.x2 - crop.x1, crop.y2 - crop.y1, 1, channels.sliceCount(), 0.f);
+        setWeightedImage(layer, 0, ctx.img, ctx.sliceCoord, crop, [](float q) { return (q == 0.f) ? 1.f : 0.f; });
+        layer.get_shared_channel( channels.ones() ).fill(1.f);
+        insideBlur(layer, ctx.renderScale, effect);
+        mergeOver(result, layer, crop, channels);
+    }
+
+    return true;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class ZDefocusPlugin
@@ -1006,6 +1094,7 @@ ZDefocusPlugin::render(const RenderArguments &args)
             cimgThrowBitDepthUnsupported(*this);
         }
         if (src->getPixelComponentCount() != nComps) {
+            setPersistentMessage(Message::eMessageError, "", "The Source and Output images have different numbers of components.");
             throwSuiteStatusException(kOfxStatErrImageFormat);
         }
         checkBadRenderScaleOrField(src, args);
@@ -1028,7 +1117,7 @@ ZDefocusPlugin::render(const RenderArguments &args)
     // get the parameters
     const CImgKernelChannelEnum depthChannel = static_cast<CImgKernelChannelEnum>( _depthChannel->getValueAtTime(time) );
     const DepthTypeEnum depthType = static_cast<DepthTypeEnum>( _depthType->getValueAtTime(time) );
-    const double maxSize = kRadiusToDiameter * _maxSize->getValueAtTime(time); // the largest kernel diameter
+    const double maxRadius = _maxSize->getValueAtTime(time);
     const int slices = (std::max)( 1, _slices->getValueAtTime(time) );
     const bool fillBackground = _fillBackground->getValueAtTime(time);
     const bool blurInside = _blurInside->getValueAtTime(time);
@@ -1045,12 +1134,12 @@ ZDefocusPlugin::render(const RenderArguments &args)
     const BlurModel blurModel( depthType,
                                getFocusValue(time, args.renderScale, depth.get(), depthChannel),
                                (std::max)( 0., _depthOfFocus->getValueAtTime(time) ),
-                               kRadiusToDiameter * _size->getValueAtTime(time),
-                               maxSize,
+                               _size->getValueAtTime(time),
+                               maxRadius,
                                slices );
 
     // compute the region to process: the render window, padded by the maximum blur size
-    const OfxPointI pad = renderPadding(maxSize, args.renderScale);
+    const OfxPointI pad = renderPadding(maxRadius, args.renderScale);
     OfxRectI procRect = { renderWindow.x1 - pad.x, renderWindow.y1 - pad.y, renderWindow.x2 + pad.x, renderWindow.y2 + pad.y };
     if ( !Coords::rectIntersection(procRect, src->getBounds(), &procRect) ) {
         return;
@@ -1070,9 +1159,9 @@ ZDefocusPlugin::render(const RenderArguments &args)
     // are zero for all apertures, and the blurred slice is divided by the blur of an all-ones
     // image. Without this, the masks of the near slices would fall below 1 near the image edges,
     // and the far slices would show through.
-    const OfxRectI procBox = {0, 0, W, H};
+    const SliceContext context{ img, sliceCoord, {0, 0, W, H}, LayerChannels{nComps}, aperture, kernel,
+                                args.renderScale, fillBackground, blurInside };
     CImg<cimgpix_t> result(W, H, 1, nComps + 1, 0.f);
-    const LayerChannels channels{nComps};
     CImg<cimgpix_t> layer;
     try {
         // Register this effect so that CImg's abort test (cimg_abort_test, see CImgFilter.h)
@@ -1089,44 +1178,10 @@ ZDefocusPlugin::render(const RenderArguments &args)
             if ( abort() ) {
                 return;
             }
-            const double sliceSize = std::abs(k) * maxSize / slices;
-            const double sx = sliceSize * args.renderScale.x;
-            const double sy = sliceSize * args.renderScale.y;
-            // Only process the slice bounding box, grown by the kernel half-size (where the blurred
-            // slice is non-zero) and by the kernel half-size again (the pixels read to blur it,
-            // used by the normalization), so that small slices are cheap.
-            const int hx = blurPadding(sx);
-            const int hy = blurPadding(sy);
-            OfxRectI crop = {box.x1 - 2 * hx, box.y1 - 2 * hy, box.x2 + 2 * hx, box.y2 + 2 * hy};
-            Coords::rectIntersection(crop, procBox, &crop);
-            // The layer channels: the premultiplied slice image, the slice mask, the all-ones image,
-            // and, to fill the background hidden by the slices in front of the focal plane, the
-            // premultiplied background behind the slice and its mask. They are blurred together.
-            // With Blur Inside, the in-focus pixels (q = 0) are left out of slice 0, and blurred below.
-            const bool fill = fillBackground && (k > 0);
-            const bool inside = blurInside && (k == 0);
-            layer.assign(crop.x2 - crop.x1, crop.y2 - crop.y1, 1, fill ? channels.fillCount() : channels.sliceCount(), 0.f);
-            setWeightedImage(layer, 0, img, sliceCoord, crop,
-                             [k, inside](float q) { return (inside && q == 0.f) ? 0.f : sliceWeight(q, k); });
-            layer.get_shared_channel( channels.ones() ).fill(1.f);
-            if (fill) {
-                setWeightedImage(layer, channels.behind(), img, sliceCoord, crop, [k](float q) { return behindWeight(q, k); });
-            }
-            if ( !apertureBlur(layer, aperture, kernel, sx, sy, *this) ) {
+            const double sliceRadius = std::abs(k) * maxRadius / slices;
+            const OfxPointD radius = { sliceRadius * args.renderScale.x, sliceRadius * args.renderScale.y };
+            if ( !blurAndMergeSlice(context, k, radius, box, layer, result, *this) ) {
                 return;
-            }
-            if (fill) {
-                // a fraction of the mask of a single pixel, whose blurred mask is 1/(kernel area)
-                const double kernelArea = (std::max)(1., OFXS_PI / 4 * sx * sy);
-                fillHiddenBackground( result, layer, crop, channels, static_cast<float>(kFillMinPixelMask / kernelArea) );
-            }
-            mergeOver(result, layer, crop, channels);
-            if (inside) {
-                layer.assign(crop.x2 - crop.x1, crop.y2 - crop.y1, 1, channels.sliceCount(), 0.f);
-                setWeightedImage(layer, 0, img, sliceCoord, crop, [](float q) { return (q == 0.f) ? 1.f : 0.f; });
-                layer.get_shared_channel( channels.ones() ).fill(1.f);
-                insideBlur(layer, args.renderScale, *this);
-                mergeOver(result, layer, crop, channels);
             }
         }
     } catch (CImgAbortException&) {
@@ -1179,7 +1234,7 @@ ZDefocusPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
     const double time = args.time;
     const ApertureEnum aperture = static_cast<ApertureEnum>( _aperture->getValueAtTime(time) );
     // same padding as in render(), converted from pixels to canonical coordinates
-    const OfxPointI pad = renderPadding(kRadiusToDiameter * _maxSize->getValueAtTime(time), args.renderScale);
+    const OfxPointI pad = renderPadding(_maxSize->getValueAtTime(time), args.renderScale);
     const double padX = pad.x * clipPAR(_srcClip) / args.renderScale.x;
     const double padY = pad.y / args.renderScale.y;
     OfxRectD roi = args.regionOfInterest;
