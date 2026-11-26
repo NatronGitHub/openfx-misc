@@ -1094,14 +1094,7 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     , _imageShaderID(1)
     , _imageShaderUniformsID(1)
     , _imageShaderUpdateParams(false)
-    , _imageShaderExtraParameters()
-    , _imageShaderHasMouse(false)
-    , _imageShaderInputEnabled(NBINPUTS)
-    , _imageShaderInputLabel(NBINPUTS)
-    , _imageShaderInputHint(NBINPUTS)
-    , _imageShaderInputFilter(NBINPUTS, eFilterMipmap)
-    , _imageShaderInputWrap(NBINPUTS, eWrapRepeat)
-    , _imageShaderBBox(eBBoxDefault)
+    , _imageShaderParams()
     , _imageShaderCompiled(false)
     , _openGLContextData()
     , _openGLContextAttached(false)
@@ -1630,28 +1623,14 @@ ShadertoyPlugin::updateExtra()
     // without holding it: setValue() is a host call, which may call changedParam() back, and
     // changedParam() takes the same non-recursive lock (C++ Core Guidelines CP.22).
     bool updateParams = false;
-    std::vector<ExtraParameter> extraParameters;
-    bool hasMouse = false;
-    std::vector<bool> inputEnabled;
-    std::vector<std::string> inputLabel;
-    std::vector<std::string> inputHint;
-    std::vector<FilterEnum> inputFilter;
-    std::vector<WrapEnum> inputWrap;
-    BBoxEnum bbox = BBoxEnum();
+    ImageShaderParams extracted;
     {
         std::lock_guard<std::mutex> lock(_imageShaderMutex);
         // only do this if parameters were updated!
         updateParams = _imageShaderUpdateParams;
         if (updateParams) {
             _imageShaderUpdateParams = false;
-            extraParameters = _imageShaderExtraParameters;
-            hasMouse = _imageShaderHasMouse;
-            inputEnabled = _imageShaderInputEnabled;
-            inputLabel = _imageShaderInputLabel;
-            inputHint = _imageShaderInputHint;
-            inputFilter = _imageShaderInputFilter;
-            inputWrap = _imageShaderInputWrap;
-            bbox = _imageShaderBBox;
+            extracted = _imageShaderParams;
         }
     }
     {
@@ -1660,35 +1639,35 @@ ShadertoyPlugin::updateExtra()
             EditBlock eb(*this, kParamAuto);
             // Try to avoid setting parameters to the same value, since this maytrigger an unnecessary instancechanged on some hosts
             for (unsigned i = 0; i < NBINPUTS; ++i) {
-                if ( inputEnabled[i] != _inputEnable[i]->getValue() ) {
-                    _inputEnable[i]->setValue(inputEnabled[i]);
+                if ( extracted.inputEnabled[i] != _inputEnable[i]->getValue() ) {
+                    _inputEnable[i]->setValue(extracted.inputEnabled[i]);
                 }
                 string s;
                 _inputLabel[i]->getValue(s);
-                if (inputLabel[i] != s) {
-                    _inputLabel[i]->setValue(inputLabel[i]);
+                if (extracted.inputLabel[i] != s) {
+                    _inputLabel[i]->setValue(extracted.inputLabel[i]);
                 }
                 _inputHint[i]->getValue(s);
-                if (inputHint[i] != s) {
-                    _inputHint[i]->setValue(inputHint[i]);
+                if (extracted.inputHint[i] != s) {
+                    _inputHint[i]->setValue(extracted.inputHint[i]);
                 }
-                if ( inputFilter[i] != _inputFilter[i]->getValue() ) {
-                    _inputFilter[i]->setValue(inputFilter[i]);
+                if ( extracted.inputFilter[i] != _inputFilter[i]->getValue() ) {
+                    _inputFilter[i]->setValue(extracted.inputFilter[i]);
                 }
-                if ( inputWrap[i] != _inputWrap[i]->getValue() ) {
-                    _inputWrap[i]->setValue(inputWrap[i]);
+                if ( extracted.inputWrap[i] != _inputWrap[i]->getValue() ) {
+                    _inputWrap[i]->setValue(extracted.inputWrap[i]);
                 }
             }
-            if ( hasMouse != _mouseParams->getValue() ) {
-                _mouseParams->setValue(hasMouse);
+            if ( extracted.hasMouse != _mouseParams->getValue() ) {
+                _mouseParams->setValue(extracted.hasMouse);
             }
-            unsigned paramCount = (std::min)( extraParameters.size() , _paramType.size() );
+            unsigned paramCount = (std::min)( extracted.extraParameters.size() , _paramType.size() );
             if ( (int)paramCount != _paramCount->getValue() ) {
                 _paramCount->setValue(paramCount);
                 uniformsChanged = true;
             }
             for (unsigned i = 0; i < paramCount; ++i) {
-                const ExtraParameter& p = extraParameters[i];
+                const ExtraParameter& p = extracted.extraParameters[i];
                 UniformTypeEnum t = p.getType();
                 bool nChanged = false; // did the param name change? (required shader recompilation to get the uniform address)
                 bool tChanged = ( t != (UniformTypeEnum)_paramType[i]->getValue() );
@@ -1898,7 +1877,7 @@ ShadertoyPlugin::updateExtra()
                 }
                 } // switch
             }
-            for (unsigned i = extraParameters.size(); i < _paramType.size(); ++i) {
+            for (unsigned i = extracted.extraParameters.size(); i < _paramType.size(); ++i) {
                 bool tChanged = ( (UniformTypeEnum)_paramType[i]->getValue() != eUniformTypeNone );
                 if (tChanged) {
                     _paramDefaultBool[i]->resetToDefault();
@@ -1919,7 +1898,7 @@ ShadertoyPlugin::updateExtra()
                     //_paramMaxVec4[i]->resetToDefault();
                 }
             }
-            _bbox->setValue( (int)bbox );
+            _bbox->setValue( (int)extracted.bbox );
             resetParamsValues();
             if (uniformsChanged) {
                 // mark that image shader must be recompiled on next render

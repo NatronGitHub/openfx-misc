@@ -322,6 +322,19 @@ public:
         std::string filename;
     };
 
+    // What the last compilation extracted from the shader, for updateExtra()
+    struct ImageShaderParams
+    {
+        std::vector<ExtraParameter> extraParameters;
+        bool hasMouse = false;
+        std::vector<bool> inputEnabled = std::vector<bool>(SHADERTOY_NBINPUTS);
+        std::vector<std::string> inputLabel = std::vector<std::string>(SHADERTOY_NBINPUTS);
+        std::vector<std::string> inputHint = std::vector<std::string>(SHADERTOY_NBINPUTS);
+        std::vector<FilterEnum> inputFilter = std::vector<FilterEnum>(SHADERTOY_NBINPUTS, eFilterMipmap);
+        std::vector<WrapEnum> inputWrap = std::vector<WrapEnum>(SHADERTOY_NBINPUTS, eWrapRepeat);
+        BBoxEnum bbox = eBBoxDefault;
+    };
+
 public:
     /** @brief ctor */
     ShadertoyPlugin(OfxImageEffectHandle handle);
@@ -464,14 +477,7 @@ private:
     unsigned int _imageShaderID; // an ID that changes each time the shadertoy changes and needs to be recompiled
     unsigned int _imageShaderUniformsID; // an ID that changes each time the uniform names or count changed
     bool _imageShaderUpdateParams; // ask to extract parameters from the shader on next compilation
-    std::vector<ExtraParameter> _imageShaderExtraParameters; // parameters extracted from the shader
-    bool _imageShaderHasMouse; // parameters extracted from the shader
-    std::vector<bool> _imageShaderInputEnabled;
-    std::vector<std::string> _imageShaderInputLabel;
-    std::vector<std::string> _imageShaderInputHint;
-    std::vector<FilterEnum> _imageShaderInputFilter;
-    std::vector<WrapEnum> _imageShaderInputWrap;
-    BBoxEnum _imageShaderBBox;
+    ImageShaderParams _imageShaderParams; // guarded by _imageShaderMutex
     bool _imageShaderCompiled;
     struct OpenGLContextData
     {
