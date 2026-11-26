@@ -48,10 +48,13 @@
 #include "ofxsCoords.h"
 #include "ofxsLut.h"
 #include "ofxsMacros.h"
+#include "SampleUtils.h"
 
 using namespace OFX;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
+
+using SampleUtils::sampleToFloat;
 
 // whether the host supports periodic parametric params (set in describeInContext)
 static bool gParametricPeriodic = false;
@@ -1130,13 +1133,6 @@ public:
 
     void setSrcImg(const Image *v) {_srcImg = v; }
 };
-
-template<class PIX, int maxValue>
-static float
-sampleToFloat(PIX value)
-{
-    return (maxValue == 1) ? value : (value / (float)maxValue);
-}
 
 template<class PIX, int maxValue>
 static PIX

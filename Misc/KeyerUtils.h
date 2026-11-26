@@ -18,7 +18,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 /*
- * The pixel input code shared by the Keyer and ChromaKeyer plug-ins.
+ * The pixel input code shared by the Keyer, ChromaKeyer and PIK plug-ins.
  */
 
 #ifndef openfx_misc_KeyerUtils_h
@@ -26,27 +26,14 @@
 
 #include <algorithm>
 
-#include "ofxsNonFinite.h" // clampToFloatRange, clampToUnit
+#include "ofxsNonFinite.h" // clampToUnit
+#include "SampleUtils.h"
 
 namespace OFX {
 namespace KeyerUtils {
 
-/// A sample, normalized to [0,1] for integer samples.
-template<class PIX, int maxValue>
-inline float
-sampleToFloat(PIX value)
-{
-    return (maxValue == 1) ? value : (value / (float)maxValue);
-}
-
-/// A sample, normalized, in the float range: NaN gives 0, +-inf gives +-FLT_MAX (issues #195, #213),
-/// so that the keyer computations never see inf * 0 or inf - inf.
-template<class PIX, int maxValue>
-inline float
-finiteSampleToFloat(PIX value)
-{
-    return clampToFloatRange( sampleToFloat<PIX, maxValue>(value) );
-}
+using SampleUtils::sampleToFloat;
+using SampleUtils::finiteSampleToFloat;
 
 /// The inside and outside masks of a keyer at a pixel, in [0,1].
 struct Masks

@@ -62,6 +62,7 @@ Merge/Merge.cpp
 Mirror/Mirror.cpp
 Misc/KeyerUtils.h
 Misc/MultiviewFetch.h
+Misc/SampleUtils.h
 Misc/SoftEdge.h
 Misc/TransformDefaults.h
 Misc/randomGenerator.cpp
