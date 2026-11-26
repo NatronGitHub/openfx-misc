@@ -77,8 +77,13 @@ pixelComponentString(const std::string& p)
     const std::string prefix = "OfxImageComponent";
 
     std::string s = p;
+    const std::string::size_type pos = s.find(prefix);
 
-    return s.replace(s.find(prefix), prefix.length(), "");
+    if (pos != std::string::npos) {
+        s.erase(pos, prefix.length());
+    }
+
+    return s;
 }
 
 inline const char*
@@ -178,7 +183,7 @@ appendClipInfo(std::ostringstream& oss,
         OfxRectI format;
         c.getFormat(format);
         oss << format.x2 - format.x1 << 'x' << format.y2 - format.y1;
-        if ( (format.x1 != 0) && (format.y1 != 0) ) {
+        if ( (format.x1 != 0) || (format.y1 != 0) ) {
             if (format.x1 < 0) {
                 oss << format.x1;
             } else {
