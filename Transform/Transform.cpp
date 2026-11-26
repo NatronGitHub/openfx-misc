@@ -26,6 +26,7 @@
 
 #include "ofxsTransform3x3.h"
 #include "ofxsTransformInteract.h"
+#include "TransformDefaults.h"
 #include "ofxsCoords.h"
 #include "ofxsThreadSuite.h"
 
@@ -57,7 +58,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History (Transform, TransformMasked, DirBlur):
 // version 1.0: initial version
 // version 1.1: the inverse of a transform matrix with huge entries (e.g. a concatenated source transform) no longer overflows to NaN or 0 (SupportExt #81)
-// SupportExt#179, in the current minor versions (not released yet, so no further bump): with the Box
+// SupportExt#179, in the current minor versions: with the Box
 //              filter, the thin band just outside the source image is black (Black Outside) or the
 //              edge colour, not about 4x the edge value (garbage).
 // SupportExt#183-#185, #205 and #207, also in the current minor versions:
@@ -78,7 +79,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              the image centre, which changes the output.
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
-// 1.1 (Transform, TransformMasked, DirBlur) (unreleased, fixed in place): the Lanczos4, Lanczos6 and Sinc4 filters (appended options) and the
+// 1.1 (Transform, TransformMasked, DirBlur): the Lanczos4, Lanczos6 and Sinc4 filters (appended options) and the
 //      Prefilter Downscaling checkbox (after Black Outside, off) (issue #270); the default output is unchanged.
 
 #define kParamSrcClipChanged "srcClipChanged"
@@ -139,17 +140,8 @@ public:
              ( _scaleUniform->getNumKeys() == 0) ) {
             _scaleUniform->setIsSecretAndDisabled(true);
         }
-        // Hosts that ignore normalised defaults (OFX 1.1 hosts such as VEGAS, and DaVinci Resolve)
-        // give the default center (0.5, 0.5) as is: move it to the project centre (#66). The host
-        // may send instanceChanged for that setValue(), which changedParam() would take as a center
-        // edit and stop the re-centring on a new source: keep Center Changed as it was (this works
-        // only if the host sends instanceChanged synchronously, from setValue()). Last, since
-        // setValue() may call changedParam().
-        const bool centerChanged = _centerChanged->getValue();
-        ofxsTransformDenormaliseDefaults(*this, /*oldParams=*/true);
-        if (_centerChanged->getValue() != centerChanged) {
-            _centerChanged->setValue(centerChanged);
-        }
+        // last, since setValue() may call changedParam()
+        transformDenormaliseDefaultsKeepCenterChanged(*this, *_centerChanged);
     }
 
 private:

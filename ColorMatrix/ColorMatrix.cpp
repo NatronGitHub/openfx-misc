@@ -45,15 +45,16 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
-// version 2.1: premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79);
-//              (2.1 is unreleased, extended in place, issue #291) Invert parameter (default off): apply the inverse of the matrix
-// version 3.0: Clamp Black is off by default, so that the default node keeps negative values (issue #272);
-//              version 2.1 is kept, with Clamp Black on by default
+// version 2.1: NaN/inf-safe premultiply (SupportExt #73, #79);
+//              Invert parameter, off by default: apply the inverse of the matrix (issue #291)
+// version 3.0: Clamp Black is off by default, so that the default node keeps negative values (issue #272).
+//              Version 2.1 is kept, obsolete.
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinorV2 1 // the minor version of the obsolete version 2
 
 // the first major version whose Clamp Black is off by default (issue #272)
-#define kVersionClampBlackOff 3
+static constexpr unsigned kVersionClampBlackOff = 3;
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -144,23 +145,47 @@ using ColorMatrixRows = std::array<RGBAValues, 4>;
 // the channels (R, G, B, A) that the render changes: processed, and in the image
 using ColorMatrixChannels = std::array<bool, 4>;
 
-// The inverse of the 4x4 matrix whose rows are m, or nothing if it is not invertible. A matrix
-// whose determinant is tiny relative to the product of its row norms (an upper bound of the
-// determinant, Hadamard's inequality) is not invertible either: its inverse would only amplify
-// rounding errors (e.g. rows (.1,.2,.3), (.4,.5,.6), (.7,.8,.9) have a determinant of about
-// 1e-17 in double, and an inverse with entries around 1e15).
-std::optional<ColorMatrixRows>
-invertColorMatrix(const ColorMatrixRows& m)
+// the matrix whose rows are m
+static Matrix4x4
+toMatrix4x4(const ColorMatrixRows& m)
 {
-    constexpr double kRelativeDeterminantMin = 1e-12;
     Matrix4x4 mat;
-    double rowNormProduct = 1.;
     for (int i = 0; i < 4; ++i) {
         mat(i, 0) = m[i].r;
         mat(i, 1) = m[i].g;
         mat(i, 2) = m[i].b;
         mat(i, 3) = m[i].a;
-        rowNormProduct *= std::sqrt(m[i].r * m[i].r + m[i].g * m[i].g + m[i].b * m[i].b + m[i].a * m[i].a);
+    }
+
+    return mat;
+}
+
+// the rows of mat
+static ColorMatrixRows
+toRows(const Matrix4x4& mat)
+{
+    ColorMatrixRows m;
+    for (int i = 0; i < 4; ++i) {
+        m[i].r = mat(i, 0);
+        m[i].g = mat(i, 1);
+        m[i].b = mat(i, 2);
+        m[i].a = mat(i, 3);
+    }
+
+    return m;
+}
+
+// The inverse of mat, or nothing if it is not invertible. A matrix whose determinant is tiny relative to
+// the product of its row norms (an upper bound of the determinant, Hadamard's inequality) is not invertible
+// either: its inverse would only amplify rounding errors (e.g. rows (.1,.2,.3), (.4,.5,.6), (.7,.8,.9) have a
+// determinant of about 1e-17 in double, and an inverse with entries around 1e15).
+std::optional<ColorMatrixRows>
+invertColorMatrix(const Matrix4x4& mat)
+{
+    constexpr double kRelativeDeterminantMin = 1e-12;
+    double rowNormProduct = 1.;
+    for (int i = 0; i < 4; ++i) {
+        rowNormProduct *= std::sqrt(mat(i, 0) * mat(i, 0) + mat(i, 1) * mat(i, 1) + mat(i, 2) * mat(i, 2) + mat(i, 3) * mat(i, 3));
     }
     const double det = mat.determinant();
     // also false for a NaN determinant or row norm
@@ -171,47 +196,53 @@ invertColorMatrix(const ColorMatrixRows& m)
     if ( !mat.inverse(&inv) ) {
         return std::nullopt;
     }
+    // not redundant with the determinant test: an inverse entry is only bounded by
+    // 1 / (kRelativeDeterminantMin * the norm of a row), which overflows for a tiny row
     for (double v : inv.m) {
         if ( !std::isfinite(v) ) {
             return std::nullopt;
         }
     }
-    ColorMatrixRows ret;
-    for (int i = 0; i < 4; ++i) {
-        ret[i].r = inv(i, 0);
-        ret[i].g = inv(i, 1);
-        ret[i].b = inv(i, 2);
-        ret[i].a = inv(i, 3);
-    }
 
-    return ret;
+    return toRows(inv);
 }
 
 // The matrix that the render applies: the rows of the channels it does not change are unit
 // rows (the input value is kept), the other rows are those of m.
-ColorMatrixRows
+Matrix4x4
 effectiveColorMatrix(const ColorMatrixRows& m,
                      const ColorMatrixChannels& changed)
 {
-    ColorMatrixRows ret = m;
-    if (!changed[0]) {
-        ret[0] = RGBAValues(0.);
-        ret[0].r = 1.;
-    }
-    if (!changed[1]) {
-        ret[1] = RGBAValues(0.);
-        ret[1].g = 1.;
-    }
-    if (!changed[2]) {
-        ret[2] = RGBAValues(0.);
-        ret[2].b = 1.;
-    }
-    if (!changed[3]) {
-        ret[3] = RGBAValues(0.);
-        ret[3].a = 1.;
+    Matrix4x4 mat = toMatrix4x4(m);
+    for (int i = 0; i < 4; ++i) {
+        if (!changed[i]) {
+            for (int j = 0; j < 4; ++j) {
+                mat(i, j) = (i == j) ? 1. : 0.;
+            }
+        }
     }
 
-    return ret;
+    return mat;
+}
+
+// true if the rows of the processed channels are unit rows: the render keeps these channels
+static bool
+isIdentityOn(const ColorMatrixRows& m,
+             const ColorMatrixChannels& processed)
+{
+    const Matrix4x4 mat = toMatrix4x4(m);
+    for (int i = 0; i < 4; ++i) {
+        if (!processed[i]) {
+            continue;
+        }
+        for (int j = 0; j < 4; ++j) {
+            if ( mat(i, j) != ( (i == j) ? 1. : 0. ) ) {
+                return false;
+            }
+        }
+    }
+
+    return true;
 }
 
 class ColorMatrixProcessorBase
@@ -630,16 +661,7 @@ ColorMatrixPlugin::isIdentity(const IsIdentityArguments &args,
     _processA->getValueAtTime(args.time, processA);
     const std::optional<ColorMatrixRows> matrix = getMatrix( args.time, getChangedChannels( args.time, _dstClip->getPixelComponents() ) );
     // not invertible: the render reports the error, except where the mask excludes the render window (below)
-    const ColorMatrixRows rows = matrix.value_or( ColorMatrixRows() );
-    const RGBAValues& r = rows[0];
-    const RGBAValues& g = rows[1];
-    const RGBAValues& b = rows[2];
-    const RGBAValues& a = rows[3];
-    if ( matrix &&
-         ( !processR || ( (r.r == 1.) && (r.g == 0.) && (r.b == 0.) && (r.a == 0.) ) ) &&
-         ( !processG || ( ( g.r == 0.) && ( g.g == 1.) && ( g.b == 0.) && ( g.a == 0.) ) ) &&
-         ( !processB || ( ( b.r == 0.) && ( b.g == 0.) && ( b.b == 1.) && ( b.a == 0.) ) ) &&
-         ( !processA || ( ( a.r == 0.) && ( a.g == 0.) && ( a.b == 0.) && ( a.a == 1.) ) ) ) {
+    if ( matrix && isIdentityOn( *matrix, ColorMatrixChannels{ {processR, processG, processB, processA} } ) ) {
         identityClip = _srcClip;
 
         return true;
@@ -713,9 +735,7 @@ ColorMatrixPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
-    if (majorVersion < kPluginVersionMajor) {
-        desc.setIsObsolete(true);
-    }
+    desc.setIsObsolete(majorVersion < kPluginVersionMajor);
 
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
@@ -919,8 +939,8 @@ ColorMatrixPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle hand
 
 static ColorMatrixPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 // version 2: Clamp Black is on by default
-static ColorMatrixPluginFactory<2> p2(kPluginIdentifier, 1);
+static ColorMatrixPluginFactory<2> p_v2(kPluginIdentifier, kPluginVersionMinorV2);
 mRegisterPluginFactoryInstance(p)
-mRegisterPluginFactoryInstance(p2)
+mRegisterPluginFactoryInstance(p_v2)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

@@ -32,10 +32,7 @@
 #include "ofxsMacros.h"
 #include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
-#ifndef OFX_USE_MULTITHREAD_MUTEX
-// some OFX hosts do not have mutex handling in the MT-Suite (e.g. Sony Catalyst Edit)
 #include <mutex>
-#endif
 
 #define SHADERTOY_NBINPUTS 4 // number of input channels (the standard shadertoy has 4 inputs)
 #define SHADERTOY_NBUNIFORMS 20 // number of additional uniforms (if more than 7, Nuke 7's parameter page goes blank when unfolding the Extra Parameters group)
@@ -325,13 +322,18 @@ public:
         std::string filename;
     };
 
-#ifdef OFX_USE_MULTITHREAD_MUTEX
-    typedef OFX::MultiThread::Mutex Mutex;
-    typedef OFX::MultiThread::AutoMutex AutoMutex;
-#else
-    typedef std::mutex Mutex;
-    typedef OFX::MultiThread::AutoMutexT<std::mutex> AutoMutex;
-#endif
+    // What the last compilation extracted from the shader, for updateExtra()
+    struct ImageShaderParams
+    {
+        std::vector<ExtraParameter> extraParameters;
+        bool hasMouse = false;
+        std::vector<bool> inputEnabled = std::vector<bool>(SHADERTOY_NBINPUTS);
+        std::vector<std::string> inputLabel = std::vector<std::string>(SHADERTOY_NBINPUTS);
+        std::vector<std::string> inputHint = std::vector<std::string>(SHADERTOY_NBINPUTS);
+        std::vector<FilterEnum> inputFilter = std::vector<FilterEnum>(SHADERTOY_NBINPUTS, eFilterMipmap);
+        std::vector<WrapEnum> inputWrap = std::vector<WrapEnum>(SHADERTOY_NBINPUTS, eWrapRepeat);
+        BBoxEnum bbox = eBBoxDefault;
+    };
 
 public:
     /** @brief ctor */
@@ -471,18 +473,13 @@ private:
     std::vector<OFX::Double2DParam *> _paramMaxVec2;
     OFX::BooleanParam *_enableGPU;
     OFX::ChoiceParam *_cpuDriver;
-    OFX::auto_ptr<Mutex> _imageShaderMutex;
+    // _imageShaderMutex guards the five members below, which changedParam() and render() share, and the
+    // imageShaderID and imageShaderUniformsID of the OpenGL context data (CP.50)
+    std::mutex _imageShaderMutex;
     unsigned int _imageShaderID; // an ID that changes each time the shadertoy changes and needs to be recompiled
     unsigned int _imageShaderUniformsID; // an ID that changes each time the uniform names or count changed
     bool _imageShaderUpdateParams; // ask to extract parameters from the shader on next compilation
-    std::vector<ExtraParameter> _imageShaderExtraParameters; // parameters extracted from the shader
-    bool _imageShaderHasMouse; // parameters extracted from the shader
-    std::vector<bool> _imageShaderInputEnabled;
-    std::vector<std::string> _imageShaderInputLabel;
-    std::vector<std::string> _imageShaderInputHint;
-    std::vector<FilterEnum> _imageShaderInputFilter;
-    std::vector<WrapEnum> _imageShaderInputWrap;
-    BBoxEnum _imageShaderBBox;
+    ImageShaderParams _imageShaderParams; // what the compilation extracted, copied by updateExtra()
     bool _imageShaderCompiled;
     struct OpenGLContextData
     {
@@ -504,7 +501,7 @@ private:
 
     OpenGLContextData _openGLContextData; // (OpenGL-only) - the single openGL context, in case the host does not support kNatronOfxImageEffectPropOpenGLContextData
     bool _openGLContextAttached; // (OpenGL-only) - set to true when the contextAttached function is executed - used for checking non-conformant hosts such as Sony Catalyst
-    OFX::auto_ptr<Mutex> _rendererInfoMutex;
+    std::mutex _rendererInfoMutex;
     std::string _rendererInfo;
     bool _rendererInfoIsMesa; // which render path filled _rendererInfo
 
@@ -516,7 +513,7 @@ private:
     // A new context is created if the list is empty.
     // That way, we can have multithreaded OSMesa rendering without having to create a context at each render
     std::list<OSMesaPrivate *> _osmesa;
-    OFX::auto_ptr<Mutex> _osmesaMutex;
+    std::mutex _osmesaMutex;
 #endif
 };
 

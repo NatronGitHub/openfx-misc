@@ -29,25 +29,16 @@
 #include "ofxsMacros.h"
 #include "ofxsLut.h"
 #include "ofxsNonFinite.h" // clampToFloatRange, clampToUnit, finiteSample
+#include "KeyerUtils.h"
 #include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
-#ifdef OFX_USE_MULTITHREAD_MUTEX
-namespace {
-typedef OFX::MultiThread::Mutex Mutex;
-typedef OFX::MultiThread::AutoMutex AutoMutex;
-}
-#else
-// some OFX hosts do not have mutex handling in the MT-Suite (e.g. Sony Catalyst Edit)
 #include <mutex>
-namespace {
-typedef std::mutex Mutex;
-typedef OFX::MultiThread::AutoMutexT<std::mutex> AutoMutex;
-}
-#endif
 
 using namespace OFX;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
+
+using KeyerUtils::finiteSampleToFloat;
 
 #define kPluginName "ChromaKeyerOFX"
 #define kPluginGrouping "Keyer"
@@ -186,7 +177,7 @@ enum SourceAlphaEnum
     eSourceAlphaNormal,
 };
 
-static Color::LutManager<Mutex>* gLutManager;
+static Color::LutManager<std::mutex>* gLutManager;
 
 class ChromaKeyerProcessorBase
     : public ImageProcessor
@@ -350,13 +341,6 @@ public:
 
 
 template<class PIX, int maxValue>
-static float
-sampleToFloat(PIX value)
-{
-    return (maxValue == 1) ? value : (value / (float)maxValue);
-}
-
-template<class PIX, int maxValue>
 static PIX
 floatToSample(float value)
 {
@@ -421,27 +405,19 @@ private:
                 const PIX *bgPix = (const PIX *)  (_bgImg ? _bgImg->getPixelAddress(x, y) : 0);
                 const PIX *inMaskPix = (const PIX *)  (_inMaskImg ? _inMaskImg->getPixelAddress(x, y) : 0);
                 const PIX *outMaskPix = (const PIX *)  (_outMaskImg ? _outMaskImg->getPixelAddress(x, y) : 0);
-                float inMask = inMaskPix ? sampleToFloat<PIX, maxValue>(*inMaskPix) : 0.f;
-                if ( (_sourceAlpha == eSourceAlphaAddToInsideMask) && srcPix ) {
-                    // take the max of inMask and the source Alpha (an RGB Source is opaque, as when the
-                    // host maps it to RGBA: srcPix[3] would be the next pixel's red)
-                    inMask = (std::max)( inMask, srcHasAlpha ? clampToFloatRange( sampleToFloat<PIX, maxValue>(srcPix[3]) ) : 1.f );
-                }
-                float outMask = outMaskPix ? sampleToFloat<PIX, maxValue>(*outMaskPix) : 0.f;
+                const PIX *addedSrcPix = (_sourceAlpha == eSourceAlphaAddToInsideMask) ? srcPix : nullptr;
+                const auto [inMask, outMask] =
+                    KeyerUtils::masks<PIX, maxValue>( inMaskPix, outMaskPix, KeyerUtils::insideMaskFromSource<PIX, maxValue>(addedSrcPix, srcHasAlpha) );
                 float Kbg = 0.f;
-
-                // clamp inMask and outMask in the [0,1] range (NaN gives 0)
-                inMask = clampToUnit(inMask);
-                outMask = clampToUnit(outMask);
 
                 // output of the foreground suppressor
                 // non-finite samples: NaN gives 0, +-inf gives +-FLT_MAX (see clampToFloatRange)
-                float fgr = srcPix ? clampToFloatRange( sampleToFloat<PIX, maxValue>(srcPix[0]) ) : 0.f;
-                float fgg = srcPix ? clampToFloatRange( sampleToFloat<PIX, maxValue>(srcPix[1]) ) : 0.f;
-                float fgb = srcPix ? clampToFloatRange( sampleToFloat<PIX, maxValue>(srcPix[2]) ) : 0.f;
-                float bgr = bgPix ? clampToFloatRange( sampleToFloat<PIX, maxValue>(bgPix[0]) ) : 0.f;
-                float bgg = bgPix ? clampToFloatRange( sampleToFloat<PIX, maxValue>(bgPix[1]) ) : 0.f;
-                float bgb = bgPix ? clampToFloatRange( sampleToFloat<PIX, maxValue>(bgPix[2]) ) : 0.f;
+                float fgr = srcPix ? finiteSampleToFloat<PIX, maxValue>(srcPix[0]) : 0.f;
+                float fgg = srcPix ? finiteSampleToFloat<PIX, maxValue>(srcPix[1]) : 0.f;
+                float fgb = srcPix ? finiteSampleToFloat<PIX, maxValue>(srcPix[2]) : 0.f;
+                float bgr = bgPix ? finiteSampleToFloat<PIX, maxValue>(bgPix[0]) : 0.f;
+                float bgg = bgPix ? finiteSampleToFloat<PIX, maxValue>(bgPix[1]) : 0.f;
+                float bgb = bgPix ? finiteSampleToFloat<PIX, maxValue>(bgPix[2]) : 0.f;
 
                 // we want to be able to play with the matte even if the background is not connected
                 if (!srcPix) {
@@ -630,7 +606,7 @@ private:
                 assert(fga >= 0. && fga <= 1.);
                 double compAlpha = (_outputMode == eOutputModeComposite &&
                                     _sourceAlpha == eSourceAlphaNormal &&
-                                    srcHasAlpha && srcPix) ? clampToFloatRange( sampleToFloat<PIX, maxValue>(srcPix[3]) ) : 1.;
+                                    srcHasAlpha && srcPix) ? finiteSampleToFloat<PIX, maxValue>(srcPix[3]) : 1.;
                 switch (_outputMode) {
                 case eOutputModeIntermediate:
                     for (int c = 0; c < 3; ++c) {
@@ -904,7 +880,7 @@ ChromaKeyerPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     }
 }
 
-mDeclarePluginFactory(ChromaKeyerPluginFactory, { gLutManager = new Color::LutManager<Mutex>; ofxsThreadSuiteCheck(); }, { delete gLutManager; });
+mDeclarePluginFactory(ChromaKeyerPluginFactory, { gLutManager = new Color::LutManager<std::mutex>; ofxsThreadSuiteCheck(); }, { delete gLutManager; });
 void
 ChromaKeyerPluginFactory::describe(ImageEffectDescriptor &desc)
 {

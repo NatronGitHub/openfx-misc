@@ -16,12 +16,23 @@ for o in BUILD_MISC OFXMISC_STANDALONE_BUNDLES OSMESA_PKGCONFIG_STATIC OSMESA_LI
         status=1
     fi
 done
-for f in .github/tools/loadtest.sh .github/tools/smoketest.sh .github/tools/ofxload.cpp; do
+for f in .github/tools/lib.sh .github/tools/loadtest.sh .github/tools/smoketest.sh \
+         .github/tools/smoketest_lists.py .github/tools/ofxload.cpp; do
     if [ ! -f "$f" ]; then
         echo "ERROR: $PWD/$f not found"
         status=1
     fi
 done
+# release.yml runs smoketest.sh with SMOKETEST_NO_TEST=1, and package-release.sh copies the
+# pocketfft licence that CMake puts in CImg.ofx.bundle
+if [ -f .github/tools/smoketest.sh ] && ! grep -q SMOKETEST_NO_TEST .github/tools/smoketest.sh; then
+    echo "ERROR: $PWD/.github/tools/smoketest.sh has no SMOKETEST_NO_TEST"
+    status=1
+fi
+if ! grep -qs Licence_pocketfft.txt CMakeLists.txt cmake/*.cmake; then
+    echo "ERROR: the CMake files of $PWD do not put Licence_pocketfft.txt in CImg.ofx.bundle"
+    status=1
+fi
 if [ $status != 0 ]; then
     echo "ERROR: this source predates the release tooling of this workflow (openfx-misc#173): build a"
     echo "newer tag, or run the release.yml of a ref that matches it"

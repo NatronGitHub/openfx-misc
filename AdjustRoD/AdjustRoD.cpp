@@ -23,6 +23,7 @@
 
 #include <cmath>
 #include <cfloat> // DBL_MAX
+#include <cassert>
 #include <algorithm>
 
 #include "ofxsProcessing.H"
@@ -45,7 +46,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // 1.2 a NULL Source image (disconnected, or fetchImage failed) renders black instead of crashing;
 //     with Nearest border conditions, ask for the Source edge pixels even where the render window
 //     is out of the Source RoD (it got no Source image there);
-//     (#299, in the same unreleased minor version) negative amounts shrink the region of definition (the range
+//     (#299) negative amounts shrink the region of definition (the range
 //     started at 0); the pixels outside the shrunk region follow the border conditions, from its edge
 // 2.0 the default amount is 25 (it was 0, a no-op); the amounts are whole pixels, truncated toward zero (in x,
 //     Add Pixels divided by the pixel aspect ratio) (#299). Version 1 is kept, obsolete, for old projects.
@@ -54,6 +55,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginVersionMinorV1 2 // the minor version of the obsolete version 1
 #define kParamAddPixelsDefault 25. // version 2
 #define kParamAddPixelsDefaultV1 0.
+
+// version 2: whole-pixel amounts, and Add Pixels 25 by default
+static constexpr unsigned kVersionWholePixels = 2;
+// the largest amount in pixels, so that the int conversions are defined
+static constexpr double kMaxPixelAmount = 1e9;
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -95,8 +101,17 @@ enum class AmountRounding
     eWholePixels,
 };
 
-// Version 2: a canonical x coordinate of the RoD near c whose pixel (floor(c / par) for a lower edge, ceil for an
-// upper one) is exactly pixel, so that the host gets whole pixels: (n * par) / par may be 92.999... for n = 93.
+// The pixel of the canonical x coordinate c of a RoD edge: floor(c / par) for a lower edge, ceil for an upper one.
+static double
+edgePixelX(double c,
+           double par,
+           bool lower)
+{
+    return lower ? std::floor(c / par) : std::ceil(c / par);
+}
+
+// Version 2: a canonical x coordinate of the RoD near c whose pixel (see edgePixelX()) is exactly pixel, so that
+// the host gets whole pixels: (n * par) / par may be 92.999... for n = 93.
 static double
 canonicalEdgeX(double c,
                double par,
@@ -104,7 +119,7 @@ canonicalEdgeX(double c,
                bool lower)
 {
     for (int i = 0; i < 8; ++i) {
-        const double p = lower ? std::floor(c / par) : std::ceil(c / par);
+        const double p = edgePixelX(c, par, lower);
         if (p < pixel) {
             c = std::nextafter(c, DBL_MAX);
         } else if (p > pixel) {
@@ -113,6 +128,8 @@ canonicalEdgeX(double c,
             break;
         }
     }
+    // a few ulps away at most, so that the loop ends on the pixel (or on a NaN, which compares false)
+    assert( !(edgePixelX(c, par, lower) < pixel) && !(edgePixelX(c, par, lower) > pixel) );
 
     return c;
 }
@@ -188,9 +205,11 @@ private:
     void setupAndCopy(PixelProcessorFilterBase &, const RenderArguments &args);
 
     // the amounts added on each side (canonical, negative to shrink)
-    void getAmounts(double time, double* w, double* h) const;
+    OfxPointD getAmounts(double time) const;
     // version 2: the amounts in whole pixels at render scale 1 (x, then y)
     OfxPointI getPixelAmounts(double time) const;
+    // the Source pixel aspect ratio, 1 if it is disconnected (or the PAR is not positive)
+    double getSourcePAR() const;
 
 private:
     const AmountRounding _amountRounding; // from the major version
@@ -243,8 +262,9 @@ AdjustRoDPlugin::setupAndCopy(PixelProcessorFilterBase & processor,
     // set the images
     processor.setDstImg( dst.get() );
     const int boundary = _boundary->getValueAtTime(time);
-    double w = 0., h = 0.;
-    getAmounts(time, &w, &h);
+    const OfxPointD amount = getAmounts(time);
+    const double w = amount.x;
+    const double h = amount.y;
     if ( (w < 0) || (h < 0) ) {
         // shrunk: only the Source pixels in the output RoD are shown, and the border conditions apply from
         // its edge. The host may give a larger Source image: use the part of it in the shrunk RoD.
@@ -283,6 +303,14 @@ AdjustRoDPlugin::setupAndCopy(PixelProcessorFilterBase & processor,
     processor.process();
 }
 
+double
+AdjustRoDPlugin::getSourcePAR() const
+{
+    const double par = ( _srcClip && _srcClip->isConnected() ) ? _srcClip->getPixelAspectRatio() : 1.;
+
+    return (par > 0.) ? par : 1.;
+}
+
 // Version 2: whole pixels at render scale 1, truncated toward zero: Add Pixels is in canonical coordinates, so
 // the x amount is divided by the pixel aspect ratio (as a float: e.g. 16 at PAR 768/720 gives 14 pixels, not 15).
 OfxPointI
@@ -291,30 +319,30 @@ AdjustRoDPlugin::getPixelAmounts(double time) const
     double w = 0., h = 0.;
 
     _size->getValueAtTime(time, w, h);
-    const double par = ( _srcClip && _srcClip->isConnected() ) ? _srcClip->getPixelAspectRatio() : 1.;
-    const double parf = (par > 0.) ? static_cast<double>( static_cast<float>(par) ) : 1.;
-    // clamped to a range where the int conversions are defined
-    const double nx = (std::max)( -1e9, (std::min)( 1e9, std::trunc(w / parf) ) );
-    const double ny = (std::max)( -1e9, (std::min)( 1e9, std::trunc(h) ) );
+    // the PAR as a float, as the formats of the tests/nuke reference store it
+    const double parf = static_cast<double>( static_cast<float>( getSourcePAR() ) );
+    const double nx = (std::max)( -kMaxPixelAmount, (std::min)( kMaxPixelAmount, std::trunc(w / parf) ) );
+    const double ny = (std::max)( -kMaxPixelAmount, (std::min)( kMaxPixelAmount, std::trunc(h) ) );
     const OfxPointI n = { static_cast<int>(nx), static_cast<int>(ny) };
 
     return n;
 }
 
-void
-AdjustRoDPlugin::getAmounts(double time,
-                            double* w,
-                            double* h) const
+OfxPointD
+AdjustRoDPlugin::getAmounts(double time) const
 {
-    if (_amountRounding == AmountRounding::eExact) {
-        _size->getValueAtTime(time, *w, *h);
+    OfxPointD amount = {0., 0.};
 
-        return;
+    if (_amountRounding == AmountRounding::eExact) {
+        _size->getValueAtTime(time, amount.x, amount.y);
+
+        return amount;
     }
     const OfxPointI n = getPixelAmounts(time);
-    const double par = ( _srcClip && _srcClip->isConnected() ) ? _srcClip->getPixelAspectRatio() : 1.;
-    *w = n.x * ( (par > 0.) ? par : 1. );
-    *h = n.y;
+    amount.x = n.x * getSourcePAR();
+    amount.y = n.y;
+
+    return amount;
 }
 
 // Along one axis: the part of the Source range [s1,s2) that Nearest border conditions need to
@@ -359,8 +387,9 @@ AdjustRoDPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
     if ( Coords::rectIsEmpty(srcRod) || Coords::rectIsEmpty(args.regionOfInterest) ) {
         return;
     }
-    double w = 0., h = 0.;
-    getAmounts(args.time, &w, &h);
+    const OfxPointD amount = getAmounts(args.time);
+    const double w = amount.x;
+    const double h = amount.y;
 
     OfxRectD paddedRoD = adjustedRoD(srcRod, w, h);
     // the part of the Source that the output shows: all of it, or the shrunk RoD
@@ -404,18 +433,17 @@ AdjustRoDPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
     if ( Coords::rectIsEmpty(srcRod) ) {
         return false;
     }
-    double w = 0., h = 0.;
-    getAmounts(args.time, &w, &h);
+    const OfxPointD amount = getAmounts(args.time);
+    const double w = amount.x;
+    const double h = amount.y;
 
     rod = adjustedRoD(srcRod, w, h);
     if ( (_amountRounding == AmountRounding::eWholePixels) && !Coords::rectIsEmpty(rod) ) {
         // whole pixels: the RoD in pixels must be the Source's, plus the amount
-        const double par = _srcClip->getPixelAspectRatio();
-        if (par > 0.) {
-            const OfxPointI n = getPixelAmounts(args.time);
-            rod.x1 = canonicalEdgeX(rod.x1, par, std::floor(srcRod.x1 / par) - n.x, true);
-            rod.x2 = canonicalEdgeX(rod.x2, par, std::ceil(srcRod.x2 / par) + n.x, false);
-        }
+        const double par = getSourcePAR();
+        const OfxPointI n = getPixelAmounts(args.time);
+        rod.x1 = canonicalEdgeX(rod.x1, par, edgePixelX(srcRod.x1, par, true) - n.x, true);
+        rod.x2 = canonicalEdgeX(rod.x2, par, edgePixelX(srcRod.x2, par, false) + n.x, false);
     }
 
     return true;
@@ -479,9 +507,9 @@ AdjustRoDPlugin::isIdentity(const IsIdentityArguments &args,
                             double & /*identityTime*/
                             , int& /*view*/, std::string& /*plane*/)
 {
-    double w = 0., h = 0.;
-
-    getAmounts(args.time, &w, &h);
+    const OfxPointD amount = getAmounts(args.time);
+    const double w = amount.x;
+    const double h = amount.y;
     if ( (w == 0) && (h == 0) ) {
         identityClip = _srcClip;
 
@@ -539,7 +567,7 @@ ImageEffect*
 AdjustRoDPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                        ContextEnum /*context*/)
 {
-    return new AdjustRoDPlugin(handle, (majorVersion >= 2) ? AmountRounding::eWholePixels : AmountRounding::eExact);
+    return new AdjustRoDPlugin(handle, (majorVersion >= kVersionWholePixels) ? AmountRounding::eWholePixels : AmountRounding::eExact);
 }
 
 template<unsigned int majorVersion>
@@ -581,9 +609,9 @@ AdjustRoDPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &d
     {
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamAddPixels);
         param->setLabel(kParamAddPixelsLabel);
-        param->setHint( (majorVersion >= 2) ? kParamAddPixelsHint : kParamAddPixelsHintV1 );
+        param->setHint( (majorVersion >= kVersionWholePixels) ? kParamAddPixelsHint : kParamAddPixelsHintV1 );
         param->setDoubleType(eDoubleTypeXY);
-        const double amount = (majorVersion >= 2) ? kParamAddPixelsDefault : kParamAddPixelsDefaultV1;
+        const double amount = (majorVersion >= kVersionWholePixels) ? kParamAddPixelsDefault : kParamAddPixelsDefaultV1;
         param->setDefault(amount, amount);
         param->setIncrement(1.);
         param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // negative values shrink the RoD (#299)

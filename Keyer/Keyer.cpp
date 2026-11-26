@@ -30,10 +30,14 @@
 #include "ofxsLut.h"
 #include "ofxsMacros.h"
 #include "ofxsNonFinite.h" // clampToFloatRange, clampToUnit, finiteSample
+#include "ofxsMaskMix.h" // ofxsClamp
+#include "KeyerUtils.h"
 
 using namespace OFX;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
+
+using KeyerUtils::finiteSampleToFloat;
 
 #define kPluginName "KeyerOFX"
 #define kPluginGrouping "Keyer"
@@ -80,32 +84,20 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginIdentifier "net.sf.openfx.KeyerPlugin"
 // history:
 // 1.0 initial version
-// 1.1 non-finite input samples give a finite output and a matte in [0,1] (issue #195): a NaN
-//     sample is keyed as 0, +-inf as +-FLT_MAX (an infinite pixel gave inf * 0 = NaN in the despill,
-//     e.g. Screen mode with keyColor (0,0,1) and pixel (0,0,inf)); the Composite output is clamped
-//     to the float range. The output for finite inputs is unchanged.
-//     In the filter context, Source is RGBA and the Output components are those of Source, as the
-//     OpenFX spec mandates (issue #190; the Output was forced to RGBA). With an RGB Source (general
-//     context), "Add to Inside Mask" and "Normal" source alpha treat it as opaque (they read the
-//     next pixel's red as alpha).
-//     With a key colour component beyond about 1.8e19, the squared norm of the key colour, computed
-//     in float, overflowed to inf (issue #213): in Screen mode, the matte was wrong (the distance to
-//     the key colour axis was |fg|), and the despill of the Screen and None modes was skipped. It is
-//     now computed in double when the float one overflows. A key colour beyond the float range is
-//     clamped to it. The output is unchanged for the key colours whose float squared norm is finite.
-//     New "Invert" parameter (issue #280), off by default: it inverts the key computed from the
-//     foreground key, before the inside and outside masks are applied, so that the pixels whose
-//     foreground key is between B and C become opaque, as with Foundry's Keyer node. The despill
-//     amount uses the key without Invert. Existing projects render the same.
-// 2.0 the matte follows Foundry's documentation of the Keyer node (issue #280): in the Luminance and Color modes, the
-//     output alpha is the background key (opaque between B and C), and the default A, B, C, D are
-//     0, 1, 1, 1 (softnessLower -1, softnessUpper 0), so that the default alpha is the luminance,
-//     clamped to [0, 1]. The Screen mode keeps the polarity of version 1 (the key color is
-//     transparent). New Saturation, Min and Max keyer modes. Version 1 is kept (deprecated), with its
-//     polarity and defaults, so that old projects render the same.
+// 1.1 non-finite input samples give a finite output and a matte in [0,1] (issue #195); in the filter
+//     context, the Output components are those of Source (issue #190); an RGB Source is opaque for
+//     "Add to Inside Mask" and "Normal" source alpha; key colours beyond about 1.8e19 are keyed correctly
+//     (issue #213); new Invert parameter, off by default (issue #280).
+// 2.0 the output alpha is the key, opaque between B and C, as in Foundry's documentation of the Keyer node,
+//     except in the Screen mode (the key color stays transparent); the default A, B, C, D are 0, 1, 1, 1,
+//     so that the default alpha is the luminance, clamped to [0, 1]; new Saturation, Min and Max modes
+//     (issue #280). Version 1 is kept, obsolete.
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
-#define kPluginVersionMinorV1 1 // the minor version of the deprecated version 1
+#define kPluginVersionMinorV1 1 // the minor version of the obsolete version 1
+
+// version 2: the output alpha is the key (opaque between B and C), except in Screen mode
+static constexpr unsigned kVersionOpaqueInRange = 2;
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -346,7 +338,7 @@ public:
     // invert the key computed from the foreground key (not the masks, nor the despill amount)
     void setInvert(bool invert) { _invert = invert; }
 
-    // version 2: the output alpha is the background key (opaque between B and C), except in Screen mode
+    // version 2: the output alpha is the key (opaque between B and C), except in Screen mode
     void setOpaqueInRange(bool opaqueInRange) { _opaqueInRange = opaqueInRange; }
 
     double key_bg(double Kfg)
@@ -393,13 +385,6 @@ protected:
     }
 };
 
-
-template<class PIX, int maxValue>
-static float
-sampleToFloat(PIX value)
-{
-    return (maxValue == 1) ? value : (value / (float)maxValue);
-}
 
 template<class PIX, int maxValue>
 static PIX
@@ -482,27 +467,19 @@ private:
                 const PIX *bgPix = (const PIX *)  (_bgImg ? _bgImg->getPixelAddress(x, y) : 0);
                 const PIX *inMaskPix = (const PIX *)  (_inMaskImg ? _inMaskImg->getPixelAddress(x, y) : 0);
                 const PIX *outMaskPix = (const PIX *)  (_outMaskImg ? _outMaskImg->getPixelAddress(x, y) : 0);
-                float inMask = inMaskPix ? sampleToFloat<PIX, maxValue>(*inMaskPix) : 0.f;
-                if ( (_sourceAlpha == eSourceAlphaAddToInsideMask) && srcPix ) {
-                    // take the max of inMask and the source Alpha (an RGB Source is opaque, as when the
-                    // host maps it to RGBA: srcPix[3] would be the next pixel's red)
-                    inMask = (std::max)( inMask, srcHasAlpha ? clampToFloatRange( sampleToFloat<PIX, maxValue>(srcPix[3]) ) : 1.f );
-                }
-                float outMask = outMaskPix ? sampleToFloat<PIX, maxValue>(*outMaskPix) : 0.f;
+                const PIX *addedSrcPix = (_sourceAlpha == eSourceAlphaAddToInsideMask) ? srcPix : nullptr;
+                const auto [inMask, outMask] =
+                    KeyerUtils::masks<PIX, maxValue>( inMaskPix, outMaskPix, KeyerUtils::insideMaskFromSource<PIX, maxValue>(addedSrcPix, srcHasAlpha) );
                 double Kbg = 0.;
-
-                // clamp inMask and outMask in the [0,1] range (NaN gives 0)
-                inMask = clampToUnit(inMask);
-                outMask = clampToUnit(outMask);
 
                 // output of the foreground suppressor
                 // non-finite samples: NaN gives 0, +-inf gives +-FLT_MAX (see clampToFloatRange)
-                double fgr = srcPix ? clampToFloatRange( sampleToFloat<PIX, maxValue>(srcPix[0]) ) : 0.;
-                double fgg = srcPix ? clampToFloatRange( sampleToFloat<PIX, maxValue>(srcPix[1]) ) : 0.;
-                double fgb = srcPix ? clampToFloatRange( sampleToFloat<PIX, maxValue>(srcPix[2]) ) : 0.;
-                double bgr = bgPix ? clampToFloatRange( sampleToFloat<PIX, maxValue>(bgPix[0]) ) : 0.;
-                double bgg = bgPix ? clampToFloatRange( sampleToFloat<PIX, maxValue>(bgPix[1]) ) : 0.;
-                double bgb = bgPix ? clampToFloatRange( sampleToFloat<PIX, maxValue>(bgPix[2]) ) : 0.;
+                double fgr = srcPix ? finiteSampleToFloat<PIX, maxValue>(srcPix[0]) : 0.;
+                double fgg = srcPix ? finiteSampleToFloat<PIX, maxValue>(srcPix[1]) : 0.;
+                double fgb = srcPix ? finiteSampleToFloat<PIX, maxValue>(srcPix[2]) : 0.;
+                double bgr = bgPix ? finiteSampleToFloat<PIX, maxValue>(bgPix[0]) : 0.;
+                double bgg = bgPix ? finiteSampleToFloat<PIX, maxValue>(bgPix[1]) : 0.;
+                double bgb = bgPix ? finiteSampleToFloat<PIX, maxValue>(bgPix[2]) : 0.;
 
                 // we want to be able to play with the matte even if the background is not connected
                 if (!srcPix) {
@@ -567,7 +544,8 @@ private:
                     // the background key is 1 - alpha: in version 1 (and in Screen mode), alpha is 1 - key,
                     // so that the key color is transparent; in version 2, alpha is the key (opaque between
                     // B and C) in the other modes. Invert inverts this.
-                    const bool invertKey = ( _invert != (_opaqueInRange && (_keyerMode != eKeyerModeScreen) ) );
+                    const bool alphaIsKey = _opaqueInRange && (_keyerMode != eKeyerModeScreen);
+                    const bool invertKey = (_invert != alphaIsKey);
                     if (invertKey && (_keyerMode != eKeyerModeNone) ) {
                         // invert the key, not the masks, which are applied below
                         Kbg = 1. - Kbg;
@@ -626,7 +604,7 @@ private:
                 assert(fga >= 0. && fga <= 1.);
                 double compAlpha = (_outputMode == eOutputModeComposite &&
                                     _sourceAlpha == eSourceAlphaNormal &&
-                                    srcHasAlpha && srcPix) ? clampToFloatRange( sampleToFloat<PIX, maxValue>(srcPix[3]) ) : 1.;
+                                    srcHasAlpha && srcPix) ? finiteSampleToFloat<PIX, maxValue>(srcPix[3]) : 1.;
                 switch (_outputMode) {
                 case eOutputModeIntermediate:
                     for (int c = 0; c < 3; ++c) {
@@ -741,6 +719,9 @@ private:
     }
 
     void setThresholdsFromKeyColor(double r, double g, double b, KeyerModeEnum keyerMode, LuminanceMathEnum luminanceMath);
+    // set A, B, C, D (see the description) with no tolerance: B = C = center, A = center + softnessLower,
+    // D = center + softnessUpper (the parameters are set as given, so that their values are exact)
+    void setABCD(double softnessLower, double center, double softnessUpper);
 
     void updateVisibility()
     {
@@ -871,7 +852,7 @@ KeyerPlugin::setupAndProcess(KeyerProcessorBase &processor,
     SourceAlphaEnum sourceAlpha = (SourceAlphaEnum)_sourceAlpha->getValueAtTime(time);
     processor.setValues(keyColorF, keyerMode, luminanceMath, softnessLower, toleranceLower, center, toleranceUpper, softnessUpper, despill, despillAngle, outputMode, sourceAlpha);
     processor.setInvert( _invert->getValueAtTime(time) );
-    processor.setOpaqueInRange(_majorVersion >= 2);
+    processor.setOpaqueInRange(_majorVersion >= kVersionOpaqueInRange);
     processor.setDstImg( dst.get() );
     processor.setSrcImgs( src.get(), bg.get(), inMask.get(), outMask.get() );
     processor.setRenderWindow(args.renderWindow, args.renderScale);
@@ -976,41 +957,33 @@ KeyerPlugin::setThresholdsFromKeyColor(double r,
         break;
     }
     }
-    if (_majorVersion < 2) {
-        // version 1: the key is 1 at the key color (transparent), 0 at 0 and 1
-        _softnessLower->setValue(-l);
-        _toleranceLower->setValue(0.);
-        _center->setValue(l);
-        _toleranceUpper->setValue(0.);
-        _softnessUpper->setValue(1. - l);
-
-        return;
+    if (_majorVersion >= kVersionOpaqueInRange) {
+        // in [0, 1], so that the parameters stay in their ranges (HDR or negative key colors)
+        l = ofxsClamp(l, 0, 1);
     }
-    // version 2: in [0, 1], so that the parameters stay in their ranges (HDR or negative key colors)
-    l = (std::min)( (std::max)(l, 0.), 1. );
-    if (keyerMode == eKeyerModeScreen) {
-        // alpha is 1 minus the key: the key is 1 at the key color (transparent), as in version 1
-        _softnessLower->setValue(-l);
-        _toleranceLower->setValue(0.);
-        _center->setValue(l);
-        _toleranceUpper->setValue(0.);
-        _softnessUpper->setValue(1. - l);
+    if ( (_majorVersion < kVersionOpaqueInRange) || (keyerMode == eKeyerModeScreen) ) {
+        // alpha is 1 minus the key: the key is 1 at the key color (transparent), 0 at 0 and 1
+        setABCD(-l, l, 1. - l);
     } else if (l > 0.) {
         // alpha is the key: opaque at 0 (B = C = 0), going down to transparent at the key color
         // (D = l) and above it; this also holds for l = 1, e.g. a pure primary in Color mode
-        _softnessLower->setValue(0.);
-        _toleranceLower->setValue(0.);
-        _center->setValue(0.);
-        _toleranceUpper->setValue(0.);
-        _softnessUpper->setValue(l);
+        setABCD(0., 0., l);
     } else {
         // a zero key (e.g. black in Luminance mode): the defaults 0, 1, 1, 1, transparent at 0
-        _softnessLower->setValue(-1.);
-        _toleranceLower->setValue(0.);
-        _center->setValue(1.);
-        _toleranceUpper->setValue(0.);
-        _softnessUpper->setValue(0.);
+        setABCD(-1., 1., 0.);
     }
+}
+
+void
+KeyerPlugin::setABCD(double softnessLower,
+                     double center,
+                     double softnessUpper)
+{
+    _softnessLower->setValue(softnessLower);
+    _toleranceLower->setValue(0.);
+    _center->setValue(center);
+    _toleranceUpper->setValue(0.);
+    _softnessUpper->setValue(softnessUpper);
 }
 
 void
@@ -1032,7 +1005,7 @@ KeyerPlugin::changedParam(const InstanceChangedArgs &args,
         KeyerModeEnum keyerMode = (KeyerModeEnum)_keyerMode->getValueAtTime(time);
         // version 1 sets A, B, C, D from the key color when the mode changes; version 2 keeps them, as the
         // Keyer node does (issue #280; only an edit of the key color sets them)
-        if (_majorVersion < 2) {
+        if (_majorVersion < kVersionOpaqueInRange) {
             OfxRGBColourD keyColor;
             _keyColor->getValueAtTime(time, keyColor.r, keyColor.g, keyColor.b);
             LuminanceMathEnum luminanceMath = (keyerMode == eKeyerModeLuminance) ? (LuminanceMathEnum)_luminanceMath->getValueAtTime(time) : eLuminanceMathRec709;
@@ -1052,10 +1025,8 @@ KeyerPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
-    desc.setPluginDescription(majorVersion < 2 ? kPluginDescriptionV1 : kPluginDescription);
-    if (majorVersion < kPluginVersionMajor) {
-        desc.setIsObsolete(true);
-    }
+    desc.setPluginDescription(majorVersion < kVersionOpaqueInRange ? kPluginDescriptionV1 : kPluginDescription);
+    desc.setIsObsolete(majorVersion < kPluginVersionMajor);
 
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
@@ -1186,7 +1157,7 @@ KeyerPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
         param->appendOption(kParamKeyerModeOptionScreen);
         assert(param->getNOptions() == (int)eKeyerModeNone);
         param->appendOption(kParamKeyerModeOptionNone);
-        if (majorVersion >= 2) {
+        if (majorVersion >= kVersionOpaqueInRange) {
             assert(param->getNOptions() == (int)eKeyerModeSaturation);
             param->appendOption(kParamKeyerModeOptionSaturation);
             assert(param->getNOptions() == (int)eKeyerModeMin);
@@ -1232,7 +1203,7 @@ KeyerPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
         param->setDisplayRange(-1., 0.);
         param->setDigits(5);
         // A = 0 in version 2 (A, B, C, D = 0, 1, 1, 1, as in Foundry's Keyer node, issue #280), 0.5 in version 1
-        param->setDefault(majorVersion < 2 ? -0.5 : -1.);
+        param->setDefault(majorVersion < kVersionOpaqueInRange ? -0.5 : -1.);
         param->setAnimates(true);
         if (page) {
             page->addChild(*param);
@@ -1293,7 +1264,7 @@ KeyerPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
         param->setDisplayRange(0., 1.);
         param->setDigits(5);
         // D = C in version 2 (A, B, C, D = 0, 1, 1, 1), C + 0.5 in version 1
-        param->setDefault(majorVersion < 2 ? 0.5 : 0.);
+        param->setDefault(majorVersion < kVersionOpaqueInRange ? 0.5 : 0.);
         param->setAnimates(true);
         if (page) {
             page->addChild(*param);
@@ -1378,7 +1349,7 @@ KeyerPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
 
 static KeyerPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
-static KeyerPluginFactory<1> p1(kPluginIdentifier, kPluginVersionMinorV1);
-mRegisterPluginFactoryInstance(p1)
+static KeyerPluginFactory<1> p_v1(kPluginIdentifier, kPluginVersionMinorV1);
+mRegisterPluginFactoryInstance(p_v1)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

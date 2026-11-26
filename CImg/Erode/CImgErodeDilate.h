@@ -77,7 +77,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
 // version 2.1: add expand rod parameter
-// version 2.2: premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79)
+// version 2.2: NaN/inf-safe premultiply (SupportExt #73, #79)
 // version 3.0: the default size is 0 (no change), as in the reference; version 2 (default size 1) is kept for
 //              backward compatibility
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.

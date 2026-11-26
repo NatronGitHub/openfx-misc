@@ -60,10 +60,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // 1.0 initial version
 // 2.0 the bars of the ColorBars node of the same name: SMPTE bars in linear RGB, Bar Intensity from
 //     0 to 1 (0.5 by default), no alpha (RGB output by default), and PAL, which removes the
-//     NTSC-specific patches (#286). Version 1.0 is kept (obsolete), with its pattern, Output IRE
-//     and defaults; the unreleased 1.1 PAL param (EBU bars) is removed.
+//     NTSC-specific patches (#286). Version 1 is kept, obsolete.
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinorV1 0 // the minor version of the obsolete version 1
+
+// version 2: the SMPTE bars in linear RGB, PAL, and an RGB output by default
+static constexpr unsigned kVersionLinearBars = 2;
 
 #define kSupportsByte true
 #define kSupportsUShort true
@@ -422,12 +425,12 @@ public:
         _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert( _srcClip && (!_srcClip->isConnected() || OFX_COMPONENTS_OK(_srcClip->getPixelComponents())) );
         _barIntensity = fetchDoubleParam(kParamBarIntensity);
-        if (_majorVersion >= 2) {
+        if (_majorVersion >= kVersionLinearBars) {
             _pal = fetchBooleanParam(kParamPAL);
         } else {
             _outputIRE = fetchBooleanParam(kParamOutputIRE);
         }
-        assert( _barIntensity && (_majorVersion >= 2 ? _pal != NULL : _outputIRE != NULL) );
+        assert( _barIntensity && (_majorVersion >= kVersionLinearBars ? _pal != NULL : _outputIRE != NULL) );
     }
 
 private:
@@ -540,7 +543,7 @@ template <class PIX, int nComponents, int max>
 void
 ColorBarsPlugin::renderDepth(const RenderArguments &args)
 {
-    if (_majorVersion >= 2) {
+    if (_majorVersion >= kVersionLinearBars) {
         ColorBars2Processor<PIX, nComponents, max> processor(*this);
         setupAndProcess(processor, args);
     } else {
@@ -577,7 +580,7 @@ ColorBarsPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     clipPreferences.setOutputHasContinuousSamples(true);
 
     GeneratorPlugin::getClipPreferences(clipPreferences);
-    if (_majorVersion >= 2) {
+    if (_majorVersion >= kVersionLinearBars) {
         // version 2 has no alpha: an RGB output is opaque ("the image is opaque and so has no
         // premultiplication state", ofxImageEffect.h); in an RGBA output alpha is 0, and the colors
         // are not premultiplied by it
@@ -596,10 +599,8 @@ void
 ColorBarsPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
     desc.setLabel(kPluginName);
-    desc.setPluginDescription(majorVersion >= 2 ? kPluginDescription : kPluginDescriptionV1);
-    if (majorVersion < 2) {
-        desc.setIsObsolete(true);
-    }
+    desc.setPluginDescription(majorVersion >= kVersionLinearBars ? kPluginDescription : kPluginDescriptionV1);
+    desc.setIsObsolete(majorVersion < kPluginVersionMajor);
     desc.setPluginGrouping(kPluginGrouping);
     desc.addSupportedContext(eContextGenerator);
     desc.addSupportedContext(eContextGeneral);
@@ -653,12 +654,12 @@ ColorBarsPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &d
 
     // version 2: RGB by default (the bars have no alpha)
     generatorDescribeInContext(page, desc, *dstClip, eGeneratorExtentDefault,
-                               majorVersion >= 2 ? ePixelComponentRGB : ePixelComponentRGBA, true, context);
+                               majorVersion >= kVersionLinearBars ? ePixelComponentRGB : ePixelComponentRGBA, true, context);
 
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamBarIntensity);
         param->setLabel(kParamBarIntensityLabel);
-        if (majorVersion >= 2) {
+        if (majorVersion >= kVersionLinearBars) {
             param->setHint(kParamBarIntensityHintV2);
             param->setDefault(kParamBarIntensityDefaultV2);
             param->setRange(0., DBL_MAX);
@@ -673,7 +674,7 @@ ColorBarsPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &d
             page->addChild(*param);
         }
     }
-    if (majorVersion >= 2) {
+    if (majorVersion >= kVersionLinearBars) {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPAL);
         param->setLabel(kParamPALLabel);
         param->setHint(kParamPALHint);
@@ -682,7 +683,7 @@ ColorBarsPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &d
             page->addChild(*param);
         }
     }
-    if (majorVersion < 2) {
+    if (majorVersion < kVersionLinearBars) {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamOutputIRE);
         param->setLabel(kParamOutputIRELabel);
         param->setHint(kParamOutputIREHint);
@@ -704,8 +705,8 @@ ColorBarsPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle
 // Each major version has its own factory class (FactoryMainEntryHelper stores the plugin UID in a
 // static shared by all the objects of a class).
 static ColorBarsPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
-static ColorBarsPluginFactory<1> p1(kPluginIdentifier, 0); // 1.0, obsolete (Natron 2.5.0)
+static ColorBarsPluginFactory<1> p_v1(kPluginIdentifier, kPluginVersionMinorV1); // obsolete (Natron 2.5.0)
 mRegisterPluginFactoryInstance(p)
-mRegisterPluginFactoryInstance(p1)
+mRegisterPluginFactoryInstance(p_v1)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

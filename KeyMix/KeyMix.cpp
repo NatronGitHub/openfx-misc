@@ -59,13 +59,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // 1.0: Original version
 // 2.0: With Alpha-only images, the A checkbox (instead of the R checkbox) controls the alpha channel
-// 1.1 and 2.0 (2.0 is unreleased, fixed in place): in the filter context, the B input is the mandated Source
+// 1.1 and 2.0: in the filter context, the B input is the mandated Source
 //      clip (it had no Source clip), and Source is not remapped there (Output has the components of Source);
 //      the general context is unchanged (issue #217)
-// 1.1 and 2.0 (unreleased, fixed in place): isIdentity no longer returns B where the render window misses
+// 1.1 and 2.0: isIdentity no longer returns B where the render window misses
 //      the A RoD: there, the output is B * (1 - mask * mix), not B; it returns B without a mask (Mask
 //      disconnected or Apply Mask off), where the render gives B (issue #321)
-// 1.1 and 2.0 (unreleased, added in place): Bounding Box parameter (Union, B, A), Union by default, which
+// 1.1 and 2.0: Bounding Box parameter (Union, B, A), Union by default, which
 //      is the previous output bounding box (issue #278); where isIdentity returns B (Mix 0, no A channel,
 //      no Mask or Apply Mask off), the RoD is B's (it was the union with A when no A channel was
 //      processed or Apply Mask was off; the pixels are the same)
@@ -124,7 +124,11 @@ enum class BBoxEnum
 #define kClipB "B"
 #define kClipBHint "The main input. This input is passed through when the KeyMix node is disabled."
 // in the filter context, B is the mandated Source clip (ofxImageEffectContexts.rst, The Filter Context)
-#define kClipBName(context) ( (context) == eContextFilter ? kOfxImageEffectSimpleSourceClipName : kClipB )
+inline const char*
+clipBName(ContextEnum context)
+{
+    return (context == eContextFilter) ? kOfxImageEffectSimpleSourceClipName : kClipB;
+}
 
 
 class KeyMixProcessorBase
@@ -259,7 +263,7 @@ public:
         assert( _srcClipA && (!_srcClipA->isConnected() || _srcClipA->getPixelComponents() == ePixelComponentRGB || _srcClipA->getPixelComponents() == ePixelComponentRGBA || _srcClipA->getPixelComponents() == ePixelComponentAlpha) );
 
 
-        _srcClipB = fetchClip( kClipBName( getContext() ) );
+        _srcClipB = fetchClip( clipBName( getContext() ) );
         assert( _srcClipB && (!_srcClipB->isConnected() || _srcClipB->getPixelComponents() == ePixelComponentRGB || _srcClipB->getPixelComponents() == ePixelComponentRGBA || _srcClipB->getPixelComponents() == ePixelComponentAlpha) );
         _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
@@ -574,6 +578,8 @@ KeyMixPlugin::isIdentity(const IsIdentityArguments &args,
     // tmpPix to 0 there): even out of A, B is attenuated where the mask is non-zero, so the A RoD
     // cannot make the effect an identity. With Invert Mask, ofxsMaskGetRoDPixel returns false (m = 1
     // outside the mask RoD).
+    // not ofxsMaskRoDExcludesRenderWindow(), which skips the test on hosts without multi-resolution
+    // (hostDemo too): it would stop being an identity there
     OfxRectI maskRoD;
     if ( ofxsMaskGetRoDPixel(_maskClip, _maskApply, _maskInvert, time, args.renderScale, &maskRoD) &&
          !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
@@ -622,7 +628,7 @@ KeyMixPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc
                                        ContextEnum context)
 {
     // the filter context mandates an input clip named Source: it is B there
-    ClipDescriptor* srcClipB = desc.defineClip( kClipBName(context) );
+    ClipDescriptor* srcClipB = desc.defineClip( clipBName(context) );
 
     srcClipB->setHint(kClipBHint);
     srcClipB->addSupportedComponent( ePixelComponentRGBA );

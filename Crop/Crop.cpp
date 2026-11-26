@@ -32,6 +32,7 @@
 #include "ofxsGenerator.h"
 #include "ofxsFormatResolution.h"
 #include "ofxsThreadSuite.h"
+#include "SoftEdge.h"
 
 using namespace OFX;
 
@@ -53,6 +54,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 #define kPluginVersionMinorV1 1 // the minor version of the obsolete version 1
+
+// version 2: the smoothstep Softness, and Black Outside on by default
+static constexpr unsigned kVersionSmoothstepSoftness = 2;
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -89,36 +93,6 @@ enum SoftnessFalloffEnum
     eSoftnessFalloffSmoothstep,    // version 2: smoothstep over [-p/2, softness + p/2]
 };
 
-static inline
-double
-rampSmooth(double t)
-{
-    t *= 2.;
-    if (t < 1) {
-        return t * t / (2.);
-    } else {
-        t -= 1.;
-
-        return -0.5 * (t * (t - 2) - 1);
-    }
-}
-
-// TODO: move to SupportExt (the same as CopyRectangle's)
-// smoothstep(t) = 3t^2 - 2t^3 for t in [0,1], 0 below, 1 above
-static inline
-double
-smoothstep(double t)
-{
-    if (t <= 0.) {
-        return 0.;
-    }
-    if (t >= 1.) {
-        return 1.;
-    }
-
-    return t * t * (3. - 2. * t);
-}
-
 // The fade factor at the distance d (canonical, inside the rectangle if positive) from the nearest edge, for a
 // softness > 0 and a pixel of size pixelSize (canonical, at render scale 1) along that axis.
 static inline
@@ -129,7 +103,7 @@ softnessFactor(SoftnessFalloffEnum falloff,
                double pixelSize)
 {
     if (falloff == eSoftnessFalloffSmoothstep) {
-        return smoothstep( (d + 0.5 * pixelSize) / (softness + pixelSize) );
+        return SoftEdge::smoothstep( (d + 0.5 * pixelSize) / (softness + pixelSize) );
     }
     // version 1, clamped to [0,1] (the pixels whose centre is outside the rectangle are black)
     if (d <= 0.) {
@@ -139,7 +113,7 @@ softnessFactor(SoftnessFalloffEnum falloff,
         return 1.;
     }
 
-    return rampSmooth(d / softness);
+    return SoftEdge::rampSmooth(d / softness);
 }
 
 class CropProcessorBase
@@ -916,7 +890,7 @@ ImageEffect*
 CropPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                                 ContextEnum /*context*/)
 {
-    return new CropPlugin(handle, (majorVersion >= 2) ? eSoftnessFalloffSmoothstep : eSoftnessFalloffQuadratic);
+    return new CropPlugin(handle, (majorVersion >= kVersionSmoothstepSoftness) ? eSoftnessFalloffSmoothstep : eSoftnessFalloffQuadratic);
 }
 
 template<unsigned int majorVersion>
@@ -972,7 +946,7 @@ CropPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
         param->setRange(0., 1000.);
         param->setDisplayRange(0., 100.);
         param->setIncrement(1.);
-        param->setHint( (majorVersion >= 2) ? kParamSoftnessHint : kParamSoftnessHintV1 );
+        param->setHint( (majorVersion >= kVersionSmoothstepSoftness) ? kParamSoftnessHint : kParamSoftnessHintV1 );
         if (page) {
             page->addChild(*param);
         }
@@ -1009,7 +983,7 @@ CropPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamBlackOutside);
         param->setLabel(kParamBlackOutsideLabel);
-        param->setDefault( (majorVersion >= 2) ? kParamBlackOutsideDefault : kParamBlackOutsideDefaultV1 );
+        param->setDefault( (majorVersion >= kVersionSmoothstepSoftness) ? kParamBlackOutsideDefault : kParamBlackOutsideDefaultV1 );
         param->setAnimates(true);
         param->setHint(kParamBlackOutsideHint);
         if (page) {

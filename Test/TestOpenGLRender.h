@@ -139,6 +139,7 @@ PROC getProcAddress(LPCSTR lpszProc1, LPCSTR lpszProc2) {
     if (!ret) {
         ret = wglGetProcAddress(lpszProc2);
     }
+    return ret;
 }
 
 static
@@ -150,6 +151,7 @@ PROC getProcAddress(LPCSTR lpszProc1, LPCSTR lpszProc2, LPCSTR lpszProc3) {
     if (!ret) {
         ret = wglGetProcAddress(lpszProc3);
     }
+    return ret;
 }
 #endif
 
@@ -536,7 +538,7 @@ TestOpenGLPlugin::initMesa()
 void
 TestOpenGLPlugin::exitMesa()
 {
-    AutoMutex lock( _osmesaMutex.get() );
+    std::lock_guard<std::mutex> lock(_osmesaMutex);
 
     for (std::list<OSMesaPrivate *>::iterator it = _osmesa.begin(); it != _osmesa.end(); ++it) {
         delete *it;
@@ -1350,7 +1352,7 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     /* Allocate the image buffer */
     OSMesaPrivate *osmesa;
     {
-        AutoMutex lock( _osmesaMutex.get() );
+        std::lock_guard<std::mutex> lock(_osmesaMutex);
         if ( _osmesa.empty() ) {
             osmesa = new OSMesaPrivate(this);
         } else {
@@ -1404,7 +1406,7 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 #endif
 
     {
-        AutoMutex lock( _rendererInfoMutex.get() );
+        std::lock_guard<std::mutex> lock(_rendererInfoMutex);
         std::string &message = _rendererInfo;
         if ( message.empty() ) {
             const char* glRenderer = (const char*)glGetString(GL_RENDERER);
@@ -1894,7 +1896,7 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
     // We're finished with this osmesa, make it available for other renders
     {
-        AutoMutex lock( _osmesaMutex.get() );
+        std::lock_guard<std::mutex> lock(_osmesaMutex);
         _osmesa.push_back(osmesa);
     }
 #endif // ifdef USE_OSMESA
@@ -2047,7 +2049,7 @@ TestOpenGLPlugin::contextAttached(bool createContextData)
 #endif
 
     {
-        AutoMutex lock( _rendererInfoMutex.get() );
+        std::lock_guard<std::mutex> lock(_rendererInfoMutex);
         std::string &message = _rendererInfo;
         if ( message.empty() ) {
             const char* glRenderer = (const char*)glGetString(GL_RENDERER);

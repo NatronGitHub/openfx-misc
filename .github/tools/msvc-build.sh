@@ -101,15 +101,15 @@ while IFS= read -r f; do
     machine=$(printf '%s\n' "$headers" | grep -m1 ' machine (' | sed 's/^ *//; s/ *$//')
     deps=$(dumpbin -nologo -dependents "$(cygpath -w "$f")" | tr -d '\r' |
            awk '/following (delay load )?dependencies/ {d = 1; next} /Summary/ {d = 0} d && tolower($1) ~ /\.dll$/ {print $1}' |
-           sort -u | tr '\n' ' ')
-    echo "${f#"$out"/}: $machine; imports $deps"
+           sort -u)
+    echo "${f#"$out"/}: $machine; imports $(printf '%s\n' "$deps" | tr '\n' ' ')"
     case "$dir:$machine" in
         "Win64:8664 machine (x64)") ;;
         "Win-arm64:AA64 machine (ARM64)") ;;
         "Win-arm64ec:AA64 machine (ARM64) (ARM64X)") ;;
         *) echo "ERROR: $f: unexpected machine for $dir: $machine"; status=1 ;;
     esac
-    if printf '%s\n' $deps | grep -i -E '^(vcruntime|msvcp|vcomp|concrt|ucrtbase|api-ms-win-crt-)'; then
+    if printf '%s\n' "$deps" | grep -i -E '^(vcruntime|msvcp|vcomp|concrt|ucrtbase|api-ms-win-crt-)'; then
         echo "ERROR: $f imports the MSVC runtime DLLs above (it must be built with /MT)"
         status=1
     fi

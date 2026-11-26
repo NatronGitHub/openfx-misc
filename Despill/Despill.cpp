@@ -34,12 +34,15 @@
 #include "ofxsMacros.h"
 #include "ofxsCoords.h"
 #include "ofxsNonFinite.h" // clampToFloatRange, finiteSample
+#include "SampleUtils.h"
 #ifdef OFX_EXTENSIONS_NATRON
 #include "ofxNatron.h"
 #endif
 using namespace OFX;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
+
+using SampleUtils::sampleToFloat;
 
 #define kPluginName "Despill"
 #define kPluginGrouping "Keyer"
@@ -256,13 +259,6 @@ DespillProcessorBase::clamp<float>(double value,
     }
 
     return value;
-}
-
-template<class PIX, int maxValue>
-static float
-sampleToFloat(PIX value)
-{
-    return (maxValue == 1) ? value : (value / (float)maxValue);
 }
 
 template <class PIX, int nComponents, int maxValue, ScreenTypeEnum screen>

@@ -333,8 +333,9 @@ FrameRangePlugin::changedClip(const InstanceChangedArgs &args,
     // When the Source is connected and Frame Range was never set and is still the default (1,1), set it to
     // the input range, on all hosts (as in version 1.0). Loading a project is a user edit too (ofxCore.h,
     // kOfxChangeUserEdited: "loading values from files or presets"), so a host could call this while it
-    // loads a project: frameRangeInitialised, saved with the project, keeps a Frame Range that was set, even
-    // to (1,1) (#400). Old projects have no flag, and behave as in version 1.0.
+    // loads a project: frameRangeInitialised, saved with the project, keeps a Frame Range that was set to
+    // another value (#400); setting it to (1,1) clears the flag (see changedParam()). Old projects have no
+    // flag, and behave as in version 1.0.
     if ( _srcClip && _srcClip->isConnected() && !_frameRangeInitialised->getValue() ) {
         int min, max;
         _frameRange->getValue(min, max);

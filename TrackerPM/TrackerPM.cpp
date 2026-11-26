@@ -36,19 +36,7 @@
 #include "ofxsNonFinite.h" // finiteSample
 #include "ofxsAnalysisScope.h" // InAnalysisScope, ProgressScope
 #include "ofxsNormalisedDefaults.h"
-#ifdef OFX_USE_MULTITHREAD_MUTEX
-namespace {
-typedef OFX::MultiThread::Mutex Mutex;
-typedef OFX::MultiThread::AutoMutex AutoMutex;
-}
-#else
-// some OFX hosts do not have mutex handling in the MT-Suite (e.g. Sony Catalyst Edit)
 #include <mutex>
-namespace {
-typedef std::mutex Mutex;
-typedef OFX::MultiThread::AutoMutexT<std::mutex> AutoMutex;
-}
-#endif
 
 using namespace OFX;
 
@@ -216,7 +204,7 @@ protected:
     OfxRectI _refRectPixel;
     OfxPointI _refCenterI;
     std::pair<OfxPointD, double> _bestMatch; //< the results for the current processor
-    Mutex _bestMatchMutex; //< this is used so we can multi-thread the tracking and protect the shared results
+    std::mutex _bestMatchMutex; //< this is used so we can multi-thread the tracking and protect the shared results
 
 public:
     TrackerPMProcessorBase(ImageEffect &instance)
@@ -551,7 +539,7 @@ private:
 
         // scoped lock (CP.20); the refinement below runs without it, not to block other threads
         const bool possibleWinner = [&] {
-            AutoMutex lock(_bestMatchMutex);
+            std::lock_guard<std::mutex> lock(_bestMatchMutex);
             return !(_bestMatch.second < bestScore);
         }();
         if (possibleWinner) {
@@ -581,7 +569,7 @@ private:
             }
             // check again...
             {
-                AutoMutex lock(_bestMatchMutex);
+                std::lock_guard<std::mutex> lock(_bestMatchMutex);
                 if (_bestMatch.second > bestScore) {
                     _bestMatch.second = bestScore;
                     _bestMatch.first.x = point.x + dx;

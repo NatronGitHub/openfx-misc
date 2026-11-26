@@ -38,19 +38,7 @@
 #include "ofxNatron.h"
 #endif
 
-#ifdef OFX_USE_MULTITHREAD_MUTEX
-namespace {
-typedef OFX::MultiThread::Mutex Mutex;
-typedef OFX::MultiThread::AutoMutex AutoMutex;
-}
-#else
-// some OFX hosts do not have mutex handling in the MT-Suite (e.g. Sony Catalyst Edit)
 #include <mutex>
-namespace {
-typedef std::mutex Mutex;
-typedef OFX::MultiThread::AutoMutexT<std::mutex> AutoMutex;
-}
-#endif
 
 #ifdef DEBUG
 #pragma message WARN("TimeBuffer not yet supported by Natron, check again when Natron supports kOfxImageEffectInstancePropSequentialRender")
@@ -161,7 +149,7 @@ sleep(const unsigned int milliseconds)
    - if t == startTime, the buffer is locked and marked as dirty, with date t+1, then unlocked
  * if t > startTime:
    - the buffer is locked, and if it doesn't have date t, then either the render fails, a black image is rendered, or the buffer is used anyway, depending on the user-chosen strategy
-   - if it is marked as dirty, it is unlocked, then locked and read again after a delay (there are no condition variables in the multithread suite, polling is the only solution). The delay starts at 10ms, and is multiplied by two at each unsuccessful lock. abort() is checked at each iteration.
+   - if it is marked as dirty, it is unlocked, then locked and read again after a delay (polling, rather than a condition variable, lets each iteration check abort()). The delay starts at 5 ms, and is multiplied by two at each unsuccessful lock. abort() is checked at each iteration.
    - when the buffer is locked and clean, it is copied to output and unlocked
    - the buffer is re-locked for writing, and marked as dirty, with date t+1, then unlocked
 
@@ -171,7 +159,7 @@ sleep(const unsigned int milliseconds)
    - the RoD is empty
  * if t > startTime:
    - the buffer is locked, and if it doesn't have date t, then either getRoD fails, a black image with an empty RoD is rendered, or the RoD from buffer is used anyway, depending on the user-chosen strategy
-   - if it is marked as dirty ,it is unlocked, then locked and read again after a delay (there are no condition variables in the multithread suite, polling is the only solution). The delay starts at 10ms, and is multiplied by two at each unsuccessful lock. abort() is checked at each iteration.
+   - if it is marked as dirty ,it is unlocked, then locked and read again after a delay (polling, rather than a condition variable, lets each iteration check abort()). The delay starts at 5 ms, and is multiplied by two at each unsuccessful lock. abort() is checked at each iteration.
    - when the buffer is locked and clean, the buffer's RoD is returned and it is unlocked
 
 
@@ -197,7 +185,7 @@ struct TimeBuffer
 {
     ImageEffect *readInstance; // written only once, not protected by mutex
     ImageEffect *writeInstance; // written only once, not protected by mutex
-    mutable Mutex mutex;
+    mutable std::mutex mutex;
     double time; // can store any integer from 0 to 2^53
     bool dirty; // TimeBufferRead sets this to true and sets date to t+1, TimeBufferWrite sets this to false
     std::vector<unsigned char> pixelData;
@@ -246,40 +234,10 @@ struct TimeBuffer
 // so that the same name can exist in different groups and/or different projects
 typedef std::string TimeBufferKey;
 typedef std::map<TimeBufferKey, TimeBuffer*> TimeBufferMap;
-static auto_ptr<TimeBufferMap> gTimeBufferMap;
-static auto_ptr<Mutex> gTimeBufferMapMutex;
-
-// kOfxActionLoad and kOfxActionUnload are per plug-in: TimeBufferRead and TimeBufferWrite share
-// gTimeBufferMap and its mutex, so they are created at the first Load and freed only when both
-// plug-ins are unloaded. One flag per plug-in (not a count), so that an Unload of a plug-in that
-// was not loaded doesn't free the map of the other one. The host sends these actions on its main
-// thread, before and after all the other actions of the plug-in.
-static bool gTimeBufferLoaded[2] = { false, false }; // [isRead]
-
-static void
-timeBufferLoad(bool isRead)
-{
-    ofxsThreadSuiteCheck();
-    gTimeBufferLoaded[isRead ? 1 : 0] = true;
-    if ( !gTimeBufferMapMutex.get() ) {
-        gTimeBufferMapMutex.reset(new Mutex);
-    }
-}
-
-static void
-timeBufferUnload(bool isRead)
-{
-    if (!gTimeBufferLoaded[isRead ? 1 : 0]) {
-        return; // not loaded
-    }
-    gTimeBufferLoaded[isRead ? 1 : 0] = false;
-    if (!gTimeBufferLoaded[0] && !gTimeBufferLoaded[1]) {
-        // both plug-ins are unloaded: no instance is left (the binary may be unloaded, or loaded
-        // again, after this)
-        gTimeBufferMap.reset(NULL);
-        gTimeBufferMapMutex.reset(NULL);
-    }
-}
+// Both guarded by gTimeBufferMapMutex. TimeBufferRead and TimeBufferWrite share them. The map is
+// empty when no instance is left: each buffer is erased when its last instance releases it.
+static TimeBufferMap gTimeBufferMap;
+static std::mutex gTimeBufferMapMutex;
 
 // builds the key of a buffer in gTimeBufferMap: always use this, so that
 // insertion, lookup and erasure use the same key
@@ -305,17 +263,6 @@ protected:
         , _name()
         , _isRead(isRead)
     {
-        // created by timeBufferLoad(): kOfxActionLoad comes before any instance
-        assert( gTimeBufferMapMutex.get() );
-        if ( !gTimeBufferMapMutex.get() ) {
-            throwSuiteStatusException(kOfxStatFailed);
-        }
-        {
-            AutoMutex guard( gTimeBufferMapMutex.get() );
-            if ( !gTimeBufferMap.get() ) {
-                gTimeBufferMap.reset(new TimeBufferMap);
-            }
-        }
         // the project and group identifiers are part of the buffer key, set them before setName()
         _projectId = getPropertySet().propGetString(kNatronOfxImageEffectPropProjectId, false);
         _groupId = getPropertySet().propGetString(kNatronOfxImageEffectPropGroupId, false);
@@ -348,9 +295,9 @@ protected:
         if (!name.empty() && !_buffer) {
             TimeBuffer* timeBuffer = 0;
             {
-                AutoMutex guard( gTimeBufferMapMutex.get() );
-                TimeBufferMap::const_iterator it = gTimeBufferMap->find(key);
-                if ( it != gTimeBufferMap->end() ) {
+                std::lock_guard<std::mutex> guard(gTimeBufferMapMutex);
+                TimeBufferMap::const_iterator it = gTimeBufferMap.find(key);
+                if ( it != gTimeBufferMap.end() ) {
                     timeBuffer = it->second;
                 }
             }
@@ -369,9 +316,9 @@ protected:
             thisInstance(_buffer) = this;
             _name = name;
             {
-                AutoMutex guard( gTimeBufferMapMutex.get() );
-                TimeBufferMap::const_iterator it = gTimeBufferMap->find(key);
-                if ( it != gTimeBufferMap->end() ) {
+                std::lock_guard<std::mutex> guard(gTimeBufferMapMutex);
+                TimeBufferMap::const_iterator it = gTimeBufferMap.find(key);
+                if ( it != gTimeBufferMap.end() ) {
                     assert(it->second == timeBuffer);
                     if (it->second != timeBuffer) {
                         setPersistentMessage(Message::eMessageError, "", std::string("A ") + thisPluginName() + " already exists with name \"" + name + "\".");
@@ -383,7 +330,7 @@ protected:
                         return;
                     }
                 } else {
-                    (*gTimeBufferMap)[key] = _buffer;
+                    gTimeBufferMap[key] = _buffer;
                 }
             }
         }
@@ -404,24 +351,11 @@ protected:
         }
         // clear this side, check the other side and free the buffer under one lock, so that the
         // Read and the Write instances, destroyed on different threads, cannot both free it
-        // (no lock if the mutex was already freed)
-        if ( gTimeBufferMapMutex.get() ) {
-            AutoMutex guard( gTimeBufferMapMutex.get() );
-            releaseBufferLocked();
-        } else {
-            releaseBufferLocked();
-        }
-    }
-
-    // releaseBuffer(), with gTimeBufferMapMutex locked (if it exists)
-    void releaseBufferLocked()
-    {
+        std::lock_guard<std::mutex> guard(gTimeBufferMapMutex);
         thisInstance(_buffer) = 0; // remove reference to this instance
         if ( !otherInstance(_buffer) ) {
             // we may free this buffer
-            if ( gTimeBufferMap.get() ) {
-                gTimeBufferMap->erase(getTimeBufferKey(_projectId, _groupId, _name));
-            }
+            gTimeBufferMap.erase(getTimeBufferKey(_projectId, _groupId, _name));
             delete _buffer;
             _buffer = 0;
             _name.clear();
@@ -432,9 +366,9 @@ protected:
     {
 #ifdef DEBUG
         std::string key = getTimeBufferKey(_projectId, _groupId, _name);
-        AutoMutex guard( gTimeBufferMapMutex.get() );
-        TimeBufferMap::const_iterator it = gTimeBufferMap->find(key);
-        if ( it == gTimeBufferMap->end() ) {
+        std::lock_guard<std::mutex> guard(gTimeBufferMapMutex);
+        TimeBufferMap::const_iterator it = gTimeBufferMap.find(key);
+        if ( it == gTimeBufferMap.end() ) {
             if ( !_name.empty() ) {
                 std::cout << "Error: Buffer '" << _name << "' not found\n";
 
@@ -442,7 +376,7 @@ protected:
             }
         } else {
             if ( _name.empty() ) {
-                if ( it != gTimeBufferMap->end() ) {
+                if ( it != gTimeBufferMap.end() ) {
                     std::cout << "Error: Buffer with empty name found\n";
                 }
                 if (_buffer) {
@@ -471,9 +405,9 @@ protected:
         TimeBuffer* timeBuffer = 0;
         // * if the other instance does not exist, an error is displayed and render fails
         {
-            AutoMutex guard( gTimeBufferMapMutex.get() );
-            TimeBufferMap::const_iterator it = gTimeBufferMap->find(key);
-            if ( it != gTimeBufferMap->end() ) {
+            std::lock_guard<std::mutex> guard(gTimeBufferMapMutex);
+            TimeBufferMap::const_iterator it = gTimeBufferMap.find(key);
+            if ( it != gTimeBufferMap.end() ) {
                 timeBuffer = it->second;
             }
         }
@@ -574,7 +508,7 @@ private:
     // The buffer must be locked by guard on entry.
     // Times out with an error, unless the Black strategy is selected.
     WaitResultEnum waitForCleanBuffer(TimeBuffer* timeBuffer,
-                                      AutoMutex &guard)
+                                      std::unique_lock<std::mutex> &guard)
     {
         int delay = 5; // initial delay, in milliseconds
         double timeout = _timeOut->getValue();
@@ -599,7 +533,7 @@ private:
                     return eWaitTimedOutBlack;
                 }
             }
-            guard.relock();
+            guard.lock();
         }
 
         return eWaitClean;
@@ -659,7 +593,7 @@ TimeBufferReadPlugin::render(const RenderArguments &args)
         clearPersistentMessage();
         fillBlack( *this, args.renderWindow, args.renderScale, dst.get() );
         if (time == startFrame) {
-            AutoMutex guard(timeBuffer->mutex);
+            std::lock_guard<std::mutex> guard(timeBuffer->mutex);
             timeBuffer->dirty = true;
             timeBuffer->time = time + 1;
         }
@@ -667,7 +601,7 @@ TimeBufferReadPlugin::render(const RenderArguments &args)
 
         return;
     }
-    AutoMutex guard(timeBuffer->mutex);
+    std::unique_lock<std::mutex> guard(timeBuffer->mutex);
     // * if t > startTime:
     //   - the buffer is locked, and if it doesn't have date t, then either the render fails, a black image is rendered, or the buffer is used anyway, depending on the user-chosen strategy
     if (timeBuffer->time != time) {
@@ -689,14 +623,14 @@ TimeBufferReadPlugin::render(const RenderArguments &args)
             break;
         }
     }
-    //   - if it is marked as dirty, it is unlocked, then locked and read again after a delay (there are no condition variables in the multithread suite, polling is the only solution). The delay starts at 10ms, and is multiplied by two at each unsuccessful lock. abort() is checked at each iteration.
+    //   - if it is marked as dirty, it is unlocked, then locked and read again after a delay (polling, rather than a condition variable, lets each iteration check abort()). The delay starts at 5 ms, and is multiplied by two at each unsuccessful lock. abort() is checked at each iteration.
     switch ( waitForCleanBuffer(timeBuffer, guard) ) {
     case eWaitAborted:
 
         return;
     case eWaitTimedOutBlack:
         fillBlack( *this, args.renderWindow, args.renderScale, dst.get() );
-        guard.relock(); // the buffer must be locked before modifying it
+        guard.lock(); // the buffer must be locked before modifying it
         timeBuffer->dirty = true;
         timeBuffer->time = time + 1;
 
@@ -774,7 +708,7 @@ TimeBufferReadPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &a
 
         return false; // use default behavior
     }
-    AutoMutex guard(timeBuffer->mutex);
+    std::unique_lock<std::mutex> guard(timeBuffer->mutex);
     // * if t > startTime:
     // - the buffer is locked, and if it doesn't have date t, then either getRoD fails, a black image with an empty RoD is rendered, or the RoD from buffer is used anyway, depending on the user-chosen strategy
     if (timeBuffer->time != time) {
@@ -793,7 +727,7 @@ TimeBufferReadPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &a
             break;
         }
     }
-    // - if it is marked as dirty ,it is unlocked, then locked and read again after a delay (there are no condition variables in the multithread suite, polling is the only solution). The delay starts at 10ms, and is multiplied by two at each unsuccessful lock. abort() is checked at each iteration.
+    // - if it is marked as dirty ,it is unlocked, then locked and read again after a delay (polling, rather than a condition variable, lets each iteration check abort()). The delay starts at 5 ms, and is multiplied by two at each unsuccessful lock. abort() is checked at each iteration.
     if ( waitForCleanBuffer(timeBuffer, guard) != eWaitClean ) {
         return false; // aborted, or timed out with Black: use default behavior
     }
@@ -842,7 +776,7 @@ TimeBufferReadPlugin::changedParam(const InstanceChangedArgs & /*args*/,
             return;
         }
         // reset the buffer to a clean state
-        AutoMutex guard(timeBuffer->mutex);
+        std::unique_lock<std::mutex> guard(timeBuffer->mutex);
         timeBuffer->reset();
         _resetTrigger->setValue( !_resetTrigger->getValue() ); // trigger a render
     } else if (paramName == kParamInfo) {
@@ -851,7 +785,7 @@ TimeBufferReadPlugin::changedParam(const InstanceChangedArgs & /*args*/,
     }
 }
 
-mDeclarePluginFactory(TimeBufferReadPluginFactory, { timeBufferLoad(true); }, { timeBufferUnload(true); });
+mDeclarePluginFactory(TimeBufferReadPluginFactory, { ofxsThreadSuiteCheck(); }, {});
 void
 TimeBufferReadPluginFactory::describe(ImageEffectDescriptor &desc)
 {
@@ -1136,7 +1070,7 @@ TimeBufferWritePlugin::render(const RenderArguments &args)
     }
     // - the buffer is locked for writing, and if it doesn't have date t+1 or is not dirty, then it is unlocked, render fails and a message is posted. It may be because the TimeBufferRead plugin is not upstream - in this case a solution is to connect TimeBufferRead output to TimeBufferWrite' sync input for syncing.
     {
-        AutoMutex guard(timeBuffer->mutex);
+        std::unique_lock<std::mutex> guard(timeBuffer->mutex);
         if ( (timeBuffer->time != time + 1) || !timeBuffer->dirty ) {
             setPersistentMessage(Message::eMessageError, "", "The TimeBuffer has wrong properties. Check that the corresponding TimeBufferRead effect is connected to the Sync input.");
             throwSuiteStatusException(kOfxStatFailed);
@@ -1182,7 +1116,7 @@ TimeBufferWritePlugin::changedParam(const InstanceChangedArgs & /*args*/,
             return;
         }
         // reset the buffer to a clean state
-        AutoMutex guard(timeBuffer->mutex);
+        std::unique_lock<std::mutex> guard(timeBuffer->mutex);
         if (timeBuffer->readInstance) {
             sendMessage(Message::eMessageError, "", "A TimeBufferRead instance is connected to this buffer, please reset it instead.");
 
@@ -1196,7 +1130,7 @@ TimeBufferWritePlugin::changedParam(const InstanceChangedArgs & /*args*/,
     }
 }
 
-mDeclarePluginFactory(TimeBufferWritePluginFactory, { timeBufferLoad(false); }, { timeBufferUnload(false); });
+mDeclarePluginFactory(TimeBufferWritePluginFactory, { ofxsThreadSuiteCheck(); }, {});
 void
 TimeBufferWritePluginFactory::describe(ImageEffectDescriptor &desc)
 {

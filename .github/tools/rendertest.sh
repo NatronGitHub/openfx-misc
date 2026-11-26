@@ -62,6 +62,7 @@
 # failure must show; a crash of an XFAIL render (e.g. a segmentation fault)
 # is expected, and its message is in the log of that render only.
 set -eo pipefail
+. "$(dirname "$0")/lib.sh"
 
 case "$(uname -s)" in
     Darwin|Linux) windows=0 ;;
@@ -157,20 +158,15 @@ cd "$work"
 # PF (RGB, so opaque), black except a white 32x16 rectangle at (10,8).
 python3 -I - << 'EOF2'
 import struct
-w, h = 64, 48
-pix = []
-for y in range(h):
-    for x in range(w):
-        pix += [1. if 10 <= x < 42 and 8 <= y < 24 else 0.] * 3
-with open("autocrop.pfm", "wb") as f:
-    f.write(b"PF\n%d %d\n-1.0\n" % (w, h) + struct.pack("<%df" % len(pix), *pix))
-# convsrc.pfm: a 720x576 PF (not a power of two) with pseudo-random values in [0,1), different in
-# each channel; convk.pfm: a 7x5 PF kernel, positive, not symmetric, different in each channel
-# (for the "conv" check: an exact linear convolution)
 def pfm(name, w, h, val):
+    # a W x H PF whose channel C at pixel (X, Y) is VAL(X, Y, C)
     pix = [val(x, y, c) for y in range(h) for x in range(w) for c in range(3)]
     with open(name, "wb") as f:
         f.write(b"PF\n%d %d\n-1.0\n" % (w, h) + struct.pack("<%df" % len(pix), *pix))
+pfm("autocrop.pfm", 64, 48, lambda x, y, c: 1. if 10 <= x < 42 and 8 <= y < 24 else 0.)
+# convsrc.pfm: a 720x576 PF (not a power of two) with pseudo-random values in [0,1), different in
+# each channel; convk.pfm: a 7x5 PF kernel, positive, not symmetric, different in each channel
+# (for the "conv" check: an exact linear convolution)
 pfm("convsrc.pfm", 720, 576, lambda x, y, c: ((x * 7919 + y * 104729 + c * 4099) % 1009) / 1009.)
 pfm("convk.pfm", 7, 5, lambda x, y, c: 1. + ((x * 3 + y * 5 + c * 7) % 11))
 # vramp.pfm: a 720x576 PF vertical ramp, (y + 0.5) / 576 at row y (for the Y axis of GodRays scale 0)
@@ -200,6 +196,16 @@ check() {
     python3 -I - "$@" << 'EOF'
 import array, json, sys
 path, depth, expects = sys.argv[1:4]
+def readpfm(path):
+    # (width, height, pixels) of a float RGB PFM file (bottom row first)
+    with open(path, "rb") as f:
+        h = f.read().split(b"\n", 3)
+    w, hh = (int(v) for v in h[1].split())
+    a = array.array("f")
+    a.frombytes(h[3][:w * hh * 3 * 4])
+    if sys.byteorder != "little":
+        a.byteswap()
+    return w, hh, a
 refs = dict(a.split("=", 1) for a in sys.argv[4:])
 with open(path) as f:
     r = json.load(f)
@@ -330,17 +336,8 @@ if out0:
             # render (float RGB PFM files, bottom row first)
             with open(refs["full"]) as f:
                 full = json.load(f)["renders"][0]["output"]
-            def pfm(path):
-                with open(path, "rb") as f:
-                    h = f.read().split(b"\n", 3)
-                w, hh = (int(v) for v in h[1].split())
-                a = array.array("f")
-                a.frombytes(h[3][:w * hh * 3 * 4])
-                if sys.byteorder != "little":
-                    a.byteswap()
-                return w, a
-            tw, tile = pfm(out0["files"][0])
-            fw, fpix = pfm(full["files"][0])
+            tw, _, tile = readpfm(out0["files"][0])
+            fw, _, fpix = readpfm(full["files"][0])
             tb, fb = out0["bounds"], full["bounds"]
             diff = 0
             for y in range(tb[1], tb[3]):
@@ -358,15 +355,6 @@ if out0:
             # normalized by its sum), with the kernel origin at pixel (kw//2, kh//2) of KERNEL
             # (filterCenter=2, the center of its RoD), on the rendered part of the RoD. Checked on
             # every 7th pixel and on the borders of the output, within 1e-4.
-            def readpfm(path):
-                with open(path, "rb") as f:
-                    h = f.read().split(b"\n", 3)
-                w, hh = (int(v) for v in h[1].split())
-                a = array.array("f")
-                a.frombytes(h[3][:w * hh * 3 * 4])
-                if sys.byteorder != "little":
-                    a.byteswap()
-                return w, hh, a
             sw, sh, src = readpfm(expect[5:].split(",")[0])
             kw, kh, ker = readpfm(expect[5:].split(",")[1])
             ow, oh, out = readpfm(out0["files"][0])
@@ -465,8 +453,8 @@ print([k for k in r["renders"] if k["time"] == 0 and not k.get("view")][0]["outp
 # hostdemo LOG ARGS...: run hostDemo with its output in LOG. The subshell
 # keeps the shell's message about a crash (e.g. "Segmentation fault") in LOG.
 # On Linux and macOS, a render that takes more than RENDERTEST_TIMEOUT seconds
-# (default 300) is killed by SIGALRM (perl's alarm survives exec), so that a
-# hang fails instead of blocking the test.
+# (default 300) is killed (run_with_timeout), so that a hang fails instead of
+# blocking the test.
 RENDERTEST_TIMEOUT=${RENDERTEST_TIMEOUT:-300}
 hostdemo() {
     local log=$1 status=0
@@ -475,8 +463,8 @@ hostdemo() {
         ( "$HOSTDEMO" --no-std-paths --no-cache --quiet "$@"; exit $? ) > "$log" 2>&1
         return
     fi
-    ( exec perl -e 'alarm shift; exec @ARGV or die "$!\n"' "$RENDERTEST_TIMEOUT" \
-           "$HOSTDEMO" --no-std-paths --no-cache --quiet "$@" ) > "$log" 2>&1 || status=$?
+    ( run_with_timeout "$RENDERTEST_TIMEOUT" "$HOSTDEMO" --no-std-paths --no-cache --quiet "$@" ) \
+        > "$log" 2>&1 || status=$?
     [ "$status" != 142 ] || echo "timeout: killed after ${RENDERTEST_TIMEOUT}s" >> "$log"
     return "$status"
 }
@@ -498,7 +486,9 @@ hostdemo() {
 # result. It is then reported as XFAIL and does not fail the test. If it
 # fails otherwise, it is a FAIL; if it passes (XPASS), the test fails too, so
 # that the entry is updated when the bug is fixed. A "debug:" known bug (a
-# failed assertion) is only expected in debug builds.
+# failed assertion) is only expected in debug builds. An "error:" entry is not
+# a bug but an expected error (e.g. parameters that the plug-in refuses): it is
+# checked in the same way, and its render passes ("ok", an expected error).
 # ContactSheet (filter context): hostDemo connects every clip that has no -i, so the inputs
 # after the last one of a test are disconnected with -i N=none (Center Rows depends on the last
 # connected input). The clips of inputs 10 to 15 are named 10 to 15; in ContactSheet 1, they are
@@ -717,7 +707,7 @@ tests=(
     "ColorMatrix invert unprocessed|net.sf.openfx.ColorMatrixPlugin|filter|*|notidentity+mean=0.5,0.5,0.25,1||-i Source=solid:0.75,0.5,0.25,1 -i Mask=none outputRed=1,0,1,0 outputBlue=0,0,2,0 NatronOfxParamProcessB=0 invert=1"
     # a matrix so close to singular (determinant about 1e-17 in double) that its inverse is
     # meaningless: the render fails with an error (an expected error, not a bug)
-    "ColorMatrix invert near-singular|net.sf.openfx.ColorMatrixPlugin|filter|float|mean=0,0,0,1|expected error: near-singular matrix~not invertible|-i Source=solid:0.75,0.5,0.25,1 -i Mask=none outputRed=0.1,0.2,0.3,0 outputGreen=0.4,0.5,0.6,0 outputBlue=0.7,0.8,0.9,0 invert=1"
+    "ColorMatrix invert near-singular|net.sf.openfx.ColorMatrixPlugin|filter|float|mean=0,0,0,1|error:near-singular matrix~not invertible|-i Source=solid:0.75,0.5,0.25,1 -i Mask=none outputRed=0.1,0.2,0.3,0 outputGreen=0.4,0.5,0.6,0 outputBlue=0.7,0.8,0.9,0 invert=1"
     # Saturation -1 (issue #292): a check of the formula, 2 * luma - colour, luma (Rec. 709) 0.4649.
     # It does not test the new minimum: hostDemo does not clamp parameters to their range
     "Saturation negative formula|net.sf.openfx.SaturationPlugin|filter|*|notidentity+mean=0.6798,0.4298,0.1798,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none saturation=-1"
@@ -1691,6 +1681,8 @@ for t in "${tests[@]}"; do
     fi
     [ "$depths" != '*' ] || depths="byte short float"
     case "$bug" in debug:*) [ $debug = 1 ] && bug=${bug#debug:} || bug= ;; esac
+    expected_error=0
+    case "$bug" in error:*) expected_error=1 bug=${bug#error:} ;; esac
     bugmsg=
     if [ -n "$bug" ]; then
         bugmsg=${bug##*~}
@@ -1769,7 +1761,17 @@ for t in "${tests[@]}"; do
             result="hostDemo exit status $status"
             [ ! -f report.json ] || result="$result: $(check report.json "$depth" "$expect" "${refs[@]}" || true)"
         fi
-        if [ -n "$bug" ]; then
+        if [ -n "$bug" ] && [ $expected_error = 1 ]; then
+            if [ $ok = 1 ]; then
+                result="$result (expected error \"$bug\" not raised)"
+                ok=0
+            elif { echo "$result"; cat run.log; } | grep -E -e "$bugmsg" > /dev/null; then
+                printf 'ok    %-26s expected error: %s\n' "$name" "$bug"
+                continue
+            else
+                result="$result (expected error \"$bug\", but not the expected message \"$bugmsg\")"
+            fi
+        elif [ -n "$bug" ]; then
             if [ $ok = 1 ]; then
                 printf 'XPASS %-26s %s\n' "$name" "$result"
                 echo "  known bug \"$bug\" fixed? Update the test list of $0."
@@ -1792,7 +1794,6 @@ for t in "${tests[@]}"; do
         fi
     done
 done
-rm -f out.* full.* report.json ref.json autocrop.pfm convsrc.pfm convk.pfm diffa.pfm diffb.pfm mirror65.pfm
 
 if [ $n = 0 ]; then
     echo "no render matches RENDERTEST_ONLY=$RENDERTEST_ONLY"

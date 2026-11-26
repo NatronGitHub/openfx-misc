@@ -18,6 +18,7 @@
 # pkg-config, bison, flex, zlib. The LLVM in LLVM_PREFIX is not rebuilt (LLVM_BUILD=0): building
 # it takes hours.
 set -eo pipefail
+. "$(dirname "$0")/lib.sh"
 
 # mesa-25.0.7.tar.xz, as published in https://docs.mesa3d.org/relnotes/25.0.7.html
 mesa_version_default=25.0.7
@@ -61,10 +62,10 @@ else
     mesa_url=https://archive.mesa3d.org/older-versions/${mesa_version%%.*}.x/$mesa_archive
 fi
 curl -fsSL --proto '=https' --tlsv1.2 -o "$mesa_archive" "$mesa_url"
-if command -v sha256sum > /dev/null; then
-    echo "$mesa_sha256  $mesa_archive" | sha256sum -c -
-else
-    echo "$mesa_sha256  $mesa_archive" | shasum -a 256 -c -
+actual=$(sha256_of "$mesa_archive")
+if [ "$actual" != "$mesa_sha256" ]; then
+    echo "ERROR: SHA256 of $mesa_archive is $actual, expected $mesa_sha256"
+    exit 1
 fi
 # the licenses: Mesa's from the verified archive, LLVM's from its prefix (a package's license or
 # doc directory)

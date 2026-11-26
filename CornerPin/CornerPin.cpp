@@ -118,7 +118,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginIdentifier "net.sf.openfx.CornerPinPlugin"
 #define kPluginMaskedIdentifier "net.sf.openfx.CornerPinMaskedPlugin"
-// SupportExt#179, in the current minor versions (not released yet, so no further bump): with the Box
+// SupportExt#179, in the current minor versions: with the Box
 //              filter, the thin band just outside the source image is black (Black Outside) or the
 //              edge colour, not about 4x the edge value (garbage).
 // SupportExt#183-#185, #205 and #207, also in the current minor versions:
@@ -135,9 +135,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 // 2.1: overlay point selection, host selection rectangle param (Natron);
 //      the inverse of a transform matrix with huge entries (e.g. a concatenated source transform) no longer overflows to NaN or 0 (SupportExt #81)
-// 1.1 and 2.1 (unreleased, fixed in place): new "Set to input format" button (appended), which copies the
+// 1.1 and 2.1: new "Set to input format" button (appended), which copies the
 //      input format into the "from" points (issue #270); "Set to input rod" is unchanged.
-// 1.1 and 2.1 (unreleased, fixed in place): the Lanczos4, Lanczos6 and Sinc4 filters (appended options) and the
+// 1.1 and 2.1: the Lanczos4, Lanczos6 and Sinc4 filters (appended options) and the
 //      Prefilter Downscaling checkbox (after Black Outside, off) (issue #270); the default output is unchanged.
 
 #define POINT_SIZE 5

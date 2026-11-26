@@ -1,4 +1,4 @@
-name: Continous Integration tests
+name: Continuous Integration tests
 
 # Every change gets up to three CMake builds (Linux, Windows, then macOS) of the
 # release configuration (with the Test bundle), each installed and followed by a
@@ -150,7 +150,7 @@ jobs:
       - name: Show tools
         run: |
           echo "PATH=$PATH"
-          echo "MACOSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET:-(unset: CMakeLists.txt's 14.0)}"
+          echo "MACOSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET:-(unset: CMakeLists.txt default 14.0)}"
           command -v c++ gsed cmake
           c++ --version
           cmake --version
@@ -220,13 +220,13 @@ jobs:
         run: openfx/Support/include/linuxCheckBundle.sh install/OFX/Plugins
       - name: Render test (hostDemo)
         # Renders the generators and some filters at the three depths, and checks
-        # the outputs (21 s in CI).
+        # the outputs.
         timeout-minutes: 10
         run: .github/tools/rendertest.sh install
       - name: Smoke test (hostDemo, all plug-ins)
         # Renders every plug-in with its default parameters, in its most general
         # context (--quick: general, else filter; nightly.yml renders both), at each
-        # supported depth (38 s in CI).
+        # supported depth.
         timeout-minutes: 10
         run: .github/tools/smoketest.sh --quick install
       - name: Smoke test (hostDemo --ofx14, all plug-ins)

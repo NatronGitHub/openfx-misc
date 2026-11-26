@@ -21,6 +21,7 @@
 # Run from the top of the source tree (ofxload is built from .github/tools/ofxload.cpp).
 # Exit status: 0 if the bundles match, 1 otherwise.
 set -eo pipefail
+. "$(dirname "$0")/lib.sh"
 
 if [ $# -ne 2 ]; then
     echo "Usage: $0 <DIR_A> <DIR_B>"
@@ -29,12 +30,9 @@ fi
 a=$1
 b=$2
 
-case "$(uname -s)" in
-    Darwin) arch=MacOS; libs= ;;
-    Linux) arch=Linux-$(uname -m); [ "$arch" = Linux-x86_64 ] && arch=Linux-x86-64; libs=-ldl ;;
-    *_NT-*) arch='Win*'; libs= ;; # any Contents/Win* folder: Win64, Win-arm64ec, Win-arm64...
-    *) echo "unsupported OS $(uname -s)"; exit 2 ;;
-esac
+arch=$(os_arch) || { echo "unsupported OS $(uname -s)"; exit 2; }
+libs=
+case "$arch" in Linux-*) libs=-ldl ;; esac
 
 work=$(mktemp -d "${TMPDIR:-/tmp}/bundlediff.XXXXXX")
 trap 'rm -rf "$work"' EXIT

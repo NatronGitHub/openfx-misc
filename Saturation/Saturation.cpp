@@ -48,21 +48,19 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
-// version 2.1 (kept for backward compatibility): premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79)
-// version 3.0: fix ACES AP1 luminance math (version 2 used CCIR 601);
-//              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79)
-//              (versions 2.1 and 3.0, no output change on hosts with multi-resolution) the mask-RoD
-//              identity test is skipped on hosts without multi-resolution, and premult defaults to false
-//              for a non-RGBA source, as in the other plug-ins (#240)
-//              (versions 2.1 and 3.0) the saturation can be negative (complementary colours): its minimum
-//              was 0, although the render handles a negative value (issue #292)
-//              (3.0 is unreleased, changed in place, issue #272) Clamp Black is off by default (on in version 2),
-//              so that the default node keeps negative values
+// version 2.1: NaN/inf-safe premultiply (SupportExt #73, #79);
+//              the mask-RoD identity test is skipped on hosts without multi-resolution, and premult defaults to
+//              false for a non-RGBA source (#240); the saturation can be negative (complementary colours) (#292)
+// version 3.0: fix ACES AP1 luminance math (version 2 used CCIR 601); Clamp Black is off by default, so that
+//              the default node keeps negative values (#272); as 2.1 otherwise. Version 2.1 is kept, obsolete.
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinorV2 1 // the minor version of the obsolete version 2
 
 // the first major version whose Clamp Black is off by default (issue #272)
-#define kVersionClampBlackOff 3
+static constexpr unsigned kVersionClampBlackOff = 3;
+// the first major version whose ACES AP1 luminance math is not CCIR 601
+static constexpr unsigned kVersionAcesAp1Fixed = 3;
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -360,7 +358,7 @@ public:
         , _maskApply(NULL)
         , _maskInvert(NULL)
         , _premultChanged(NULL)
-        , _legacyAcesAp1(majorVersion < 3)
+        , _legacyAcesAp1(majorVersion < kVersionAcesAp1Fixed)
     {
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -636,9 +634,7 @@ SaturationPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
-    if (majorVersion < kPluginVersionMajor) {
-        desc.setIsObsolete(true);
-    }
+    desc.setIsObsolete(majorVersion < kPluginVersionMajor);
 
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
@@ -816,8 +812,8 @@ SaturationPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handl
 
 static SaturationPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 // version 2: "ACES AP1" luminance math is computed as CCIR 601
-static SaturationPluginFactory<2> p2(kPluginIdentifier, 1);
+static SaturationPluginFactory<2> p_v2(kPluginIdentifier, kPluginVersionMinorV2);
 mRegisterPluginFactoryInstance(p)
-mRegisterPluginFactoryInstance(p2)
+mRegisterPluginFactoryInstance(p_v2)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

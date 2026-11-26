@@ -364,6 +364,7 @@ public:
     virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip* &identityClip, double &identityTime, int& /*view*/, std::string& /*plane*/) OVERRIDE FINAL;
 
     // the following functions can be overridden/implemented by the plugin
+    // (params is value-initialised by the callers: this may leave fields unset)
     virtual void getValuesAtTime(double time, Params& params) = 0;
 
     // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
@@ -620,7 +621,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     // render posted it (the plug-in may post another message below while processing)
     clearPersistentMessage();
 
-    Params params{}; // value-initialised: getValuesAtTime() may not set every field
+    Params params{}; // see getValuesAtTime()
     getValuesAtTime(time, params);
     int srcBoundary = getBoundary(params);
     assert(0 <= srcBoundary && srcBoundary <= 2);
@@ -947,7 +948,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::getRegionsOfInterest(const OFX
         }
     }
 
-    Params params{}; // value-initialised: getValuesAtTime() may not set every field
+    Params params{}; // see getValuesAtTime()
     getValuesAtTime(args.time, params);
 
     double pixelaspectratio = ( _srcClip && _srcClip->isConnected() ) ? _srcClip->getPixelAspectRatio() : 1.;
@@ -977,7 +978,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::getRegionOfDefinition(const OF
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 # endif
-    Params params{}; // value-initialised: getValuesAtTime() may not set every field
+    Params params{}; // see getValuesAtTime()
     getValuesAtTime(args.time, params);
 
     OfxRectI srcRoDPixel = {0, 0, 0, 0};
@@ -1036,7 +1037,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::isIdentity(const OFX::IsIdenti
         }
     }
 
-    Params params{}; // value-initialised: getValuesAtTime() may not set every field
+    Params params{}; // see getValuesAtTime()
     getValuesAtTime(time, params);
     if ( isIdentity(args, params) ) {
         identityClip = _srcClip;

@@ -46,6 +46,8 @@
 # entry can be "debug:ofx14:..." or "debug:ofx11:..."),
 # SMOKETEST_BUNDLES (the expected bundles, see BUNDLES below; e.g. "Misc:0" for a build
 # with -DBUILD_CIMG_PLUGINS=OFF -DBUILD_SHADERTOY=OFF -DBUILD_TESTING=OFF),
+# SMOKETEST_NO_TEST=1 (a build without the Test bundle, -DBUILD_TESTING=OFF: BUNDLES without Test,
+# and stale entries are only a warning, as with SMOKETEST_BUNDLES),
 # SMOKETEST_XPASS_OK=1 (accept the known bugs that were fixed: an XFAIL entry that passes
 # (XPASS) is reported but does not fail, and stale entries are only a warning; an XFAIL
 # render whose failure does not show the expected message still fails; for SupportExt's CI, so that a SupportExt pull request that fixes a bug of the XFAIL list
@@ -102,12 +104,15 @@
 # matches no plug-in and a PARAMS entry that adds no render (except with --only),
 # and, in full mode only (not --quick, not --only; --quick does not render every
 # context), an IDENTITY or XFAIL entry that matches no identity render or no
-# expected failure. With SMOKETEST_BUNDLES
-# (a partial build) or SMOKETEST_XPASS_OK=1, stale entries are only a warning.
+# expected failure. With SMOKETEST_BUNDLES or SMOKETEST_NO_TEST=1 (a partial build) or
+# SMOKETEST_XPASS_OK=1, stale entries are only a warning.
 set -eo pipefail
+. "$(dirname "$0")/lib.sh"
+# the Python helpers of the list checks (smoketest_lists.py), for the scripts below
+SMOKETEST_TOOLS=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+export SMOKETEST_TOOLS
 
 # ---------------------------------------------------------------------------
-# The plug-ins that are not tested: "identifier regex|reason" (the whole identifier).
 # The expected bundles: "name:minimum number of plug-ins (identifier and major version)"
 # (the counts of a release build; debug builds have more). A missing bundle, or one with
 # fewer plug-ins, fails the test (raise or lower the minimum when plug-ins are added or
@@ -115,15 +120,20 @@ set -eo pipefail
 BUNDLES=(Misc:171 CImg:40 Shadertoy:1 Test:6)
 # shellcheck disable=SC2206
 [ -z "$SMOKETEST_BUNDLES" ] || BUNDLES=($SMOKETEST_BUNDLES)
+if [ "${SMOKETEST_NO_TEST:-0}" = 1 ]; then
+    with_test=("${BUNDLES[@]}") BUNDLES=()
+    for b in "${with_test[@]}"; do [ "${b%%:*}" = Test ] || BUNDLES+=("$b"); done
+fi
 # The plug-ins that are not tested: "identifier regex|reason" (the whole identifier; a
 # "debug:" reason is only used in debug builds, an "ofx14:" one only with --ofx14, an "ofx11:"
-# one only with --ofx11; these
-# prefixes, which can be combined, only work at the start of the reason or description
-# field of the SKIP, IDENTITY and XFAIL lists).
+# one only with --ofx11; these prefixes, which can be combined, only work at the start of the
+# reason or description field of the SKIP, IDENTITY and XFAIL lists).
+# (a regex can't have "|": one entry per plug-in, each checked for staleness)
+parametric="needs parametric parameters, which hostDemo does not advertise (kOfxParamHostPropSupportsParametric: describeInContext throws kOfxStatErrMissingHostFeature)"
 SKIP=(
-    "net.sf.openfx.ColorLookupPlugin|needs parametric parameters, which hostDemo does not advertise (kOfxParamHostPropSupportsParametric: describeInContext throws kOfxStatErrMissingHostFeature)"
-    "net.sf.openfx.HueCorrect|needs parametric parameters, which hostDemo does not advertise (kOfxParamHostPropSupportsParametric: describeInContext throws kOfxStatErrMissingHostFeature)"
-    "net.sf.openfx.HueKeyer|needs parametric parameters, which hostDemo does not advertise (kOfxParamHostPropSupportsParametric: describeInContext throws kOfxStatErrMissingHostFeature)"
+    "net.sf.openfx.ColorLookupPlugin|$parametric"
+    "net.sf.openfx.HueCorrect|$parametric"
+    "net.sf.openfx.HueKeyer|$parametric"
     "net.sf.openfx.TimeBufferRead|debug:reads the buffer of a TimeBufferWrite instance of the same name, in the same host process (getClipPreferences fails: No TimeBuffer exists with name \"\")"
     "net.sf.openfx.TimeBufferWrite|debug:writes the buffer of a TimeBufferRead instance of the same name, in the same host process (render fails: No TimeBuffer exists with name \"\")"
 )
@@ -202,17 +212,18 @@ esac
 SMOKETEST_TIMEOUT=${SMOKETEST_TIMEOUT:-120}
 
 # watchdog LOG BUNDLE HOSTDEMO-ARGS...: run hostDemo with only BUNDLE in OFX_PLUGIN_PATH
-# and its output in LOG, killed by SIGALRM after SMOKETEST_TIMEOUT seconds (perl's alarm
-# survives exec), and set $status to its exit status. The caller sends its stderr to LOG,
-# for the shell's message about a crash.
+# and its output in LOG, killed after SMOKETEST_TIMEOUT seconds (run_with_timeout), and set
+# $status to its exit status. The caller sends its stderr to LOG, for the shell's message about
+# a crash.
 watchdog() {
     local log=$1 bundle=$2 host=()
     shift 2
     # --ofx14 or --ofx11: an OFX 1.4 or OFX 1.1 host
     [ "${SMOKETEST_PROFILE:-default}" = default ] || host=("--$SMOKETEST_PROFILE")
     status=0
-    ( OFX_PLUGIN_PATH=$SMOKETEST_WORK/path/$bundle exec perl -e 'alarm shift; exec @ARGV or die "$!\n"' \
-          "$SMOKETEST_TIMEOUT" "$HOSTDEMO" --no-std-paths --no-cache --quiet "${host[@]}" "$@" ) > "$log" 2>&1 || status=$?
+    ( export OFX_PLUGIN_PATH=$SMOKETEST_WORK/path/$bundle
+      run_with_timeout "$SMOKETEST_TIMEOUT" "$HOSTDEMO" --no-std-paths --no-cache --quiet "${host[@]}" "$@" ) \
+        > "$log" 2>&1 || status=$?
     if [ "$status" = 142 ]; then
         echo "timeout: killed after ${SMOKETEST_TIMEOUT}s" >> "$log"
     elif [ "$status" -gt 128 ]; then
@@ -265,7 +276,7 @@ if [ "$1" = --render-job ]; then
 fi
 
 usage() { sed -n '/^# Usage/,/^# Linux and macOS/p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-1}"; }
-top=$(cd "$(dirname "$0")/../.." && pwd)
+top=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 supportext='' build='' out='' only='' quick=0 profile=default prefix='' jobs=$(getconf _NPROCESSORS_ONLN 2> /dev/null || echo 2)
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -422,8 +433,10 @@ import os
 import re
 import sys
 work, gl_ok = sys.argv[1], sys.argv[2] == "1"
-with open(os.path.join(work, "opengl.txt")) as f:
-    rules = [line.rstrip("\n").split("|", 1) for line in f if line.strip()]
+sys.dont_write_bytecode = True  # no __pycache__ in the source tree
+sys.path.insert(0, os.environ["SMOKETEST_TOOLS"])
+import smoketest_lists
+rules = [line.split("|", 1) for line in smoketest_lists.entries(work, "opengl.txt")]
 with open(os.path.join(work, "plugins.txt")) as f:
     pids = sorted(set(line.split()[1] for line in f))
 found = [(pid, next(r for rx, r in rules if re.fullmatch(rx, pid)))
@@ -449,16 +462,13 @@ python3 -I - "$work" "$quick" "${SMOKETEST_DEBUG:-0}" "$profile" "$gl_ok" > "$wo
 import json, os, re, sys
 work, quick, debug, profile = sys.argv[1], sys.argv[2] == "1", sys.argv[3] == "1", sys.argv[4]
 gl_ok = sys.argv[5] == "1"
+sys.dont_write_bytecode = True  # no __pycache__ in the source tree
+sys.path.insert(0, os.environ["SMOKETEST_TOOLS"])
+import smoketest_lists
 def entries(name):
-    return [l.rstrip("\n") for l in open(os.path.join(work, name)) if l.strip()]
+    return smoketest_lists.entries(work, name)
 def only_in(desc):
-    # (keep, desc): the "debug:" entries are only used in debug builds, the "ofx14:" ones with
-    # --ofx14, the "ofx11:" ones with --ofx11
-    keep = True
-    while desc.startswith(("debug:", "ofx14:", "ofx11:")):
-        keep = keep and (debug if desc.startswith("debug:") else desc[:5] == profile)
-        desc = desc[6:]
-    return keep, desc
+    return smoketest_lists.only_in(desc, debug, profile)
 skip = []
 for s in entries("skip.txt"):
     rx, reason = s.split("|", 1)
@@ -475,7 +485,7 @@ for s in entries("inputs.txt"):
     overrides.append((m.group(1), m.group(2), m.group(3).replace("DATA", os.path.join(work, "data")).split()))
 params = []
 for s in entries("params.txt"):
-    m = re.fullmatch(r"([^:@/|]*)(?::([0-9]+))?(?:@(filter|general))?(?:/(byte|short|float))?\|([^|;]*)", s)
+    m = re.fullmatch(smoketest_lists.SELECTOR + r"\|([^|;]*)", s)
     words = m.group(5).split() if m else []
     refs = [w[8:] for w in words if w.startswith("differs:")]
     words = [w for w in words if not w.startswith("differs:")]
@@ -630,31 +640,29 @@ tr '\n' '\0' < "$work/jobs.txt" | xargs -r -0 -n 1 -P "$jobs" "$0" --render-job 
 mode=full
 [ "$quick" = 0 ] || mode=quick
 [ -z "$only" ] || mode=only
-[ -z "$SMOKETEST_BUNDLES" ] || mode=$mode-partial
+[ -z "$SMOKETEST_BUNDLES" ] && [ "${SMOKETEST_NO_TEST:-0}" != 1 ] || mode=$mode-partial
 status=0
 python3 -I - "$work" "${SMOKETEST_DEBUG:-0}" "$mode" "${SMOKETEST_XPASS_OK:-0}" "$profile" << 'EOF' || status=$?
 import json, os, re, sys
 work, debug, mode, xpass_ok = sys.argv[1], sys.argv[2] == "1", sys.argv[3], sys.argv[4] == "1"
 profile = sys.argv[5]
-# stale entries are only a warning with SMOKETEST_BUNDLES (a partial build) or SMOKETEST_XPASS_OK
+# stale entries are only a warning in a partial build (SMOKETEST_BUNDLES, SMOKETEST_NO_TEST) or
+# with SMOKETEST_XPASS_OK
 lenient = mode.endswith("partial") or xpass_ok
+sys.dont_write_bytecode = True  # no __pycache__ in the source tree
+sys.path.insert(0, os.environ["SMOKETEST_TOOLS"])
+import smoketest_lists
 def entries(name):
-    return [l.rstrip("\n") for l in open(os.path.join(work, name)) if l.strip()]
-def debug_only(desc):
-    # (keep, desc): the "debug:" entries are only used in debug builds, the "ofx14:" ones with
-    # --ofx14, the "ofx11:" ones with --ofx11
-    keep = True
-    while desc.startswith(("debug:", "ofx14:", "ofx11:")):
-        keep = keep and (debug if desc.startswith("debug:") else desc[:5] == profile)
-        desc = desc[6:]
-    return keep, desc
+    return smoketest_lists.entries(work, name)
+def only_in(desc):
+    return smoketest_lists.only_in(desc, debug, profile)
 xfail = []
 for x in entries("xfail.txt"):
-    m = re.fullmatch(r"([^:@/|]*)(?::([0-9]+))?(?:@(filter|general))?(?:/(byte|short|float))?\|([^|]*)\|(.*)", x)
+    m = re.fullmatch(smoketest_lists.SELECTOR + r"\|([^|]*)\|(.*)", x)
     if not m:
         sys.exit("bad XFAIL entry: " + x)
     rx, major, ctx, depth, msg, desc = m.groups()
-    keep, desc = debug_only(desc)
+    keep, desc = only_in(desc)
     if keep:
         xfail.append((rx, major, ctx, depth, msg, desc, x))
 identity = []
@@ -662,12 +670,12 @@ for x in entries("identity.txt"):
     m = re.fullmatch(r"([^:@|]*)(?::([0-9]+))?(?:@(filter|general))?\|(.*)", x)
     if not m:
         sys.exit("bad IDENTITY entry: " + x)
-    if debug_only(m.group(4))[0]:
+    if only_in(m.group(4))[0]:
         identity.append(m.groups() + (x,))
 skip = []
 for x in entries("skip.txt"):
     rx, reason = x.split("|", 1)
-    keep, reason = debug_only(reason)
+    keep, reason = only_in(reason)
     if keep:
         skip.append((rx, x))
 # OPENGL: an entry that matches no plug-in is stale, as in SKIP
@@ -902,8 +910,8 @@ for k, v in notes.items():
         print("not failures (%s): %s" % (k, ", ".join(sorted(v))))
 print("slowest renders: " + ", ".join("%s %ds" % (n, s) for s, n in times[:5]))
 # Stale entries: SKIP and PARAMS unless --only; XFAIL and IDENTITY in full mode only
-# (--quick does not render every context). They fail, except with SMOKETEST_BUNDLES (a
-# partial build) or SMOKETEST_XPASS_OK (then they are warnings).
+# (--quick does not render every context). They fail, except in a partial build
+# (SMOKETEST_BUNDLES, SMOKETEST_NO_TEST) or with SMOKETEST_XPASS_OK (then they are warnings).
 stale = []
 if not mode.startswith("only"):
     stale += [("OPENGL   " if x in opengl_entries else "SKIP     ") + x for rx, x in skip if x not in used]

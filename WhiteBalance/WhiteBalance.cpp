@@ -320,11 +320,11 @@ daylightUV(double T,
     xyToUV(x, y, u, v);
 }
 
+// CIE 1931 xy -> XYZ with Y=1 (y must not be 0)
 static Point3D
 xyToXYZ(double x,
         double y)
 {
-    // only called with the constant chromaticities of the working spaces and D65 (y != 0)
     return Point3D(x / y, 1., (1. - x - y) / y);
 }
 
@@ -396,7 +396,7 @@ temperatureToXYZ(double T,
         // impossible on the clamped domains (y > 0.17), but don't divide by zero
         return false;
     }
-    *xyz = Point3D(x / y, 1., (1. - x - y) / y);
+    *xyz = xyToXYZ(x, y);
 
     return true;
 }
@@ -419,11 +419,11 @@ rgbToXYZ(WorkingSpaceEnum space)
     switch (space) {
     case eWorkingSpaceRec709:
         // ITU-R BT.709-6
-        xr = 0.64; yr = 0.33; xg = 0.30; yg = 0.60; xb = 0.15; yb = 0.06; xw = 0.3127; yw = 0.3290;
+        xr = 0.64; yr = 0.33; xg = 0.30; yg = 0.60; xb = 0.15; yb = 0.06; xw = kD65x; yw = kD65y;
         break;
     case eWorkingSpaceRec2020:
         // ITU-R BT.2020-2
-        xr = 0.708; yr = 0.292; xg = 0.170; yg = 0.797; xb = 0.131; yb = 0.046; xw = 0.3127; yw = 0.3290;
+        xr = 0.708; yr = 0.292; xg = 0.170; yg = 0.797; xb = 0.131; yb = 0.046; xw = kD65x; yw = kD65y;
         break;
     case eWorkingSpaceACESAP0:
         // SMPTE ST 2065-1
@@ -435,7 +435,7 @@ rgbToXYZ(WorkingSpaceEnum space)
         break;
     case eWorkingSpaceP3D65:
         // SMPTE EG 432-1 (P3-D65)
-        xr = 0.680; yr = 0.320; xg = 0.265; yg = 0.690; xb = 0.150; yb = 0.060; xw = 0.3127; yw = 0.3290;
+        xr = 0.680; yr = 0.320; xg = 0.265; yg = 0.690; xb = 0.150; yb = 0.060; xw = kD65x; yw = kD65y;
         break;
     case eWorkingSpaceXYZ:
     default: {

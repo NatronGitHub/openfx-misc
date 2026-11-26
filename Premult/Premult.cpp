@@ -63,22 +63,21 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginUnpremultIdentifier "net.sf.openfx.Unpremult"
 // History:
 // version 1.0: initial version
-// version 2.0: use kNatronOfxParamProcess* parameters;
-//              do not guess checkbox values from input premult, leave kParamPremultChanged for backward compatibility
-//              (this line said 2.1, but the minor version was not incremented)
+// version 2.0: use kNatronOfxParamProcess* parameters; the checkboxes are no longer guessed from the input
+//              premultiplication
 // version 2.1: describes on hosts that are not multi-planar (e.g. OFX 1.4 hosts), with a fixed channel menu
-//              (R, G, B, A, 0, 1); describeInContext failed there (issue #166)
-//              New "Invert" parameter (issue #295), off by default: use 1 - alpha (or 1 minus the
-//              selected channel; the constants 0 and 1 are swapped). Existing projects render the same.
-//              Premult only: new "Clamp Alpha" parameter (issue #295), off by default: the premult channel
-//              is clamped to [0, 1] before multiplying. Existing projects render the same.
-// Premult version 3.0: Clamp Alpha is on by default (issue #295), as in the node of the same name; version 2.1 is
-//              kept, obsolete, with Clamp Alpha off by default, so that existing projects render the same.
+//              (R, G, B, A, 0, 1) (issue #166); new Invert parameter, off by default (issue #295); Premult only:
+//              new Clamp Alpha parameter, off by default (issue #295)
+// Premult version 3.0: Clamp Alpha is on by default (issue #295). Version 2.1 is kept, obsolete.
 //              Unpremult stays at version 2.1.
-#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
-#define kPluginPremultVersionMajor 3 // Premult only (see the history)
-#define kPluginPremultVersionMinor 0
+#define kPluginPremultVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginPremultVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginPremultVersionMinorV2 1 // the minor version of the obsolete Premult version 2
+#define kPluginUnpremultVersionMajor 2
+#define kPluginUnpremultVersionMinor 1
+
+// Premult version 3: Clamp Alpha is on by default
+static constexpr unsigned kVersionClampAlphaOn = 3;
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -1038,12 +1037,12 @@ PremultPluginFactory<isPremult, majorVersion>::describe(ImageEffectDescriptor &d
 {
     // basic labels
     if (isPremult) {
-        // version 2 (Clamp Alpha off by default) is kept for existing projects
         desc.setIsObsolete(majorVersion < kPluginPremultVersionMajor);
         desc.setLabel(kPluginPremultName);
         desc.setPluginGrouping(kPluginPremultGrouping);
         desc.setPluginDescription(kPluginPremultDescription);
     } else {
+        desc.setIsObsolete(majorVersion < kPluginUnpremultVersionMajor);
         desc.setLabel(kPluginUnpremultName);
         desc.setPluginGrouping(kPluginUnpremultGrouping);
         desc.setPluginDescription(kPluginUnpremultDescription);
@@ -1222,13 +1221,12 @@ PremultPluginFactory<isPremult, majorVersion>::describeInContext(ImageEffectDesc
         }
     }
 
-    // clamp alpha (Premult only; added in version 2.1, issue #295): on by default from version 3.0, as in the node
-    // of the same name; off in version 2.1, so that existing projects render the same
+    // clamp alpha (Premult only)
     if (isPremult) {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamClampAlpha);
         param->setLabel(kParamClampAlphaLabel);
         param->setHint(kParamClampAlphaHint);
-        param->setDefault(majorVersion >= kPluginPremultVersionMajor);
+        param->setDefault(majorVersion >= kVersionClampAlphaOn);
         param->setAnimates(true);
         if (page) {
             page->addChild(*param);
@@ -1244,11 +1242,11 @@ PremultPluginFactory<isPremult, majorVersion>::createInstance(OfxImageEffectHand
     return new PremultPlugin<isPremult>(handle);
 }
 
-static PremultPluginFactory<true, kPluginPremultVersionMajor> p1(kPluginPremultIdentifier, kPluginPremultVersionMinor);
-static PremultPluginFactory<true, kPluginVersionMajor> p1v2(kPluginPremultIdentifier, kPluginVersionMinor); // obsolete
-static PremultPluginFactory<false, kPluginVersionMajor> p2(kPluginUnpremultIdentifier, kPluginVersionMinor);
-mRegisterPluginFactoryInstance(p1)
-mRegisterPluginFactoryInstance(p1v2)
-mRegisterPluginFactoryInstance(p2)
+static PremultPluginFactory<true, kPluginPremultVersionMajor> pPremult(kPluginPremultIdentifier, kPluginPremultVersionMinor);
+static PremultPluginFactory<true, 2> pPremult_v2(kPluginPremultIdentifier, kPluginPremultVersionMinorV2);
+static PremultPluginFactory<false, kPluginUnpremultVersionMajor> pUnpremult(kPluginUnpremultIdentifier, kPluginUnpremultVersionMinor);
+mRegisterPluginFactoryInstance(pPremult)
+mRegisterPluginFactoryInstance(pPremult_v2)
+mRegisterPluginFactoryInstance(pUnpremult)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

@@ -19,7 +19,7 @@
 
 /*
  * The Draw options shared by the Radial and Rectangle plugins: Premultiply, Replace and Invert,
- * and the falloff curve of the Softness.
+ * and the falloff curve of the Softness, and the pixel writing code of their processors.
  * Included by Rectangle/Rectangle.cpp and Radial/Radial.cpp.
  */
 
@@ -31,8 +31,41 @@
 #include <cfloat>
 
 #include "ofxsImageEffect.h"
-#include "ofxsMaskMix.h" // kParamMix, kParamMaskApply
+#include "ofxsProcessing.H"
+#include "ofxsMaskMix.h" // kParamMix, kParamMaskApply, ofxsMaskMixPix
 #include "ofxsMerging.h" // MergeImages2D::mergeFiniteInput
+#ifdef OFX_EXTENSIONS_NATRON
+#include "ofxNatron.h"
+#endif
+#include "SoftEdge.h"
+
+#ifdef OFX_EXTENSIONS_NATRON
+#define kParamProcessR kNatronOfxParamProcessR
+#define kParamProcessRLabel kNatronOfxParamProcessRLabel
+#define kParamProcessRHint kNatronOfxParamProcessRHint
+#define kParamProcessG kNatronOfxParamProcessG
+#define kParamProcessGLabel kNatronOfxParamProcessGLabel
+#define kParamProcessGHint kNatronOfxParamProcessGHint
+#define kParamProcessB kNatronOfxParamProcessB
+#define kParamProcessBLabel kNatronOfxParamProcessBLabel
+#define kParamProcessBHint kNatronOfxParamProcessBHint
+#define kParamProcessA kNatronOfxParamProcessA
+#define kParamProcessALabel kNatronOfxParamProcessALabel
+#define kParamProcessAHint kNatronOfxParamProcessAHint
+#else
+#define kParamProcessR      "processR"
+#define kParamProcessRLabel "R"
+#define kParamProcessRHint  "Process red channel."
+#define kParamProcessG      "processG"
+#define kParamProcessGLabel "G"
+#define kParamProcessGHint  "Process green channel."
+#define kParamProcessB      "processB"
+#define kParamProcessBLabel "B"
+#define kParamProcessBHint  "Process blue channel."
+#define kParamProcessA      "processA"
+#define kParamProcessALabel "A"
+#define kParamProcessAHint  "Process alpha channel."
+#endif
 
 #define kParamShapePremult "premultiply"
 #define kParamShapePremultLabel "Premultiply"
@@ -63,55 +96,8 @@ namespace OFX {
 namespace ShapeDraw {
 
 /// The falloff curve of the Softness (the options of the Falloff parameter, in order).
-enum class FalloffEnum
-{
-    eFalloffQuadratic = 0, // the default before version 3
-    eFalloffLinear,
-    eFalloffSmooth0,
-    eFalloffSmooth1,
-    eFalloffSmooth,
-};
-
-/// The shape weight at the distance t across the Softness (0 at the outer edge, 1 at the inner one).
-/// The callers pass t < 1. Quadratic is the formula of the versions without the parameter, unchanged
-/// (it is not clamped); the other curves are clamped to [0, 1], and Smooth0, Smooth1 and Smooth are
-/// those of ofxsRamp (the Ramp plug-in).
-inline double
-falloff(FalloffEnum curve,
-        double t)
-{
-    if ( (curve <= FalloffEnum::eFalloffQuadratic) || (FalloffEnum::eFalloffSmooth < curve) ) {
-        // 2t^2 then 1 - 2(1 - t)^2, written as in these versions
-        t *= 2.;
-        if (t < 1.) {
-            return t * t / 2.;
-        }
-        t -= 1.;
-
-        return -0.5 * (t * (t - 2.) - 1.);
-    }
-    if ( !(t > 0.) ) {
-        return 0.;
-    }
-    if (t >= 1.) {
-        return 1.;
-    }
-    switch (curve) {
-    case FalloffEnum::eFalloffLinear:
-
-        return t;
-    case FalloffEnum::eFalloffSmooth0:
-
-        return t * t * (2. - t);
-    case FalloffEnum::eFalloffSmooth1:
-
-        return t * ( 1. + t * (1. - t) );
-    case FalloffEnum::eFalloffSmooth:
-    default:
-
-        return t * t * (3. - 2. * t);
-    }
-}
+using SoftEdge::FalloffEnum;
+using SoftEdge::falloff;
 
 /// Describe the Falloff parameter (put it after Softness), with its default.
 inline void
@@ -145,29 +131,18 @@ struct Options
     bool replace = false; // clear the drawn channels of the Source
     bool invert = false; // swap the colors, and invert the Premultiply weight
     FalloffEnum falloff = FalloffEnum::eFalloffQuadratic; // the curve of the Softness
-    bool pixelCenterSoftness = false; // version 3: the Softness is computed at the pixel center (see softWeight())
 };
 
-/// The shape weight of a pixel in the Softness, in versions 3 and later (Options::pixelCenterSoftness): the falloff
-/// curve of the distance t across the Softness (0 at the outer edge, 1 at the inner one), taken at the pixel
-/// center, 0 outside and 1 inside (no other antialiasing: the Softness is the edge).
+/// The shape weight of a pixel in the Softness, in versions 3 and later (ProcessorBase::_pixelCenterSoftness):
+/// SoftEdge::softEdgeWeight() at the pixel center, whose distance inside the edge is d, for a Softness and a
+/// half pixel in the same units (halfPixel 0: no other antialiasing, the Softness is the edge).
 inline float
 softWeight(FalloffEnum curve,
-           double t,
-           bool plinear)
+           double d,
+           double softness,
+           double halfPixel)
 {
-    if ( !(t > 0.) ) {
-        return 0.f;
-    }
-    if (t >= 1.) {
-        return 1.f;
-    }
-    double w = falloff(curve, t);
-    if (plinear) {
-        w = w * w * w; // perceptually linear
-    }
-
-    return static_cast<float>(w);
+    return static_cast<float>( SoftEdge::softEdgeWeight(curve, d, softness, halfPixel) );
 }
 
 /// The Source pixel srcPixRGBA (RGBA, not normalized), before the shape is drawn over it: Premultiply
@@ -203,12 +178,160 @@ prepareSource(const Options& options,
     }
 }
 
+/// A color parameter value.
+struct RGBAValues
+{
+    double r, g, b, a;
+    explicit RGBAValues(double v) : r(v), g(v), b(v), a(v) {}
+
+    RGBAValues() : r(0), g(0), b(0), a(0) {}
+};
+
 /// The colors outside (color0) and inside (color1) of the shape, swapped by Invert.
-template<class RGBA>
 struct Colors
 {
-    RGBA color0;
-    RGBA color1;
+    RGBAValues color0;
+    RGBAValues color1;
+};
+
+/// The checkboxes of the processed channels.
+struct ProcessChannels
+{
+    bool r = false;
+    bool g = false;
+    bool b = false;
+    bool a = false;
+};
+
+/// The members of the Radial and Rectangle processors that do not depend on the shape, and the code that
+/// writes a pixel from the shape color. The plug-ins set them with setDrawValues(); the derived
+/// processors read the Source image and the colors.
+class ProcessorBase
+    : public ImageProcessor
+{
+protected:
+    const Image *_srcImg = nullptr;
+    RGBAValues _color0, _color1;
+
+private:
+    const Image *_maskImg = nullptr;
+    bool _doMasking = false;
+    double _mix = 1.;
+    bool _maskInvert = false;
+    ProcessChannels _process;
+    Options _drawOptions; // Premultiply, Replace, Invert, Falloff
+    bool _pixelCenterSoftness = false; // version 3: the Softness is computed at the pixel center (see softWeight())
+
+public:
+    explicit ProcessorBase(ImageEffect &instance)
+        : ImageProcessor(instance)
+    {
+    }
+
+    /// The colors (swapped by Invert), Mix, the processed channels and the Draw options at the render time.
+    void setDrawValues(const Colors& colors,
+                       double mix,
+                       const ProcessChannels& process,
+                       const Options& drawOptions)
+    {
+        _color0 = colors.color0;
+        _color1 = colors.color1;
+        _mix = mix;
+        _process = process;
+        _drawOptions = drawOptions;
+    }
+
+    /** @brief set the src image */
+    void setSrcImg(const Image *v)
+    {
+        _srcImg = v;
+    }
+
+    void setMaskImg(const Image *v,
+                    bool maskInvert)
+    {
+        _maskImg = v;
+        _maskInvert = maskInvert;
+    }
+
+    void doMasking(bool v)
+    {
+        _doMasking = v;
+    }
+
+    /** @brief version 3 and later: the Softness is computed at the pixel center */
+    void setPixelCenterSoftness(bool v)
+    {
+        _pixelCenterSoftness = v;
+    }
+
+protected:
+    const ProcessChannels& processChannels() const
+    {
+        return _process;
+    }
+
+    FalloffEnum falloffCurve() const
+    {
+        return _drawOptions.falloff;
+    }
+
+    bool pixelCenterSoftness() const
+    {
+        return _pixelCenterSoftness;
+    }
+
+    // tmpPix (RGBA and the shape weight) for the shape weight w: Color 0 (w = 0) to Color 1 (w = 1)
+    void setSoftPixel(float w,
+                      float tmpPix[5]) const
+    {
+        tmpPix[0] = (float)_color0.r * (1.f - w) + (float)_color1.r * w;
+        tmpPix[1] = (float)_color0.g * (1.f - w) + (float)_color1.g * w;
+        tmpPix[2] = (float)_color0.b * (1.f - w) + (float)_color1.b * w;
+        tmpPix[3] = (float)_color0.a * (1.f - w) + (float)_color1.a * w;
+        tmpPix[4] = w;
+    }
+
+    // Composite the shape color tmpPix (normalized, premultiplied) over the source pixel in the
+    // processed channels, then apply the mask and mix and write dstPix.
+    // Shared by the process functions, which only differ in how they compute tmpPix.
+    template<class PIX, int nComponents, int maxValue, bool processR, bool processG, bool processB, bool processA>
+    void writePixel(float tmpPix[5],
+                    const PIX* srcPix,
+                    int x,
+                    int y,
+                    PIX* dstPix)
+    {
+        float a = tmpPix[3];
+
+        // ofxsMaskMixPix takes non-normalized values
+        tmpPix[0] *= maxValue;
+        tmpPix[1] *= maxValue;
+        tmpPix[2] *= maxValue;
+        tmpPix[3] *= maxValue;
+        float srcPixRGBA[4] = {0, 0, 0, 0};
+        if (srcPix) {
+            if (nComponents >= 3) {
+                srcPixRGBA[0] = srcPix[0];
+                srcPixRGBA[1] = srcPix[1];
+                srcPixRGBA[2] = srcPix[2];
+            }
+            if ( (nComponents == 1) || (nComponents == 4) ) {
+                srcPixRGBA[3] = srcPix[nComponents - 1];
+            }
+        }
+        // Premultiply and Replace; tmpPix[4] is the shape weight
+        prepareSource<processR, processG, processB, processA>(_drawOptions, tmpPix[4], srcPixRGBA);
+        tmpPix[0] = processR ? (tmpPix[0] + srcPixRGBA[0] * (1.f - a)) : srcPixRGBA[0];
+        tmpPix[1] = processG ? (tmpPix[1] + srcPixRGBA[1] * (1.f - a)) : srcPixRGBA[1];
+        tmpPix[2] = processB ? (tmpPix[2] + srcPixRGBA[2] * (1.f - a)) : srcPixRGBA[2];
+        tmpPix[3] = processA ? (tmpPix[3] + srcPixRGBA[3] * (1.f - a)) : srcPixRGBA[3];
+        if (nComponents == 1) {
+            // ofxsMaskMixPix reads the only channel from tmpPix[0]
+            tmpPix[0] = tmpPix[3];
+        }
+        ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
+    }
 };
 
 /// The parameters of the Draw options, and the colors they apply to.
@@ -224,8 +347,16 @@ public:
         , _replace( effect.fetchBooleanParam(kParamShapeReplace) )
         , _invert( effect.fetchBooleanParam(kParamShapeInvert) )
         , _falloff( effect.fetchChoiceParam(kParamShapeFalloff) )
+        , _processR( effect.fetchBooleanParam(kParamProcessR) )
+        , _processG( effect.fetchBooleanParam(kParamProcessG) )
+        , _processB( effect.fetchBooleanParam(kParamProcessB) )
+        , _processA( effect.fetchBooleanParam(kParamProcessA) )
+        , _mix( effect.fetchDoubleParam(kParamMix) )
+        , _maskApply( ( ofxsMaskIsAlwaysConnected( OFX::getImageEffectHostDescription() ) && effect.paramExists(kParamMaskApply) ) ?
+                      effect.fetchBooleanParam(kParamMaskApply) : NULL )
     {
         assert(_color0 && _color1 && _premult && _replace && _invert && _falloff);
+        assert(_processR && _processG && _processB && _processA && _mix);
     }
 
     Options options(double time) const
@@ -235,17 +366,17 @@ public:
         o.replace = _replace->getValueAtTime(time);
         o.invert = _invert->getValueAtTime(time);
         const int curve = _falloff->getValueAtTime(time);
+        // the only range check of the curve (falloff() does not check it)
         o.falloff = ( (curve >= static_cast<int>(FalloffEnum::eFalloffQuadratic)) && (curve <= static_cast<int>(FalloffEnum::eFalloffSmooth)) ) ?
                     static_cast<FalloffEnum>(curve) : FalloffEnum::eFalloffQuadratic;
 
         return o;
     }
 
-    /// The colors at time, swapped by Invert. RGBA has members r, g, b and a (double).
-    template<class RGBA>
-    Colors<RGBA> colors(double time) const
+    /// The colors at time, swapped by Invert.
+    Colors colors(double time) const
     {
-        Colors<RGBA> c;
+        Colors c;
         _color0->getValueAtTime(time, c.color0.r, c.color0.g, c.color0.b, c.color0.a);
         _color1->getValueAtTime(time, c.color1.r, c.color1.g, c.color1.b, c.color1.a);
         if ( _invert->getValueAtTime(time) ) {
@@ -271,14 +402,50 @@ public:
         return ( (comps == ePixelComponentRGB) || (comps == ePixelComponentRGBA) ) && _premult->getValueAtTime(time);
     }
 
-    /// The checkboxes of the processed channels.
-    struct ProcessChannels
+    /// The R, G, B and A checkboxes at time.
+    ProcessChannels processChannels(double time) const
     {
-        bool r;
-        bool g;
-        bool b;
-        bool a;
-    };
+        ProcessChannels p;
+        p.r = _processR->getValueAtTime(time);
+        p.g = _processG->getValueAtTime(time);
+        p.b = _processB->getValueAtTime(time);
+        p.a = _processA->getValueAtTime(time);
+
+        return p;
+    }
+
+    /// The R, G, B and A checkboxes, at the current time (for the clip preferences).
+    ProcessChannels processChannels() const
+    {
+        ProcessChannels p;
+        p.r = _processR->getValue();
+        p.g = _processG->getValue();
+        p.b = _processB->getValue();
+        p.a = _processA->getValue();
+
+        return p;
+    }
+
+    /// Mix at time.
+    double mix(double time) const
+    {
+        return _mix->getValueAtTime(time);
+    }
+
+    /// true if Mix is 1 and no Mask applies, at the current time (for the clip preferences).
+    bool isFullMix(const Clip* maskClip) const
+    {
+        const bool masked = maskClip && maskClip->isConnected() && ( !_maskApply || _maskApply->getValue() );
+
+        return !masked && (_mix->getValue() == 1.);
+    }
+
+    /// outputIsPremultipliedByShape() for the current values of the checkboxes, Mix and the mask.
+    bool outputIsPremultipliedByShape(const Clip* srcClip,
+                                      const Clip* maskClip) const
+    {
+        return outputIsPremultipliedByShape( processChannels(), srcClip, isFullMix(maskClip) );
+    }
 
     /// true if the Output alpha is the shape and the RGB are premultiplied by it: Premultiply, Replace
     /// and Process A on an RGB or RGBA Source (the unmapped components: an RGB Source is mapped to RGBA
@@ -321,6 +488,12 @@ private:
     BooleanParam* _replace;
     BooleanParam* _invert;
     ChoiceParam* _falloff;
+    BooleanParam* _processR;
+    BooleanParam* _processG;
+    BooleanParam* _processB;
+    BooleanParam* _processA;
+    DoubleParam* _mix;
+    BooleanParam* _maskApply; // NULL if the host has no Apply Mask
 };
 
 /// Describe the drawing options (Premultiply, Replace, Invert), then the mask and mix parameters

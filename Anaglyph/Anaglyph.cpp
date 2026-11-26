@@ -31,6 +31,7 @@
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
 #include "ofxsThreadSuite.h"
+#include "MultiviewFetch.h"
 
 using namespace OFX;
 
@@ -64,21 +65,6 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamOffsetHint "Horizontal offset. " \
     "The red view is shifted to the left by half this amount, " \
     "and the cyan view is shifted to the right by half this amount (in pixels)." // rounded up // rounded down
-
-// OFX 1.4 hosts have neither the multiview plane suite (kFnOfxImageEffectPlaneSuite v2)
-// nor the Vegas stereoscopic suite: they have a single view, which is then every view.
-static Image*
-fetchViewImage(Clip* clip,
-               double time,
-               int view)
-{
-    if ( fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true) ||
-         fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true) ) {
-        return clip->fetchStereoscopicImage(time, view);
-    }
-
-    return clip->fetchImage(time);
-}
 
 // Base class for the RGBA and the Alpha processor
 class AnaglyphBase

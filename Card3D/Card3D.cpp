@@ -72,10 +72,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "See also https://web.archive.org/web/20210727235824/opticalenquiry.com/nuke/index.php?title=Card3D"
 
 #define kPluginIdentifier "net.sf.openfx.Card3D"
-// SupportExt#179, in the current minor versions (not released yet, so no further bump): with the Box
+// SupportExt#179, in the current minor versions: with the Box
 //              filter, the thin band just outside the source image is black (Black Outside) or the
 //              edge colour, not about 4x the edge value (garbage).
-// (#236, in the current minor version, not released yet) on hosts that ignore normalised defaults
+// (#236, in the current minor version) on hosts that ignore normalised defaults
 //              (e.g. DaVinci Resolve), the default rectangle is the project's, not (1,1) pixels
 // SupportExt#205 and #207, also in the current minor version: the Shutter can be up to 1000 frames and the
 //              custom shutter offset +-1000 (they were limited to 2 and +-1; part of openfx-misc#273), and a
@@ -86,7 +86,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 // 1.1: importing a chan or Boujou file no longer sets NaN or infinite rotation and focal length keys (NaN audit);
 //      the inverse of a transform matrix with huge entries (e.g. a concatenated source transform) no longer overflows to NaN or 0 (SupportExt #81)
-// 1.1 (unreleased, fixed in place): the Lanczos4, Lanczos6 and Sinc4 filters (appended options) and the
+// 1.1: the Lanczos4, Lanczos6 and Sinc4 filters (appended options) and the
 //      Prefilter Downscaling checkbox (after Black Outside, off) (issue #270); the default output is unchanged.
 
 #define kParamSrcClipChanged "srcClipChanged"
@@ -2082,8 +2082,6 @@ Card3DPluginFactory::describe(ImageEffectDescriptor &desc)
     desc.setPluginDescription(kPluginDescription);
 
     Transform3x3Describe(desc, false);
-
-    //ofxsSetOverlayInteractDescriptorV2(desc, new TransformOverlayDescriptorOldParamsV2);
 }
 
 

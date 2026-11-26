@@ -34,6 +34,7 @@
 #include "ofxNatron.h"
 #endif
 #include "ofxsThreadSuite.h"
+#include "SoftEdge.h"
 
 using namespace OFX;
 
@@ -178,15 +179,7 @@ public:
             d = (1. - _curvature) * dline + _curvature * d;
         }
         // antialiasing over one pixel, plus the soft edge inside the shape
-        double t = (d + 0.5) / (_softness + 1.);
-        if (t <= 0.) {
-            return 0.;
-        }
-        if (t >= 1.) {
-            return 1.;
-        }
-
-        return t * t * (3. - 2. * t); // smoothstep
+        return SoftEdge::smoothstep( (d + 0.5) / (_softness + 1.) );
     }
 };
 

@@ -28,6 +28,7 @@
 
 #include "ofxsTransform3x3.h"
 #include "ofxsTransformInteract.h"
+#include "TransformDefaults.h"
 #include "ofxsCoords.h"
 #include "ofxsThreadSuite.h"
 
@@ -46,7 +47,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "This plugin concatenates transforms upstream."
 
 #define kPluginIdentifier "net.sf.openfx.GodRays"
-// SupportExt#179, in the current minor versions (not released yet, so no further bump): with the Box
+// SupportExt#179, in the current minor versions: with the Box
 //              filter, the thin band just outside the source image is black (Black Outside) or the
 //              edge colour, not about 4x the edge value (garbage).
 // SupportExt#183, also in the current minor versions: the Mask checkbox works on hosts where the mask
@@ -585,17 +586,8 @@ public:
              ( _scaleUniform->getNumKeys() == 0) ) {
             _scaleUniform->setIsSecretAndDisabled(true);
         }
-        // Hosts that ignore normalised defaults (OFX 1.1 hosts such as VEGAS, and DaVinci Resolve)
-        // give the default center (0.5, 0.5) as is: move it to the project centre (#66). The host
-        // may send instanceChanged for that setValue(), which changedParam() would take as a center
-        // edit and stop the re-centring on a new source: keep Center Changed as it was (this works
-        // only if the host sends instanceChanged synchronously, from setValue()). Last, since
-        // setValue() may call changedParam().
-        const bool centerChanged = _centerChanged->getValue();
-        ofxsTransformDenormaliseDefaults(*this, /*oldParams=*/true);
-        if (_centerChanged->getValue() != centerChanged) {
-            _centerChanged->setValue(centerChanged);
-        }
+        // last, since setValue() may call changedParam()
+        transformDenormaliseDefaultsKeepCenterChanged(*this, *_centerChanged);
     }
 
 private:

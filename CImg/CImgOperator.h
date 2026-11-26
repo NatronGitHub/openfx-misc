@@ -119,6 +119,7 @@ public:
     virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip* &identityClip, double &identityTime, int& /*view*/, std::string& /*plane*/) OVERRIDE FINAL;
 
     // the following functions can be overridden/implemented by the plugin
+    // (params is value-initialised by the callers: this may leave fields unset)
     virtual void getValuesAtTime(double time, Params& params) = 0;
 
     // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
@@ -249,7 +250,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
     _premultChannel->getValueAtTime(time, premultChannel);
     const double mix = _ignoreMix ? 1. : _mix->getValueAtTime(time);
 
-    Params params{}; // value-initialised: getValuesAtTime() may not set every field
+    Params params{}; // see getValuesAtTime()
     getValuesAtTime(time, params);
     int srcBoundary = getBoundary(params);
     assert(0 <= srcBoundary && srcBoundary <= 2);
@@ -432,7 +433,7 @@ CImgOperatorPluginHelper<Params>::getRegionsOfInterest(const OFX::RegionsOfInter
 # endif
     const double time = args.time;
     const OfxRectD& regionOfInterest = args.regionOfInterest;
-    Params params{}; // value-initialised: getValuesAtTime() may not set every field
+    Params params{}; // see getValuesAtTime()
     getValuesAtTime(time, params);
 
     {
@@ -469,7 +470,7 @@ CImgOperatorPluginHelper<Params>::getRegionOfDefinition(const OFX::RegionOfDefin
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 # endif
-    Params params{}; // value-initialised: getValuesAtTime() may not set every field
+    Params params{}; // see getValuesAtTime()
     getValuesAtTime(args.time, params);
 
     double srcApixelaspectratio = _srcAClip ? _srcAClip->getPixelAspectRatio() : 1.;
@@ -514,7 +515,7 @@ CImgOperatorPluginHelper<Params>::isIdentity(const OFX::IsIdentityArguments &arg
 
         return true;
     }
-    Params params{}; // value-initialised: getValuesAtTime() may not set every field
+    Params params{}; // see getValuesAtTime()
     getValuesAtTime(time, params);
     switch ( isIdentity(args, params) ) {
     case 0:

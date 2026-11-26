@@ -649,7 +649,7 @@ ShadertoyPlugin::initMesa()
 void
 ShadertoyPlugin::exitMesa()
 {
-    AutoMutex lock( _osmesaMutex.get() );
+    std::lock_guard<std::mutex> lock(_osmesaMutex);
 
     for (std::list<OSMesaPrivate *>::iterator it = _osmesa.begin(); it != _osmesa.end(); ++it) {
         delete *it;
@@ -1013,6 +1013,255 @@ static std::string fsFooter =
     "{\n"
     "  mainImage(gl_FragColor, gl_FragCoord.xy + ifFragCoordOffsetUniform );\n"
     "}\n";
+// For compatibility with ShaderToy: replace the first line of str that starts with prefix (at
+// the start of str or after a newline) by an empty line.
+static void
+removeLineStartingWith(std::string& str,
+                       const char* prefix)
+{
+    std::size_t found = str.find(prefix);
+    if ( (found != std::string::npos) && ( (found == 0) || ( (str[found - 1] == '\n') || (str[found - 1] == '\r') ) ) ) {
+        std::size_t eol = str.find('\n', found);
+        if (eol == std::string::npos) {
+            // last line
+            eol = str.size();
+        }
+        str.replace( found, eol - found, std::string() );
+    }
+}
+
+// The fragment shader of the Image Shader source str: the uniforms, then str, then main().
+static std::string
+imageShaderSource(std::string str)
+{
+    removeLineStartingWith(str, "const vec2 iRenderScale");
+    removeLineStartingWith(str, "const vec2 iChannelOffset");
+    std::string fsSource = fsHeader;
+    for (unsigned i = 0; i < NBINPUTS; ++i) {
+        fsSource += std::string("uniform sampler2D iChannel") + (char)('0' + i) + ";\n";
+    }
+    fsSource += "#line 0\n";
+    fsSource += str + '\n' + fsFooter;
+
+    return fsSource;
+}
+
+// Compile and link the fragment shader into shadertoy->program, and get the locations of the
+// builtin uniforms. Returns false, with the compiler log in errstr, if it fails.
+static bool
+compileProgram(ShadertoyShader* shadertoy,
+               const char* fragmentShader,
+               std::string& errstr)
+{
+    const GLuint program = compileAndLinkProgram(vsSource.c_str(), fragmentShader, errstr);
+    shadertoy->program = program;
+    if (program == 0) {
+        return false;
+    }
+    shadertoy->iResolutionLoc        = glGetUniformLocation(program, "iResolution");
+    shadertoy->iTimeLoc        = glGetUniformLocation(program, "iTime");
+    if (shadertoy->iTimeLoc == -1) {
+        // for backward compatibility with older (pre-0.9.3) shaders
+        shadertoy->iTimeLoc        = glGetUniformLocation(program, "iGlobalTime");
+    }
+    shadertoy->iTimeDeltaLoc         = glGetUniformLocation(program, "iTimeDelta");
+    shadertoy->iFrameLoc             = glGetUniformLocation(program, "iFrame");
+    shadertoy->iChannelTimeLoc       = glGetUniformLocation(program, "iChannelTime");
+    shadertoy->iMouseLoc             = glGetUniformLocation(program, "iMouse");
+    shadertoy->iDateLoc              = glGetUniformLocation(program, "iDate");
+    shadertoy->iSampleRateLoc        = glGetUniformLocation(program, "iSampleRate");
+    shadertoy->iChannelResolutionLoc = glGetUniformLocation(program, "iChannelResolution");
+    shadertoy->ifFragCoordOffsetUniformLoc = glGetUniformLocation(program, "ifFragCoordOffsetUniform");
+    shadertoy->iRenderScaleLoc = glGetUniformLocation(program, "iRenderScale");
+    shadertoy->iChannelOffsetLoc = glGetUniformLocation(program, "iChannelOffset");
+    char iChannelX[10] = "iChannelX"; // index 8 holds the channel character
+    assert(NBINPUTS < 10 && iChannelX[8] == 'X');
+    for (unsigned i = 0; i < NBINPUTS; ++i) {
+        iChannelX[8] = '0' + (char)i;
+        shadertoy->iChannelLoc[i] = glGetUniformLocation(shadertoy->program, iChannelX);
+        //printf("%s -> %d\n", iChannelX, (int)shadertoy->iChannelLoc[i]);
+    }
+
+    return true;
+}
+
+// List what the uniforms of program tell (ImageShaderParams): the inputs (iChannel*) it uses,
+// whether it uses iMouse, and the extra parameters. bbox is the current BBox parameter, that the
+// shader source may override.
+static void
+listShaderParams(GLuint program,
+                 const char* fragmentShader,
+                 ShadertoyPlugin::BBoxEnum bbox,
+                 ShadertoyPlugin::ImageShaderParams& params)
+{
+    params.hasMouse = false;
+
+    params.extraParameters.clear();
+    {
+        // go through the uniforms, and list extra parameters
+
+        GLint i;
+        GLint count;
+        GLint size; // size of the variable
+        GLenum type; // type of the variable (float, vec3 or mat4, etc)
+        GLint bufSize; // maximum name length
+
+        std::string name; // variable name in GLSL
+        GLsizei length; // name length
+
+        // Uniforms
+        glGetProgramiv(program, GL_ACTIVE_UNIFORM_MAX_LENGTH, &bufSize);
+        count = 0;
+        glGetProgramiv(program, GL_ACTIVE_UNIFORMS, &count);
+        if (count > 0) {
+            //DPRINT( ("Active Uniforms: %d\n", count) );
+        }
+        params.inputEnabled.assign(NBINPUTS, false);
+        for (i = 0; i < count; i++) {
+            name.resize((unsigned)bufSize);
+            glGetActiveUniform(program, (GLuint)i, bufSize, &length, &size, &type, &name[0]);
+            glCheckError();
+            name.resize((unsigned)length);
+            //DPRINT( ("Uniform #%d Type: %s Name: %s\n", i, glGetEnumString(type), (const char*)&name[0]) );
+            GLint loc = glGetUniformLocation(program, &name[0]);
+
+            if (loc >= 0) {
+                if ( starts_with(name, "iChannel") ) {
+                    for (unsigned j = 0; j < NBINPUTS; ++j) {
+                        if ( name == ( std::string("iChannel") + (char)('0' + j) ) ) {
+                            params.inputEnabled[j] = true;
+                            getChannelInfo(fragmentShader, j, params.inputLabel[j], params.inputHint[j], params.inputFilter[j], params.inputWrap[j]);
+                            loc = -1; // go to next uniform
+                            break;
+                        }
+                    }
+                }
+
+                // mark if shader has mouse params
+                if (name == "iMouse") {
+                    params.hasMouse = true;
+                    continue;
+                }
+
+                if ( (name == "iResolution") ||
+                     ( name == "iTime") ||
+                     ( name == "iGlobalTime") ||
+                     ( name == "iTimeDelta") ||
+                     ( name == "iFrame") ||
+                     ( name == "iChannelTime") ||
+                     ( name == "iChannelTime[0]") ||
+                     //name == "iMouse" ||
+                     ( name == "iDate") ||
+                     ( name == "iSampleRate") ||
+                     ( name == "iChannelResolution") ||
+                     ( name == "iChannelResolution[0]") ||
+                     ( name == "ifFragCoordOffsetUniform") ||
+                     ( name == "iRenderScale") ||
+                     ( name == "iChannelOffset") ||
+                     ( name == "iChannelOffset[0]") ||
+                     starts_with(name, "gl_") ) {
+                    // builtin uniform
+                    continue;
+                }
+                ShadertoyPlugin::UniformTypeEnum t = ShadertoyPlugin::eUniformTypeNone;
+                switch (type) {
+                case GL_BOOL:
+                    t = ShadertoyPlugin::eUniformTypeBool;
+                    break;
+
+                case GL_INT:
+                    t = ShadertoyPlugin::eUniformTypeInt;
+                    break;
+
+                case GL_FLOAT:
+                    t = ShadertoyPlugin::eUniformTypeFloat;
+                    break;
+
+                case GL_FLOAT_VEC2:
+                    t = ShadertoyPlugin::eUniformTypeVec2;
+                    break;
+
+                case GL_FLOAT_VEC3:
+                    t = ShadertoyPlugin::eUniformTypeVec3;
+                    break;
+
+                case GL_FLOAT_VEC4:
+                    t = ShadertoyPlugin::eUniformTypeVec4;
+                    break;
+
+                default:
+                    // ignore uniform
+                    break;
+                }
+                if (t == ShadertoyPlugin::eUniformTypeNone) {
+                    DPRINT( ("Uniform #%d Type: %s Name: %s NOT SUPPORTED\n", i, glGetEnumString(type), (const char*)&name[0]) );
+                    continue;
+                }
+
+                ShadertoyPlugin::ExtraParameter p;
+                p.init(t, name);
+
+                switch (t) {
+                case ShadertoyPlugin::eUniformTypeBool: {
+                    GLint v;
+                    glGetUniformiv(program, loc, &v);
+                    //DPRINT( ("Value: %d\n", v) );
+                    p.set(p.getDefault(), (bool)v);
+                    break;
+                }
+                case ShadertoyPlugin::eUniformTypeInt: {
+                    GLint v;
+                    glGetUniformiv(program, loc, &v);
+                    //DPRINT( ("Value: %d\n", v) );
+                    p.set(p.getDefault(), (int)v);
+                    break;
+                }
+                case ShadertoyPlugin::eUniformTypeFloat: {
+                    GLfloat v;
+                    glGetUniformfv(program, loc, &v);
+                    //DPRINT( ("Value: %g\n", v) );
+                    p.set(p.getDefault(), (float)v);
+                    break;
+                }
+                case ShadertoyPlugin::eUniformTypeVec2: {
+                    GLfloat v[2];
+                    glGetUniformfv(program, loc, v);
+                    //DPRINT( ("Value: (%g, %g)\n", v[0], v[1]) );
+                    p.set(p.getDefault(), (float)v[0], (float)v[1]);
+                    break;
+                }
+                case ShadertoyPlugin::eUniformTypeVec3: {
+                    GLfloat v[3];
+                    glGetUniformfv(program, loc, v);
+                    //DPRINT( ("Value: (%g, %g, %g)\n", v[0], v[1], v[2]) );
+                    p.set(p.getDefault(), (float)v[0], (float)v[1], (float)v[2]);
+                    break;
+                }
+                case ShadertoyPlugin::eUniformTypeVec4: {
+                    GLfloat v[4];
+                    glGetUniformfv(program, loc, v);
+                    //DPRINT( ("Value: (%g, %g, %g, %g)\n", v[0], v[1], v[2], v[3]) );
+                    p.set(p.getDefault(), (float)v[0], (float)v[1], (float)v[2], (float)v[3]);
+                    break;
+                }
+                default:
+                    assert(false);
+                    break;
+                }
+
+                // parse hint/min/max from comment
+                getExtraParameterInfo(fragmentShader, p);
+
+                params.extraParameters.push_back(p);
+            } // if (loc >= 0)
+            params.bbox = bbox;
+            getBboxInfo(fragmentShader, params.bbox);
+        } // for (i = 0; i < count; i++) {
+    }
+
+    std::sort(params.extraParameters.begin(), params.extraParameters.end(), ShadertoyPlugin::ExtraParameter::less_than_pos());
+}
+
 void
 ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 {
@@ -1253,7 +1502,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     /* Allocate the image buffer */
     OSMesaPrivate *osmesa;
     {
-        AutoMutex lock( _osmesaMutex.get() );
+        std::lock_guard<std::mutex> lock(_osmesaMutex);
         if ( _osmesa.empty() ) {
             osmesa = new OSMesaPrivate(this);
         } else {
@@ -1267,7 +1516,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     {
         OSMesaReleaser(OSMesaPrivate* o,
                        std::list<OSMesaPrivate *>& l,
-                       Mutex* m)
+                       std::mutex& m)
             : osmesa(o)
             , list(l)
             , mutex(m)
@@ -1291,7 +1540,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
             // We're finished with this osmesa, make it available for other renders
             {
-                AutoMutex lock(mutex);
+                std::lock_guard<std::mutex> lock(mutex);
                 list.push_back(osmesa);
             }
             osmesa = NULL;
@@ -1299,9 +1548,9 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
         OSMesaPrivate* osmesa;
         std::list<OSMesaPrivate *>& list;
-        Mutex* mutex;
+        std::mutex& mutex;
     };
-    OSMesaReleaser osmesaReleaser( osmesa, _osmesa, _osmesaMutex.get() );
+    OSMesaReleaser osmesaReleaser(osmesa, _osmesa, _osmesaMutex);
     if (OSMesaGetCurrentContext() != NULL) {
         DPRINT( ("render error: %s\n", "Mesa context still attached") );
         glFlush(); // waits until commands are submitted but does not wait for the commands to finish executing
@@ -1344,7 +1593,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 #endif
 
     {
-        AutoMutex lock( _rendererInfoMutex.get() );
+        std::lock_guard<std::mutex> lock(_rendererInfoMutex);
         std::string &message = _rendererInfo;
         if ( message.empty() ) {
             const char* glRenderer = (const char*)glGetString(GL_RENDERER);
@@ -1376,7 +1625,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     std::string compileError; // set on failure; "" if there is no compiler log to show
     bool compileFailed = false;
     do {
-        AutoMutex lock( _imageShaderMutex.get() );
+        std::lock_guard<std::mutex> lock(_imageShaderMutex);
         bool must_recompile = false;
         bool uniforms_changed = false;
         shadertoy = (ShadertoyShader *)contextData->imageShader;
@@ -1400,240 +1649,18 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             }
             std::string str;
             _imageShaderSource->getValue(str);
-            {
-                // for compatibility with ShaderToy, remove the first line that starts with "const vec2 iRenderScale"
-                std::size_t found = str.find("const vec2 iRenderScale");
-                if ( (found != std::string::npos) && ( (found == 0) || ( (str[found - 1] == '\n') || (str[found - 1] == '\r') ) ) ) {
-                    std::size_t eol = str.find('\n', found);
-                    if (eol == std::string::npos) {
-                        // last line
-                        eol = str.size();
-                    }
-                    // replace by an empty line
-                    str.replace( found, eol - found, std::string() );
-                }
-            }
-            {
-                // for compatibility with ShaderToy, remove the first line that starts with "const vec2 iChannelOffset"
-                std::size_t found = str.find("const vec2 iChannelOffset");
-                if ( (found != std::string::npos) && ( (found == 0) || ( (str[found - 1] == '\n') || (str[found - 1] == '\r') ) ) ) {
-                    std::size_t eol = str.find('\n', found);
-                    if (eol == std::string::npos) {
-                        // last line
-                        eol = str.size();
-                    }
-                    // replace by an empty line
-                    str.replace( found, eol - found, std::string() );
-                }
-            }
-            std::string fsSource = fsHeader;
-            for (unsigned i = 0; i < NBINPUTS; ++i) {
-                fsSource += std::string("uniform sampler2D iChannel") + (char)('0' + i) + ";\n";
-            }
-            fsSource += "#line 0\n";
-            fsSource += str + '\n' + fsFooter;
+            const std::string fsSource = imageShaderSource(str);
             std::string errstr;
             const char* fragmentShader = fsSource.c_str();
-            shadertoy->program = compileAndLinkProgram(vsSource.c_str(), fragmentShader, errstr);
-            const GLuint program = shadertoy->program;
-            if (shadertoy->program == 0) {
+            if ( !compileProgram(shadertoy, fragmentShader, errstr) ) {
                 compileFailed = true;
                 compileError = errstr;
                 break;
             }
-            shadertoy->iResolutionLoc        = glGetUniformLocation(program, "iResolution");
-            shadertoy->iTimeLoc        = glGetUniformLocation(program, "iTime");
-            if (shadertoy->iTimeLoc == -1) {
-                // for backward compatibility with older (pre-0.9.3) shaders
-                shadertoy->iTimeLoc        = glGetUniformLocation(program, "iGlobalTime");
-            }
-            shadertoy->iTimeDeltaLoc         = glGetUniformLocation(program, "iTimeDelta");
-            shadertoy->iFrameLoc             = glGetUniformLocation(program, "iFrame");
-            shadertoy->iChannelTimeLoc       = glGetUniformLocation(program, "iChannelTime");
-            shadertoy->iMouseLoc             = glGetUniformLocation(program, "iMouse");
-            shadertoy->iDateLoc              = glGetUniformLocation(program, "iDate");
-            shadertoy->iSampleRateLoc        = glGetUniformLocation(program, "iSampleRate");
-            shadertoy->iChannelResolutionLoc = glGetUniformLocation(program, "iChannelResolution");
-            shadertoy->ifFragCoordOffsetUniformLoc = glGetUniformLocation(program, "ifFragCoordOffsetUniform");
-            shadertoy->iRenderScaleLoc = glGetUniformLocation(program, "iRenderScale");
-            shadertoy->iChannelOffsetLoc = glGetUniformLocation(program, "iChannelOffset");
-            char iChannelX[10] = "iChannelX"; // index 8 holds the channel character
-            assert(NBINPUTS < 10 && iChannelX[8] == 'X');
-            for (unsigned i = 0; i < NBINPUTS; ++i) {
-                iChannelX[8] = '0' + (char)i;
-                shadertoy->iChannelLoc[i] = glGetUniformLocation(shadertoy->program, iChannelX);
-                //printf("%s -> %d\n", iChannelX, (int)shadertoy->iChannelLoc[i]);
-            }
-
             if (_imageShaderUpdateParams) {
-                _imageShaderHasMouse = false;
-
-                _imageShaderExtraParameters.clear();
-                {
-                    // go through the uniforms, and list extra parameters
-
-                    GLint i;
-                    GLint count;
-                    GLint size; // size of the variable
-                    GLenum type; // type of the variable (float, vec3 or mat4, etc)
-                    GLint bufSize; // maximum name length
-
-                    std::string name; // variable name in GLSL
-                    GLsizei length; // name length
-
-                    // Uniforms
-                    glGetProgramiv(program, GL_ACTIVE_UNIFORM_MAX_LENGTH, &bufSize);
-                    count = 0;
-                    glGetProgramiv(program, GL_ACTIVE_UNIFORMS, &count);
-                    if (count > 0) {
-                        //DPRINT( ("Active Uniforms: %d\n", count) );
-                    }
-                    _imageShaderInputEnabled.assign(NBINPUTS, false);
-                    for (i = 0; i < count; i++) {
-                        name.resize((unsigned)bufSize);
-                        glGetActiveUniform(program, (GLuint)i, bufSize, &length, &size, &type, &name[0]);
-                        glCheckError();
-                        name.resize((unsigned)length);
-                        //DPRINT( ("Uniform #%d Type: %s Name: %s\n", i, glGetEnumString(type), (const char*)&name[0]) );
-                        GLint loc = glGetUniformLocation(program, &name[0]);
-
-                        if (loc >= 0) {
-                            if ( starts_with(name, "iChannel") ) {
-                                for (unsigned j = 0; j < NBINPUTS; ++j) {
-                                    if ( name == ( std::string("iChannel") + (char)('0' + j) ) ) {
-                                        _imageShaderInputEnabled[j] = true;
-                                        getChannelInfo(fragmentShader, j, _imageShaderInputLabel[j], _imageShaderInputHint[j], _imageShaderInputFilter[j], _imageShaderInputWrap[j]);
-                                        loc = -1; // go to next uniform
-                                        break;
-                                    }
-                                }
-                            }
-
-                            // mark if shader has mouse params
-                            if (name == "iMouse") {
-                                _imageShaderHasMouse = true;
-                                continue;
-                            }
-
-                            if ( (name == "iResolution") ||
-                                 ( name == "iTime") ||
-                                 ( name == "iGlobalTime") ||
-                                 ( name == "iTimeDelta") ||
-                                 ( name == "iFrame") ||
-                                 ( name == "iChannelTime") ||
-                                 ( name == "iChannelTime[0]") ||
-                                 //name == "iMouse" ||
-                                 ( name == "iDate") ||
-                                 ( name == "iSampleRate") ||
-                                 ( name == "iChannelResolution") ||
-                                 ( name == "iChannelResolution[0]") ||
-                                 ( name == "ifFragCoordOffsetUniform") ||
-                                 ( name == "iRenderScale") ||
-                                 ( name == "iChannelOffset") ||
-                                 ( name == "iChannelOffset[0]") ||
-                                 starts_with(name, "gl_") ) {
-                                // builtin uniform
-                                continue;
-                            }
-                            UniformTypeEnum t = eUniformTypeNone;
-                            switch (type) {
-                            case GL_BOOL:
-                                t = eUniformTypeBool;
-                                break;
-
-                            case GL_INT:
-                                t = eUniformTypeInt;
-                                break;
-
-                            case GL_FLOAT:
-                                t = eUniformTypeFloat;
-                                break;
-
-                            case GL_FLOAT_VEC2:
-                                t = eUniformTypeVec2;
-                                break;
-
-                            case GL_FLOAT_VEC3:
-                                t = eUniformTypeVec3;
-                                break;
-
-                            case GL_FLOAT_VEC4:
-                                t = eUniformTypeVec4;
-                                break;
-
-                            default:
-                                // ignore uniform
-                                break;
-                            }
-                            if (t == eUniformTypeNone) {
-                                DPRINT( ("Uniform #%d Type: %s Name: %s NOT SUPPORTED\n", i, glGetEnumString(type), (const char*)&name[0]) );
-                                continue;
-                            }
-
-                            ExtraParameter p;
-                            p.init(t, name);
-
-                            switch (t) {
-                            case eUniformTypeBool: {
-                                GLint v;
-                                glGetUniformiv(program, loc, &v);
-                                //DPRINT( ("Value: %d\n", v) );
-                                p.set(p.getDefault(), (bool)v);
-                                break;
-                            }
-                            case eUniformTypeInt: {
-                                GLint v;
-                                glGetUniformiv(program, loc, &v);
-                                //DPRINT( ("Value: %d\n", v) );
-                                p.set(p.getDefault(), (int)v);
-                                break;
-                            }
-                            case eUniformTypeFloat: {
-                                GLfloat v;
-                                glGetUniformfv(program, loc, &v);
-                                //DPRINT( ("Value: %g\n", v) );
-                                p.set(p.getDefault(), (float)v);
-                                break;
-                            }
-                            case eUniformTypeVec2: {
-                                GLfloat v[2];
-                                glGetUniformfv(program, loc, v);
-                                //DPRINT( ("Value: (%g, %g)\n", v[0], v[1]) );
-                                p.set(p.getDefault(), (float)v[0], (float)v[1]);
-                                break;
-                            }
-                            case eUniformTypeVec3: {
-                                GLfloat v[3];
-                                glGetUniformfv(program, loc, v);
-                                //DPRINT( ("Value: (%g, %g, %g)\n", v[0], v[1], v[2]) );
-                                p.set(p.getDefault(), (float)v[0], (float)v[1], (float)v[2]);
-                                break;
-                            }
-                            case eUniformTypeVec4: {
-                                GLfloat v[4];
-                                glGetUniformfv(program, loc, v);
-                                //DPRINT( ("Value: (%g, %g, %g, %g)\n", v[0], v[1], v[2], v[3]) );
-                                p.set(p.getDefault(), (float)v[0], (float)v[1], (float)v[2], (float)v[3]);
-                                break;
-                            }
-                            default:
-                                assert(false);
-                                break;
-                            }
-
-                            // parse hint/min/max from comment
-                            getExtraParameterInfo(fragmentShader, p);
-
-                            _imageShaderExtraParameters.push_back(p);
-                        } // if (loc >= 0)
-                        _imageShaderBBox = (BBoxEnum)_bbox->getValueAtTime(time);
-                        getBboxInfo(fragmentShader, _imageShaderBBox);
-                    } // for (i = 0; i < count; i++) {
-                }
-
-                std::sort(_imageShaderExtraParameters.begin(), _imageShaderExtraParameters.end(), ExtraParameter::less_than_pos());
+                listShaderParams(shadertoy->program, fragmentShader, (BBoxEnum)_bbox->getValueAtTime(time), _imageShaderParams);
                 imageShaderParamsUpdated = true;
-            } // if (_imageShaderUpdateParams)
+            }
 
             // Note: InstanceChanged is (illegally) triggered at the end of render() using:
             // _imageShaderParamsUpdated->setValue( !_imageShaderParamsUpdated->getValueAtTime(time) );
@@ -2391,7 +2418,7 @@ ShadertoyPlugin::contextAttached(bool createContextData)
 #endif
 
     {
-        AutoMutex lock( _rendererInfoMutex.get() );
+        std::lock_guard<std::mutex> lock(_rendererInfoMutex);
         std::string &message = _rendererInfo;
         if ( message.empty() ) {
             const char* glRenderer = (const char*)glGetString(GL_RENDERER);

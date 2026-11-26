@@ -86,19 +86,7 @@
 #include "ofxsAnalysisScope.h" // InAnalysisScope, ProgressScope
 #include "ofxOld.h"
 
-#ifdef OFX_USE_MULTITHREAD_MUTEX
-namespace {
-typedef OFX::MultiThread::Mutex Mutex;
-typedef OFX::MultiThread::AutoMutex AutoMutex;
-}
-#else
-// some OFX hosts do not have mutex handling in the MT-Suite (e.g. Sony Catalyst Edit)
 #include <mutex>
-namespace {
-typedef std::mutex Mutex;
-typedef OFX::MultiThread::AutoMutexT<std::mutex> AutoMutex;
-}
-#endif
 
 using namespace OFX;
 #ifdef DEBUG_STDOUT
@@ -157,10 +145,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.0: initial version
 // version 1.1: warn when the noise analysis region is unsuitable (clipped values, details, too few pixels),
 //              with the analysisWarning status parameter (the analysis and the render are unchanged);
-//              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79);
-//              a NaN Mask sample is outside the analysis mask, as a 0 sample (issue #220);
-//              (1.1 is unreleased, fixed in place) with the R'G'B' or RGB color model and R unchecked, the
-//              blue channel is denoised: isIdentity tested processR instead of processB for it (issue #323)
+//              NaN/inf-safe premultiply (SupportExt #73, #79);
+//              a NaN Mask sample is outside the analysis mask, as a 0 sample (#220);
+//              with the R'G'B' or RGB color model and R unchecked, the blue channel is denoised (#323)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -302,18 +289,13 @@ enum ColorModelEnum
 // noise is underestimated by 2.3% at p=2%, 6% at p=5%, 13% at p=10% (Gaussian noise). 2% is about the statistical
 // uncertainty of the estimate on the minimum window.
 #define kAnalysisClipFractionMax 0.02
-// Details or texture: for Gaussian noise (white or spatially correlated), the absolute values of the wavelet detail
-// coefficients of each level are half-normal, so the ratio of their 90th percentile to their median is
-// 1.6449/0.6745 = 2.44. Edges, details and texture give heavy tails (a larger ratio). Simulations on 80x80 regions
-// (100 trials each, with the linear wavelet) gave a maximum ratio of 2.9 for white, blurred (correlated) and 8-bit
-// quantized Gaussian noise and 2.9 for Laplacian noise, versus 3 to 30 for a region with an edge, a soft edge, flat
-// shapes, or clipped values. With the B3 spline wavelet, the coarsest level (Very Low frequencies) has fewer
-// independent coefficients: an independent simulation of pure noise on 80x80 regions gave ratios up to 3.20 there
-// (2.94 with the linear wavelet), so the margin to the threshold is smaller with B3, and a false warning about very
-// low frequencies is possible on small analysis windows with B3. The finest level (High frequencies) is not
-// checked: quantized low noise (below one code value) gives a ratio above 4 there. A level whose median is zero is
-// not checked either: its noise estimate is zero, so it cannot be overestimated. Smooth Gaussian-like textures
-// cannot be distinguished from correlated noise this way, and are not detected.
+// Details or texture: for Gaussian noise, the absolute wavelet detail coefficients of a level are half-normal, so
+// the ratio of their 90th percentile to their median is 1.6449/0.6745 = 2.44; edges, details and texture give
+// heavier tails. On simulated 80x80 regions, pure noise (white, correlated, quantized or Laplacian) gave ratios up
+// to 2.9 (3.2 at the coarsest B3 spline level: false warnings are possible there on small windows), and regions
+// with edges, flat shapes or clipped values 3 to 30. Not checked: the finest level (quantized low noise gives
+// ratios above 4), and levels whose median is 0 (their noise estimate cannot be too high). Smooth Gaussian-like
+// textures look like correlated noise, and are not detected.
 #define kAnalysisDetailRatioMax 3.5
 #define kAnalysisDetailQuantile 0.9
 
@@ -477,7 +459,7 @@ static const float noise_b3[] = { 0.8908f,   0.2007f,   0.0855f,    0.0412f,    
 #define abort_test_loop() abort_test()
 #endif
 
-static Color::LutManager<Mutex>* gLutManager;
+static Color::LutManager<std::mutex>* gLutManager;
 
 template<typename T>
 static inline void
@@ -966,12 +948,7 @@ public:
         _analysisFrame = fetchIntParam(kParamAnalysisFrame);
         _analyze = fetchPushButtonParam(kParamAnalyzeNoiseLevels);
         _analysisWarning = paramExists(kParamAnalysisWarning) ? fetchStringParam(kParamAnalysisWarning) : NULL;
-        if (_analysisWarning) {
-            // the param is hidden when empty (the secret state is not saved by all hosts)
-            std::string warning;
-            _analysisWarning->getValue(warning);
-            _analysisWarning->setIsSecret( warning.empty() );
-        }
+        syncAnalysisWarningVisibility();
 
         // noise levels
         for (unsigned f = 0; f < 4; ++f) {
@@ -1111,6 +1088,17 @@ private:
                    float b); //!< progress increment
 
     void setAnalysisWarning(const std::string& warning);
+
+    void syncAnalysisWarningVisibility(const std::string& warning);
+    void syncAnalysisWarningVisibility();
+
+    template <class PIX, int nComponents, int maxValue>
+    std::string clippedChannelsReport(const Image& src,
+                                      const OfxRectI& srcWindow,
+                                      const bool* bimgmask,
+                                      bool premult,
+                                      int premultChannel,
+                                      unsigned int nSamples);
 
     void analysisLock()
     {
@@ -1446,13 +1434,13 @@ private:
                 sumsqrow += _fimg_hpass[i] * _fimg_hpass[i];
             }
             {
-                AutoMutex l(&_sumsq_mutex);
+                std::lock_guard<std::mutex> l(_sumsq_mutex);
                 *_sumsq += sumsqrow;
             }
         }
     }
 
-    Mutex _sumsq_mutex;
+    std::mutex _sumsq_mutex;
     double *_sumsq;
 };
 
@@ -3096,11 +3084,9 @@ DenoiseSharpenPlugin::changedParam(const InstanceChangedArgs &args,
     } else if ( (paramName == kParamPremult) && (args.reason == eChangeUserEdit) ) {
         _premultChanged->setValue(true);
     } else if ( (paramName == kParamAnalysisWarning) && _analysisWarning ) {
-        // keep the visibility in sync with the value after an undo, a paste, a reset to the default, or a script
-        // (setIsSecret is a property change, so this does not call changedParam again)
-        std::string warning;
-        _analysisWarning->getValue(warning);
-        _analysisWarning->setIsSecret( warning.empty() );
+        // after an undo, a paste, a reset to the default, or a script (setIsSecret is a property change, so this
+        // does not call changedParam again)
+        syncAnalysisWarningVisibility();
     } else if ( (paramName == kParamColorModel) || (paramName == kParamB3) ) {
         updateLabels();
         if (args.reason == eChangeUserEdit) {
@@ -3138,7 +3124,27 @@ DenoiseSharpenPlugin::setAnalysisWarning(const std::string& warning)
         if (previous != warning) {
             _analysisWarning->setValue(warning);
         }
+        syncAnalysisWarningVisibility(warning);
+    }
+}
+
+// The Analysis Warning param is hidden when it is empty (the secret state is not saved by all hosts).
+void
+DenoiseSharpenPlugin::syncAnalysisWarningVisibility(const std::string& warning)
+{
+    if (_analysisWarning) {
         _analysisWarning->setIsSecret( warning.empty() );
+    }
+}
+
+// The same, for the current value of the param.
+void
+DenoiseSharpenPlugin::syncAnalysisWarningVisibility()
+{
+    if (_analysisWarning) {
+        std::string warning;
+        _analysisWarning->getValue(warning);
+        syncAnalysisWarningVisibility(warning);
     }
 }
 
@@ -3231,6 +3237,77 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForComponents(const InstanceChangedArgs 
     }
 }
 
+// One line per color channel of src that has too many clipped values in the analysis window (see
+// kAnalysisClipFractionMax), before the color model conversion, or an empty string. bimgmask (NULL if no
+// AnalysisMask) selects the nSamples > 0 analyzed pixels. Alpha is not checked: a constant 0 or 1 alpha is normal.
+template <class PIX, int nComponents, int maxValue>
+std::string
+DenoiseSharpenPlugin::clippedChannelsReport(const Image& src,
+                                            const OfxRectI& srcWindow,
+                                            const bool* bimgmask,
+                                            bool premult,
+                                            int premultChannel,
+                                            unsigned int nSamples)
+{
+    const unsigned int iwidth = srcWindow.x2 - srcWindow.x1;
+    std::ostringstream report;
+    float vmin[3] = { FLT_MAX, FLT_MAX, FLT_MAX };
+    float vmax[3] = { -FLT_MAX, -FLT_MAX, -FLT_MAX };
+    unsigned int nmin[3] = { 0, 0, 0 };
+    unsigned int nmax[3] = { 0, 0, 0 };
+    // two passes: the extremal values, then the number of values equal to them
+    for (int pass = 0; pass < 2; ++pass) {
+        for (int y = srcWindow.y1; y < srcWindow.y2; y++) {
+            for (int x = srcWindow.x1; x < srcWindow.x2; x++) {
+                unsigned int pix = (x - srcWindow.x1) + (y - srcWindow.y1) * iwidth;
+                if ( bimgmask && !bimgmask[pix] ) {
+                    continue;
+                }
+                const PIX *srcPix = (const PIX *)src.getPixelAddress(x, y);
+                float unpPix[4] = {0.f, 0.f, 0.f, 0.f};
+                ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, premult, premultChannel);
+                for (int c = 0; c < 3; ++c) {
+                    const float v = unpPix[c];
+                    if (pass == 0) {
+                        vmin[c] = (std::min)(vmin[c], v);
+                        vmax[c] = (std::max)(vmax[c], v);
+                    } else {
+                        nmin[c] += (v == vmin[c]);
+                        nmax[c] += (v == vmax[c]);
+                    }
+                }
+            }
+        }
+        abort_test();
+    }
+    static const char* const rgbName[3] = { "R", "G", "B" };
+    for (int c = 0; c < 3; ++c) {
+        // vmin <= 0 and vmax >= 1 cannot be the same value, so no value is counted twice
+        const bool lowClipped = (vmin[c] <= 0.f) && (nmin[c] > 0);
+        const bool highClipped = (vmax[c] >= 1.f) && (nmax[c] > 0);
+        const unsigned int nclip = (lowClipped ? nmin[c] : 0) + (highClipped ? nmax[c] : 0);
+        // nSamples > 0 here, so the percentage below has no division by zero
+        if (nclip > kAnalysisClipFractionMax * nSamples) {
+            report << "- " << (int)(100. * nclip / nSamples + 0.5) << " percent of the " << rgbName[c]
+                   << " values are clipped (at ";
+            if (lowClipped) {
+                report << (vmin[c] == 0.f ? 0.f : vmin[c]) << (highClipped ? " and " : ""); // no "-0"
+            }
+            if (highClipped) {
+                report << vmax[c];
+            }
+            report << ")";
+            if (premult && lowClipped && (vmin[c] == 0.f)) {
+                // with Premultiplied checked, transparent pixels (alpha = 0) are unpremultiplied to 0
+                report << " or transparent";
+            }
+            report << "\n";
+        }
+    }
+
+    return report.str();
+}
+
 template <class PIX, int nComponents, int maxValue>
 void
 DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const InstanceChangedArgs &args)
@@ -3282,7 +3359,8 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const InstanceChangedArgs &a
     OfxRectI srcWindow;
     bool intersect = Coords::rectIntersection(src->getBounds(), cropRectI, &srcWindow);
     if ( !intersect || ( (srcWindow.x2 - srcWindow.x1) < kAnalysisMinSize ) || ( (srcWindow.y2 - srcWindow.y1) < kAnalysisMinSize ) ) {
-        setPersistentMessage(Message::eMessageError, "", "The analysis window must be at least 80x80 pixels.");
+        setPersistentMessage(Message::eMessageError, "", "The analysis window must be at least " + std::to_string(kAnalysisMinSize) + 'x' +
+                             std::to_string(kAnalysisMinSize) + " pixels.");
         throwSuiteStatusException(kOfxStatFailed);
     }
     clearPersistentMessage();
@@ -3396,62 +3474,8 @@ DenoiseSharpenPlugin::analyzeNoiseLevelsForBitDepth(const InstanceChangedArgs &a
         }
     }
 
-    // clipped values in the color channels, before the color model conversion (see kAnalysisClipFractionMax).
-    // Alpha is not checked: a constant 0 or 1 alpha is normal.
     if ( (nComponents != 1) && (nSamples > 0) ) {
-        float vmin[3] = { FLT_MAX, FLT_MAX, FLT_MAX };
-        float vmax[3] = { -FLT_MAX, -FLT_MAX, -FLT_MAX };
-        unsigned int nmin[3] = { 0, 0, 0 };
-        unsigned int nmax[3] = { 0, 0, 0 };
-        // two passes: the extremal values, then the number of values equal to them
-        for (int pass = 0; pass < 2; ++pass) {
-            for (int y = srcWindow.y1; y < srcWindow.y2; y++) {
-                for (int x = srcWindow.x1; x < srcWindow.x2; x++) {
-                    unsigned int pix = (x - srcWindow.x1) + (y - srcWindow.y1) * iwidth;
-                    if ( doMasking && !bimgmask[pix] ) {
-                        continue;
-                    }
-                    const PIX *srcPix = (const PIX *)src->getPixelAddress(x, y);
-                    float unpPix[4] = {0.f, 0.f, 0.f, 0.f};
-                    ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, premult, premultChannel);
-                    for (int c = 0; c < 3; ++c) {
-                        const float v = unpPix[c];
-                        if (pass == 0) {
-                            vmin[c] = (std::min)(vmin[c], v);
-                            vmax[c] = (std::max)(vmax[c], v);
-                        } else {
-                            nmin[c] += (v == vmin[c]);
-                            nmax[c] += (v == vmax[c]);
-                        }
-                    }
-                }
-            }
-            abort_test();
-        }
-        static const char* const rgbName[3] = { "R", "G", "B" };
-        for (int c = 0; c < 3; ++c) {
-            // vmin <= 0 and vmax >= 1 cannot be the same value, so no value is counted twice
-            const bool lowClipped = (vmin[c] <= 0.f) && (nmin[c] > 0);
-            const bool highClipped = (vmax[c] >= 1.f) && (nmax[c] > 0);
-            const unsigned int nclip = (lowClipped ? nmin[c] : 0) + (highClipped ? nmax[c] : 0);
-            // nSamples > 0 here, so the percentage below has no division by zero
-            if (nclip > kAnalysisClipFractionMax * nSamples) {
-                problems << "- " << (int)(100. * nclip / nSamples + 0.5) << " percent of the " << rgbName[c]
-                         << " values are clipped (at ";
-                if (lowClipped) {
-                    problems << (vmin[c] == 0.f ? 0.f : vmin[c]) << (highClipped ? " and " : ""); // no "-0"
-                }
-                if (highClipped) {
-                    problems << vmax[c];
-                }
-                problems << ")";
-                if (premult && lowClipped && (vmin[c] == 0.f)) {
-                    // with Premultiplied checked, transparent pixels (alpha = 0) are unpremultiplied to 0
-                    problems << " or transparent";
-                }
-                problems << "\n";
-            }
-        }
+        problems << clippedChannelsReport<PIX, nComponents, maxValue>(*src, srcWindow, doMasking ? bimgmask : NULL, premult, premultChannel, nSamples);
     }
 
     // set noise levels
@@ -3553,7 +3577,7 @@ class DenoiseSharpenOverlayDescriptor
 {
 };
 
-mDeclarePluginFactory(DenoiseSharpenPluginFactory, { gLutManager = new Color::LutManager<Mutex>; ofxsThreadSuiteCheck(); }, { delete gLutManager; });
+mDeclarePluginFactory(DenoiseSharpenPluginFactory, { gLutManager = new Color::LutManager<std::mutex>; ofxsThreadSuiteCheck(); }, { delete gLutManager; });
 
 void
 DenoiseSharpenPluginFactory::describe(ImageEffectDescriptor &desc)

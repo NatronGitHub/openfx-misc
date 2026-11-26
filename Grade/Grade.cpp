@@ -33,19 +33,7 @@
 #include "ofxsMacros.h"
 #include "ofxsThreadSuite.h"
 #include "ofxsMultiThread.h"
-#ifdef OFX_USE_MULTITHREAD_MUTEX
-namespace {
-    typedef OFX::MultiThread::Mutex Mutex;
-    typedef OFX::MultiThread::AutoMutex AutoMutex;
-}
-#else
-// some OFX hosts do not have mutex handling in the MT-Suite (e.g. Sony Catalyst Edit)
 #include <mutex>
-namespace {
-    typedef std::mutex Mutex;
-    typedef OFX::MultiThread::AutoMutexT<std::mutex> AutoMutex;
-}
-#endif
 
 using namespace OFX;
 
@@ -82,7 +70,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 2.1: gamma <= 0 gives FLT_MAX instead of +inf above 1 (NaN after premultiplying by alpha = 0),
 //              and the results of a small gamma are capped to FLT_MAX;
 //              Normalize with no analyzed pixel leaves the black and white points unchanged;
-//              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79)
+//              NaN/inf-safe premultiply (SupportExt #73, #79)
 // version 3.0: above 1, the gamma curve is continued by its tangent at 1 (output = 1 + (x - 1) / gamma), as in Nuke's Grade.
 //              Version 2 (obsolete, same code) keeps the power curve above 1, so that existing projects render the same.
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
@@ -210,7 +198,7 @@ class ImageStatisticsProcessorBase
 : public ImageProcessor
 {
 protected:
-    Mutex _mutex; //< this is used so we can multi-thread the analysis and protect the shared results
+    std::mutex _mutex; //< this is used so we can multi-thread the analysis and protect the shared results
     unsigned long _count;
 
 public:
@@ -302,7 +290,7 @@ private:
                     double max[nComponents],
                     unsigned long count)
     {
-        AutoMutex l (&_mutex);
+        std::lock_guard<std::mutex> l(_mutex);
         for (int c = 0; c < nComponents; ++c) {
             _min[c] = (std::min)(_min[c], min[c]);
             _max[c] = (std::max)(_max[c], max[c]);

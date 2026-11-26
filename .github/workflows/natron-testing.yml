@@ -24,7 +24,7 @@ name: Natron testing bundles
 # keeps its asset from an earlier run.
 on:
   workflow_run:
-    workflows: [Continous Integration tests]
+    workflows: [Continuous Integration tests]
     types: [completed]
     branches: [master]
   workflow_dispatch:

@@ -20,6 +20,7 @@
 # osmesa.pc is made relocatable: its prefix is DEST/osmesa, and the LLVM flags of its Libs.private
 # (paths of the build machine) are removed, since CMake adds LLVM's flags from llvm-config.
 set -eo pipefail
+. "$(dirname "$0")/lib.sh"
 
 sums=$(dirname "$0")/../parameters/osmesa-install.sha256
 check=0
@@ -51,11 +52,7 @@ work=$(mktemp -d "${TMPDIR:-/tmp}/fetch-osmesa.XXXXXX")
 trap 'rm -rf "$work"' EXIT
 echo "Downloading $url"
 curl -fsSL --retry 3 -o "$work/$asset" "$url"
-if command -v sha256sum > /dev/null; then
-    actual=$(sha256sum "$work/$asset" | cut -d' ' -f1)
-else
-    actual=$(shasum -a 256 "$work/$asset" | cut -d' ' -f1)
-fi
+actual=$(sha256_of "$work/$asset")
 if [ "$actual" != "$expected" ]; then
     echo "ERROR: SHA256 of $asset is $actual, expected $expected ($sums)"
     exit 1
