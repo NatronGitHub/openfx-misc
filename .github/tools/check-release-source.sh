@@ -16,7 +16,8 @@ for o in BUILD_MISC OFXMISC_STANDALONE_BUNDLES OSMESA_PKGCONFIG_STATIC OSMESA_LI
         status=1
     fi
 done
-for f in .github/tools/loadtest.sh .github/tools/smoketest.sh .github/tools/ofxload.cpp; do
+for f in .github/tools/lib.sh .github/tools/loadtest.sh .github/tools/smoketest.sh \
+         .github/tools/smoketest_lists.py .github/tools/ofxload.cpp; do
     if [ ! -f "$f" ]; then
         echo "ERROR: $PWD/$f not found"
         status=1

@@ -108,6 +108,9 @@
 # SMOKETEST_XPASS_OK=1, stale entries are only a warning.
 set -eo pipefail
 . "$(dirname "$0")/lib.sh"
+# the Python helpers of the list checks (smoketest_lists.py), for the scripts below
+SMOKETEST_TOOLS=$(cd "$(dirname "$0")" && pwd)
+export SMOKETEST_TOOLS
 
 # ---------------------------------------------------------------------------
 # The expected bundles: "name:minimum number of plug-ins (identifier and major version)"
@@ -398,37 +401,6 @@ printf '%s\n' "${INPUTS[@]}" > "$work/inputs.txt"
 printf '%s\n' "${PARAMS[@]}" > "$work/params.txt"
 printf '%s\n' "${XFAIL[@]}" > "$work/xfail.txt"
 printf '%s\n' "${IDENTITY[@]}" > "$work/identity.txt"
-# The helpers of the Python scripts below, which import them from $work
-cat > "$work/smoketest_lists.py" << 'EOF'
-"""The lists of smoketest.sh (SKIP, OPENGL, IDENTITY, INPUTS, PARAMS, XFAIL), for its scripts."""
-import os
-
-# "identifier regex[:major][@context][/depth]" of PARAMS and XFAIL: the groups are the regex,
-# the major version, the context and the depth
-SELECTOR = r"([^:@/|]*)(?::([0-9]+))?(?:@(filter|general))?(?:/(byte|short|float))?"
-_PREFIXES = ("debug", "ofx14", "ofx11")
-
-
-def entries(work, name):
-    """Returns the entries of the list file NAME in WORK, one per non-empty line."""
-    with open(os.path.join(work, name)) as f:
-        return [line.rstrip("\n") for line in f if line.strip()]
-
-
-def only_in(desc, debug, profile):
-    """Returns (keep, DESC without its prefixes).
-
-    The "debug:" entries are only used in debug builds, the "ofx14:" ones with --ofx14 and the
-    "ofx11:" ones with --ofx11; the prefixes can be combined.
-    """
-    keep = True
-    parts = desc.split(":", 1)
-    while len(parts) == 2 and parts[0] in _PREFIXES:
-        keep = keep and (debug if parts[0] == "debug" else parts[0] == profile)
-        desc = parts[1]
-        parts = desc.split(":", 1)
-    return keep, desc
-EOF
 
 # The input files of INPUTS (little-endian PFM, bottom row first)
 python3 -I - "$work/data" << 'EOF'
@@ -461,9 +433,10 @@ import os
 import re
 import sys
 work, gl_ok = sys.argv[1], sys.argv[2] == "1"
-sys.path.insert(0, work)
-from smoketest_lists import entries
-rules = [line.split("|", 1) for line in entries(work, "opengl.txt")]
+sys.dont_write_bytecode = True  # no __pycache__ in the source tree
+sys.path.insert(0, os.environ["SMOKETEST_TOOLS"])
+import smoketest_lists
+rules = [line.split("|", 1) for line in smoketest_lists.entries(work, "opengl.txt")]
 with open(os.path.join(work, "plugins.txt")) as f:
     pids = sorted(set(line.split()[1] for line in f))
 found = [(pid, next(r for rx, r in rules if re.fullmatch(rx, pid)))
@@ -489,12 +462,13 @@ python3 -I - "$work" "$quick" "${SMOKETEST_DEBUG:-0}" "$profile" "$gl_ok" > "$wo
 import json, os, re, sys
 work, quick, debug, profile = sys.argv[1], sys.argv[2] == "1", sys.argv[3] == "1", sys.argv[4]
 gl_ok = sys.argv[5] == "1"
-sys.path.insert(0, work)
-import smoketest_lists as lists
+sys.dont_write_bytecode = True  # no __pycache__ in the source tree
+sys.path.insert(0, os.environ["SMOKETEST_TOOLS"])
+import smoketest_lists
 def entries(name):
-    return lists.entries(work, name)
+    return smoketest_lists.entries(work, name)
 def only_in(desc):
-    return lists.only_in(desc, debug, profile)
+    return smoketest_lists.only_in(desc, debug, profile)
 skip = []
 for s in entries("skip.txt"):
     rx, reason = s.split("|", 1)
@@ -511,7 +485,7 @@ for s in entries("inputs.txt"):
     overrides.append((m.group(1), m.group(2), m.group(3).replace("DATA", os.path.join(work, "data")).split()))
 params = []
 for s in entries("params.txt"):
-    m = re.fullmatch(lists.SELECTOR + r"\|([^|;]*)", s)
+    m = re.fullmatch(smoketest_lists.SELECTOR + r"\|([^|;]*)", s)
     words = m.group(5).split() if m else []
     refs = [w[8:] for w in words if w.startswith("differs:")]
     words = [w for w in words if not w.startswith("differs:")]
@@ -675,15 +649,16 @@ profile = sys.argv[5]
 # stale entries are only a warning in a partial build (SMOKETEST_BUNDLES, SMOKETEST_NO_TEST) or
 # with SMOKETEST_XPASS_OK
 lenient = mode.endswith("partial") or xpass_ok
-sys.path.insert(0, work)
-import smoketest_lists as lists
+sys.dont_write_bytecode = True  # no __pycache__ in the source tree
+sys.path.insert(0, os.environ["SMOKETEST_TOOLS"])
+import smoketest_lists
 def entries(name):
-    return lists.entries(work, name)
+    return smoketest_lists.entries(work, name)
 def only_in(desc):
-    return lists.only_in(desc, debug, profile)
+    return smoketest_lists.only_in(desc, debug, profile)
 xfail = []
 for x in entries("xfail.txt"):
-    m = re.fullmatch(lists.SELECTOR + r"\|([^|]*)\|(.*)", x)
+    m = re.fullmatch(smoketest_lists.SELECTOR + r"\|([^|]*)\|(.*)", x)
     if not m:
         sys.exit("bad XFAIL entry: " + x)
     rx, major, ctx, depth, msg, desc = m.groups()
