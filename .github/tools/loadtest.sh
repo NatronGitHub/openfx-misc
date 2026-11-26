@@ -11,7 +11,7 @@ tools=$(dirname "$0")
 . "$tools/lib.sh"
 
 arch=$(os_arch) || { echo "unsupported OS $(uname -s)"; exit 1; }
-windows= libs=
+windows='' libs=''
 case "$arch" in
     Linux-*) libs=-ldl ;;
     Win\*) windows=1 ;;
