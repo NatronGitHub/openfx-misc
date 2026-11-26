@@ -28,6 +28,7 @@
 #include "ofxsMacros.h"
 #include "ofxsCoords.h"
 #include "ofxsThreadSuite.h"
+#include "MultiviewFetch.h"
 
 using namespace OFX;
 
@@ -61,20 +62,6 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamViewOptionLeft "Left", "Left view.", "left"
 #define kParamViewOptionRight "Right", "Right view.", "right"
 
-// OFX 1.4 hosts have neither the multiview plane suite (kFnOfxImageEffectPlaneSuite v2)
-// nor the Vegas stereoscopic suite: they have a single view, which is then every view.
-static Image*
-fetchViewImage(Clip* clip,
-               double time,
-               int view)
-{
-    if ( fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true) ||
-         fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true) ) {
-        return clip->fetchStereoscopicImage(time, view);
-    }
-
-    return clip->fetchImage(time);
-}
 
 // Base class for the RGBA and the Alpha processor
 class SideBySideBase

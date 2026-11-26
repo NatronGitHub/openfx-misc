@@ -63,6 +63,7 @@ Mirror/Mirror.cpp
 Misc/randomGenerator.cpp
 Misc/randomGenerator.H
 Misc/KeyerUtils.h
+Misc/MultiviewFetch.h
 Misc/SoftEdge.h
 Misc/TransformDefaults.h
 MixViews/MixViews.cpp

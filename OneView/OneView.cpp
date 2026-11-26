@@ -25,6 +25,7 @@
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
 #include "ofxsCopier.h"
+#include "MultiviewFetch.h"
 
 using namespace OFX;
 
@@ -54,20 +55,6 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 static bool gHostSupportsDynamicChoices = false;
 
-// OFX 1.4 hosts have neither the multiview plane suite (kFnOfxImageEffectPlaneSuite v2)
-// nor the Vegas stereoscopic suite: they have a single view, which is then every view.
-static Image*
-fetchViewImage(Clip* clip,
-               double time,
-               int view)
-{
-    if ( fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true) ||
-         fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true) ) {
-        return clip->fetchStereoscopicImage(time, view);
-    }
-
-    return clip->fetchImage(time);
-}
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
