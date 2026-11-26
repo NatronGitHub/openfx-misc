@@ -109,7 +109,7 @@
 set -eo pipefail
 . "$(dirname "$0")/lib.sh"
 # the Python helpers of the list checks (smoketest_lists.py), for the scripts below
-SMOKETEST_TOOLS=$(cd "$(dirname "$0")" && pwd)
+SMOKETEST_TOOLS=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 export SMOKETEST_TOOLS
 
 # ---------------------------------------------------------------------------
@@ -276,7 +276,7 @@ if [ "$1" = --render-job ]; then
 fi
 
 usage() { sed -n '/^# Usage/,/^# Linux and macOS/p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-1}"; }
-top=$(cd "$(dirname "$0")/../.." && pwd)
+top=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 supportext='' build='' out='' only='' quick=0 profile=default prefix='' jobs=$(getconf _NPROCESSORS_ONLN 2> /dev/null || echo 2)
 while [ $# -gt 0 ]; do
     case "$1" in
