@@ -438,7 +438,9 @@ suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,OfxMemorySuite,Ofx
 - Non-conformant behavior: OfxImageEffectSuiteV1::clipGetRegionOfDefinition() returns the RoD in
   pixels, and depends on the current renderScale!!! Sony wrongly implemented
   http://openeffects.org/standard_changes/properties-that-are-doubles-canonical-but-should-really-be-ints-in-pixels-space
-  in OFX 1.3.
+  in OFX 1.3 (see also the comments "In Sony Catalyst Edit, clipGetRegionOfDefinition returns the
+  RoD in pixels" in CImg/CImgFilter.h, CImg/CImgOperator.h, CImg/CImgOperator.cpp and SupportExt's
+  ofxsTransform3x3.cpp).
   Catalyst Edit does not support multi-resolution, so all inputs have the same RoD anyway: the
   isIdentity test "the mask RoD does not intersect the render window" must be skipped on hosts
   without multi-resolution. SupportExt's ofxsMaskRoDExcludesRenderWindow() (ofxsRGBAProcessing.h)
@@ -718,8 +720,8 @@ Caveats/Bugs (see https://github.com/NatronGitHub/openfx-misc/issues/66):
     next successful render).
 - (unconfirmed) VEGAS Pro 17 and later: red and blue are swapped in some plug-ins' output. Sources:
   ntsc-rs/ntsc-rs#14 (VEGAS Pro 17); https://revisionfx.com/faq/vegas/.
-- (unconfirmed) some VEGAS versions skip the parameter types they do not support silently, instead
-  of returning an error when they are defined. Source: a comment by Revision FX in
+- (unconfirmed) VEGAS used to skip parameter types it does not support silently, instead of
+  returning an error when they are defined. Source: a comment by Revision FX in
   AcademySoftwareFoundation/openfx#286.
 
 * Blackmagic Fusion
