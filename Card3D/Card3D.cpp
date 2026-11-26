@@ -88,6 +88,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //      the inverse of a transform matrix with huge entries (e.g. a concatenated source transform) no longer overflows to NaN or 0 (SupportExt #81)
 // 1.1: the Lanczos4, Lanczos6 and Sinc4 filters (appended options) and the
 //      Prefilter Downscaling checkbox (after Black Outside, off) (issue #270); the default output is unchanged.
+// 1.1: declares multiple clip PARs, so that hosts accept the output PAR of the Output Format
+//      (getClipPreferences set it with the Source connected, which the spec only allows then).
 
 #define kParamSrcClipChanged "srcClipChanged"
 

@@ -555,21 +555,38 @@ def ofx_command(prefix, case, work, case_dir):
     return command
 
 
-def read_render(case, case_dir, output):
-    """The [r, g, b, a] at case_points(case) of one hostDemo output.
+def _whole_rod_render(render, bounds):
+    """True if hostDemo may render more than the window: the output is the
+    project, or the plug-in or its output clip has no tiles (it renders its
+    whole RoD)."""
+    if list(bounds) == [0, 0, cases.PROJECT[0], cases.PROJECT[1]]:
+        return True
+    tiles = render.get("supportsTiles") or {}
+    return (tiles.get("effect") is False
+            or (tiles.get("clips") or {}).get("Output") is False)
+
+
+def read_render(case, case_dir, render):
+    """The [r, g, b, a] at case_points(case) of one hostDemo render.
 
     Pixels outside the output bounds are 0, and so is the alpha of an RGB
     output.
     """
+    output = render["output"]
+    x1, y1, x2, y2, _ = case_region(case)
     files = output["files"]
     bx1, by1, bx2, by2 = output["bounds"]
     width, height, _, color = read_pfm(os.path.join(case_dir, files[0]))
     if (width, height) != (bx2 - bx1, by2 - by1):
         raise CaseError("%s is %dx%d, but its bounds are %r"
                         % (files[0], width, height, output["bounds"]))
-    # The bounds may exceed the window: a plug-in without tiles renders its whole RoD, e.g. the
-    # project for one without multi-resolution, whose inputs hostDemo pads to the project
-    # (openfx #359). Only the case points are read.
+    # Bounds larger than the window are only accepted for a whole-RoD render:
+    # a plug-in without tiles, or one without multi-resolution, whose RoD is
+    # the project since hostDemo pads its inputs (openfx #359).
+    if ((bx1 < x1 or by1 < y1 or bx2 > x2 or by2 > y2)
+            and not _whole_rod_render(render, output["bounds"])):
+        raise CaseError("the output bounds %r exceed the window"
+                        % (output["bounds"],))
     alpha = None
     if len(files) > 1:
         alpha = read_pfm(os.path.join(case_dir, files[1]))[3]
@@ -614,7 +631,7 @@ def run_ofx(prefix, case, work):
         output = render.get("output") or {}
         key = (float(render["time"]), view)
         if output.get("files"):
-            results[key] = read_render(case, case_dir, output)
+            results[key] = read_render(case, case_dir, render)
         else:  # an empty render window: all black
             results[key] = [[0.] * 4 for _ in case_points(case)]
     return results
