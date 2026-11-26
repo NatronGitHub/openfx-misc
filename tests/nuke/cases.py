@@ -1281,11 +1281,12 @@ CASES += [
     case("ColorBars PAL, intensity 0.75",
          ("ColorBars", {"PAL": True, "barintensity": .75}),
          (ofx_id("ColorBars"), {"PAL": 1, "barIntensity": .75}), **GEN),
-    # With the knob defaults, both gammas are 0.45: only the anti-aliased
-    # edge of the disc differs (DOCUMENTED), as with gamma 1.
+    # Inside the disc (its anti-aliased edge differs, see the whole disc
+    # cases). With the knob defaults, both gammas are 0.45.
     case("ColorWheel defaults", ("ColorWheel", {}),
-         (ofx_id("ColorWheel"), {}), **dict(GEN, tolerance=5e-3)),
-    # Inside the disc (its anti-aliased edge differs).
+         (ofx_id("ColorWheel"), {}),
+         **dict(GEN, region=(232, 160, 488, 416, 8), tolerance=5e-3)),
+    # Inside the disc too.
     case("ColorWheel gamma 1", ("ColorWheel", {"gamma": 1.}),
          (ofx_id("ColorWheel"), {"gamma": 1.}),
          **dict(GEN, region=(232, 160, 488, 416, 8), tolerance=5e-3)),
@@ -1293,6 +1294,8 @@ CASES += [
     case("ColorWheel gamma 0.45", ("ColorWheel", {"gamma": .45}),
          (ofx_id("ColorWheel"), {"gamma": .45}),
          **dict(GEN, region=(232, 160, 488, 416, 8), tolerance=5e-3)),
+    case("ColorWheel defaults, whole disc", ("ColorWheel", {}),
+         (ofx_id("ColorWheel"), {}), **dict(GEN, tolerance=5e-3)),
     case("ColorWheel gamma 1, whole disc", ("ColorWheel", {"gamma": 1.}),
          (ofx_id("ColorWheel"), {"gamma": 1.}), **dict(GEN, tolerance=5e-3)),
     case("Ramp defaults", ("Ramp", {}), (ofx_id("Ramp"), {}),
@@ -2541,7 +2544,7 @@ KNOWN = {
         "Erode (blur) size 3, blur 0.5",
         "FilterErode size 1 box (ErodeSmoothCImg)"],
     DOCUMENTED: [
-        "Log2Lin lin2log", "ColorWheel defaults",
+        "Log2Lin lin2log", "ColorWheel defaults, whole disc",
         "ColorWheel gamma 1, whole disc",
         "Ramp defaults", "Transform translate 0.5,0.25 cubic, edges",
         "Reformat to box 20x12 fit, box PAR = PAR",

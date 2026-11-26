@@ -252,8 +252,8 @@ def nuke_script(case, result_path):
     # unqualified ones ("knob", which createNode applies to every class):
     # Nuke's own files set only localizationPolicy (Read nodes), and
     # `nuke --safe` (NUKE_ARGS) keeps the user's init files from setting
-    # any. (nuke.knobDefault returns None,
-    # never "", when there is no default: setting "" removes it.)
+    # any. nuke.knobDefault returns None, never "", when there is no
+    # default: setting "" removes it.
     lines += [
         "for knob_name in n.knobs():",
         "    knob_default = nuke.knobDefault(n.Class() + '.' + knob_name)",
