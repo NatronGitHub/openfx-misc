@@ -80,6 +80,7 @@
 #include "ofxsLut.h"
 #include "ofxsRectangleInteract.h"
 #include "ofxsThreadSuite.h"
+#include "ofxsOpenMP.h" // ofxsPinOpenMPRuntime
 #include "ofxsMultiThread.h"
 #include "ofxsCopier.h"
 #include "ofxsNonFinite.h" // finiteSample
@@ -2385,6 +2386,8 @@ DenoiseSharpenPlugin::sigma_mad(float *fimg[4], //!< fimg[0] is the channel to p
 void
 DenoiseSharpenPlugin::render(const RenderArguments &args)
 {
+    // keep the OpenMP runtime loaded once the plug-in is unloaded (before the first parallel region)
+    ofxsPinOpenMPRuntime();
 #ifdef _OPENMP
     // set the number of OpenMP threads to a reasonable value
     // (but remember that the OpenMP threads are not counted my the multithread suite)
@@ -3151,6 +3154,8 @@ DenoiseSharpenPlugin::syncAnalysisWarningVisibility()
 void
 DenoiseSharpenPlugin::analyzeNoiseLevels(const InstanceChangedArgs &args)
 {
+    // the analysis also runs parallel regions (from changedParam): see render()
+    ofxsPinOpenMPRuntime();
     DBG(cout << "analysis!\n");
 
     assert(args.renderScale.x == 1. && args.renderScale.y == 1.);

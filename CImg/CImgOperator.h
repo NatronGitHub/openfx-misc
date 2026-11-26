@@ -159,6 +159,8 @@ template <class Params>
 void
 CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
 {
+    // keep the OpenMP runtime of CImg's parallel regions loaded once the plug-in is unloaded
+    OFX::ofxsPinOpenMPRuntime();
 # ifndef NDEBUG
     if ( !_supportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);

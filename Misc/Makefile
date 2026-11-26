@@ -1,4 +1,5 @@
 PLUGINOBJECTS = ofxsThreadSuite.o \
+ofxsOpenMP.o \
 ofxsFileOpen.o \
 ofxsGenerator.o \
 ofxsLut.o \

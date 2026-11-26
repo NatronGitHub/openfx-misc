@@ -5,6 +5,12 @@
 VPATH += $(TOP_SRCDIR)/CImg
 CXXFLAGS += -I$(TOP_SRCDIR)/CImg
 
+# openmp, as ../Makefile
+ifeq ($(OPENMP),1)
+  CXXFLAGS += -Dcimg_use_openmp -fopenmp
+  LINKFLAGS += -fopenmp
+endif
+
 # The shared CImg sources include CImg.h, which must be downloaded first.
 $(OBJECTPATH)/CImgFilter.o $(OBJECTPATH)/CImgOperator.o: CImg.h
 
