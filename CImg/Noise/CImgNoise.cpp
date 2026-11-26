@@ -54,11 +54,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
-// version 2.1 (kept for backward compatibility): premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79)
+// version 2.1 (kept for backward compatibility): NaN/inf-safe premultiply (SupportExt #73, #79)
 // version 3.0: fix Rice noise (used the first channel only, real and imaginary parts were identical),
 //              Poisson noise (wrong distribution), and Salt & Pepper noise (pattern depended on the tile,
 //              and the salt and pepper values were the max and min of each tile; they are now 1 and 0);
-//              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79)
+//              NaN/inf-safe premultiply (SupportExt #73, #79)
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 

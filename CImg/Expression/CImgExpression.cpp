@@ -212,7 +212,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
-// version 2.2: premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79);
+// version 2.2: NaN/inf-safe premultiply (SupportExt #73, #79);
 //              X and Y: pixel coordinates in the full-size image (x and y are buffer indices at the render scale, #297); the '*' and ':' expression prefixes work;
 //              T keeps all its digits (%.17g)
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.

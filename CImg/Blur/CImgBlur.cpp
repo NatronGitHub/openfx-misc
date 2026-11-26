@@ -228,13 +228,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 3.0: use kNatronOfxParamProcess* parameters
 // version 4.0: the default is to blur all channels including alpha (see processAlpha in describeInContext)
 // version 4.0: added cropToFormat parameter on Natron (this line said 4.1, but the minor version was not incremented)
-// versions 3.1 (kept for Blur, Laplacian, ChromaBlur, Bloom) and 4.1: premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79);
+// versions 3.1 (kept for Blur, Laplacian, ChromaBlur, Bloom) and 4.1: NaN/inf-safe premultiply (SupportExt #73, #79);
 //              EdgeExtend has no premult parameter and stayed 4.0 for these
 // versions 3.1 (Blur, Bloom) and 4.1 (Blur, Bloom, ErodeBlur): not an identity (pass-through) when the Alpha Threshold changes the alpha, or when ErodeBlur remaps or clamps the values, even with a small size (issue #324);
 // EdgeExtend version 4.1: not an identity (pass-through) with a small size (below about 0.24 with the Gaussian filters, 1 with Box, Triangle
 //              and Quadratic, at full resolution, more at proxy scales), since the render merges the image over itself (issue #337);
 // EdgeDetect version 5.0: fix the gradient direction in RMS multichannel mode (only EdgeDetect has version 5);
-//              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79);
+//              NaN/inf-safe premultiply (SupportExt #73, #79);
 //              (5.0 is unreleased, extended in place, issue #314) Prewitt filter (appended to the Filter menu) and
 //              Threshold parameter (default 0: no edge is removed)
 // Blur, Laplacian, Sharpen and Soften version 5.0: FIR Gaussian filter, the default (the IIR Gaussian has a
