@@ -50,15 +50,16 @@ isReservedPlaneName(const std::string& name)
     static const char* const reserved[] = {
         "Color", "RGBA", "RGB", "Alpha",
         "Forward", "Backward", "DisparityLeft", "DisparityRight",
-        NULL
     };
-    for (const char* const* r = reserved; *r != NULL; ++r) {
-        if (name == *r) {
+    for (const char* r : reserved) {
+        if (name == r) {
             return true;
         }
     }
-    // the OFX plane identifiers (kFnOfxImagePlane*), e.g. "uk.co.thefoundry.OfxImagePlaneColour"
-    return name.compare(0, 30, "uk.co.thefoundry.OfxImagePlane") == 0;
+    // the prefix of the OFX plane identifiers (kFnOfxImagePlane*), e.g. kFnOfxImagePlaneColour
+    static const std::string ofxPlanePrefix = "uk.co.thefoundry.OfxImagePlane";
+
+    return name.compare(0, ofxPlanePrefix.size(), ofxPlanePrefix) == 0;
 }
 
 #define kPluginName "LayerRenameOFX"
@@ -148,6 +149,26 @@ struct PlaneRename
     std::string dstName;
 };
 
+// The result of LayerRenamePlugin::getPlaneRenames()
+struct PlaneRenames
+{
+    std::vector<PlaneRename> renames; // the planes of the output, the color plane first
+    bool renamed = false; // the output planes differ from the input planes (a plane is renamed or removed)
+    std::string messages; // the renames and the conflicts, one per line
+    std::string warning; // the conflicts, one per line
+    std::string error; // e.g. an invalid regular expression
+};
+
+// An input plane and its new name (see LayerRenamePlugin::getPlaneRenames())
+struct PlaneCandidate
+{
+    std::string srcPlane;
+    MultiPlane::ImagePlaneDesc desc;
+    std::string name;
+    std::string newName;
+    bool rename; // false: the plane keeps its name
+};
+
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class LayerRenamePlugin
@@ -193,17 +214,29 @@ private:
     virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
 
+    /** @brief Compute the planes of the output and the input plane each one is copied from. */
+    PlaneRenames getPlaneRenames(double time) const;
+
     /**
-     * @brief Compute the planes of the output and the input plane each one is copied from.
-     * The color plane is always first. Returns true if any plane is renamed.
-     * If messages is not NULL, it receives the renames and conflicts, one per line,
-     * and error receives an error (e.g. an invalid regular expression).
+     * @brief First pass of getPlaneRenames(): the new names of the input planes. The names of the
+     * planes that keep their name are added to taken.
      */
-    bool getPlaneRenames(double time,
-                         std::vector<PlaneRename>* renames,
-                         std::string* messages,
-                         std::string* warning,
-                         std::string* error) const;
+    static std::vector<PlaneCandidate> planeCandidates(const std::vector<std::string>& planes,
+                                                       int srcNComps,
+                                                       bool renameColor,
+                                                       MatchEnum match,
+                                                       const std::string& find,
+                                                       const std::string& replace,
+                                                       const std::regex* re,
+                                                       std::set<std::string>& taken);
+
+    /**
+     * @brief Second pass of getPlaneRenames(): give the new names, in the input order, unless
+     * they conflict. Appends to result.
+     */
+    static void assignPlaneNames(const std::vector<PlaneCandidate>& candidates,
+                                 std::set<std::string>& taken,
+                                 PlaneRenames& result);
 
     /** @brief rename a plane name with the current parameters. Returns false if the name is unchanged. */
     static bool renamePlane(const std::string& name,
@@ -274,25 +307,20 @@ LayerRenamePlugin::renamePlane(const std::string& name,
     return *newName != name;
 }
 
-bool
-LayerRenamePlugin::getPlaneRenames(double time,
-                                   std::vector<PlaneRename>* renames,
-                                   std::string* messages,
-                                   std::string* warning,
-                                   std::string* error) const
+PlaneRenames
+LayerRenamePlugin::getPlaneRenames(double time) const
 {
-    renames->clear();
-    bool renamed = false;
+    PlaneRenames result;
     const int srcNComps = (_srcClip && _srcClip->isConnected()) ? _srcClip->getPixelComponentCount() : 0;
     // the color plane of the output is always the color plane of the input
     {
         PlaneRename color;
         color.srcPlane = color.dstPlane = kFnOfxImagePlaneColour;
         color.srcName = color.dstName = kColorPlaneName;
-        renames->push_back(color);
+        result.renames.push_back(color);
     }
     if ( !gIsMultiPlanar || !_srcClip || !_srcClip->isConnected() ) {
-        return false;
+        return result;
     }
 
     std::string find, replace;
@@ -308,30 +336,36 @@ LayerRenamePlugin::getPlaneRenames(double time,
             re.assign(find, std::regex::ECMAScript);
             reValid = true;
         } catch (const std::regex_error& e) {
-            if (error) {
-                *error = std::string("Invalid regular expression \"") + find + "\": " + e.what();
-            }
+            result.error = std::string("Invalid regular expression \"") + find + "\": " + e.what();
         }
     }
 
     std::vector<std::string> planes;
     _srcClip->getPlanesPresent(&planes);
 
-    // First pass: compute the new names. The names of the planes that are not renamed are reserved.
-    struct Candidate
-    {
-        std::string srcPlane;
-        MultiPlane::ImagePlaneDesc desc;
-        std::string name;
-        std::string newName;
-        bool rename;
-    };
-    std::vector<Candidate> candidates;
     std::set<std::string> taken; // plane IDs and labels used in the output
     taken.insert(kColorPlaneName);
     taken.insert(kFnOfxImagePlaneColour);
+    const std::vector<PlaneCandidate> candidates =
+        planeCandidates(planes, srcNComps, renameColor, match, find, replace, reValid ? &re : NULL, taken);
+    assignPlaneNames(candidates, taken, result);
+
+    return result;
+} // LayerRenamePlugin::getPlaneRenames
+
+std::vector<PlaneCandidate>
+LayerRenamePlugin::planeCandidates(const std::vector<std::string>& planes,
+                                   int srcNComps,
+                                   bool renameColor,
+                                   MatchEnum match,
+                                   const std::string& find,
+                                   const std::string& replace,
+                                   const std::regex* re,
+                                   std::set<std::string>& taken)
+{
+    std::vector<PlaneCandidate> candidates;
     for (std::size_t i = 0; i < planes.size(); ++i) {
-        Candidate c;
+        PlaneCandidate c;
         c.srcPlane = planes[i];
         c.rename = false;
         if (planes[i] == kFnOfxImagePlaneColour) {
@@ -355,7 +389,7 @@ LayerRenamePlugin::getPlaneRenames(double time,
                 continue;
             }
         }
-        c.rename = renamePlane(c.name, match, find, replace, reValid ? &re : NULL, &c.newName);
+        c.rename = renamePlane(c.name, match, find, replace, re, &c.newName);
         if (!c.rename) {
             if (planes[i] == kFnOfxImagePlaneColour) {
                 continue; // already in the output
@@ -366,17 +400,24 @@ LayerRenamePlugin::getPlaneRenames(double time,
         candidates.push_back(c);
     }
 
-    // Second pass: give the new names, in the input order
+    return candidates;
+}
+
+void
+LayerRenamePlugin::assignPlaneNames(const std::vector<PlaneCandidate>& candidates,
+                                    std::set<std::string>& taken,
+                                    PlaneRenames& result)
+{
     std::string msgs, warn;
     for (std::size_t i = 0; i < candidates.size(); ++i) {
-        const Candidate& c = candidates[i];
+        const PlaneCandidate& c = candidates[i];
         PlaneRename r;
         r.srcPlane = c.srcPlane;
         r.srcName = c.name;
         if (!c.rename) {
             r.dstPlane = c.srcPlane;
             r.dstName = c.name;
-            renames->push_back(r);
+            result.renames.push_back(r);
             continue;
         }
         const bool isColor = (c.srcPlane == kFnOfxImagePlaneColour);
@@ -398,8 +439,8 @@ LayerRenamePlugin::getPlaneRenames(double time,
             r.dstPlane = MultiPlane::ImagePlaneDesc::mapPlaneToOFXPlaneString(newDesc);
             r.dstName = c.newName;
             taken.insert(c.newName);
-            renames->push_back(r);
-            renamed = true;
+            result.renames.push_back(r);
+            result.renamed = true;
             msgs += c.name + " -> " + c.newName + "\n";
             continue;
         }
@@ -409,29 +450,23 @@ LayerRenamePlugin::getPlaneRenames(double time,
             warn += c.name + " -> " + c.newName + ": " + problem + ", not renamed\n";
         } else if ( taken.count(c.name) ) {
             warn += c.name + " -> " + c.newName + ": " + problem + ", and " + c.name + " is used by another renamed layer: removed\n";
-            renamed = true; // the output differs from the input: a plane is removed
+            result.renamed = true; // the output differs from the input: a plane is removed
         } else {
             r.dstPlane = c.srcPlane;
             r.dstName = c.name;
             taken.insert(c.name);
             taken.insert( c.desc.getPlaneLabel() );
-            renames->push_back(r);
+            result.renames.push_back(r);
             warn += c.name + " -> " + c.newName + ": " + problem + ", kept as " + c.name + "\n";
         }
         // the color copy that is not added, or a plane kept with its name: the output is unchanged
     }
-    if (messages) {
-        *messages = msgs + warn;
-        if ( !messages->empty() ) {
-            messages->erase(messages->size() - 1); // trailing newline
-        }
+    result.messages = msgs + warn;
+    if ( !result.messages.empty() ) {
+        result.messages.erase(result.messages.size() - 1); // trailing newline
     }
-    if (warning) {
-        *warning = warn;
-    }
-
-    return renamed;
-} // LayerRenamePlugin::getPlaneRenames
+    result.warning = warn;
+}
 
 // Sets the Renamed Layers param: called from changedParam and changedClip (kOfxActionInstanceChanged,
 // as the OFX spec requires), and from getClipPreferences, which is a Natron-only exception to the spec
@@ -442,18 +477,16 @@ LayerRenamePlugin::updateRenames()
     if (!gIsMultiPlanar) {
         return;
     }
-    std::vector<PlaneRename> renames;
-    std::string messages, warning, error;
-    getPlaneRenames(timeLineGetTime(), &renames, &messages, &warning, &error);
+    const PlaneRenames r = getPlaneRenames( timeLineGetTime() );
     std::string current;
     _renames->getValue(current);
-    if (current != messages) {
-        _renames->setValue(messages);
+    if (current != r.messages) {
+        _renames->setValue(r.messages);
     }
-    if ( !error.empty() ) {
-        setPersistentMessage(Message::eMessageError, "", error);
-    } else if ( !warning.empty() ) {
-        setPersistentMessage(Message::eMessageWarning, "", "Some layers could not be renamed:\n" + warning);
+    if ( !r.error.empty() ) {
+        setPersistentMessage(Message::eMessageError, "", r.error);
+    } else if ( !r.warning.empty() ) {
+        setPersistentMessage(Message::eMessageWarning, "", "Some layers could not be renamed:\n" + r.warning);
     } else {
         clearPersistentMessage();
     }
@@ -475,8 +508,7 @@ LayerRenamePlugin::render(const RenderArguments &args)
         planes.push_back(kFnOfxImagePlaneColour);
     }
 
-    std::vector<PlaneRename> renames;
-    getPlaneRenames(args.time, &renames, NULL, NULL, NULL);
+    const std::vector<PlaneRename> renames = getPlaneRenames(args.time).renames;
 
     for (std::list<std::string>::const_iterator it = planes.begin(); it != planes.end(); ++it) {
         auto_ptr<Image> dst;
@@ -533,8 +565,7 @@ LayerRenamePlugin::isIdentity(const IsIdentityArguments &args,
 {
     // Without multiplane support, there is nothing to rename.
     // With multiplane support, identity if no plane is renamed (all planes are then copied unchanged).
-    std::vector<PlaneRename> renames;
-    if ( !gIsMultiPlanar || !getPlaneRenames(args.time, &renames, NULL, NULL, NULL) ) {
+    if ( !gIsMultiPlanar || !getPlaneRenames(args.time).renamed ) {
         identityClip = _srcClip;
 
         return true;
@@ -564,8 +595,7 @@ LayerRenamePlugin::getClipComponents(const ClipComponentsArguments& args,
     // Every output plane, renamed or not, is listed here and copied in render().
     clipComponents.setPassThroughClip(NULL, args.time, args.view);
 
-    std::vector<PlaneRename> renames;
-    getPlaneRenames(args.time, &renames, NULL, NULL, NULL);
+    const std::vector<PlaneRename> renames = getPlaneRenames(args.time).renames;
 
     std::set<std::string> srcPlanes;
     for (std::size_t i = 0; i < renames.size(); ++i) {
