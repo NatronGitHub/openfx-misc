@@ -28,22 +28,11 @@
 #include <cstdlib> // getenv
 #include <cstdio> // rename
 #include <cerrno>
-#include <algorithm> // min
 #include <atomic>
 #ifdef _WIN32
-#include <cwchar>
-#include <fcntl.h> // _O_CREAT...
-#include <io.h> // _wsopen, _write, _close
-#include <process.h> // _getpid
-#include <share.h> // _SH_DENYRW
-#include <sys/stat.h> // _S_IREAD, _S_IWRITE
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h> // WideCharToMultiByte
+#include <filesystem>
+#include <fstream>
+#include <system_error>
 #else
 #include <fcntl.h> // open
 #include <unistd.h> // write, close, unlink, getpid
@@ -484,36 +473,34 @@ NoOpPlugin::getTransform(const TransformArguments &args,
 #endif
 
 
-// The enum-to-string functions of Support throw std::invalid_argument on values they don't know
-// (e.g. a custom component that the host lists): print a placeholder instead.
-static const char*
-contextName(ContextEnum e)
+// Support's enum-to-string functions throw std::invalid_argument on values they don't know (e.g. a
+// custom component that the host lists): return the placeholder instead.
+template <typename Enum>
+const char*
+nameOr(const char* (*toStr)(Enum),
+       Enum e,
+       const char* placeholder)
 {
     try {
-        return mapContextEnumToStr(e);
+        return toStr(e);
     } catch (...) {
-        return "[unknown context]";
+        return placeholder;
     }
 }
 
-static const char*
-componentName(PixelComponentEnum e)
+// Append "key=item0,item1,...\n", with format(item) printed for each item.
+template <typename Container, typename Format>
+void
+joinTo(std::ostringstream& oss,
+       const char* key,
+       const Container& items,
+       Format format)
 {
-    try {
-        return mapPixelComponentEnumToStr(e);
-    } catch (...) {
-        return "[custom components]";
+    oss << key << '=';
+    for (std::size_t i = 0; i < items.size(); ++i) {
+        oss << (i ? "," : "") << format(items[i]);
     }
-}
-
-static const char*
-depthName(BitDepthEnum e)
-{
-    try {
-        return mapBitDepthEnumToStr(e);
-    } catch (...) {
-        return "[unknown depth]";
-    }
+    oss << '\n';
 }
 
 static const char*
@@ -589,21 +576,13 @@ appendHostInfo(std::ostringstream& oss)
     oss << "supportsMultiResolution=" << h.supportsMultiResolution << '\n';
     oss << "supportsTiles=" << h.supportsTiles << '\n';
     oss << "temporalClipAccess=" << h.temporalClipAccess << '\n';
-    oss << "supportedComponents=";
-    for (std::size_t i = 0; i < h._supportedComponents.size(); ++i) {
-        oss << (i ? "," : "") << componentName(h._supportedComponents[i]);
-    }
-    oss << '\n';
-    oss << "supportedContexts=";
-    for (std::size_t i = 0; i < h._supportedContexts.size(); ++i) {
-        oss << (i ? "," : "") << contextName(h._supportedContexts[i]);
-    }
-    oss << '\n';
-    oss << "supportedPixelDepths=";
-    for (std::size_t i = 0; i < h._supportedPixelDepths.size(); ++i) {
-        oss << (i ? "," : "") << depthName(h._supportedPixelDepths[i]);
-    }
-    oss << '\n';
+    const auto asIs = [](const std::string& item) -> const std::string& { return item; };
+    joinTo(oss, "supportedComponents", h._supportedComponents,
+           [](PixelComponentEnum e) { return nameOr(mapPixelComponentEnumToStr, e, "[custom components]"); });
+    joinTo(oss, "supportedContexts", h._supportedContexts,
+           [](ContextEnum e) { return nameOr(mapContextEnumToStr, e, "[unknown context]"); });
+    joinTo(oss, "supportedPixelDepths", h._supportedPixelDepths,
+           [](BitDepthEnum e) { return nameOr(mapBitDepthEnumToStr, e, "[unknown depth]"); });
     oss << "supportsMultipleClipDepths=" << h.supportsMultipleClipDepths << '\n';
     oss << "supportsMultipleClipPARs=" << h.supportsMultipleClipPARs << '\n';
     oss << "supportsSetableFrameRate=" << h.supportsSetableFrameRate << '\n';
@@ -638,11 +617,7 @@ appendHostInfo(std::ostringstream& oss)
     oss << "supportsMetalRender=" << h.supportsMetalRender << '\n';
     oss << "supportsMetalTexture=" << h.supportsMetalTexture << '\n';
     oss << "colourManagementStyle=" << colourManagementStyleName(h.colourManagementStyle) << '\n';
-    oss << "colourManagementAvailableConfigs=";
-    for (std::size_t i = 0; i < h.colourManagementAvailableConfigs.size(); ++i) {
-        oss << (i ? "," : "") << h.colourManagementAvailableConfigs[i];
-    }
-    oss << '\n';
+    joinTo(oss, "colourManagementAvailableConfigs", h.colourManagementAvailableConfigs, asIs);
 #ifdef OFX_EXTENSIONS_NUKE
     oss << "supportsCamera=" << h.supportsCamera << '\n';
     oss << "isMultiPlanar=" << h.isMultiPlanar << '\n';
@@ -661,16 +636,9 @@ appendHostInfo(std::ostringstream& oss)
     oss << "supportsChannelSelector=" << h.supportsChannelSelector << '\n';
     oss << "canDistort=" << h.canDistort << '\n';
     oss << "supportsInteractKeyModifiers=" << h.supportsInteractKeyModifiers << '\n';
-    oss << "nativeOverlays=";
-    for (std::size_t i = 0; i < h.nativeInteracts.size(); ++i) {
-        oss << (i ? "," : "") << h.nativeInteracts[i].identifier;
-    }
-    oss << '\n';
-    oss << "supportedCursors=";
-    for (std::size_t i = 0; i < h.supportedCursors.size(); ++i) {
-        oss << (i ? "," : "") << h.supportedCursors[i];
-    }
-    oss << '\n';
+    joinTo(oss, "nativeOverlays", h.nativeInteracts,
+           [](const ImageEffectHostDescription::NativeOverlayHandle& n) -> const std::string& { return n.identifier; });
+    joinTo(oss, "supportedCursors", h.supportedCursors, asIs);
 #endif
     oss << "suites=";
     bool first = true;
@@ -704,58 +672,10 @@ appendHostInfo(std::ostringstream& oss)
     oss << '\n';
 } // appendHostInfo
 
-#ifdef _WIN32
-// the value of a (wide, so that non-ASCII user names work) environment variable, or empty
-static std::wstring
-winGetEnv(const wchar_t* name)
-{
-#ifdef _MSC_VER
-    wchar_t* value = NULL;
-    std::size_t len = 0;
-    std::wstring ret;
-    if ( (_wdupenv_s(&value, &len, name) == 0) && value ) {
-        ret = value;
-    }
-    std::free(value);
-
-    return ret;
-#else
-    const wchar_t* value = _wgetenv(name);
-
-    return value ? std::wstring(value) : std::wstring();
-#endif
-}
-
-// a wide string as UTF-8, to show it to the user; empty if it can't be converted
-static std::string
-winToUtf8(const std::wstring& w)
-{
-    if ( w.empty() ) {
-        return std::string();
-    }
-    const int n = WideCharToMultiByte(CP_UTF8, 0, w.data(), (int)w.size(), NULL, 0, NULL, NULL);
-    if (n <= 0) {
-        return std::string();
-    }
-    std::string ret( (std::size_t)n, '\0' );
-    if (WideCharToMultiByte(CP_UTF8, 0, w.data(), (int)w.size(), &ret[0], n, NULL, NULL) != n) {
-        return std::string();
-    }
-
-    return ret;
-}
-
-#endif
-
 // Save the host info text to OFXHostInfo-<hostName>.txt in the user's temporary directory, because
 // some hosts truncate messages or show them in a small dialog. Best effort, never throws: returns
 // the path to show the user, or an empty string if the file could not be written (then no
 // file, not even a partial one, is left behind).
-// The temporary directory may be shared (/tmp, with TMPDIR unset on Linux), and another user may
-// have planted a FIFO, a symbolic or hard link, or a file of their own at the final name: the text
-// is written to a new file next to it, created with O_EXCL (never an existing file, FIFO or link)
-// and mode 0600, which then replaces the final name with rename(). If the final name belongs to
-// another user in a sticky directory, rename() fails, and only the message is shown.
 static std::string
 saveHostInfo(const std::string& hostName,
              const std::string& text)
@@ -769,85 +689,40 @@ saveHostInfo(const std::string& hostName,
         fileName += ok ? c : '_';
     }
     fileName += ".txt";
-    // a unique suffix for the new file (several instances, or hosts, may save at the same time)
+
+#ifdef _WIN32
+    // %TEMP% is per-user: no other user can plant a file there. Text mode writes CRLF (Notepad).
+    try {
+        namespace fs = std::filesystem;
+        std::error_code ec;
+        const fs::path path = fs::temp_directory_path(ec) / fileName;
+        if (ec) {
+            return std::string();
+        }
+        std::ofstream out(path);
+        out << text;
+        out.close(); // sets failbit if a write or the close failed
+        if (!out) {
+            fs::remove(path, ec);
+
+            return std::string();
+        }
+        const auto u8 = path.u8string(); // std::string in C++17, std::u8string in C++20
+
+        return std::string( u8.begin(), u8.end() );
+    } catch (...) {
+        return std::string();
+    }
+#else
+    // The temporary directory may be shared (/tmp, with TMPDIR unset on Linux), and another user may
+    // have planted a FIFO, a symbolic or hard link, or a file of their own at the final name: the
+    // text is written to a new file next to it, created with O_EXCL (never an existing file, FIFO
+    // or link) and mode 0600, which then replaces the final name with rename(). If the final name
+    // belongs to another user in a sticky directory, rename() fails, and only the message is shown.
+    // A unique suffix for the new file: several instances, or hosts, may save at the same time.
     static std::atomic<unsigned> counter(0);
     std::ostringstream suffix;
-#ifdef _WIN32
-    suffix << ".tmp" << _getpid() << '.' << counter++;
-#else
     suffix << ".tmp" << getpid() << '.' << counter++;
-#endif
-
-#ifdef _WIN32
-    std::wstring dir = winGetEnv(L"TEMP");
-    if ( dir.empty() ) {
-        dir = winGetEnv(L"TMP");
-    }
-    if ( dir.empty() ) {
-        return std::string();
-    }
-    dir += L'\\';
-    std::wstring path = dir;
-    path.append( fileName.begin(), fileName.end() ); // ASCII only
-    const std::string suffixStr = suffix.str();
-    std::wstring tmpPath = path;
-    tmpPath.append( suffixStr.begin(), suffixStr.end() ); // ASCII only
-    // CRLF line endings (Notepad), written in binary mode
-    std::string data;
-    data.reserve( text.size() + text.size() / 32 );
-    for (std::size_t i = 0; i < text.size(); ++i) {
-        if (text[i] == '\n') {
-            data += '\r';
-        }
-        data += text[i];
-    }
-    int fd = -1;
-    const int oflag = _O_CREAT | _O_EXCL | _O_WRONLY | _O_BINARY | _O_NOINHERIT;
-#ifdef _MSC_VER
-    if (_wsopen_s(&fd, tmpPath.c_str(), oflag, _SH_DENYRW, _S_IREAD | _S_IWRITE) != 0) {
-        fd = -1;
-    }
-#else
-    fd = _wsopen(tmpPath.c_str(), oflag, _SH_DENYRW, _S_IREAD | _S_IWRITE);
-#endif
-    if (fd < 0) {
-        return std::string();
-    }
-    std::size_t written = 0;
-    while ( written < data.size() ) {
-        const std::size_t chunk = std::min<std::size_t>(data.size() - written, 1 << 20);
-        const int n = _write(fd, data.data() + written, (unsigned int)chunk);
-        if (n <= 0) {
-            break;
-        }
-        written += (std::size_t)n;
-    }
-    const bool closed = _close(fd) == 0;
-    // _wrename does not replace an existing file: remove the old one first (%TEMP% is per-user)
-    if ( (written != data.size()) || !closed ||
-         ( (_wremove( path.c_str() ) != 0) && (errno != ENOENT) ) ||
-         (_wrename( tmpPath.c_str(), path.c_str() ) != 0) ) {
-        _wremove( tmpPath.c_str() );
-
-        return std::string();
-    }
-
-    // the expanded path, without percent signs: a host may read the message as a printf format (#66)
-    const std::string shown = winToUtf8(path);
-    if ( shown.empty() ) {
-        return fileName + " in the TEMP folder";
-    }
-    std::string noPercent;
-    for (std::size_t i = 0; i < shown.size(); ++i) {
-        if (shown[i] == '%') { // percent-ok: replaces the percent signs of the path
-            noPercent += "(percent)";
-        } else {
-            noPercent += shown[i];
-        }
-    }
-
-    return noPercent;
-#else
     const char* dir = std::getenv("TMPDIR");
     std::string path = (dir && *dir) ? dir : "/tmp";
     if (path[path.size() - 1] != '/') {
