@@ -59,30 +59,23 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "First, set the Range parameter of the Hue parameter set and then work down the other Ranges parameters, tuning with the range Falloff and Adjustment parameters." \
 
 #define kPluginIdentifier "net.sf.openfx.HSVToolPlugin"
-// version 1.1: wrap the rotated hue into the hue circle (bug fix: some rotations gave magenta), and
-//              premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79);
-//              normalizing an angle no longer converts it to int (undefined beyond the int range) (#178);
-//              in the filter and paint contexts, Source is RGBA and the Output components are those of Source,
-//              as the OpenFX spec mandates (issue #190; Output Alpha remapped Source and Output to RGBA);
-//              with an Output Alpha other than Source, a NaN Mask sample is 0 (it was ignored) and +-inf is
-//              +-FLT_MAX (-inf gave a -inf alpha), as in the mask mix (issue #220);
-//              (1.1 is unreleased, fixed in place, issue #322) with Output Alpha = Source, the output alpha
-//              of RGBA images is the source alpha (it was 0, or mixed with 0), and Premultiply no longer
-//              multiplies the colours by 0 (RGBA and RGB images were black); without adjustments, the
-//              colours are copied (the HSV round trip changed them by rounding, and a negative saturation
-//              in a range that includes it was set to 0); isIdentity no longer passes the source through
-//              when the render sets the alpha (Output Alpha other than Source, even with Mix 0 or outside the
-//              mask), clamps float images (Clamp Black, on by default in version 1, or Clamp White), or applies a gain
-//              other than 1;
-//              (1.1 is unreleased, extended in place, issue #293) Set Saturation and Set Brightness parameters
-//              (default off): the adjustment is the value that the saturation or brightness is set to
-// version 2.0: Clamp Black is off by default, so that the default node keeps negative values (issue #272);
-//              version 1.1 is kept, with Clamp Black on by default
+// History:
+// version 1.0: initial version
+// version 1.1: wrap the rotated hue into the hue circle (some rotations gave magenta); non-finite colours are
+//              premultiplied and unpremultiplied to finite values (SupportExt #73, #79), and angles are no longer
+//              converted to int (#178); in the filter and paint contexts, the Output components are those of
+//              Source (issue #190); a non-finite Mask sample is made finite for the output alpha (issue #220);
+//              with Output Alpha = Source, the output alpha of RGBA images is the source alpha, Premultiply no
+//              longer blackens the image, and the colours are copied without adjustments (issue #322); new Set
+//              Saturation and Set Brightness parameters, off by default (issue #293)
+// version 2.0: Clamp Black is off by default, so that the default node keeps negative values (issue #272).
+//              Version 1.1 is kept, obsolete.
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinorV1 1 // the minor version of the obsolete version 1
 
 // the first major version whose Clamp Black is off by default (issue #272)
-#define kVersionClampBlackOff 2
+static constexpr unsigned kVersionClampBlackOff = 2;
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -228,8 +221,7 @@ static bool gHostSupportsDefaultCoordinateSystem = true; // for kParamDefaultsNo
    - when setting srcColor: compute hueRange, satRange, valRange (as empty ranges), set rolloffs to (50,0.3,0.3)
    - when setting dstColor: compute hueRotation, satAdjust and valAdjust
  */
-// a saturation or brightness of the Src Color, and of the Dst Color (distinct types, so that
-// they cannot be swapped)
+// The Src and Dst values of adjustmentTo(), as distinct types so that they cannot be swapped (I.4, I.24)
 struct SrcValue
 {
     double value;
@@ -1174,18 +1166,14 @@ private:
     /* the hue, saturation and brightness parameters at time, as render() uses them */
     HSVToolValues getValuesAtTime(double time) const;
 
-    // The Saturation Adjustment that takes the saturation of the Src Color to the one of the Dst
-    // Color: the Dst value itself with Set Saturation, the offset otherwise.
-    double saturationAdjustmentTo(double time, SrcValue src, DstValue dst) const
+    // The Saturation or Brightness Adjustment that takes the value of the Src Color (from) to the one of
+    // the Dst Color (to): the Dst value itself with Set Saturation or Set Brightness (setValue), the offset
+    // otherwise.
+    static double adjustmentTo(bool setValue,
+                               SrcValue from,
+                               DstValue to)
     {
-        return _setSaturation->getValueAtTime(time) ? dst.value : (dst.value - src.value);
-    }
-
-    // The Brightness Adjustment that takes the brightness of the Src Color to the one of the Dst
-    // Color (see above).
-    double brightnessAdjustmentTo(double time, SrcValue src, DstValue dst) const
-    {
-        return _setBrightness->getValueAtTime(time) ? dst.value : (dst.value - src.value);
+        return setValue ? to.value : (to.value - from.value);
     }
 
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
@@ -1492,6 +1480,8 @@ HSVToolPlugin::isIdentity(const IsIdentityArguments &args,
         return true;
     }
 
+    // not ofxsMaskRoDExcludesRenderWindow(), which skips the test on hosts without multi-resolution
+    // (hostDemo too): it would stop being an identity there
     OfxRectI maskRoD;
     if ( ofxsMaskGetRoDPixel(_maskClip, _maskApply, _maskInvert, time, args.renderScale, &maskRoD) &&
          !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
@@ -1625,11 +1615,11 @@ HSVToolPlugin::setSrcFromRectangle(const Image* srcImg,
     _saturationRange->setValue( ffloor(hsvmin.s, 4), fceil(hsvmax.s, 4) );
     _saturationRangeRolloff->setValue( ffloor( (hsvmax.s - hsvmin.s) * DEFAULT_RECTANGLE_ROLLOFF, 4 ) );
     if (tov != 0.) { // no need to adjust saturation if target color is black
-        _saturationAdjustment->setValue( fround(saturationAdjustmentTo( time, SrcValue{s}, DstValue{tos} ), 4) );
+        _saturationAdjustment->setValue( fround(adjustmentTo( _setSaturation->getValueAtTime(time), SrcValue{s}, DstValue{tos} ), 4) );
     }
     _brightnessRange->setValue( ffloor(hsvmin.v, 4), fceil(hsvmax.v, 4) );
     _brightnessRangeRolloff->setValue( ffloor( (hsvmax.v - hsvmin.v) * DEFAULT_RECTANGLE_ROLLOFF, 4 ) );
-    _brightnessAdjustment->setValue( fround(brightnessAdjustmentTo( time, SrcValue{v}, DstValue{tov} ), 4) );
+    _brightnessAdjustment->setValue( fround(adjustmentTo( _setBrightness->getValueAtTime(time), SrcValue{v}, DstValue{tov} ), 4) );
 } // HSVToolPlugin::setSrcFromRectangle
 
 /* set up and run a processor */
@@ -1704,11 +1694,11 @@ HSVToolPlugin::changedParam(const InstanceChangedArgs &args,
         _saturationRange->setValue(s, s);
         _saturationRangeRolloff->setValue(0.3);
         if (tov != 0.) { // no need to adjust saturation if target color is black
-            _saturationAdjustment->setValue( saturationAdjustmentTo( time, SrcValue{s}, DstValue{tos} ) );
+            _saturationAdjustment->setValue( adjustmentTo( _setSaturation->getValueAtTime(time), SrcValue{s}, DstValue{tos} ) );
         }
         _brightnessRange->setValue(v, v);
         _brightnessRangeRolloff->setValue(0.3);
-        _brightnessAdjustment->setValue( brightnessAdjustmentTo( time, SrcValue{v}, DstValue{tov} ) );
+        _brightnessAdjustment->setValue( adjustmentTo( _setBrightness->getValueAtTime(time), SrcValue{v}, DstValue{tov} ) );
     } else if (paramName == kParamEnableRectangle) {
         // update visibility
         bool enableRectangle = _enableRectangle->getValueAtTime(time);
@@ -1744,9 +1734,9 @@ HSVToolPlugin::changedParam(const InstanceChangedArgs &args,
         EditBlock eb(*this, "setDst");
         if (tov != 0.) { // no need to adjust hue or saturation if target color is black
             _hueRotation->setValue(dh);
-            _saturationAdjustment->setValue( saturationAdjustmentTo( time, SrcValue{s}, DstValue{tos} ) );
+            _saturationAdjustment->setValue( adjustmentTo( _setSaturation->getValueAtTime(time), SrcValue{s}, DstValue{tos} ) );
         }
-        _brightnessAdjustment->setValue( brightnessAdjustmentTo( time, SrcValue{v}, DstValue{tov} ) );
+        _brightnessAdjustment->setValue( adjustmentTo( _setBrightness->getValueAtTime(time), SrcValue{v}, DstValue{tov} ) );
     } else if ( (paramName == kParamPremult) && (args.reason == eChangeUserEdit) ) {
         _premultChanged->setValue(true);
     }
@@ -1866,9 +1856,7 @@ HSVToolPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
-    if (majorVersion < kPluginVersionMajor) {
-        desc.setIsObsolete(true);
-    }
+    desc.setIsObsolete(majorVersion < kPluginVersionMajor);
 
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
@@ -2379,8 +2367,8 @@ HSVToolPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
 
 static HSVToolPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 // version 1: Clamp Black is on by default
-static HSVToolPluginFactory<1> p1(kPluginIdentifier, 1);
+static HSVToolPluginFactory<1> p_v1(kPluginIdentifier, kPluginVersionMinorV1);
 mRegisterPluginFactoryInstance(p)
-mRegisterPluginFactoryInstance(p1)
+mRegisterPluginFactoryInstance(p_v1)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
