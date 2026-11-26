@@ -1,0 +1,64 @@
+name: Natron testing bundles
+
+# Publishes the testing bundles of Natron's CI (README.md's "Natron's testing bundles"): the assets
+# openfx-misc-build-ubuntu_24-testing.zip and openfx-misc-build-windows_ucrt64-testing.zip of the
+# natron_testing release (a prerelease), which NatronGitHub/Natron's CI unzips into its plug-in
+# directory, as openfx-io's.
+#
+# No build here: ci.yml's Linux and Windows jobs upload the bundles they have just tested, as the
+# artifacts openfx-misc-build-<platform>-testing, on master only (pushes and manual runs; never
+# for pull requests). This workflow runs when such a ci.yml run completes (workflow_run), and
+# publishes the artifacts that the run has (a job that failed uploads none: its asset is kept).
+# A manual run ("Run workflow", on master only) publishes the artifacts of the "run_id" input, or
+# of the latest ci.yml run of master that has them (they are kept 7 days: after that, run ci.yml
+# on master first). See .github/tools/publish-natron-testing.sh.
+#
+# workflow_run runs this file from the default branch, with the write token: it only reads the
+# artifacts of ci.yml runs of this repository's master (the script checks the run), never those
+# of pull requests or forks.
+on:
+  workflow_run:
+    workflows: [Continous Integration tests]
+    types: [completed]
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'ci.yml run of master to publish (empty: the latest one with testing artifacts)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+# one publication at a time, in order (a pending run is replaced by a newer one)
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish the natron_testing assets
+    if: >-
+      github.repository == 'NatronGitHub/openfx-misc' &&
+      ((github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master') ||
+      (github.event_name == 'workflow_run' &&
+      github.event.workflow_run.head_branch == 'master' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch')))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write # the natron_testing release and its assets
+      actions: read # the artifacts of the ci.yml run
+    steps:
+      - name: Checkout (the script)
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/tools
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.id || inputs.run_id }}
+        run: .github/tools/publish-natron-testing.sh ${RUN_ID:+"$RUN_ID"}

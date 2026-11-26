@@ -23,6 +23,12 @@ name: Continous Integration tests
 # workflow_dispatch, but that also builds macOS and uploads the bundles, and is grouped
 # by branch, not by PR: cancel it before marking the PR ready. Superseded runs are
 # cancelled, except for tags. Jobs time out.
+#
+# Natron's testing bundles (README.md's "Natron's testing bundles"): on master (pushes, and manual
+# runs on master), the Linux and Windows jobs also upload the bundles that Natron's CI tests with,
+# as the artifacts openfx-misc-build-ubuntu_24-testing and openfx-misc-build-windows_ucrt64-testing
+# (kept 7 days). natron-testing.yml then publishes them as the assets of the natron_testing
+# release. No extra build: they are the bundles that the job has just tested.
 on:
   push:
     branches: [master, 'RB-*']
@@ -36,6 +42,8 @@ on:
       - 'Natron-*-[rR][cC]*'
       - 'Natron-*-[bB][eE][tT][aA]*'
       - 'Natron-*-[aA][lL][pP][hH][aA]*'
+      # the release of Natron's testing bundles (natron-testing.yml), not a version
+      - '!natron_testing'
     paths-ignore:
       - Documentation/**
       - '**/*.md'
@@ -81,6 +89,11 @@ env:
     ${{ github.event_name == 'workflow_dispatch' ||
     (github.ref_type == 'tag' && startsWith(github.ref_name, 'Natron-') &&
     (contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha'))) }}
+  # Natron's testing bundles (see the header) are uploaded for pushes and manual runs on master
+  # only: never for pull requests, other branches or tags.
+  NATRON_TESTING: >-
+    ${{ github.ref == 'refs/heads/master' &&
+    (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
 
 defaults:
   run:
@@ -228,6 +241,22 @@ jobs:
         # one view; issue #66).
         timeout-minutes: 10
         run: .github/tools/smoketest.sh --quick --ofx11 install
+      - name: Natron's testing bundles
+        if: env.NATRON_TESTING == 'true'
+        # Misc, CImg and Shadertoy at the root, as Natron unzips them, and openfx-misc-testing/
+        # (README.txt and the licenses): README.md's "Natron's testing bundles".
+        run: |
+          .github/tools/package-release.sh --natron-testing --platform linux-x86_64 --out NatronTesting \
+              --full install/OFX/Plugins --shadertoy-gl install/OFX/Plugins
+      - name: Upload Natron's testing bundles
+        if: env.NATRON_TESTING == 'true'
+        uses: actions/upload-artifact@v6
+        with:
+          # natron-testing.yml publishes it as openfx-misc-build-ubuntu_24-testing.zip
+          name: openfx-misc-build-ubuntu_24-testing
+          path: NatronTesting
+          if-no-files-found: error
+          retention-days: 7
       - name: Collect bundles
         if: env.UPLOAD_ARTIFACTS == 'true'
         # Not Test: it is installed (BUILD_TESTING=ON) for the load test, but it is for
@@ -297,6 +326,23 @@ jobs:
         run: |
           set -eo pipefail
           RENDERTEST_ONLY='^CImgConvolve' .github/tools/rendertest.sh install
+      - name: Natron's testing bundles
+        if: env.NATRON_TESTING == 'true'
+        # As on Linux, with the licenses of the MinGW-w64 runtime that -static links (as release.yml)
+        run: |
+          set -eo pipefail
+          .github/tools/mingw-runtime-licenses.sh windows-licenses
+          .github/tools/package-release.sh --natron-testing --platform windows-x86_64 --out NatronTesting \
+              --full install/OFX/Plugins --shadertoy-gl install/OFX/Plugins --licenses windows-licenses
+      - name: Upload Natron's testing bundles
+        if: env.NATRON_TESTING == 'true'
+        uses: actions/upload-artifact@v6
+        with:
+          # natron-testing.yml publishes it as openfx-misc-build-windows_ucrt64-testing.zip
+          name: openfx-misc-build-windows_ucrt64-testing
+          path: NatronTesting
+          if-no-files-found: error
+          retention-days: 7
       - name: Collect bundles
         if: env.UPLOAD_ARTIFACTS == 'true'
         # Not Test: it is installed (BUILD_TESTING=ON) for the load test, but it is for
