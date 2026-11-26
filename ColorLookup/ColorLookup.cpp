@@ -26,6 +26,7 @@
 #include <algorithm>
 #include <memory>
 #include <array>
+#include <mutex>
 
 #if !( defined(_WIN32) || defined(__WIN32__) || defined(WIN32) )
 #define GL_GLEXT_PROTOTYPES
@@ -66,19 +67,6 @@ typedef void (APIENTRYP PFNGLBLENDEQUATIONSEPARATEPROC)(GLenum modeRGB, GLenum m
 #include "ofxsMacros.h"
 #include "ofxsThreadSuite.h"
 #include "ofxsAnalysisScope.h" // InAnalysisScope
-#ifdef OFX_USE_MULTITHREAD_MUTEX
-namespace {
-    typedef OFX::MultiThread::Mutex Mutex;
-    typedef OFX::MultiThread::AutoMutex AutoMutex;
-}
-#else
-// some OFX hosts do not have mutex handling in the MT-Suite (e.g. Sony Catalyst Edit)
-#include <mutex>
-namespace {
-    typedef std::mutex Mutex;
-    typedef OFX::MultiThread::AutoMutexT<std::mutex> AutoMutex;
-}
-#endif
 
 using namespace OFX;
 
@@ -103,18 +91,16 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // 1.0 initial version
 // 1.1 (10/2017) add display/computation of histogram and master curve modes
-// 1.2 premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79);
-//     a NaN value no longer converts NaN to int for the curve lookup (undefined behaviour) (#178);
-//     (1.2 is unreleased, extended in place, issue #290) "Composed" master curve mode (channel(master(x))), and
-//     "Master Curve on Alpha" parameter (default off: the alpha curve is used alone, as before)
-// 2.0 (issue #290) the defaults follow the node of the same name: Master Curve Mode is Composed and Master Curve on
-//     Alpha is checked; version 1.2 is kept, obsolete, with the old defaults (Standard, off), for existing projects
-//     (2.0 and 1.2 are unreleased, fixed in place, issue #411) Luminance master curve mode: below a luminance l of 1e-3,
-//     the result is t * (the result with the gain) + (1 - t) * (the master curve applied to each channel), t = l / 1e-3,
-//     which is the latter at a luminance of 0 or less, instead of a gain master(1e-8) / 1e-8 that gave huge values. The Luminance mode was in 1.1 (Natron 2.5.0): this
-//     bug fix (minor bump, 1.2) changes Natron 2.5 projects that use it, on pixels of near-zero or negative luminance.
-//     (2.0, unreleased, fixed in place) the Luminance mode applies the master gain before the channel curves,
-//     channel(gain * x), as the Composed mode applies master then channel; version 1.2 keeps gain * channel(x).
+// 1.2 NaN/inf-safe premultiply (SupportExt #73, #79); a NaN value no longer converts NaN to int for the curve
+//     lookup (#178); "Composed" master curve mode (channel(master(x))) and "Master Curve on Alpha" parameter
+//     (default off: the alpha curve is used alone, as before) (#290); Luminance master curve mode: below a
+//     luminance l of 1e-3, the result is t * (the result with the gain) + (1 - t) * (the master curve applied to
+//     each channel), t = l / 1e-3, instead of a gain master(1e-8) / 1e-8 that gave huge values; this changes
+//     Natron 2.5 projects that use the Luminance mode, on pixels of near-zero or negative luminance (#411)
+// 2.0 the defaults follow the node of the same name: Master Curve Mode is Composed and Master Curve on Alpha is
+//     checked (#290); the Luminance mode applies the master gain before the channel curves, channel(gain * x), as
+//     the Composed mode applies master then channel (#411). Version 1.2 is kept, obsolete, with the old defaults
+//     (Standard, off) and gain * channel(x).
 #define kPluginIdentifier "net.sf.openfx.ColorLookupPlugin"
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
@@ -807,7 +793,7 @@ class HistogramProcessorBase
 : public ImageProcessor
 {
 protected:
-    Mutex _mutex; //< this is used so we can multi-thread the analysis and protect the shared results
+    std::mutex _mutex; //< this is used so we can multi-thread the analysis and protect the shared results
     unsigned long _count;
 
 public:
@@ -877,7 +863,7 @@ private:
     void addResults(const std::vector<unsigned long>& histogram,
                     unsigned long count)
     {
-        AutoMutex l (&_mutex);
+        std::lock_guard<std::mutex> l(_mutex);
         assert(histogram.size() == _histogram.size());
         for (size_t i = 0; i < HISTOGRAM_BINS * nComponents; ++i) {
             _histogram[i] += histogram[i];
@@ -992,7 +978,7 @@ public:
     void getHistogram(Results* histogram)
     {
         assert(histogram != NULL);
-        AutoMutex l(&_histogramMutex);
+        std::lock_guard<std::mutex> l(_histogramMutex);
         *histogram = _histogram;
     }
 
@@ -1054,7 +1040,7 @@ private:
             updateSub<HistogramProcessor>(srcImg, time, analysisWindow, renderScale, &results);
         }
         {
-            AutoMutex l (&_histogramMutex);
+            std::lock_guard<std::mutex> l(_histogramMutex);
             _histogram = results; // uses default copy constructor
         }
     }
@@ -1149,7 +1135,7 @@ private:
     BooleanParam* _maskApply;
     BooleanParam* _maskInvert;
     BooleanParam* _premultChanged; // set to true the first time the user connects src
-    Mutex _histogramMutex; //< this is used so we can multi-thread the analysis and protect the shared results
+    std::mutex _histogramMutex; //< this is used so we can multi-thread the analysis and protect the shared results
     Results _histogram;
 };
 
