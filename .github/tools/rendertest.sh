@@ -516,6 +516,8 @@ tests=(
     # 1 and 0 are the same in all three.
     "Constant|net.sf.openfx.ConstantPlugin|general|*|mean=1,0,1,0.5||-i Source=none color=1,0,1,0.5"
     "Constant float|net.sf.openfx.ConstantPlugin|general|float|mean=0.25,0.5,0.75,1||-i Source=none color=0.25,0.5,0.75,1"
+    # Output Components Alpha: the colour's alpha only
+    "Constant Alpha|net.sf.openfx.ConstantPlugin|general|*|comps=Alpha+mean=0.5||-i Source=none color=1,0,1,0.5 outputComponents=Alpha"
     "CheckerBoard|net.sf.openfx.CheckerBoardPlugin|general|*|nonconst||-i Source=none"
     "ColorBars|net.sf.openfx.ColorBars|general|*|nonconst||-i Source=none"
     # Constant 1.1, Infinite (#284): an infinite RoD, so a window out of the format (as in
