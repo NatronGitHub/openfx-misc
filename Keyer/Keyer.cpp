@@ -467,13 +467,9 @@ private:
                 const PIX *bgPix = (const PIX *)  (_bgImg ? _bgImg->getPixelAddress(x, y) : 0);
                 const PIX *inMaskPix = (const PIX *)  (_inMaskImg ? _inMaskImg->getPixelAddress(x, y) : 0);
                 const PIX *outMaskPix = (const PIX *)  (_outMaskImg ? _outMaskImg->getPixelAddress(x, y) : 0);
-                // the inside mask is at least the source Alpha with Add to Inside Mask (an RGB Source is
-                // opaque, as when the host maps it to RGBA: srcPix[3] would be the next pixel's red)
-                const bool addSourceAlpha = (_sourceAlpha == eSourceAlphaAddToInsideMask) && srcPix;
-                const float sourceAlpha = (addSourceAlpha && srcHasAlpha) ? finiteSampleToFloat<PIX, maxValue>(srcPix[3]) : 1.f;
-                const KeyerUtils::Masks masks = KeyerUtils::masks<PIX, maxValue>(inMaskPix, outMaskPix, addSourceAlpha, sourceAlpha);
-                const float inMask = masks.inside;
-                const float outMask = masks.outside;
+                const PIX *addedSrcPix = (_sourceAlpha == eSourceAlphaAddToInsideMask) ? srcPix : nullptr;
+                const auto [inMask, outMask] =
+                    KeyerUtils::masks<PIX, maxValue>( inMaskPix, outMaskPix, KeyerUtils::insideMaskFromSource<PIX, maxValue>(addedSrcPix, srcHasAlpha) );
                 double Kbg = 0.;
 
                 // output of the foreground suppressor

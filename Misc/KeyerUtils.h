@@ -55,24 +55,35 @@ struct Masks
     float outside;
 };
 
+/// The least inside mask that the Source pixel gives with Add to Inside Mask (pass srcPix nullptr
+/// otherwise: 0, nothing is added): its alpha, made finite (see finiteSampleToFloat()), or 1 for an RGB
+/// Source (srcHasAlpha false), which is opaque as when the host maps it to RGBA (srcPix[3] would be the
+/// next pixel's red).
+template<class PIX, int maxValue>
+inline float
+insideMaskFromSource(const PIX* srcPix,
+                     bool srcHasAlpha)
+{
+    if (!srcPix) {
+        return 0.f;
+    }
+
+    return srcHasAlpha ? finiteSampleToFloat<PIX, maxValue>(srcPix[3]) : 1.f;
+}
+
 /// The masks at a pixel from the mask samples (0 if there is no mask), clamped to [0,1] (NaN gives 0).
-/// With addSourceAlpha, the inside mask is at least sourceAlpha (before the clamp).
+/// The inside mask is at least insideAtLeast (before the clamp; see insideMaskFromSource()): 0 changes
+/// nothing, since the clamp gives 0 for a NaN or a negative mask anyway.
 template<class PIX, int maxValue>
 inline Masks
 masks(const PIX* inMaskPix,
       const PIX* outMaskPix,
-      bool addSourceAlpha,
-      float sourceAlpha)
+      float insideAtLeast)
 {
-    float inMask = inMaskPix ? sampleToFloat<PIX, maxValue>(*inMaskPix) : 0.f;
-
-    if (addSourceAlpha) {
-        inMask = (std::max)(inMask, sourceAlpha);
-    }
+    const float inMask = (std::max)(inMaskPix ? sampleToFloat<PIX, maxValue>(*inMaskPix) : 0.f, insideAtLeast);
     const float outMask = outMaskPix ? sampleToFloat<PIX, maxValue>(*outMaskPix) : 0.f;
-    const Masks m = { clampToUnit(inMask), clampToUnit(outMask) };
 
-    return m;
+    return Masks{ clampToUnit(inMask), clampToUnit(outMask) };
 }
 } // namespace KeyerUtils
 } // namespace OFX
