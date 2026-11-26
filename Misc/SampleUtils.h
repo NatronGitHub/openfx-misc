@@ -18,7 +18,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 /*
- * Pixel sample conversions shared by the keyers (Keyer, ChromaKeyer, PIK), HueKeyer and Despill.
+ * Pixel sample conversions shared by HueKeyer, Despill and, through KeyerUtils.h, Keyer, ChromaKeyer and PIK.
  * TODO: move to SupportExt's ofxsNonFinite.h, next to finiteSample().
  */
 

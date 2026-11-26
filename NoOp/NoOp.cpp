@@ -33,6 +33,7 @@
 #include <filesystem>
 #include <fstream>
 #include <system_error>
+#include <utility> // move
 #include <process.h> // _getpid
 #else
 #include <fcntl.h> // open
@@ -713,8 +714,9 @@ saveHostInfo(const std::string& hostName,
         if (ec) {
             return std::string();
         }
-        tmpPath = path;
-        tmpPath += suffix.str();
+        fs::path newPath = path;
+        newPath += suffix.str();
+        tmpPath = std::move(newPath); // named only once complete, so the catch never removes the old file
         std::ofstream out(tmpPath);
         out << text;
         out.close(); // sets failbit if a write or the close failed
