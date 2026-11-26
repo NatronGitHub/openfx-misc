@@ -1265,16 +1265,19 @@ GEN = {"region": "project", "channels": "rgba"}
 CASES += [
     # Nuke's channels rgb leaves alpha out, and Nuke treats it as 0. Constant
     # keeps RGBA output with default alpha 0, which gives the same result
-    # downstream in hosts that fill alpha 1 for RGB images (Natron).
+    # downstream in every host, also in those that fill alpha 1 when they
+    # convert RGB images to RGBA (Natron).
     case("Constant defaults", ("Constant", {}),
          (ofx_id("ConstantPlugin"), {}), **GEN),
     # With the default channels, Nuke ignores the colour's alpha, while the
-    # RGBA output has it: compare rgb only (set the alpha to 0 for no alpha).
+    # RGBA output has it: compare rgb only. The next case sets our alpha to 0
+    # and compares rgba.
     case("Constant (0.25, -0.5, 1.5, 0.75), default channels",
          ("Constant", {"color": [.25, -.5, 1.5, .75]}),
          (ofx_id("ConstantPlugin"), {"color": [.25, -.5, 1.5, .75]}),
          **dict(GEN, channels="rgb")),
-    case("Constant (0.25, -0.5, 1.5, 0), default channels",
+    # Nuke drops the colour's 0.75 alpha; our colour with alpha 0 matches it.
+    case("Constant (0.25, -0.5, 1.5, 0.75), default channels, our alpha 0",
          ("Constant", {"color": [.25, -.5, 1.5, .75]}),
          (ofx_id("ConstantPlugin"), {"color": [.25, -.5, 1.5, 0.]}), **GEN),
     case("Constant rgba (0.25, -0.5, 1.5, 0.75)",
