@@ -28,6 +28,7 @@
 
 #include "ofxsTransform3x3.h"
 #include "ofxsTransformInteract.h"
+#include "TransformDefaults.h"
 #include "ofxsCoords.h"
 #include "ofxsThreadSuite.h"
 
@@ -585,17 +586,8 @@ public:
              ( _scaleUniform->getNumKeys() == 0) ) {
             _scaleUniform->setIsSecretAndDisabled(true);
         }
-        // Hosts that ignore normalised defaults (OFX 1.1 hosts such as VEGAS, and DaVinci Resolve)
-        // give the default center (0.5, 0.5) as is: move it to the project centre (#66). The host
-        // may send instanceChanged for that setValue(), which changedParam() would take as a center
-        // edit and stop the re-centring on a new source: keep Center Changed as it was (this works
-        // only if the host sends instanceChanged synchronously, from setValue()). Last, since
-        // setValue() may call changedParam().
-        const bool centerChanged = _centerChanged->getValue();
-        ofxsTransformDenormaliseDefaults(*this, /*oldParams=*/true);
-        if (_centerChanged->getValue() != centerChanged) {
-            _centerChanged->setValue(centerChanged);
-        }
+        // last, since setValue() may call changedParam()
+        transformDenormaliseDefaultsKeepCenterChanged(*this, *_centerChanged);
     }
 
 private:
