@@ -1,7 +1,7 @@
 """Renders compatibility test cases with Nuke and hostDemo, and compares.
 
 Each case renders the same small synthetic images through a Nuke node (in
-Nuke's terminal mode, `nuke --nc -t`, one process per case: a Nuke
+Nuke's terminal mode, `nuke --nc --safe -t`, one process per case: a Nuke
 Non-Commercial session allows only 10 node objects) and through the
 matching openfx-misc plug-in (with openfx's hostDemo), and compares the
 pixel values. The cases and the input images are in cases.py.
@@ -26,6 +26,10 @@ import cases
 
 CHANNEL_INDEX = {"r": 0, "g": 1, "b": 2, "a": 3}
 NUKE_TIMEOUT = 300  # seconds, per case
+# Nuke's terminal mode, Non-Commercial; --safe skips the user's init files
+# (~/.nuke, $NUKE_PATH), which could set knob defaults or callbacks of
+# their own, but keeps Nuke's own plugins/knobdefaults.py.
+NUKE_ARGS = ["--nc", "--safe", "-t"]
 HOSTDEMO_TIMEOUT = 300  # seconds, per case
 FIRST_FRAME, LAST_FRAME = 0, 25  # hostDemo's clip frame range
 PROJECT_STEP = 8  # compare one pixel in 8x8 over the project area
@@ -241,6 +245,21 @@ def nuke_script(case, result_path):
                     "images[%r]['box'].setValue(%r)"
                     % (name, list(image["box"]))]
     lines.append("n = nuke.nodes.%s()" % node_class)
+    # nuke.nodes skips the knob defaults (nuke.knobDefault, e.g. Nuke's
+    # plugins/knobdefaults.py), which createNode applies to the node a user
+    # creates: apply them to the node under test, before the case's knobs.
+    # Only the class-qualified defaults ("Class.knob") are applied, not the
+    # unqualified ones ("knob", which createNode applies to every class):
+    # Nuke's own files set only localizationPolicy (Read nodes), and
+    # `nuke --safe` (NUKE_ARGS) keeps the user's init files from setting
+    # any. nuke.knobDefault returns None, never "", when there is no
+    # default: setting "" removes it.
+    lines += [
+        "for knob_name in n.knobs():",
+        "    knob_default = nuke.knobDefault(n.Class() + '.' + knob_name)",
+        "    if knob_default is not None:",
+        "        n[knob_name].fromScript(knob_default)",
+    ]
     for i, name in enumerate(nuke_inputs):
         if name:
             lines.append("n.setInput(%d, images[%r])" % (i, name))
@@ -355,7 +374,7 @@ def run_nuke(nuke, case, work):
     with open(script, "w") as f:
         f.write(nuke_script(case, result_path))
     log = os.path.join(work, name + ".nuke.log")
-    status = run_command([nuke, "--nc", "-t", script], log, NUKE_TIMEOUT,
+    status = run_command([nuke] + NUKE_ARGS + [script], log, NUKE_TIMEOUT,
                          cwd=work)
     if status != 0 or not os.path.exists(result_path):
         raise CaseError("Nuke failed (exit status %d), see %s: are you "
@@ -741,7 +760,7 @@ def nuke_knob_orders(nuke, node_classes, work):
                    "result_path": result_path, "common_tab": COMMON_TAB,
                    "not_param_knobs": list(NOT_PARAM_KNOBS)}, f)
     log = os.path.join(work, name + ".nuke.log")
-    status = run_command([nuke, "--nc", "-t", script, args_path], log,
+    status = run_command([nuke] + NUKE_ARGS + [script, args_path], log,
                          NUKE_TIMEOUT, cwd=work)
     if status != 0 or not os.path.exists(result_path):
         raise CaseError("Nuke failed (exit status %d), see %s"
@@ -763,14 +782,15 @@ def check_nuke(nuke, work):
                 "    json.dump(c.sample('rgba.red', 0.5, 0.5), f)\n" % result)
     if os.path.exists(result):
         os.remove(result)
-    status = run_command([nuke, "--nc", "-t", script],
+    status = run_command([nuke] + NUKE_ARGS + [script],
                          os.path.join(work, "check_nuke.log"), 120,
                          cwd=work)
     if status != 0 or not os.path.exists(result):
         raise NukeUnavailable(
-            "%s --nc -t failed (exit status %d, see %s): sign in to Nuke "
+            "%s %s failed (exit status %d, see %s): sign in to Nuke "
             "Non-Commercial (or use a licensed Nuke)"
-            % (nuke, status, os.path.join(work, "check_nuke.log")))
+            % (nuke, " ".join(NUKE_ARGS), status,
+               os.path.join(work, "check_nuke.log")))
 
 
 def run_case(nuke, prefix, case, work):

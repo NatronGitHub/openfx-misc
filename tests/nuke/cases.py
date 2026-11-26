@@ -880,11 +880,13 @@ CASES += [
          input="ramp"),
     # CImgExpression's x and y are buffer indices from the lower-left corner of the RoD, at the render
     # scale; X and Y are the full-size pixel coordinates (#297).
+    # Outside the element, Nuke's Expression fills the whole format while
+    # CImgExpression's RoD is its Source's; compare the element only.
     case("Expression x/32 on an element not at 0,0 (CImgExpression X/32)",
          ("Expression", {"expr0": "x/32", "expr1": "y/32", "expr2": "0"}),
          ("net.sf.cimg.CImgExpression",
           {"expression": "c==0?X/32:c==1?Y/32:0"}),
-         input="element"),
+         input="element", region=(2, 4, 12, 20)),
 ]
 
 # ---------------------------------------------------------------- Merge
@@ -894,9 +896,6 @@ MERGE_OPERATORS = [
     "geometric", "hard-light", "hypot", "in", "mask", "matte", "max", "min",
     "minus", "multiply", "out", "over", "overlay", "plus", "screen",
     "soft-light", "stencil", "under", "xor"]
-# Operators whose renders differ for these inputs (Merge issue): none since Merge 3 (#277).
-MERGE_KNOWN = set()
-MERGE_KNOWN_ALPHA = set()
 # Operators that use alpha: compared with alpha outside [0, 1] too.
 MERGE_ALPHA_OPERATORS = [
     "atop", "conjoint-over", "disjoint-over", "in", "mask", "matte", "out",
@@ -906,14 +905,12 @@ for _op in MERGE_OPERATORS:
         "Merge %s, opaque" % _op, ("Merge2", {"operation": _op}),
         (ofx_id("MergePlugin"), {"operation": _op}),
         nuke_inputs=["B", "A"], clips={"Source": "B", "A": "A"},
-        channels="rgba", tolerance=1e-4,
-        known=277 if _op in MERGE_KNOWN else None))
+        channels="rgba", tolerance=1e-4))
     CASES.append(case(
         "Merge %s, alpha" % _op, ("Merge2", {"operation": _op}),
         (ofx_id("MergePlugin"), {"operation": _op}),
         nuke_inputs=["Ba01", "Aa01"], clips={"Source": "Ba01", "A": "Aa01"},
-        channels="rgba", tolerance=1e-4,
-        known=277 if _op in MERGE_KNOWN | MERGE_KNOWN_ALPHA else None))
+        channels="rgba", tolerance=1e-4))
 for _op in MERGE_ALPHA_OPERATORS:
     CASES.append(case(
         "Merge %s, alpha outside [0, 1]" % _op,
@@ -1093,8 +1090,9 @@ KEYER_DEFAULT_ABCD = {"softnessLower": -1., "toleranceLower": 0.,
 # non-grey colours: tolerance 5e-3.
 KEYER_LUMINANCE_TOLERANCE = 5e-3
 CASES += [
-    # Nuke's knob default (knobdefaults.py) is the luminance key; nodes
-    # created by nuke.nodes in terminal mode get the built-in default.
+    # Nuke's knob default Keyer.keyer luminance (knobdefaults.py; keyer is
+    # an obsolete knob that sets operation) makes it the luminance key. The
+    # harness applies it too; it is pinned so that the case states it.
     case("Keyer defaults", ("Keyer", {"operation": "luminance key"}),
          (ofx_id("KeyerPlugin"), {}), input="ramp", channels="rgba",
          tolerance=KEYER_LUMINANCE_TOLERANCE),
@@ -1205,9 +1203,10 @@ CASES += [
 # ------------------------------------------------------------------ Roto
 # A Roto shape on [8, 24) x [8, 24) (exact pixel coverage); the OFX Roto
 # input is the "rect" image. Nuke's knob default output is alpha
-# (knobdefaults.py), set explicitly since nuke.nodes in terminal mode gets
-# the built-in default (rgba). Nuke's Clip To default is format; Roto's is
-# No Clip (Natron's RotoPaint uses it internally): Format is set explicitly.
+# (knobdefaults.py; the built-in default is rgba): the harness applies it
+# too, and it is pinned so that the cases state it. Nuke's Clip To default
+# is format; Roto's is No Clip (Natron's RotoPaint uses it internally):
+# Format is set explicitly.
 def _roto_shape(x2, y2):
     return "\n".join([
         "import nuke.rotopaint as rp",
@@ -1264,10 +1263,14 @@ CASES += [
 # pixels, OFX ones canonical.
 GEN = {"region": "project", "channels": "rgba"}
 CASES += [
+    # Passes only because the default colour is 0: Nuke's knob default for
+    # channels is rgb, while the plug-in's Output Components default is RGBA.
     case("Constant defaults", ("Constant", {}),
          (ofx_id("ConstantPlugin"), {}), **GEN),
+    # Nuke's knob default for Constant.channels is rgb (no alpha); the
+    # plug-in's Output Components default is RGBA: compare RGBA.
     case("Constant (0.25, -0.5, 1.5, 0.75)",
-         ("Constant", {"color": [.25, -.5, 1.5, .75]}),
+         ("Constant", {"channels": "rgba", "color": [.25, -.5, 1.5, .75]}),
          (ofx_id("ConstantPlugin"), {"color": [.25, -.5, 1.5, .75]}), **GEN),
     case("ColorBars defaults", ("ColorBars", {}), (ofx_id("ColorBars"), {}),
          **GEN),
@@ -1278,15 +1281,21 @@ CASES += [
     case("ColorBars PAL, intensity 0.75",
          ("ColorBars", {"PAL": True, "barintensity": .75}),
          (ofx_id("ColorBars"), {"PAL": 1, "barIntensity": .75}), **GEN),
+    # Inside the disc (its anti-aliased edge differs, see the whole disc
+    # cases). With the knob defaults, both gammas are 0.45.
     case("ColorWheel defaults", ("ColorWheel", {}),
-         (ofx_id("ColorWheel"), {}), **GEN),
-    # Inside the disc (its anti-aliased edge differs).
+         (ofx_id("ColorWheel"), {}),
+         **dict(GEN, region=(232, 160, 488, 416, 8), tolerance=5e-3)),
+    # Inside the disc too.
     case("ColorWheel gamma 1", ("ColorWheel", {"gamma": 1.}),
          (ofx_id("ColorWheel"), {"gamma": 1.}),
          **dict(GEN, region=(232, 160, 488, 416, 8), tolerance=5e-3)),
+    # Inside the disc too.
     case("ColorWheel gamma 0.45", ("ColorWheel", {"gamma": .45}),
          (ofx_id("ColorWheel"), {"gamma": .45}),
          **dict(GEN, region=(232, 160, 488, 416, 8), tolerance=5e-3)),
+    case("ColorWheel defaults, whole disc", ("ColorWheel", {}),
+         (ofx_id("ColorWheel"), {}), **dict(GEN, tolerance=5e-3)),
     case("ColorWheel gamma 1, whole disc", ("ColorWheel", {"gamma": 1.}),
          (ofx_id("ColorWheel"), {"gamma": 1.}), **dict(GEN, tolerance=5e-3)),
     case("Ramp defaults", ("Ramp", {}), (ofx_id("Ramp"), {}),
@@ -1569,7 +1578,7 @@ CASES += [
     case("AdjBBox 16, AdjustRoD 16 (both divided by the PAR in x)",
          ("AdjBBox", {"numpixels": 16}),
          (ofx_id("AdjustRoDPlugin"), {"addPixels": [16, 16]}),
-         input="element", channels="rgba", region=(0, 0, 26, 40)),
+         input="element", channels="rgba", region=(0, 0, 26, 32)),
     case("Position 3,-2", ("Position", {"translate": [3, -2]}),
          (ofx_id("Position"), {"translate": [cx(3), -2]}), input="ramp",
          channels="rgba"),
@@ -2166,9 +2175,9 @@ CASES += [
     case("FrameBlend 6 frames (FrameBlend defaults)",
          ("FrameBlend", {"numframes": 6}), (ofx_id("FrameBlend"), {}),
          frames=[10], **TIME),
-    # nuke.nodes skips the knob defaults of Nuke's knobdefaults.py, which
-    # createNode (the node a user creates) applies: TimeBlur's are
-    # shutteroffset start and shuttercustomoffset 0 (else custom, -0.25).
+    # Nuke's knob defaults (knobdefaults.py) are shutteroffset start and
+    # shuttercustomoffset 0 (the built-in ones: custom, -0.25). The harness
+    # applies them too; they are pinned so that the cases state them.
     case("TimeBlur defaults",
          ("TimeBlur", {"shutteroffset": "start", "shuttercustomoffset": 0.}),
          (ofx_id("TimeBlur"), {}), frames=[10], **TIME),
@@ -2493,7 +2502,6 @@ KNOWN = {
                 "Bilinear", "Cubic", "Keys", "Simon", "Rifman", "Mitchell",
                 "Parzen", "Notch")],
     279: ["ShuffleCopy defaults"],
-    287: ["ColorWheel defaults"],
     288: [
         # version 2 (obsolete): the Softness at the pixel corner nearest to the center (Radial) or without the
         # extra pixel (Rectangle), and Quadratic by default
@@ -2536,7 +2544,8 @@ KNOWN = {
         "Erode (blur) size 3, blur 0.5",
         "FilterErode size 1 box (ErodeSmoothCImg)"],
     DOCUMENTED: [
-        "Log2Lin lin2log", "ColorWheel gamma 1, whole disc",
+        "Log2Lin lin2log", "ColorWheel defaults, whole disc",
+        "ColorWheel gamma 1, whole disc",
         "Ramp defaults", "Transform translate 0.5,0.25 cubic, edges",
         "Reformat to box 20x12 fit, box PAR = PAR",
         "Reformat to box 20x12 fit, reference black outside",
@@ -2572,7 +2581,6 @@ ISSUES = {
     282: 'CopyRectangle: softness ramp shape; whole-image default area',
     283: 'Roto: nothing is drawn by default (Process A off); no pre...',
     284: 'Constant: finite region of definition',
-    287: 'ColorWheel: gamma default 0.45; no area control',
     288: 'Radial and Rectangle: softness falloff curve; missing Dra...',
     289: 'ColorCorrect: tonal range weighting, negative values unde...',
     290: 'ColorLookup: master curve combination, and the master cur...',
