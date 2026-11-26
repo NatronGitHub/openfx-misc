@@ -117,13 +117,14 @@ BUNDLES=(Misc:171 CImg:40 Shadertoy:1 Test:6)
 [ -z "$SMOKETEST_BUNDLES" ] || BUNDLES=($SMOKETEST_BUNDLES)
 # The plug-ins that are not tested: "identifier regex|reason" (the whole identifier; a
 # "debug:" reason is only used in debug builds, an "ofx14:" one only with --ofx14, an "ofx11:"
-# one only with --ofx11; these
-# prefixes, which can be combined, only work at the start of the reason or description
-# field of the SKIP, IDENTITY and XFAIL lists).
+# one only with --ofx11; these prefixes, which can be combined, only work at the start of the
+# reason or description field of the SKIP, IDENTITY and XFAIL lists).
+# (a regex can't have "|": one entry per plug-in, each checked for staleness)
+parametric="needs parametric parameters, which hostDemo does not advertise (kOfxParamHostPropSupportsParametric: describeInContext throws kOfxStatErrMissingHostFeature)"
 SKIP=(
-    "net.sf.openfx.ColorLookupPlugin|needs parametric parameters, which hostDemo does not advertise (kOfxParamHostPropSupportsParametric: describeInContext throws kOfxStatErrMissingHostFeature)"
-    "net.sf.openfx.HueCorrect|needs parametric parameters, which hostDemo does not advertise (kOfxParamHostPropSupportsParametric: describeInContext throws kOfxStatErrMissingHostFeature)"
-    "net.sf.openfx.HueKeyer|needs parametric parameters, which hostDemo does not advertise (kOfxParamHostPropSupportsParametric: describeInContext throws kOfxStatErrMissingHostFeature)"
+    "net.sf.openfx.ColorLookupPlugin|$parametric"
+    "net.sf.openfx.HueCorrect|$parametric"
+    "net.sf.openfx.HueKeyer|$parametric"
     "net.sf.openfx.TimeBufferRead|debug:reads the buffer of a TimeBufferWrite instance of the same name, in the same host process (getClipPreferences fails: No TimeBuffer exists with name \"\")"
     "net.sf.openfx.TimeBufferWrite|debug:writes the buffer of a TimeBufferRead instance of the same name, in the same host process (render fails: No TimeBuffer exists with name \"\")"
 )
@@ -391,6 +392,37 @@ printf '%s\n' "${INPUTS[@]}" > "$work/inputs.txt"
 printf '%s\n' "${PARAMS[@]}" > "$work/params.txt"
 printf '%s\n' "${XFAIL[@]}" > "$work/xfail.txt"
 printf '%s\n' "${IDENTITY[@]}" > "$work/identity.txt"
+# The helpers of the Python scripts below, which import them from $work
+cat > "$work/smoketest_lists.py" << 'EOF'
+"""The lists of smoketest.sh (SKIP, OPENGL, IDENTITY, INPUTS, PARAMS, XFAIL), for its scripts."""
+import os
+
+# "identifier regex[:major][@context][/depth]" of PARAMS and XFAIL: the groups are the regex,
+# the major version, the context and the depth
+SELECTOR = r"([^:@/|]*)(?::([0-9]+))?(?:@(filter|general))?(?:/(byte|short|float))?"
+_PREFIXES = ("debug", "ofx14", "ofx11")
+
+
+def entries(work, name):
+    """Returns the entries of the list file NAME in WORK, one per non-empty line."""
+    with open(os.path.join(work, name)) as f:
+        return [line.rstrip("\n") for line in f if line.strip()]
+
+
+def only_in(desc, debug, profile):
+    """Returns (keep, DESC without its prefixes).
+
+    The "debug:" entries are only used in debug builds, the "ofx14:" ones with --ofx14 and the
+    "ofx11:" ones with --ofx11; the prefixes can be combined.
+    """
+    keep = True
+    parts = desc.split(":", 1)
+    while len(parts) == 2 and parts[0] in _PREFIXES:
+        keep = keep and (debug if parts[0] == "debug" else parts[0] == profile)
+        desc = parts[1]
+        parts = desc.split(":", 1)
+    return keep, desc
+EOF
 
 # The input files of INPUTS (little-endian PFM, bottom row first)
 python3 -I - "$work/data" << 'EOF'
@@ -423,8 +455,9 @@ import os
 import re
 import sys
 work, gl_ok = sys.argv[1], sys.argv[2] == "1"
-with open(os.path.join(work, "opengl.txt")) as f:
-    rules = [line.rstrip("\n").split("|", 1) for line in f if line.strip()]
+sys.path.insert(0, work)
+from smoketest_lists import entries
+rules = [line.split("|", 1) for line in entries(work, "opengl.txt")]
 with open(os.path.join(work, "plugins.txt")) as f:
     pids = sorted(set(line.split()[1] for line in f))
 found = [(pid, next(r for rx, r in rules if re.fullmatch(rx, pid)))
@@ -450,16 +483,12 @@ python3 -I - "$work" "$quick" "${SMOKETEST_DEBUG:-0}" "$profile" "$gl_ok" > "$wo
 import json, os, re, sys
 work, quick, debug, profile = sys.argv[1], sys.argv[2] == "1", sys.argv[3] == "1", sys.argv[4]
 gl_ok = sys.argv[5] == "1"
+sys.path.insert(0, work)
+import smoketest_lists as lists
 def entries(name):
-    return [l.rstrip("\n") for l in open(os.path.join(work, name)) if l.strip()]
+    return lists.entries(work, name)
 def only_in(desc):
-    # (keep, desc): the "debug:" entries are only used in debug builds, the "ofx14:" ones with
-    # --ofx14, the "ofx11:" ones with --ofx11
-    keep = True
-    while desc.startswith(("debug:", "ofx14:", "ofx11:")):
-        keep = keep and (debug if desc.startswith("debug:") else desc[:5] == profile)
-        desc = desc[6:]
-    return keep, desc
+    return lists.only_in(desc, debug, profile)
 skip = []
 for s in entries("skip.txt"):
     rx, reason = s.split("|", 1)
@@ -476,7 +505,7 @@ for s in entries("inputs.txt"):
     overrides.append((m.group(1), m.group(2), m.group(3).replace("DATA", os.path.join(work, "data")).split()))
 params = []
 for s in entries("params.txt"):
-    m = re.fullmatch(r"([^:@/|]*)(?::([0-9]+))?(?:@(filter|general))?(?:/(byte|short|float))?\|([^|;]*)", s)
+    m = re.fullmatch(lists.SELECTOR + r"\|([^|;]*)", s)
     words = m.group(5).split() if m else []
     refs = [w[8:] for w in words if w.startswith("differs:")]
     words = [w for w in words if not w.startswith("differs:")]
@@ -639,23 +668,19 @@ work, debug, mode, xpass_ok = sys.argv[1], sys.argv[2] == "1", sys.argv[3], sys.
 profile = sys.argv[5]
 # stale entries are only a warning with SMOKETEST_BUNDLES (a partial build) or SMOKETEST_XPASS_OK
 lenient = mode.endswith("partial") or xpass_ok
+sys.path.insert(0, work)
+import smoketest_lists as lists
 def entries(name):
-    return [l.rstrip("\n") for l in open(os.path.join(work, name)) if l.strip()]
-def debug_only(desc):
-    # (keep, desc): the "debug:" entries are only used in debug builds, the "ofx14:" ones with
-    # --ofx14, the "ofx11:" ones with --ofx11
-    keep = True
-    while desc.startswith(("debug:", "ofx14:", "ofx11:")):
-        keep = keep and (debug if desc.startswith("debug:") else desc[:5] == profile)
-        desc = desc[6:]
-    return keep, desc
+    return lists.entries(work, name)
+def only_in(desc):
+    return lists.only_in(desc, debug, profile)
 xfail = []
 for x in entries("xfail.txt"):
-    m = re.fullmatch(r"([^:@/|]*)(?::([0-9]+))?(?:@(filter|general))?(?:/(byte|short|float))?\|([^|]*)\|(.*)", x)
+    m = re.fullmatch(lists.SELECTOR + r"\|([^|]*)\|(.*)", x)
     if not m:
         sys.exit("bad XFAIL entry: " + x)
     rx, major, ctx, depth, msg, desc = m.groups()
-    keep, desc = debug_only(desc)
+    keep, desc = only_in(desc)
     if keep:
         xfail.append((rx, major, ctx, depth, msg, desc, x))
 identity = []
@@ -663,12 +688,12 @@ for x in entries("identity.txt"):
     m = re.fullmatch(r"([^:@|]*)(?::([0-9]+))?(?:@(filter|general))?\|(.*)", x)
     if not m:
         sys.exit("bad IDENTITY entry: " + x)
-    if debug_only(m.group(4))[0]:
+    if only_in(m.group(4))[0]:
         identity.append(m.groups() + (x,))
 skip = []
 for x in entries("skip.txt"):
     rx, reason = x.split("|", 1)
-    keep, reason = debug_only(reason)
+    keep, reason = only_in(reason)
     if keep:
         skip.append((rx, x))
 # OPENGL: an entry that matches no plug-in is stale, as in SKIP
