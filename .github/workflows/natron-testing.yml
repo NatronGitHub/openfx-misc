@@ -1,0 +1,72 @@
+name: Natron testing bundles
+
+# Publishes the testing bundles of Natron's CI (README.md's "Natron's testing bundles"): the assets
+# openfx-misc-build-ubuntu_24-testing.zip and openfx-misc-build-windows_ucrt64-testing.zip of the
+# natron_testing release (a prerelease), which NatronGitHub/Natron's CI unzips into its plug-in
+# directory, as openfx-io's.
+#
+# No build here: ci.yml's Linux and Windows jobs upload the bundles they have just tested, as the
+# artifacts openfx-misc-build-<platform>-testing, on master only (pushes and manual runs; never
+# for pull requests). This workflow runs when such a ci.yml run completes (workflow_run), and
+# publishes the artifacts that the run has (a job that failed uploads none: its asset is kept).
+# A manual run ("Run workflow", on master only) publishes the artifacts of the "run_id" input, or
+# of the latest ci.yml run of master that has them (they are kept 7 days: after that, run ci.yml
+# on master first). See .github/tools/publish-natron-testing.sh.
+#
+# workflow_run runs this file from the default branch, with the write token. The trigger alone
+# does not prove where a run comes from (its branch filter matches a fork's master too): the job
+# condition below, then publish-natron-testing.sh, which reads the run from the API, check that it
+# is a ci.yml run of this repository's master (a push or a manual run), never a pull request or a
+# fork's. Skipped runs (conclusion "skipped") are not published.
+#
+# Publishing waits for the whole ci.yml run, macOS and the Arm64X build included (about 25
+# minutes after the push). The two assets may come from different commits: a job that failed
+# keeps its asset from an earlier run.
+on:
+  workflow_run:
+    workflows: [Continous Integration tests]
+    types: [completed]
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'ci.yml run of master to publish (empty: the latest one with testing artifacts)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+# one publication at a time, in order (a pending run is replaced by a newer one)
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish the natron_testing assets
+    if: >-
+      github.repository == 'NatronGitHub/openfx-misc' &&
+      ((github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master') ||
+      (github.event_name == 'workflow_run' &&
+      github.event.workflow_run.head_branch == 'master' &&
+      github.event.workflow_run.conclusion != 'skipped' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch')))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write # the natron_testing release and its assets
+      actions: read # the artifacts of the ci.yml run
+    steps:
+      - name: Checkout (the script)
+        # pinned by SHA (this job has a write token), as in release.yml
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/tools
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.id || inputs.run_id }}
+        run: .github/tools/publish-natron-testing.sh ${RUN_ID:+"$RUN_ID"}

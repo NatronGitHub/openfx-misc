@@ -118,6 +118,44 @@ as `Natron-2.5.0`) and for builds that a maintainer starts by hand:
    `sudo xattr -dr com.apple.quarantine /Library/OFX/Plugins/Misc.ofx.bundle`
 6. Restart your OpenFX host.
 
+### Natron's testing bundles
+
+[Natron](https://github.com/NatronGitHub/Natron)'s CI can test Natron with the openfx-misc
+plug-ins of the assets of the
+[`natron_testing`](https://github.com/NatronGitHub/openfx-misc/releases/tag/natron_testing)
+release (a prerelease, as openfx-io's
+[`natron_testing`](https://github.com/NatronGitHub/openfx-io/releases/tag/natron_testing)):
+
+| Asset | Natron's job | Built by (ci.yml job, artifact) |
+|-------|--------------|---------------------------------|
+| `openfx-misc-build-ubuntu_24-testing.zip` | Linux, `ubuntu-24.04` | `build_linux` (Ubuntu 24.04), `openfx-misc-build-ubuntu_24-testing` |
+| `openfx-misc-build-windows_ucrt64-testing.zip` | Windows, MSYS2 UCRT64 | `build_windows` (MSYS2 UCRT64), `openfx-misc-build-windows_ucrt64-testing` |
+
+Natron unzips each asset into its plug-in directory (next to openfx-io's `IO.ofx.bundle`): the
+zip holds `Misc.ofx.bundle`, `CImg.ofx.bundle` and `Shadertoy.ofx.bundle` at its root
+(Shadertoy is OpenGL only, without OSMesa: it can't render in Natron's headless tests, and is
+there for load tests), and `openfx-misc-testing/`, with a `README.txt` that gives the commit and the CI run, and
+the licenses (as in the binary downloads). They are not releases: the Linux bundles need the
+libraries of Ubuntu 24.04 (glibc, libstdc++, libGL, libgomp) and bundle none; the Windows ones
+link the MinGW runtime statically, without OpenMP.
+
+The bundles are the ones that CI has just tested: on pushes to master (and manual runs of
+[ci.yml](.github/workflows/ci.yml) on master), the Linux and Windows jobs upload them as
+artifacts (kept 7 days), and [natron-testing.yml](.github/workflows/natron-testing.yml) then
+replaces the assets with them. Publishing waits for the whole ci.yml run, macOS and the Arm64X
+build included (about 25 minutes after the push). A job that failed uploads nothing, and its
+asset stays as it was, so the two assets may come from different commits. Each asset is
+uploaded under a temporary name, then the old one is deleted and the new one renamed: an asset
+is missing for one API call (delete, then rename), not for the whole upload. Pull requests, other branches and tags never publish anything. To publish again by hand (e.g.
+after a failed run), run ci.yml on master: natron-testing.yml publishes its bundles when it
+completes. natron-testing.yml can also be run by hand, on master, to publish the latest ci.yml
+run of master that still has its testing artifacts, or a given one:
+
+```sh
+gh workflow run ci.yml -R NatronGitHub/openfx-misc --ref master   # also builds macOS and the release artifacts
+gh workflow run natron-testing.yml -R NatronGitHub/openfx-misc --ref master [-f run_id=<ci.yml run>]
+```
+
 License
 -------
 

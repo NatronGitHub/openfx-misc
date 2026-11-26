@@ -26,6 +26,13 @@
 #       --full DIR --shadertoy-gl DIR [--shadertoy-osmesa DIR] --denoisesharpen DIR --noop DIR \
 #       [--licenses DIR] \
 #       [--fft pocketfft|pow2|fftw3]
+#   .github/tools/package-release.sh --natron-testing [--version VERSION] --platform PLATFORM \
+#       --out DIR --full DIR --shadertoy-gl DIR [--licenses DIR] [--fft pocketfft|pow2|fftw3]
+# --natron-testing: instead of the downloads, the testing bundles of Natron's CI (ci.yml; README.md's
+#   "Natron's testing bundles"): DIR (created; it must not exist) gets Misc, CImg and the
+#   OpenGL-only Shadertoy at its root, since Natron unzips the archive into its plug-in directory,
+#   and openfx-misc-testing/ (README.txt, LICENSE.txt, and LICENSES/, as in a download). Not an
+#   archive: the artifact upload zips it.
 # --fft: the FFT of the CImg plug-ins (CMake's FFT; default pocketfft, whose
 #   CImg/pocketfft_hdronly.h, downloaded at configure, is then required for its license).
 # --licenses DIR: license files of code linked into every bundle of this platform, copied into
@@ -48,7 +55,7 @@ usage() {
     exit 2
 }
 
-version='' platform='' out='' full='' stgl='' stmesa='' ds='' noop='' extra='' fft=pocketfft msvc=
+version='' platform='' out='' full='' stgl='' stmesa='' ds='' noop='' extra='' fft=pocketfft msvc='' testing=''
 while [ $# -gt 0 ]; do
     case "$1" in
         --version) version=$2; shift 2 ;;
@@ -61,6 +68,7 @@ while [ $# -gt 0 ]; do
         --noop) noop=$2; shift 2 ;;
         --licenses) extra=$2; shift 2 ;;
         --fft) fft=$2; shift 2 ;;
+        --natron-testing) testing=1; shift ;;
         *) usage ;;
     esac
 done
@@ -73,7 +81,16 @@ if [ -z "$version" ]; then
         version=$(date -u +%Y%m%d)-${commit:0:7}
     fi
 fi
-[ -n "$version" ] && [ -n "$platform" ] && [ -n "$out" ] && [ -n "$full" ] && [ -n "$stgl" ] && [ -n "$ds" ] && [ -n "$noop" ] || usage
+[ -n "$version" ] && [ -n "$platform" ] && [ -n "$out" ] && [ -n "$full" ] && [ -n "$stgl" ] || usage
+if [ -n "$testing" ]; then
+    [ -z "$stmesa" ] && [ -z "$ds" ] && [ -z "$noop" ] || usage
+    if [ -e "$out" ]; then
+        echo "ERROR: $out exists"
+        exit 1
+    fi
+else
+    [ -n "$ds" ] && [ -n "$noop" ] || usage
+fi
 
 case "$platform" in
     linux-*)
@@ -87,8 +104,9 @@ case "$platform" in
     windows-*)
         os=Windows; ext=zip
         sysdir='C:\Program Files\Common Files\OFX\Plugins'; pathsep=';'
-        # zip (MSYS2), else 7-Zip (Git for Windows' bash on the GitHub runners has no zip)
-        command -v zip > /dev/null || command -v 7z > /dev/null || { echo "zip or 7z not found"; exit 1; }
+        # zip (MSYS2), else 7-Zip (Git for Windows' bash on the GitHub runners has no zip); the
+        # testing bundles are not zipped here
+        [ -n "$testing" ] || command -v zip > /dev/null || command -v 7z > /dev/null || { echo "zip or 7z not found"; exit 1; }
         case "$platform" in
             *-msvc) msvc=1 ;;
             # -static: every bundle contains the MinGW-w64 runtime and winpthreads
@@ -108,6 +126,41 @@ mkdir -p "$out"
 out=$(cd "$out" && pwd)
 work=$(mktemp -d "${TMPDIR:-/tmp}/package-release.XXXXXX")
 trap 'rm -rf "$work"' EXIT
+
+# mingw_paragraph: the README paragraph of the MSYS2 (MinGW) Windows bundles (readme, testing_readme)
+mingw_paragraph() {
+    cat << 'EOF'
+
+The bundles are 64-bit, for Windows 10 or later, with the MinGW runtime linked
+statically (no extra DLL is needed): the licenses of the MinGW-w64 runtime and
+winpthreads are in LICENSES/.
+EOF
+}
+
+# licenses_section: the "Licenses" section of the README (readme, testing_readme)
+licenses_section() {
+    cat << 'EOF'
+Licenses
+--------
+openfx-misc is free software, under the GNU General Public License, version 2
+or later: see LICENSE.txt. The bundles also contain third-party code, whose
+licenses are in LICENSES/: openfx's Support library (BSD 3-clause) in every
+bundle, freeglut's text renderer and pixman's blend modes
+(MIT) in Misc.ofx, CImg (CeCILL-C) and pocketfft (BSD 3-clause) in
+CImg.ofx, and, in LICENSES/<bundle>/, those of the libraries linked statically
+into a bundle or bundled with it (e.g. Mesa and LLVM in the OSMesa Shadertoy),
+which are also in <bundle>.ofx.bundle/Contents/Resources/licenses/.
+Misc.ofx also contains code first published under other licences, compatible
+with the GPL and distributed under the GPL as part of Misc.ofx (see the
+sources): Misc/randomGenerator.cpp (the MT19937 generator of Makoto Matsumoto
+and Takuji Nishimura, GNU Library General Public License, version 2 or later)
+and the Yadif mode of Deinterlace/Deinterlace.cpp (from FFmpeg's
+libavfilter/vf_yadif.c, Michael Niedermayer, GNU Lesser General Public License,
+version 2.1 or later). Distortion's PFBarrel (.pfb) file reader contains code
+"Copyright (C) 2011 The Pixel Farm Ltd", distributed under the GPL as part of
+Misc.ofx.
+EOF
+}
 
 # readme NAME CONTENTS: the README.txt of the download NAME, whose bundles are described by CONTENTS
 readme() {
@@ -152,12 +205,7 @@ bundle (<bundle>.ofx.bundle/Libraries).
 EOF
             ;;
         Windows)
-            if [ -z "$msvc" ]; then cat << 'EOF'
-
-The bundles are 64-bit, for Windows 10 or later, with the MinGW runtime linked
-statically (no extra DLL is needed): the licenses of the MinGW-w64 runtime and
-winpthreads are in LICENSES/.
-EOF
+            if [ -z "$msvc" ]; then mingw_paragraph
             else
                 cat << 'EOF'
 
@@ -201,26 +249,8 @@ EOF
 
 Natron already includes all these plug-ins: Natron users don't need them.
 
-Licenses
---------
-openfx-misc is free software, under the GNU General Public License, version 2
-or later: see LICENSE.txt. The bundles also contain third-party code, whose
-licenses are in LICENSES/: openfx's Support library (BSD 3-clause) in every
-bundle, freeglut's text renderer and pixman's blend modes
-(MIT) in Misc.ofx, CImg (CeCILL-C) and pocketfft (BSD 3-clause) in
-CImg.ofx, and, in LICENSES/<bundle>/, those of the libraries linked statically
-into a bundle or bundled with it (e.g. Mesa and LLVM in the OSMesa Shadertoy),
-which are also in <bundle>.ofx.bundle/Contents/Resources/licenses/.
-Misc.ofx also contains code first published under other licences, compatible
-with the GPL and distributed under the GPL as part of Misc.ofx (see the
-sources): Misc/randomGenerator.cpp (the MT19937 generator of Makoto Matsumoto
-and Takuji Nishimura, GNU Library General Public License, version 2 or later)
-and the Yadif mode of Deinterlace/Deinterlace.cpp (from FFmpeg's
-libavfilter/vf_yadif.c, Michael Niedermayer, GNU Lesser General Public License,
-version 2.1 or later). Distortion's PFBarrel (.pfb) file reader contains code
-"Copyright (C) 2011 The Pixel Farm Ltd", distributed under the GPL as part of
-Misc.ofx.
 EOF
+    licenses_section
 }
 
 # package NAME CONTENTS BUNDLE...: the download NAME, with the BUNDLE directories (*.ofx.bundle)
@@ -341,6 +371,62 @@ if [ -n "$stmesa" ] && [ -z "$(ls -A "$stmesa/Shadertoy.ofx.bundle/Contents/Reso
     exit 1
 fi
 shadertoy_src=${stmesa:-$stgl}
+
+# testing_readme: the README.txt of the testing bundles (--natron-testing)
+testing_readme() {
+    local commit=${GITHUB_SHA:-$(git -C "$src" rev-parse HEAD 2> /dev/null || echo unknown)} run=''
+    [ -z "$GITHUB_RUN_ID" ] || run="${GITHUB_SERVER_URL:-https://github.com}/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+    cat << EOF
+openfx-misc testing bundles ($os, $version)
+
+NOT A RELEASE: OpenFX plug-ins built by openfx-misc's continuous integration
+for Natron's automated tests (the natron_testing release of
+https://github.com/NatronGitHub/openfx-misc). The binary releases are on
+https://github.com/NatronGitHub/openfx-misc/releases
+
+Commit: $commit${run:+
+CI run: $run}
+
+Unzip the archive into a directory listed in OFX_PLUGIN_PATH. It contains:
+- Misc.ofx.bundle: the Misc plug-ins
+- CImg.ofx.bundle: the CImg plug-ins
+- Shadertoy.ofx.bundle: Shadertoy, OpenGL only (no OSMesa: it renders only in
+  hosts with OpenGL rendering; here for load tests)
+- openfx-misc-testing/: this README.txt, LICENSE.txt and LICENSES/
+EOF
+    case "$os" in
+        Linux) cat << 'EOF'
+
+Built on Ubuntu 24.04 (x86_64), the system of Natron's Linux tests. No library
+is bundled: the bundles need the system's glibc, libstdc++ and libgcc_s, the
+OpenGL library (libGL.so.1) and GCC's OpenMP runtime (libgomp.so.1).
+EOF
+            ;;
+        Windows)
+            printf '\n%s\n' "Built with MSYS2 UCRT64, without OpenMP."
+            mingw_paragraph
+            ;;
+    esac
+    echo
+    licenses_section
+}
+
+if [ -n "$testing" ]; then
+    set -- "$full/Misc.ofx.bundle" "$full/CImg.ofx.bundle" "$stgl/Shadertoy.ofx.bundle"
+    mkdir "$out/openfx-misc-testing"
+    for b in "$@"; do
+        if [ ! -d "$b" ]; then
+            echo "ERROR: $b not found"
+            exit 1
+        fi
+        cp -R "$b" "$out/"
+    done
+    licenses "$out/openfx-misc-testing" "$@"
+    testing_readme > "$out/openfx-misc-testing/README.txt"
+    [ "$os" != Windows ] || sed -i 's/$/\r/' "$out/openfx-misc-testing/README.txt"
+    echo "$out: $(cd "$out" && echo *.ofx.bundle) + openfx-misc-testing/: README.txt LICENSE.txt LICENSES/: $(cd "$out/openfx-misc-testing/LICENSES" && echo *)"
+    exit 0
+fi
 
 package "openfx-misc-$version-$platform" \
 "- Misc.ofx.bundle: the Misc plug-ins (DenoiseSharpen and NoOp included)

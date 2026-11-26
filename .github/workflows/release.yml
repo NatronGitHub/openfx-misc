@@ -46,11 +46,12 @@ name: Binary release
 # selected ref: every job checks out the source (the tag, or the ref), and the commit of the
 # workflow (github.sha) into .release-tools (sparse: .github and CImg's CeCILL-C text), whose
 # check-release-source.sh, fetch-osmesa.sh, build-osmesa.sh, bundle-linux-libs.sh,
-# render-shadertoy-osmesa.sh, package-release.sh and .github/parameters are used ($TOOLS), so a
-# fixed workflow can rebuild an older tag. The source keeps its own CMakeLists.txt and test
-# scripts (loadtest.sh, smoketest.sh: their lists belong to its plug-ins); check-release-source.sh
-# fails at once when the source lacks the CMake options or test scripts that this workflow uses
-# (a tag older than the release tooling). On a tag push, or a run on a tag ref, both are the tag.
+# render-shadertoy-osmesa.sh, mingw-runtime-licenses.sh, package-release.sh and
+# .github/parameters are used ($TOOLS), so a fixed workflow can rebuild an older tag. The source
+# keeps its own CMakeLists.txt and test scripts (loadtest.sh, smoketest.sh: their lists belong to
+# its plug-ins); check-release-source.sh fails at once when the source lacks the CMake options or
+# test scripts that this workflow uses (a tag older than the release tooling). On a tag push, or a
+# run on a tag ref, both are the tag.
 # The release job is the only one with write access (contents: write). A release that is not a
 # draft anymore (published) is never changed: the run fails. This workflow never creates tags
 # (gh release create --verify-tag) and never publishes a release: a maintainer does, by hand.
@@ -549,38 +550,12 @@ jobs:
           .github/tools/loadtest.sh install-noop
           [ -z "$OSMESA_RELEASE" ] || .github/tools/loadtest.sh install-shadertoy
       - name: Licenses of the MinGW-w64 runtime
-        # -static links into every bundle winpthreads (MIT/BSD-style) and the MinGW-w64 CRT (ZPL
-        # 2.1, parts public domain), whose licenses ask for the notice in binaries: their license
-        # files (pacman -Ql of the packages that own the static libraries) go into every Windows
-        # archive's LICENSES/. Missing ones fail. (libstdc++ and libgcc, also static, fall under the
-        # GCC Runtime Library Exception: no notice needed. Nothing else is linked statically: the
-        # bundles only need OpenGL and system DLLs, and osmesa-install's OSMesa and LLVM, whose
-        # licenses are in Shadertoy, are built without zlib, zstd and expat.)
+        # -static links winpthreads and the MinGW-w64 CRT into every bundle, whose licenses ask
+        # for the notice in binaries: their license files go into every Windows archive's
+        # LICENSES/ (see the script). Missing ones fail.
         run: |
           set -eo pipefail
-          collect() { # NAME PACKAGE_OR_FILE...: the license files of these packages (or of the owners of these files)
-            local name=$1 pkgs='' a files
-            shift
-            for a in "$@"; do
-              case "$a" in
-                /*) pkgs="$pkgs $(pacman -Qqo "$a")" ;;
-                *) if pacman -Qq "$a" > /dev/null 2>&1; then pkgs="$pkgs $a"; fi ;;
-              esac
-            done
-            pkgs=$(printf '%s\n' $pkgs | sort -u)
-            echo "$name: packages $(echo $pkgs)"
-            for a in $pkgs; do pacman -Ql "$a" | grep -i -e licen -e copying || true; done
-            files=$(for a in $pkgs; do pacman -Ql "$a"; done | awk '$2 ~ /\/share\/licenses\/.*[^\/]$/ { print $2 }')
-            if [ -z "$files" ]; then
-              echo "ERROR: no license file (share/licenses) in the packages of $name: $(echo $pkgs)"
-              exit 1
-            fi
-            mkdir -p "windows-licenses/$name"
-            for a in $files; do cp "$a" "windows-licenses/$name/"; done
-            ls -l "windows-licenses/$name"
-          }
-          collect winpthreads mingw-w64-ucrt-x86_64-libwinpthread "$MINGW_PREFIX/lib/libwinpthread.a"
-          collect mingw-w64-crt "$MINGW_PREFIX/lib/libmingw32.a" "$MINGW_PREFIX/lib/crt2.o"
+          "$TOOLS"/mingw-runtime-licenses.sh windows-licenses
       - name: Package
         run: |
           set -eo pipefail
