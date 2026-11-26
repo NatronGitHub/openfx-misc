@@ -143,7 +143,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 2.0: use kNatronOfxParamProcess* parameters
 // version 2.1: no NaN or infinite output: a source transform that sends a pixel to infinity gives
 //              transparent black (it used to sample at an infinite position), NaN audit;
-//              the inverse of a transform matrix with huge entries (e.g. a concatenated source transform) no longer overflows to NaN or 0 (SupportExt #81)
+//              a transform matrix whose inverse overflows (huge entries, e.g. a concatenated source transform) is reported as not invertible (SupportExt #229)
 // SupportExt#179, in the current minor versions (not released yet, so no further bump): with the Box
 //              filter, the thin band just outside the source image is black (Black Outside) or the
 //              edge colour, not about 4x the edge value (garbage).

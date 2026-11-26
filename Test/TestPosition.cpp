@@ -41,7 +41,7 @@
 #define kPluginPositionIdentifier "net.sf.openfx.TestPosition"
 // History:
 // version 1.0: initial version
-// version 1.1: the inverse of a transform matrix with huge entries no longer overflows to NaN or 0 (SupportExt #81);
+// version 1.1: a transform matrix whose inverse overflows (huge entries) is reported as not invertible (SupportExt #229);
 //              with a mask connected, the region of interest also includes the requested region (SupportExt #185)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
