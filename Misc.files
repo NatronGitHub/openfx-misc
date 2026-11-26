@@ -62,6 +62,7 @@ Merge/Merge.cpp
 Mirror/Mirror.cpp
 Misc/randomGenerator.cpp
 Misc/randomGenerator.H
+Misc/SoftEdge.h
 MixViews/MixViews.cpp
 Multiply/Multiply.cpp
 Noise/Noise.cpp

@@ -105,6 +105,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              without one, the shape is drawn as in version 2. Version 2 is kept, obsolete, with its output.
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinorV2 2
+
+// version 3: the Softness at the pixel center, and Falloff Smooth by default
+static constexpr unsigned kVersionPixelCenterSoftness = 3;
 
 #define kSupportsByte true
 #define kSupportsUShort true
@@ -118,33 +122,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kSupportsMultipleClipDepths false
 #define kRenderThreadSafety eRenderFullySafe
 
-#ifdef OFX_EXTENSIONS_NATRON
-#define kParamProcessR kNatronOfxParamProcessR
-#define kParamProcessRLabel kNatronOfxParamProcessRLabel
-#define kParamProcessRHint kNatronOfxParamProcessRHint
-#define kParamProcessG kNatronOfxParamProcessG
-#define kParamProcessGLabel kNatronOfxParamProcessGLabel
-#define kParamProcessGHint kNatronOfxParamProcessGHint
-#define kParamProcessB kNatronOfxParamProcessB
-#define kParamProcessBLabel kNatronOfxParamProcessBLabel
-#define kParamProcessBHint kNatronOfxParamProcessBHint
-#define kParamProcessA kNatronOfxParamProcessA
-#define kParamProcessALabel kNatronOfxParamProcessALabel
-#define kParamProcessAHint kNatronOfxParamProcessAHint
-#else
-#define kParamProcessR      "processR"
-#define kParamProcessRLabel "R"
-#define kParamProcessRHint  "Process red channel."
-#define kParamProcessG      "processG"
-#define kParamProcessGLabel "G"
-#define kParamProcessGHint  "Process green channel."
-#define kParamProcessB      "processB"
-#define kParamProcessBLabel "B"
-#define kParamProcessBHint  "Process blue channel."
-#define kParamProcessA      "processA"
-#define kParamProcessALabel "A"
-#define kParamProcessAHint  "Process alpha channel."
-#endif
+// kParamProcessR, G, B and A are in ShapeDraw.h
 
 #define kParamAngle kParamRectangleInteractAngle
 #define kParamAngleLabel kParamRectangleInteractAngleLabel
@@ -174,72 +152,25 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
 #endif
 
-struct RGBAValues
-{
-    double r, g, b, a;
-    RGBAValues(double v) : r(v), g(v), b(v), a(v) {}
-
-    RGBAValues() : r(0), g(0), b(0), a(0) {}
-};
+using ShapeDraw::RGBAValues;
 
 class RectangleProcessorBase
-    : public ImageProcessor
+    : public ShapeDraw::ProcessorBase
 {
 protected:
-    const Image *_srcImg;
-    const Image *_maskImg;
-    bool _doMasking;
-    double _mix;
-    bool _maskInvert;
-    bool _processR;
-    bool _processG;
-    bool _processB;
-    bool _processA;
     OfxPointD _btmLeft, _size;
     double _angle;
     OfxPointD _cornerRadius;
     double _softness;
-    RGBAValues _color0, _color1;
-    ShapeDraw::Options _drawOptions; // Premultiply, Replace, Invert
 
 public:
     RectangleProcessorBase(ImageEffect &instance)
-        : ImageProcessor(instance)
-        , _srcImg(NULL)
-        , _maskImg(NULL)
-        , _doMasking(false)
-        , _mix(1.)
-        , _maskInvert(false)
-        , _processR(false)
-        , _processG(false)
-        , _processB(false)
-        , _processA(false)
+        : ShapeDraw::ProcessorBase(instance)
         , _angle(0.)
         , _softness(0.)
-        , _drawOptions()
     {
         _btmLeft.x = _btmLeft.y = _size.x = _size.y = 0.;
         _cornerRadius.x = _cornerRadius.y = 0.;
-        _color0.r = _color0.g = _color0.b = _color0.a = 0.;
-        _color1.r = _color1.g = _color1.b = _color1.a = 0.;
-    }
-
-    /** @brief set the src image */
-    void setSrcImg(const Image *v)
-    {
-        _srcImg = v;
-    }
-
-    void setMaskImg(const Image *v,
-                    bool maskInvert)
-    {
-        _maskImg = v;
-        _maskInvert = maskInvert;
-    }
-
-    void doMasking(bool v)
-    {
-        _doMasking = v;
     }
 
     void setValues(const OfxPointD& btmLeft,
@@ -357,47 +288,6 @@ private:
 
 private:
 
-    // Composite the shape color tmpPix (normalized, premultiplied) over the source pixel in the
-    // processed channels, then apply the mask and mix and write dstPix.
-    // Shared by process() and processRotated(), which only differ in how they compute tmpPix.
-    template<bool processR, bool processG, bool processB, bool processA>
-    void writePixel(float tmpPix[5],
-                    const PIX* srcPix,
-                    int x,
-                    int y,
-                    PIX* dstPix)
-    {
-        float a = tmpPix[3];
-
-        // ofxsMaskMixPix takes non-normalized values
-        tmpPix[0] *= maxValue;
-        tmpPix[1] *= maxValue;
-        tmpPix[2] *= maxValue;
-        tmpPix[3] *= maxValue;
-        float srcPixRGBA[4] = {0, 0, 0, 0};
-        if (srcPix) {
-            if (nComponents >= 3) {
-                srcPixRGBA[0] = srcPix[0];
-                srcPixRGBA[1] = srcPix[1];
-                srcPixRGBA[2] = srcPix[2];
-            }
-            if ( (nComponents == 1) || (nComponents == 4) ) {
-                srcPixRGBA[3] = srcPix[nComponents - 1];
-            }
-        }
-        // Premultiply and Replace; tmpPix[4] is the shape weight
-        ShapeDraw::prepareSource<processR, processG, processB, processA>(_drawOptions, tmpPix[4], srcPixRGBA);
-        tmpPix[0] = processR ? (tmpPix[0] + srcPixRGBA[0] * (1.f - a)) : srcPixRGBA[0];
-        tmpPix[1] = processG ? (tmpPix[1] + srcPixRGBA[1] * (1.f - a)) : srcPixRGBA[1];
-        tmpPix[2] = processB ? (tmpPix[2] + srcPixRGBA[2] * (1.f - a)) : srcPixRGBA[2];
-        tmpPix[3] = processA ? (tmpPix[3] + srcPixRGBA[3] * (1.f - a)) : srcPixRGBA[3];
-        if (nComponents == 1) {
-            // ofxsMaskMixPix reads the only channel from tmpPix[0]
-            tmpPix[0] = tmpPix[3];
-        }
-        ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
-    }
-
     template<bool processR, bool processG, bool processB, bool processA>
     void process(const OfxRectI& procWindow, const OfxPointD& rs)
     {
@@ -438,17 +328,17 @@ private:
                 double dx = (std::min)(x - btmLeft.x, topRight.x - x);
                 double dy = (std::min)(y - btmLeft.y, topRight.y - y);
 
-                if ( _drawOptions.pixelCenterSoftness && (_softness > 0.) ) {
+                if ( _pixelCenterSoftness && (_softness > 0.) ) {
                     // version 3: the Softness from the pixel center (dx and dy are taken there), over the
                     // Softness plus one pixel, so that it also antialiases the edge
-                    float w = ShapeDraw::softWeight(_drawOptions.falloff, (dx + 0.5) / (softness.x + 1.), false) *
-                              ShapeDraw::softWeight(_drawOptions.falloff, (dy + 0.5) / (softness.y + 1.), false);
+                    float w = ShapeDraw::softWeight(_drawOptions.falloff, dx, softness.x, 0.5, false) *
+                              ShapeDraw::softWeight(_drawOptions.falloff, dy, softness.y, 0.5, false);
                     if ( (r.x > 0) && (r.y > 0) && (dx < r.x) && (dy < r.y) ) {
                         // in a rounded corner: also the weight of the distance to the corner ellipse
                         w = (std::min)( w, cornerSoftWeight( (r.x - dx) / r.x, (r.y - dy) / r.y, r, softness, OfxPointD{0.5, 0.5} ) );
                     }
                     setSoftPixel(w, tmpPix);
-                    writePixel<processR, processG, processB, processA>(tmpPix, srcPix, x, y, dstPix);
+                    writePixel<PIX, nComponents, maxValue, processR, processG, processB, processA>(tmpPix, srcPix, x, y, dstPix);
                     continue;
                 }
 
@@ -669,7 +559,7 @@ private:
                         tmpPix[4] *= a;
                     }
                 }
-                writePixel<processR, processG, processB, processA>(tmpPix, srcPix, x, y, dstPix);
+                writePixel<PIX, nComponents, maxValue, processR, processG, processB, processA>(tmpPix, srcPix, x, y, dstPix);
             }
         }
     } // process
@@ -690,7 +580,7 @@ private:
         const double au = std::abs(u) * r.x;
         const double av = std::abs(v) * r.y;
         if (d <= 0.) {
-            return ShapeDraw::softWeight( _drawOptions.falloff, ( (std::min)(r.x, r.y) + e.y ) / (s.y + 2. * e.y), false );
+            return ShapeDraw::softWeight( _drawOptions.falloff, (std::min)(r.x, r.y), s.y, e.y, false );
         }
         // distance to the ellipse along its radius through the pixel center (positive inside), and the Softness
         // and half pixel along that direction (those of x at the side edge, of y at the bottom or top edge)
@@ -698,18 +588,7 @@ private:
         const double sd = (au * s.x + av * s.y) / (au + av);
         const double ed = (au * e.x + av * e.y) / (au + av);
 
-        return ShapeDraw::softWeight( _drawOptions.falloff, (dist + ed) / (sd + 2. * ed), false );
-    }
-
-    // tmpPix (RGBA and the shape weight) for the shape weight w: Color 0 (w = 0) to Color 1 (w = 1)
-    void setSoftPixel(float w,
-                      float tmpPix[5]) const
-    {
-        tmpPix[0] = (float)_color0.r * (1.f - w) + (float)_color1.r * w;
-        tmpPix[1] = (float)_color0.g * (1.f - w) + (float)_color1.g * w;
-        tmpPix[2] = (float)_color0.b * (1.f - w) + (float)_color1.b * w;
-        tmpPix[3] = (float)_color0.a * (1.f - w) + (float)_color1.a * w;
-        tmpPix[4] = w;
+        return ShapeDraw::softWeight(_drawOptions.falloff, dist, sd, ed, false);
     }
 
     // Render a rotated rectangle. The rectangle is rotated by _angle around its center, in canonical coordinates.
@@ -758,16 +637,16 @@ private:
                 double dx = hs.x - std::abs(lx);
                 double dy = hs.y - std::abs(ly);
 
-                if ( _drawOptions.pixelCenterSoftness && (_softness > 0.) ) {
+                if ( _pixelCenterSoftness && (_softness > 0.) ) {
                     // version 3: as in process(), in canonical coordinates (e: half a pixel)
-                    float w = ShapeDraw::softWeight(_drawOptions.falloff, (dx + e.x) / (_softness + 2. * e.x), false) *
-                              ShapeDraw::softWeight(_drawOptions.falloff, (dy + e.y) / (_softness + 2. * e.y), false);
+                    float w = ShapeDraw::softWeight(_drawOptions.falloff, dx, _softness, e.x, false) *
+                              ShapeDraw::softWeight(_drawOptions.falloff, dy, _softness, e.y, false);
                     if ( (r.x > 0) && (r.y > 0) && (dx < r.x) && (dy < r.y) ) {
                         const OfxPointD s = {_softness, _softness};
                         w = (std::min)( w, cornerSoftWeight( (r.x - dx) / r.x, (r.y - dy) / r.y, r, s, e ) );
                     }
                     setSoftPixel(w, tmpPix);
-                    writePixel<processR, processG, processB, processA>(tmpPix, srcPix, x, y, dstPix);
+                    writePixel<PIX, nComponents, maxValue, processR, processG, processB, processA>(tmpPix, srcPix, x, y, dstPix);
                     continue;
                 }
 
@@ -911,7 +790,7 @@ private:
                         tmpPix[4] *= af;
                     }
                 }
-                writePixel<processR, processG, processB, processA>(tmpPix, srcPix, x, y, dstPix);
+                writePixel<PIX, nComponents, maxValue, processR, processG, processB, processA>(tmpPix, srcPix, x, y, dstPix);
             }
         }
     } // processRotated
@@ -973,15 +852,6 @@ private:
     /* override is identity */
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime, int& view, std::string& plane) OVERRIDE FINAL;
 
-    /** @brief the Draw options at time, and how the Softness is computed (from the pixel center since version 3) */
-    ShapeDraw::Options drawOptions(double time) const
-    {
-        ShapeDraw::Options options = _draw.options(time);
-        options.pixelCenterSoftness = (_majorVersion >= 3);
-
-        return options;
-    }
-
     /** @brief true if Process A is checked and the Source is Opaque (the Output is then UnPremultiplied) */
     bool outputIsUnpremultipliedFromOpaque() const;
 
@@ -1024,20 +894,6 @@ private:
     BooleanParam* _maskApply;
     BooleanParam* _maskInvert;
     ShapeDraw::Params _draw; // the Draw options and the colors
-
-    // the R, G, B and A checkboxes (for the clip preferences)
-    ShapeDraw::Params::ProcessChannels processChannels() const
-    {
-        return { _processR->getValue(), _processG->getValue(), _processB->getValue(), _processA->getValue() };
-    }
-
-    // true if Mix is 1 and no Mask applies, at the current time (for the clip preferences)
-    bool isFullMix() const
-    {
-        const bool masked = _maskClip && _maskClip->isConnected() && ( !_maskApply || _maskApply->getValue() );
-
-        return !masked && (_mix->getValue() == 1.);
-    }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1151,7 +1007,8 @@ RectanglePlugin::setupAndProcess(RectangleProcessorBase &processor,
                         color0, color1,
                         mix,
                         processR, processG, processB, processA,
-                        drawOptions(time));
+                        _draw.options(time));
+    processor.setPixelCenterSoftness(_majorVersion >= kVersionPixelCenterSoftness);
     // Call the base class process member, this will call the derived templated process code
     processor.process();
 } // RectanglePlugin::setupAndProcess
@@ -1223,7 +1080,7 @@ RectanglePlugin::isIdentity(const IsIdentityArguments &args,
         // pass-through would keep the Source premultiplication (issue #328)
         return false;
     }
-    if ( _draw.outputIsPremultipliedByShape( processChannels(), _srcClip, isFullMix() ) ) {
+    if ( _draw.outputIsPremultipliedByShape(_srcClip, _maskClip) ) {
         // the Output is PreMultiplied (see getClipPreferences()), also where Mix is 0
         return false;
     }
@@ -1293,7 +1150,7 @@ RectanglePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
             clipPreferences.setClipComponents(*_srcClip, ePixelComponentRGBA);
             clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
         }
-        if ( _draw.outputIsPremultipliedByShape( processChannels(), _srcClip, isFullMix() ) ) {
+        if ( _draw.outputIsPremultipliedByShape(_srcClip, _maskClip) ) {
             // the output alpha is the shape, and the Source RGB are multiplied by it
             clipPreferences.setOutputPremultiplication(eImagePreMultiplied);
         }
@@ -1543,9 +1400,7 @@ RectanglePluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
-    if (majorVersion < kPluginVersionMajor) {
-        desc.setIsObsolete(true);
-    }
+    desc.setIsObsolete(majorVersion < kPluginVersionMajor);
 
     desc.addSupportedContext(eContextGeneral);
     desc.addSupportedContext(eContextGenerator);
@@ -1732,7 +1587,7 @@ RectanglePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &d
     }
 
     // falloff
-    ShapeDraw::describeFalloffParam(desc, page, (majorVersion >= 3) ? ShapeDraw::FalloffEnum::eFalloffSmooth : ShapeDraw::FalloffEnum::eFalloffQuadratic);
+    ShapeDraw::describeFalloffParam(desc, page, (majorVersion >= kVersionPixelCenterSoftness) ? ShapeDraw::FalloffEnum::eFalloffSmooth : ShapeDraw::FalloffEnum::eFalloffQuadratic);
 
     // color1
     {
@@ -1771,7 +1626,7 @@ RectanglePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &d
 static RectanglePluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
 // 2.2: the Softness from the pixel center without the extra pixel, Quadratic by default
-static RectanglePluginFactory<2> p2(kPluginIdentifier, 2);
-mRegisterPluginFactoryInstance(p2)
+static RectanglePluginFactory<2> p_v2(kPluginIdentifier, kPluginVersionMinorV2);
+mRegisterPluginFactoryInstance(p_v2)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
