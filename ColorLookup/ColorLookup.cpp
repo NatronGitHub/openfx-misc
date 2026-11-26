@@ -775,7 +775,6 @@ private:
 
 #define HISTOGRAM_BINS 256
 
-// the parameter values of a ColorLookupProcessor
 struct RGBAValues
 {
     double r, g, b, a;

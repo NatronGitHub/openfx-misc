@@ -91,9 +91,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 // The transfer functions of the Y'CbCr, Y'PbPr and Y'UV conversions (SupportExt's ofxsLut.h):
 // the 601 ones use sRGB, not the SMPTE ST 170M OETF (which is the BT.709 one).
-// These conversions follow the standards cited in their descriptions. In tests/nuke, RGBToHSV,
-// RGBToHSL and their inverses match the reference's Colorspace node with an sRGB input; the
-// cases with a linear input and the YCbCr cases differ (known=296).
+// These conversions follow the standards cited in their descriptions. RGBToHSV, RGBToHSL and
+// their inverses match tests/nuke with an sRGB input; the cases with a linear input and the
+// YCbCr cases differ (known=296).
 #define kEncodeSRGB "Linear RGB is first encoded to R'G'B' with the sRGB transfer function (IEC 61966-2-1; not the SMPTE ST 170M one, which is the Rec.709 one); negative values become 0."
 #define kDecodeSRGB "R'G'B' is then decoded to linear RGB with the sRGB transfer function (IEC 61966-2-1); negative values become 0."
 #define kEncodeRec709 "Linear RGB is first encoded to R'G'B' with the Rec.709 transfer function (the OETF of ITU-R BT.709-6, with the more precise constants of ITU-R BT.2020-2); negative values become 0."
@@ -1224,7 +1224,7 @@ ColorTransformPluginFactory<transform, majorVersion>::describeInContext(ImageEff
             }
         }
     }
-    // the mask and mix, as in the Colorspace node of the tests/nuke reference (issue #296)
+    // the mask and mix (issue #296; matches tests/nuke)
     ofxsMaskMixDescribeParams(desc, page);
 } // >::describeInContext
 

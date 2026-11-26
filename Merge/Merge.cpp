@@ -162,8 +162,9 @@ enum MergePluginEnum
 // 1.1, 2.1 and 3.0 (unreleased, fixed in place, issue #328): with A disconnected (and an operator that gives B
 //      with B alone, or any operator in version 1), the output channels are B's channels whose B checkbox is on,
 //      else 0, and the unchecked output channels are B's (B was copied whole, and the unchecked output channels
-//      were 0); Mask and Mix apply. Natron 2.5 shipped Merge 1.0 and 2.0: its projects with A disconnected change
-//      in these three ways (bug fix, minor bump).
+//      were 0); Mask and Mix apply. Natron 2.5 shipped Merge 1.0 and 2.0: its projects change only with A
+//      disconnected and a B or output channel checkbox off (with all the B checkboxes on, the result is still B)
+//      (bug fix, minor bump).
 // 3.0 (unreleased, fixed in place): in the general context, the time domain is the frame range of B, or of
 //      A with the new "Range From" parameter (default B), instead of the host default (issue #277).
 //      Rendered images are unchanged. Versions 1 and 2 keep the host default, with no parameter.
@@ -1779,7 +1780,8 @@ MergePlugin::isIdentity(const IsIdentityArguments &args,
 
     // For each checked output channels, if srcB channel is unchecked, we are not identity
     // (Alpha-only images only have the alpha channel)
-    for (int i = (nComponents == 1) ? 3 : 0; i < 4; ++i) {
+    const int firstChannel = (nComponents == 1) ? 3 : 0;
+    for (int i = firstChannel; i < 4; ++i) {
         if (!outputChannels[i]) {
             continue;
         }
