@@ -588,9 +588,7 @@ RotoPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         return false;
     }
     if ( const std::optional<OfxRectD> region = clipRegion(args.time) ) {
-        if ( !Coords::rectIntersection(rod, *region, &rod) ) {
-            rod.x1 = rod.y1 = rod.x2 = rod.y2 = 0.;
-        }
+        Coords::rectIntersection(rod, *region, &rod); // a zero rectangle if they do not intersect
     }
 
     return true;
@@ -653,6 +651,7 @@ RotoPlugin::render(const RenderArguments &args)
     }
 }
 
+// TODO: the same as CornerPin's getSrcFormatCanonical(): move to SupportExt
 OfxRectD
 RotoPlugin::sourceFormat() const
 {
@@ -707,8 +706,8 @@ RotoPlugin::clipRegion(double time) const
 
         return region;
     case ClipTypeEnum::eIntersect:
-        if ( hasSource && !Coords::rectIntersection(region, _srcClip->getRegionOfDefinition(time), &region) ) {
-            region.x1 = region.y1 = region.x2 = region.y2 = 0.;
+        if (hasSource) {
+            Coords::rectIntersection(region, _srcClip->getRegionOfDefinition(time), &region); // zero if they do not intersect
         }
 
         return region;
