@@ -226,20 +226,16 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.0: initial version
 // version 2.0: size now has two dimensions
 // version 3.0: use kNatronOfxParamProcess* parameters
-// version 4.0: the default is to blur all channels including alpha (see processAlpha in describeInContext)
-// version 4.0: added cropToFormat parameter on Natron (this line said 4.1, but the minor version was not incremented)
-// versions 3.1 (kept for Blur, Laplacian, ChromaBlur, Bloom) and 4.1: NaN/inf-safe premultiply (SupportExt #73, #79);
-//              EdgeExtend has no premult parameter and stayed 4.0 for these
-// versions 3.1 (Blur, Bloom) and 4.1 (Blur, Bloom, ErodeBlur): not an identity (pass-through) when the Alpha Threshold changes the alpha, or when ErodeBlur remaps or clamps the values, even with a small size (issue #324);
-// EdgeExtend version 4.1: not an identity (pass-through) with a small size (below about 0.24 with the Gaussian filters, 1 with Box, Triangle
-//              and Quadratic, at full resolution, more at proxy scales), since the render merges the image over itself (issue #337);
-// EdgeDetect version 5.0: fix the gradient direction in RMS multichannel mode (only EdgeDetect has version 5);
-//              NaN/inf-safe premultiply (SupportExt #73, #79);
-//              (5.0 is unreleased, extended in place, issue #314) Prewitt filter (appended to the Filter menu) and
-//              Threshold parameter (default 0: no edge is removed)
-// Blur, Laplacian, Sharpen and Soften version 5.0: FIR Gaussian filter, the default (the IIR Gaussian has a
-//              lower peak and a longer tail, issue #312); Sharpen and Soften: Minimum and Maximum parameters,
-//              defaults 0 and 1 (issue #313); version 4 is kept for backward compatibility
+// version 3.1 (Blur, Laplacian, ChromaBlur, Bloom; kept for backward compatibility): NaN/inf-safe premultiply
+//              (SupportExt #73, #79); Blur, Bloom: not an identity when the Alpha Threshold changes the alpha (#324)
+// version 4.0: blur all channels, including alpha, by default; cropToFormat parameter on Natron
+// version 4.1: NaN/inf-safe premultiply (SupportExt #73, #79), except EdgeExtend (no premult parameter);
+//              Blur, Bloom, ErodeBlur: not an identity when the Alpha Threshold changes the alpha, or when
+//              ErodeBlur remaps or clamps the values (#324); EdgeExtend: not an identity with a small size (#337)
+// version 5.0 (Blur, Laplacian, Sharpen, Soften; version 4 kept): FIR Gaussian filter, the default (#312);
+//              Sharpen, Soften: Minimum and Maximum parameters, defaults 0 and 1 (#313)
+// version 5.0 (EdgeDetect): fix the gradient direction in RMS multichannel mode; NaN/inf-safe premultiply
+//              (SupportExt #73, #79); Prewitt filter and Threshold parameter, default 0 (#314)
 #define kPluginVersionMajorEdgeDetect 5
 #define kPluginVersionMajorFIR 5 // Blur, Laplacian, Sharpen, Soften
 #define kPluginVersionMinorOld 1 // version 3, kept for backward compatibility
@@ -399,6 +395,9 @@ filterIsGaussian(FilterEnum filter)
     return filter == eFilterQuasiGaussian || filter == eFilterGaussian || filter == eFilterGaussianFIR;
 }
 
+// an upper bound on the FIR Gaussian radius, so that the int arithmetic on it cannot overflow
+constexpr int kFirGaussianMaxRadius = INT_MAX / 4;
+
 // the radius (in pixels) of the FIR Gaussian of the given size: the kernel is cropped at 1.5*size
 inline int
 firGaussianRadius(double size)
@@ -408,7 +407,7 @@ firGaussianRadius(double size)
         return 0;
     }
 
-    return static_cast<int>( std::floor( (std::min)(r, static_cast<double>(INT_MAX / 4)) ) );
+    return static_cast<int>( std::floor( (std::min)(r, static_cast<double>(kFirGaussianMaxRadius)) ) );
 }
 
 // the axis along which a separable filter is applied
@@ -418,9 +417,64 @@ enum class Axis
     eY,
 };
 
-// FIR Gaussian filter along one axis, followed by `order` (0, 1 or 2) centered finite differences.
-// The kernel is w(i) = 2^(-(2i/size)^2), normalized, for |i| <= 1.5*size: its full width at half
-// maximum is the size. Out of the image, the values are 0 (Dirichlet) or the nearest pixel (Neumann).
+// The half kernel w(0..radius) of the FIR Gaussian: w(i) = 2^(-(2i/size)^2), normalized so that the
+// full kernel w(-radius..radius) sums to 1. Its full width at half maximum is the size.
+inline std::vector<double>
+makeFirKernel(double size,
+              int radius)
+{
+    std::vector<double> kernel(radius + 1);
+    if (radius > 0) {
+        double sum = 0.;
+        for (int i = 0; i <= radius; ++i) {
+            const double u = 2. * i / size;
+            kernel[i] = std::pow(2., -u * u);
+            sum += (i == 0) ? kernel[i] : 2. * kernel[i];
+        }
+        for (double& k : kernel) {
+            k /= sum;
+        }
+    }
+
+    return kernel;
+}
+
+// Convolve the n samples c[0..n-1] (readable from c[-radius] to c[n-1+radius]) with the symmetric
+// kernel, and write the result to p[0], p[stride], ...
+inline void
+filterLine(const double* c,
+           long n,
+           const std::vector<double>& kernel,
+           cimgpix_t* p,
+           long stride)
+{
+    const int radius = static_cast<int>(kernel.size()) - 1;
+    for (long i = 0; i < n; ++i) {
+        double v = kernel[0] * c[i];
+        for (int k = 1; k <= radius; ++k) {
+            v += kernel[k] * (c[i - k] + c[i + k]);
+        }
+        p[i * stride] = static_cast<cimgpix_t>(v);
+    }
+}
+
+// The centered finite difference of order 1 or 2 of the n samples c[0..n-1] (readable from c[-1] to
+// c[n]), written to p[0], p[stride], ...
+inline void
+differentiateLine(const double* c,
+                  long n,
+                  int order,
+                  cimgpix_t* p,
+                  long stride)
+{
+    for (long i = 0; i < n; ++i) {
+        const double v = (order == 1) ? (c[i + 1] - c[i - 1]) / 2. : c[i + 1] - 2. * c[i] + c[i - 1];
+        p[i * stride] = static_cast<cimgpix_t>(v);
+    }
+}
+
+// FIR Gaussian filter along one axis (see makeFirKernel), followed by `order` (0, 1 or 2) centered
+// finite differences. Out of the image, the values are 0 (Dirichlet) or the nearest pixel (Neumann).
 // The lines are processed in parallel (OpenMP, if enabled), by blocks: aborted() is called by the calling
 // thread between two blocks, and the function returns false if it returned true (the image is then
 // partly filtered).
@@ -437,18 +491,7 @@ firGaussian(cimg_library::CImg<cimgpix_t>& img,
     if ( (radius == 0 && order == 0) || img.is_empty() ) {
         return true;
     }
-    std::vector<double> kernel(radius + 1);
-    if (radius > 0) {
-        double sum = 0.;
-        for (int i = 0; i <= radius; ++i) {
-            const double u = 2. * i / size;
-            kernel[i] = std::pow(2., -u * u);
-            sum += (i == 0) ? kernel[i] : 2. * kernel[i];
-        }
-        for (double& k : kernel) {
-            k /= sum;
-        }
-    }
+    const std::vector<double> kernel = makeFirKernel(size, radius);
     const long w = img.width(), h = img.height(), d = img.depth(), s = img.spectrum();
     // line l starts at first(l), its samples are stride apart, and it has n samples
     const long n = (axis == Axis::eX) ? w : h;
@@ -499,26 +542,16 @@ firGaussian(cimg_library::CImg<cimgpix_t>& img,
                         line[pad + n + i] = right;
                     }
                 };
+                const double* const c = line.data() + pad;
                 load();
                 if (radius > 0) {
-                    const double* const c = line.data() + pad;
-                    for (long i = 0; i < n; ++i) {
-                        double v = kernel[0] * c[i];
-                        for (int k = 1; k <= radius; ++k) {
-                            v += kernel[k] * (c[i - k] + c[i + k]);
-                        }
-                        p[i * stride] = static_cast<cimgpix_t>(v);
-                    }
+                    filterLine(c, n, kernel, p, stride);
                 }
                 if (order > 0) {
                     if (radius > 0) {
                         load();
                     }
-                    const double* const c = line.data() + pad;
-                    for (long i = 0; i < n; ++i) {
-                        const double v = (order == 1) ? (c[i + 1] - c[i - 1]) / 2. : c[i + 1] - 2. * c[i] + c[i - 1];
-                        p[i * stride] = static_cast<cimgpix_t>(v);
-                    }
+                    differentiateLine(c, n, order, p, stride);
                 }
             }
         }
@@ -1242,40 +1275,16 @@ enum BlurPluginEnum
     eBlurPluginEdgeDetect,
 };
 
-// the latest major version of each plug-in
-inline int
-latestMajorVersion(BlurPluginEnum blurPlugin)
-{
-    switch (blurPlugin) {
-    case eBlurPluginBlur:
-    case eBlurPluginLaplacian:
-    case eBlurPluginSharpen:
-    case eBlurPluginSoften:
-        return kPluginVersionMajorFIR;
-    case eBlurPluginEdgeDetect:
-        return kPluginVersionMajorEdgeDetect;
-    case eBlurPluginChromaBlur:
-    case eBlurPluginBloom:
-    case eBlurPluginErodeBlur:
-    case eBlurPluginEdgeExtend:
-        break;
-    }
-
-    return kPluginVersionMajor;
-}
-
-// true if the plug-in version has the FIR Gaussian filter (the default) and, for Sharpen and Soften,
-// the Minimum and Maximum parameters: Blur, Laplacian, Sharpen and Soften from version 5
+// Blur, Laplacian, Sharpen and Soften: the plug-ins that have the FIR Gaussian filter from version 5
 inline bool
-hasFIRGaussian(BlurPluginEnum blurPlugin,
-               int majorVersion)
+isFIRFamily(BlurPluginEnum blurPlugin)
 {
     switch (blurPlugin) {
     case eBlurPluginBlur:
     case eBlurPluginLaplacian:
     case eBlurPluginSharpen:
     case eBlurPluginSoften:
-        return majorVersion >= kPluginVersionMajorFIR;
+        return true;
     case eBlurPluginChromaBlur:
     case eBlurPluginBloom:
     case eBlurPluginErodeBlur:
@@ -1285,6 +1294,33 @@ hasFIRGaussian(BlurPluginEnum blurPlugin,
     }
 
     return false;
+}
+
+// the latest major version of each plug-in
+inline int
+latestMajorVersion(BlurPluginEnum blurPlugin)
+{
+    if ( isFIRFamily(blurPlugin) ) {
+        return kPluginVersionMajorFIR;
+    }
+
+    return (blurPlugin == eBlurPluginEdgeDetect) ? kPluginVersionMajorEdgeDetect : kPluginVersionMajor;
+}
+
+// true if the plug-in version has the FIR Gaussian filter (the default)
+inline bool
+hasFIRGaussian(BlurPluginEnum blurPlugin,
+               int majorVersion)
+{
+    return isFIRFamily(blurPlugin) && majorVersion >= kPluginVersionMajorFIR;
+}
+
+// true if the plug-in version has the Minimum and Maximum parameters: Sharpen and Soften from version 5
+inline bool
+hasSharpenMinMax(BlurPluginEnum blurPlugin,
+                 int majorVersion)
+{
+    return (blurPlugin == eBlurPluginSharpen || blurPlugin == eBlurPluginSoften) && hasFIRGaussian(blurPlugin, majorVersion);
 }
 
 /*
@@ -1398,9 +1434,8 @@ public:
                                                         kSupportsRenderScale,
                                                         kDefaultUnpremult)
         , _blurPlugin(blurPlugin)
-        , _edgeDetectRMSSignFix(blurPlugin == eBlurPluginEdgeDetect && majorVersion >= 5)
-        , _sharpenSoftenMinMax( (blurPlugin == eBlurPluginSharpen || blurPlugin == eBlurPluginSoften) &&
-                                hasFIRGaussian(blurPlugin, majorVersion) )
+        , _edgeDetectRMSSignFix(blurPlugin == eBlurPluginEdgeDetect && majorVersion >= kPluginVersionMajorEdgeDetect)
+        , _sharpenSoftenMinMax( hasSharpenMinMax(blurPlugin, majorVersion) )
         , _sharpenSoftenAmount(NULL)
         , _sharpenSoftenMinimum(NULL)
         , _sharpenSoftenMaximum(NULL)
@@ -2123,7 +2158,7 @@ public:
             if (blurred == BlurResult::eAborted) {
                 return;
             }
-            if ( (blurred == BlurResult::eSkipped) && (_blurPlugin != eBlurPluginBloom) && (_blurPlugin != eBlurPluginEdgeExtend) && (_blurPlugin != eBlurPluginLaplacian) ) {
+            if (blurred == BlurResult::eSkipped) { // never for Bloom, EdgeExtend and Laplacian (blurIsSkipped)
                 return;
             }
 
@@ -2445,6 +2480,7 @@ public:
 
             return BlurResult::eBlurred;
         }
+        // not a FilterEnum value (the filter comes from a choice parameter): leave the image unchanged
         assert(false);
 
         return BlurResult::eSkipped;
@@ -3036,7 +3072,7 @@ CImgBlurPlugin::describeInContext(ImageEffectDescriptor& desc,
             page->addChild(*param);
         }
     }
-    if ( (blurPlugin == eBlurPluginSharpen || blurPlugin == eBlurPluginSoften) && hasFIRGaussian(blurPlugin, majorVersion) ) {
+    if ( hasSharpenMinMax(blurPlugin, majorVersion) ) {
         // Minimum and Maximum (version 5): any value, as in the reference (a negative Maximum gives a
         // constant change of -Maximum against the sign of the difference)
         auto defineMinMax = [&](const char* name, const char* label, const char* hint, double defaultValue) {
