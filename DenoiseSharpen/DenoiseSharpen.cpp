@@ -1089,6 +1089,7 @@ private:
 
     void setAnalysisWarning(const std::string& warning);
 
+    void syncAnalysisWarningVisibility(const std::string& warning);
     void syncAnalysisWarningVisibility();
 
     template <class PIX, int nComponents, int maxValue>
@@ -3123,18 +3124,27 @@ DenoiseSharpenPlugin::setAnalysisWarning(const std::string& warning)
         if (previous != warning) {
             _analysisWarning->setValue(warning);
         }
-        syncAnalysisWarningVisibility();
+        syncAnalysisWarningVisibility(warning);
     }
 }
 
 // The Analysis Warning param is hidden when it is empty (the secret state is not saved by all hosts).
+void
+DenoiseSharpenPlugin::syncAnalysisWarningVisibility(const std::string& warning)
+{
+    if (_analysisWarning) {
+        _analysisWarning->setIsSecret( warning.empty() );
+    }
+}
+
+// The same, for the current value of the param.
 void
 DenoiseSharpenPlugin::syncAnalysisWarningVisibility()
 {
     if (_analysisWarning) {
         std::string warning;
         _analysisWarning->getValue(warning);
-        _analysisWarning->setIsSecret( warning.empty() );
+        syncAnalysisWarningVisibility(warning);
     }
 }
 
