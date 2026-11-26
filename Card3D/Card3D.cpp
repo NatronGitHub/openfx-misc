@@ -2082,6 +2082,10 @@ Card3DPluginFactory::describe(ImageEffectDescriptor &desc)
     desc.setPluginDescription(kPluginDescription);
 
     Transform3x3Describe(desc, false);
+    // getClipPreferences sets the output PAR (that of the Output Format) while the Source is
+    // connected, which the spec only allows with multiple clip PARs; the render maps the source and
+    // output PARs separately (getInverseTransformCanonical, Transform3x3)
+    desc.setSupportsMultipleClipPARs(true);
 }
 
 
