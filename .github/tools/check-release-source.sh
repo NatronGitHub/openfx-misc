@@ -29,7 +29,7 @@ if [ -f .github/tools/smoketest.sh ] && ! grep -q SMOKETEST_NO_TEST .github/tool
     status=1
 fi
 if ! grep -qs Licence_pocketfft.txt CMakeLists.txt cmake/*.cmake; then
-    echo "ERROR: $PWD/CMakeLists.txt does not put Licence_pocketfft.txt in CImg.ofx.bundle"
+    echo "ERROR: the CMake files of $PWD do not put Licence_pocketfft.txt in CImg.ofx.bundle"
     status=1
 fi
 if [ $status != 0 ]; then
