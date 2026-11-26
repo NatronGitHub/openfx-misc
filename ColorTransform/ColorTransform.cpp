@@ -223,14 +223,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //     RGBToHSL takes the hue from the unclamped channels and the saturation from the colour
 //     clamped to [0,1] (bug fix #399: (2, 0.5, 0) gave H 0.917, not 0.042, and the grey (2, 2, 2) gave S 1);
 //     all conversions released as 1.0, including version 1 of the signedOutput() conversions
-//     (kept for backward compatibility): premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79)
-//     (1.1 is unreleased, extended in place, issue #296) all conversions have a Mask input and the Mask and
-//     Mix parameters (the defaults keep the output)
+//     (kept for backward compatibility): NaN/inf-safe premultiply (SupportExt #73, #79); a Mask input and the
+//     Mask and Mix parameters (the defaults keep the output) (#296)
 // 1.0 RGBToYIQ, YIQToRGB, RGBToYDbDr, YDbDrToRGB: initial version (with the Mask input and Mix, see 1.1)
 // 2.0 RGBToYPbPr601, RGBToYPbPr709, RGBToYUV601, RGBToYUV709, RGB709ToLab, XYZToLab only:
 //     only support float images, because their output may be negative (version 1 clamps negative
-//     values to 0 on 8-bit and 16-bit images); premultiplying an infinite or NaN colour by alpha 0 gives 0, not NaN (SupportExt #73); an unpremultiplied colour beyond the float range gives +-FLT_MAX, not +-inf (SupportExt #79).
-//     The other conversions are still version 1. (2.0 is unreleased: it has the Mask input and Mix of 1.1.)
+//     values to 0 on 8-bit and 16-bit images); NaN/inf-safe premultiply (SupportExt #73, #79); a Mask input and
+//     the Mask and Mix parameters (#296). The other conversions are still version 1.
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 #define kPluginNewVersionMinor 0 // minor version of the conversions added after version 1.0 was released (YIQ, YDbDr)
