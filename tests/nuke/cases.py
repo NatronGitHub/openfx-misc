@@ -1263,15 +1263,31 @@ CASES += [
 # pixels, OFX ones canonical.
 GEN = {"region": "project", "channels": "rgba"}
 CASES += [
-    # Passes only because the default colour is 0: Nuke's knob default for
-    # channels is rgb, while the plug-in's Output Components default is RGBA.
+    # Nuke's channels rgb leaves alpha out, and Nuke treats it as 0. Constant
+    # keeps RGBA output with default alpha 0, which gives the same result
+    # downstream in every host, also in those that fill alpha 1 when they
+    # convert RGB images to RGBA (Natron).
     case("Constant defaults", ("Constant", {}),
          (ofx_id("ConstantPlugin"), {}), **GEN),
-    # Nuke's knob default for Constant.channels is rgb (no alpha); the
-    # plug-in's Output Components default is RGBA: compare RGBA.
-    case("Constant (0.25, -0.5, 1.5, 0.75)",
+    # With the default channels, Nuke ignores the colour's alpha, while the
+    # RGBA output has it: compare rgb only. The next case sets our alpha to 0
+    # and compares rgba.
+    case("Constant (0.25, -0.5, 1.5, 0.75), default channels",
+         ("Constant", {"color": [.25, -.5, 1.5, .75]}),
+         (ofx_id("ConstantPlugin"), {"color": [.25, -.5, 1.5, .75]}),
+         **dict(GEN, channels="rgb")),
+    # Nuke drops the colour's 0.75 alpha; our colour with alpha 0 matches it.
+    case("Constant (0.25, -0.5, 1.5, 0.75), default channels, our alpha 0",
+         ("Constant", {"color": [.25, -.5, 1.5, .75]}),
+         (ofx_id("ConstantPlugin"), {"color": [.25, -.5, 1.5, 0.]}), **GEN),
+    case("Constant rgba (0.25, -0.5, 1.5, 0.75)",
          ("Constant", {"channels": "rgba", "color": [.25, -.5, 1.5, .75]}),
          (ofx_id("ConstantPlugin"), {"color": [.25, -.5, 1.5, .75]}), **GEN),
+    # With channels alpha, the colour knob has one value, the alpha.
+    case("Constant alpha 0.75",
+         ("Constant", {"channels": "alpha", "color": .75}),
+         (ofx_id("ConstantPlugin"), {"outputComponents": "Alpha",
+                                     "color": [.25, -.5, 1.5, .75]}), **GEN),
     case("ColorBars defaults", ("ColorBars", {}), (ofx_id("ColorBars"), {}),
          **GEN),
     case("ColorBars PAL", ("ColorBars", {"PAL": True}),
