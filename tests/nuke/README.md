@@ -25,8 +25,10 @@ and runs `pytest tests/nuke -k <plug-in>`.
   `-DOFX_BUILD_HOSTDEMO=ON`, then `cmake --install build --prefix PREFIX`.
 - Nuke (the newest `/Applications/Nuke*/Nuke*.app` is found, or `--nuke`).
   A Nuke Non-Commercial licence is enough once you are signed in: the tests
-  run `nuke --nc -t`, one process per case, because a Non-Commercial
-  session allows only 10 node objects. Without a working Nuke, the whole
+  run `nuke --nc --safe -t`, one process per case, because a Non-Commercial
+  session allows only 10 node objects. `--safe` skips your `~/.nuke` and
+  `$NUKE_PATH` init files, so the reference gets only Nuke's own knob
+  defaults (`plugins/knobdefaults.py`). Without a working Nuke, the whole
   session is skipped.
 - pytest (MacPorts: `/opt/local/bin/pytest-3.11`). pytest-xdist is
   optional; two Non-Commercial sessions can run at the same time, so
