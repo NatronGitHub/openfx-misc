@@ -473,11 +473,13 @@ private:
     std::vector<OFX::Double2DParam *> _paramMaxVec2;
     OFX::BooleanParam *_enableGPU;
     OFX::ChoiceParam *_cpuDriver;
+    // _imageShaderMutex guards the five members below, which changedParam() and render() share, and the
+    // imageShaderID and imageShaderUniformsID of the OpenGL context data (CP.50)
     std::mutex _imageShaderMutex;
     unsigned int _imageShaderID; // an ID that changes each time the shadertoy changes and needs to be recompiled
     unsigned int _imageShaderUniformsID; // an ID that changes each time the uniform names or count changed
     bool _imageShaderUpdateParams; // ask to extract parameters from the shader on next compilation
-    ImageShaderParams _imageShaderParams; // guarded by _imageShaderMutex
+    ImageShaderParams _imageShaderParams; // what the compilation extracted, copied by updateExtra()
     bool _imageShaderCompiled;
     struct OpenGLContextData
     {

@@ -1053,9 +1053,9 @@ compileProgram(ShadertoyShader* shadertoy,
                const char* fragmentShader,
                std::string& errstr)
 {
-    shadertoy->program = compileAndLinkProgram(vsSource.c_str(), fragmentShader, errstr);
-    const GLuint program = shadertoy->program;
-    if (shadertoy->program == 0) {
+    const GLuint program = compileAndLinkProgram(vsSource.c_str(), fragmentShader, errstr);
+    shadertoy->program = program;
+    if (program == 0) {
         return false;
     }
     shadertoy->iResolutionLoc        = glGetUniformLocation(program, "iResolution");
