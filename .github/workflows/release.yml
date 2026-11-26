@@ -107,8 +107,6 @@ env:
   CMAKE_OPTIONS: -DCMAKE_BUILD_TYPE=Release -DOFX_CXX_STANDARD=17 -DBUILD_TESTING=OFF -DOFX_DEPLOY_BUNDLES=ON -DOFX_BUILD_HOSTDEMO=ON -DOFXMISC_STANDALONE_BUNDLES=DenoiseSharpen;NoOp -DOSMESA_PKGCONFIG_STATIC=ON
   # The Shadertoy-only builds (without Misc and CImg)
   SHADERTOY_OPTIONS: -DCMAKE_BUILD_TYPE=Release -DOFX_CXX_STANDARD=17 -DBUILD_TESTING=OFF -DOFX_DEPLOY_BUNDLES=ON -DBUILD_MISC=OFF -DBUILD_CIMG_PLUGINS=OFF -DOSMESA_PKGCONFIG_STATIC=ON
-  # The bundles that the smoke test of the full set expects (no Test bundle)
-  SMOKETEST_FULL: Misc:168 CImg:40 Shadertoy:1
 
 defaults:
   run:
@@ -302,7 +300,7 @@ jobs:
       - name: Smoke test (hostDemo, all plug-ins)
         timeout-minutes: 15
         run: |
-          SMOKETEST_BUNDLES="$SMOKETEST_FULL" .github/tools/smoketest.sh --quick install
+          SMOKETEST_NO_TEST=1 .github/tools/smoketest.sh --quick install
           SMOKETEST_BUNDLES="net.sf.openfx.DenoiseSharpen:1" HOSTDEMO="$PWD/install/bin/hostDemo" .github/tools/smoketest.sh install-denoisesharpen
           SMOKETEST_BUNDLES="net.sf.openfx.NoOpPlugin:1" HOSTDEMO="$PWD/install/bin/hostDemo" .github/tools/smoketest.sh install-noop
       - name: Render test of the shipped Shadertoy (OSMesa)
@@ -434,7 +432,7 @@ jobs:
       - name: Smoke test (hostDemo, all plug-ins)
         timeout-minutes: 20
         run: |
-          SMOKETEST_BUNDLES="$SMOKETEST_FULL" .github/tools/smoketest.sh --quick install
+          SMOKETEST_NO_TEST=1 .github/tools/smoketest.sh --quick install
           SMOKETEST_BUNDLES="net.sf.openfx.DenoiseSharpen:1" HOSTDEMO="$PWD/install/bin/hostDemo" .github/tools/smoketest.sh install-denoisesharpen
           SMOKETEST_BUNDLES="net.sf.openfx.NoOpPlugin:1" HOSTDEMO="$PWD/install/bin/hostDemo" .github/tools/smoketest.sh install-noop
       - name: Render test of the shipped Shadertoy (OSMesa)

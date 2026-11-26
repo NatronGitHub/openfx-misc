@@ -22,6 +22,16 @@ for f in .github/tools/loadtest.sh .github/tools/smoketest.sh .github/tools/ofxl
         status=1
     fi
 done
+# release.yml runs smoketest.sh with SMOKETEST_NO_TEST=1, and package-release.sh copies the
+# pocketfft licence that CMake puts in CImg.ofx.bundle
+if [ -f .github/tools/smoketest.sh ] && ! grep -q SMOKETEST_NO_TEST .github/tools/smoketest.sh; then
+    echo "ERROR: $PWD/.github/tools/smoketest.sh has no SMOKETEST_NO_TEST"
+    status=1
+fi
+if ! grep -qs Licence_pocketfft.txt CMakeLists.txt cmake/*.cmake; then
+    echo "ERROR: $PWD/CMakeLists.txt does not put Licence_pocketfft.txt in CImg.ofx.bundle"
+    status=1
+fi
 if [ $status != 0 ]; then
     echo "ERROR: this source predates the release tooling of this workflow (openfx-misc#173): build a"
     echo "newer tag, or run the release.yml of a ref that matches it"

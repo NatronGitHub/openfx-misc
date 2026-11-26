@@ -46,6 +46,8 @@
 # entry can be "debug:ofx14:..." or "debug:ofx11:..."),
 # SMOKETEST_BUNDLES (the expected bundles, see BUNDLES below; e.g. "Misc:0" for a build
 # with -DBUILD_CIMG_PLUGINS=OFF -DBUILD_SHADERTOY=OFF -DBUILD_TESTING=OFF),
+# SMOKETEST_NO_TEST=1 (a build without the Test bundle, -DBUILD_TESTING=OFF: BUNDLES without Test,
+# and stale entries are only a warning, as with SMOKETEST_BUNDLES),
 # SMOKETEST_XPASS_OK=1 (accept the known bugs that were fixed: an XFAIL entry that passes
 # (XPASS) is reported but does not fail, and stale entries are only a warning; an XFAIL
 # render whose failure does not show the expected message still fails; for SupportExt's CI, so that a SupportExt pull request that fixes a bug of the XFAIL list
@@ -102,8 +104,8 @@
 # matches no plug-in and a PARAMS entry that adds no render (except with --only),
 # and, in full mode only (not --quick, not --only; --quick does not render every
 # context), an IDENTITY or XFAIL entry that matches no identity render or no
-# expected failure. With SMOKETEST_BUNDLES
-# (a partial build) or SMOKETEST_XPASS_OK=1, stale entries are only a warning.
+# expected failure. With SMOKETEST_BUNDLES or SMOKETEST_NO_TEST=1 (a partial build) or
+# SMOKETEST_XPASS_OK=1, stale entries are only a warning.
 set -eo pipefail
 . "$(dirname "$0")/lib.sh"
 
@@ -115,6 +117,10 @@ set -eo pipefail
 BUNDLES=(Misc:171 CImg:40 Shadertoy:1 Test:6)
 # shellcheck disable=SC2206
 [ -z "$SMOKETEST_BUNDLES" ] || BUNDLES=($SMOKETEST_BUNDLES)
+if [ "${SMOKETEST_NO_TEST:-0}" = 1 ]; then
+    with_test=("${BUNDLES[@]}") BUNDLES=()
+    for b in "${with_test[@]}"; do [ "${b%%:*}" = Test ] || BUNDLES+=("$b"); done
+fi
 # The plug-ins that are not tested: "identifier regex|reason" (the whole identifier; a
 # "debug:" reason is only used in debug builds, an "ofx14:" one only with --ofx14, an "ofx11:"
 # one only with --ofx11; these prefixes, which can be combined, only work at the start of the
@@ -660,13 +666,14 @@ tr '\n' '\0' < "$work/jobs.txt" | xargs -r -0 -n 1 -P "$jobs" "$0" --render-job 
 mode=full
 [ "$quick" = 0 ] || mode=quick
 [ -z "$only" ] || mode=only
-[ -z "$SMOKETEST_BUNDLES" ] || mode=$mode-partial
+[ -z "$SMOKETEST_BUNDLES" ] && [ "${SMOKETEST_NO_TEST:-0}" != 1 ] || mode=$mode-partial
 status=0
 python3 -I - "$work" "${SMOKETEST_DEBUG:-0}" "$mode" "${SMOKETEST_XPASS_OK:-0}" "$profile" << 'EOF' || status=$?
 import json, os, re, sys
 work, debug, mode, xpass_ok = sys.argv[1], sys.argv[2] == "1", sys.argv[3], sys.argv[4] == "1"
 profile = sys.argv[5]
-# stale entries are only a warning with SMOKETEST_BUNDLES (a partial build) or SMOKETEST_XPASS_OK
+# stale entries are only a warning in a partial build (SMOKETEST_BUNDLES, SMOKETEST_NO_TEST) or
+# with SMOKETEST_XPASS_OK
 lenient = mode.endswith("partial") or xpass_ok
 sys.path.insert(0, work)
 import smoketest_lists as lists
@@ -928,8 +935,8 @@ for k, v in notes.items():
         print("not failures (%s): %s" % (k, ", ".join(sorted(v))))
 print("slowest renders: " + ", ".join("%s %ds" % (n, s) for s, n in times[:5]))
 # Stale entries: SKIP and PARAMS unless --only; XFAIL and IDENTITY in full mode only
-# (--quick does not render every context). They fail, except with SMOKETEST_BUNDLES (a
-# partial build) or SMOKETEST_XPASS_OK (then they are warnings).
+# (--quick does not render every context). They fail, except in a partial build
+# (SMOKETEST_BUNDLES, SMOKETEST_NO_TEST) or with SMOKETEST_XPASS_OK (then they are warnings).
 stale = []
 if not mode.startswith("only"):
     stale += [("OPENGL   " if x in opengl_entries else "SKIP     ") + x for rx, x in skip if x not in used]
