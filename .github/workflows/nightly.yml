@@ -23,7 +23,7 @@ name: Weekly extra builds
 # hostDemo built by -DOFX_BUILD_HOSTDEMO=ON. On Windows (MSYS2 CMake builds), only the
 # CImgConvolve render test runs (RENDERTEST_ONLY), as a check of the pocketfft unload
 # deadlock (POCKETFFT_NO_MULTITHREADING); smoketest.sh does not run on Windows.
-# Frugal CI: runs weekly (maintainer decision, 2026-11-21) and on demand, and jobs time out.
+# Frugal CI: runs weekly and on demand, and jobs time out.
 # No job is skipped when master did not change: every job builds with a rolling toolchain or
 # checks a moving upstream (cimg_patches: openfx-gmic master), and those are tested every week.
 # The file and artifact names keep "nightly" so that existing links (README, issues) keep working.
@@ -51,33 +51,14 @@ defaults:
   run:
     shell: bash -eo pipefail {0}
 
+# Every job runs, except with "only: windows-msvc": then only the Windows MSVC jobs and
+# cimg_patches (inputs.only is empty in scheduled runs).
 jobs:
-  # Which jobs run: everything, except with "only: windows-msvc" (the Windows MSVC jobs, plus
-  # cimg_patches, which has no needs). There is no skip when master did not change: every job
-  # builds with a rolling toolchain (runner images, apt, MacPorts ports, MSYS2 packages, the
-  # runner's Visual Studio), a moving upstream that is tested every week (maintainer rule,
-  # 2026-11-21).
-  changes:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    outputs:
-      run: ${{ steps.check.outputs.run }}
-      # the Windows MSVC jobs: also with "only: windows-msvc"
-      msvc: ${{ steps.check.outputs.msvc }}
-    steps:
-      - id: check
-        env:
-          ONLY: ${{ inputs.only }}
-        run: |
-          run=true msvc=true
-          if [ "$ONLY" = windows-msvc ]; then run=false; fi
-          { echo "run=$run"; echo "msvc=$msvc"; } >> "$GITHUB_OUTPUT"
-
   # CImg.h is patched as openfx-gmic's (CImg/CImgVersion.mk): check that CImg/patches are still
   # byte-identical to openfx-gmic's patches at master, that they are applied in the same order,
   # that the pocketfft pin is the same, and that CIMGVERSION is the CImg tag of its GMICVER (a few
-  # seconds, no build). It runs at every run, without needs: changes, since the drift it catches
-  # comes from openfx-gmic, not from this repository.
+  # seconds, no build). It runs at every run, since the drift it catches comes from
+  # openfx-gmic, not from this repository.
   cimg_patches:
     name: CImg.h patches (openfx-gmic)
     runs-on: ubuntu-24.04
@@ -94,8 +75,7 @@ jobs:
 
   macos:
     name: macOS 15 ${{ matrix.name }}
-    needs: changes
-    if: needs.changes.outputs.run == 'true'
+    if: inputs.only != 'windows-msvc'
     timeout-minutes: 30
     runs-on: macos-15
     strategy:
@@ -167,8 +147,7 @@ jobs:
 
   linux:
     name: Ubuntu 24.04 ${{ matrix.name }}
-    needs: changes
-    if: needs.changes.outputs.run == 'true'
+    if: inputs.only != 'windows-msvc'
     # debug: the full smoke test of the -O0 build (with OpenMP) is much slower
     timeout-minutes: ${{ matrix.config == 'debug' && 75 || 30 }}
     runs-on: ubuntu-24.04
@@ -234,7 +213,6 @@ jobs:
         # make: the source tree; CMake: the install tree. matrix.plugins: the expected number of
         # plug-ins (ofxload's "<n> binaries, <m> plugins, <e> errors")
         run: |
-          set -o pipefail
           .github/tools/loadtest.sh ${{ matrix.make && ' ' || format('install-{0}', matrix.config) }} | tee loadtest.log
           if [ -n "${{ matrix.plugins }}" ]; then
             n=$(sed -n 's/^[0-9]* binaries, \([0-9]*\) plugins, .*/\1/p' loadtest.log | head -n 1)
@@ -257,8 +235,7 @@ jobs:
 
   windows:
     name: Windows (MSYS2 UCRT64) ${{ matrix.name }}
-    needs: changes
-    if: needs.changes.outputs.run == 'true'
+    if: inputs.only != 'windows-msvc'
     timeout-minutes: 60
     runs-on: windows-2022
     defaults:
@@ -336,8 +313,6 @@ jobs:
   # so a failed week still leaves downloads).
   windows_msvc:
     name: Windows MSVC ${{ matrix.arch }}
-    needs: changes
-    if: needs.changes.outputs.msvc == 'true'
     # arm64x: two builds
     timeout-minutes: ${{ matrix.arch == 'x64' && 25 || 45 }}
     runs-on: windows-2025

@@ -200,7 +200,6 @@ jobs:
         # The container runs as root, and the workspace belongs to the runner's user: let git
         # use the checkouts (and their submodules), else "detected dubious ownership"
         run: |
-          set -eo pipefail
           find "$GITHUB_WORKSPACE" -maxdepth 4 -name .git | while IFS= read -r g; do
             git config --global --add safe.directory "$(dirname "$g")"
           done
@@ -359,7 +358,6 @@ jobs:
           persist-credentials: false
       - name: Check the source
         run: |
-          set -eo pipefail
           git log -1 --format='source: %H %s'
           git -C .release-tools log -1 --format='release tools: %H %s'
           "$TOOLS"/check-release-source.sh
