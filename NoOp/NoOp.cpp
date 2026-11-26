@@ -33,6 +33,7 @@
 #include <filesystem>
 #include <fstream>
 #include <system_error>
+#include <process.h> // _getpid
 #else
 #include <fcntl.h> // open
 #include <unistd.h> // write, close, unlink, getpid
@@ -690,8 +691,20 @@ saveHostInfo(const std::string& hostName,
     }
     fileName += ".txt";
 
+    // The text is written to a new file next to the final name, which then replaces the final name
+    // (rename), so that a failure leaves no partial file. A unique suffix for the new file: several
+    // instances, or hosts, may save at the same time.
+    static std::atomic<unsigned> counter(0);
+    std::ostringstream suffix;
 #ifdef _WIN32
-    // %TEMP% is per-user: no other user can plant a file there. Text mode writes CRLF (Notepad).
+    suffix << ".tmp" << _getpid() << '.' << counter++;
+#else
+    suffix << ".tmp" << getpid() << '.' << counter++;
+#endif
+
+#ifdef _WIN32
+    // temp_directory_path() is %TMP%, %TEMP% or %USERPROFILE% (GetTempPath2W), per-user: no other user can
+    // plant a file there. Text mode writes CRLF (Notepad).
     try {
         namespace fs = std::filesystem;
         std::error_code ec;
@@ -699,11 +712,17 @@ saveHostInfo(const std::string& hostName,
         if (ec) {
             return std::string();
         }
-        std::ofstream out(path);
+        fs::path tmpPath = path;
+        tmpPath += suffix.str();
+        std::ofstream out(tmpPath);
         out << text;
         out.close(); // sets failbit if a write or the close failed
-        if (!out) {
-            fs::remove(path, ec);
+        if (out) {
+            fs::rename(tmpPath, path, ec); // replaces an existing file
+        }
+        if (!out || ec) {
+            std::error_code ignored;
+            fs::remove(tmpPath, ignored);
 
             return std::string();
         }
@@ -719,10 +738,6 @@ saveHostInfo(const std::string& hostName,
     // text is written to a new file next to it, created with O_EXCL (never an existing file, FIFO
     // or link) and mode 0600, which then replaces the final name with rename(). If the final name
     // belongs to another user in a sticky directory, rename() fails, and only the message is shown.
-    // A unique suffix for the new file: several instances, or hosts, may save at the same time.
-    static std::atomic<unsigned> counter(0);
-    std::ostringstream suffix;
-    suffix << ".tmp" << getpid() << '.' << counter++;
     const char* dir = std::getenv("TMPDIR");
     std::string path = (dir && *dir) ? dir : "/tmp";
     if (path[path.size() - 1] != '/') {
