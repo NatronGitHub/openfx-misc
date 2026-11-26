@@ -184,7 +184,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              range. A NaN Pick colour component is 0 (it picked Blue). The output for finite
 //              inputs is unchanged where its computation did not overflow.
 // versions 1.1 and 2.0: Clean Plate output with C disconnected (and a screen type other than Pick) is not a
-//              pass-through of the disconnected C: it is transparent black (issue #328)
+//              pass-through of the disconnected C (which 1.0, in Natron 2.5, was): it is transparent black (issue #328)
 // version 2.0: Luminance Match (with Screen Range), Autolevels (with the Yellow, Cyan and Magenta overrides) and
 //              RGBA Legal are implemented (issue #281); RGBA Legal is on by default, as in the IBKGizmo keyer, so
 //              that the alpha is at least the luminance of the screen-subtracted color (the alpha was 0 in
@@ -2114,8 +2114,7 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
         }
     } else if (getc) {
         if ( (outputMode == eOutputModeCleanPlate) && !( _cClip && _cClip->isConnected() ) ) {
-            // the clean plate of a disconnected C is transparent black, as the clean plate generator of
-            // the tests/nuke reference renders without an input (issue #328)
+            // the clean plate of a disconnected C is transparent black (issue #328; matches tests/nuke)
             fillBlack( *this, args.renderWindow, args.renderScale, dst.get() );
 
             return;

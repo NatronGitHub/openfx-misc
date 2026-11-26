@@ -162,7 +162,8 @@ enum MergePluginEnum
 // 1.1, 2.1 and 3.0 (unreleased, fixed in place, issue #328): with A disconnected (and an operator that gives B
 //      with B alone, or any operator in version 1), the output channels are B's channels whose B checkbox is on,
 //      else 0, and the unchecked output channels are B's (B was copied whole, and the unchecked output channels
-//      were 0); Mask and Mix apply.
+//      were 0); Mask and Mix apply. Natron 2.5 shipped Merge 1.0 and 2.0: its projects with A disconnected change
+//      in these three ways (bug fix, minor bump).
 // 3.0 (unreleased, fixed in place): in the general context, the time domain is the frame range of B, or of
 //      A with the new "Range From" parameter (default B), instead of the host default (issue #277).
 //      Rendered images are unchanged. Versions 1 and 2 keep the host default, with no parameter.
@@ -880,9 +881,9 @@ private:
                 // one A input, even if none is connected.
                 // This behavior was introduced in version 2.0.
                 if ( _srcImgAs.size() == 0 && ( isIdentityForBOnlyVersioned(f, _majorVersion) || _majorVersion == 1 ) ) {
-                    // B alone: the output channels are B's channels whose checkbox is on, else 0, as in the
-                    // tests/nuke reference; the other channels are B's (issue #328: B was copied whole, and
-                    // the unchecked output channels were 0)
+                    // B alone: the checked output channels are B's channels whose B checkbox is on, else 0,
+                    // and the unchecked output channels are B's (issue #328; matches tests/nuke). Before,
+                    // B was copied whole, and the unchecked output channels were 0.
                     const PIX *srcPixB = (const PIX *)  (_srcImgB ? _srcImgB->getPixelAddress(x, y) : 0);
                     for (int c = 0; c < nComponents; ++c) {
                         const bool bChannel = _bChannels[alphaFromA ? 3 : c];
@@ -1764,13 +1765,11 @@ MergePlugin::isIdentity(const IsIdentityArguments &args,
         _outputChannels[c]->getValueAtTime(time, outputChannels[c]);
         _bChannels[c]->getValueAtTime(time, srcBChannels[c]);
     }
-    {
-        // versions 1 and 2, Alpha-only images: B's R checkbox controls the alpha channel, as in the
-        // processor (issue #328)
-        const int nComponents = _dstClip->getPixelComponentCount();
-        if ( (nComponents == 1) && !alphaUsesAChannel( nComponents, getMajorVersion() ) ) {
-            srcBChannels[3] = srcBChannels[0];
-        }
+    const int nComponents = _dstClip->getPixelComponentCount();
+    // versions 1 and 2, Alpha-only images: B's R checkbox controls the alpha channel, as in the
+    // processor (issue #328)
+    if ( (nComponents == 1) && !alphaUsesAChannel( nComponents, getMajorVersion() ) ) {
+        srcBChannels[3] = srcBChannels[0];
     }
     if (!outputChannels[0] && !outputChannels[1] && !outputChannels[2] && !outputChannels[3] && plane == kFnOfxImagePlaneColour) {
         identityClip = _srcClipB;
@@ -1779,7 +1778,8 @@ MergePlugin::isIdentity(const IsIdentityArguments &args,
     }
 
     // For each checked output channels, if srcB channel is unchecked, we are not identity
-    for (int i = 0; i < 4; ++i) {
+    // (Alpha-only images only have the alpha channel)
+    for (int i = (nComponents == 1) ? 3 : 0; i < 4; ++i) {
         if (!outputChannels[i]) {
             continue;
         }

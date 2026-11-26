@@ -109,9 +109,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //     "Master Curve on Alpha" parameter (default off: the alpha curve is used alone, as before)
 // 2.0 (issue #290) the defaults follow the node of the same name: Master Curve Mode is Composed and Master Curve on
 //     Alpha is checked; version 1.2 is kept, obsolete, with the old defaults (Standard, off), for existing projects
-//     (2.0 and 1.2 are unreleased, fixed in place, issue #411) Luminance master curve mode: below a luminance of 1e-3,
-//     the result goes linearly to the master curve applied to each channel, reached at a luminance of 0 or less,
-//     instead of a gain master(1e-8) / 1e-8 that gave huge values. The Luminance mode was in 1.1 (Natron 2.5.0): this
+//     (2.0 and 1.2 are unreleased, fixed in place, issue #411) Luminance master curve mode: below a luminance l of 1e-3,
+//     the result is t * (the result with the gain) + (1 - t) * (the master curve applied to each channel), t = l / 1e-3,
+//     which is the latter at a luminance of 0 or less, instead of a gain master(1e-8) / 1e-8 that gave huge values. The Luminance mode was in 1.1 (Natron 2.5.0): this
 //     bug fix (minor bump, 1.2) changes Natron 2.5 projects that use it, on pixels of near-zero or negative luminance.
 //     (2.0, unreleased, fixed in place) the Luminance mode applies the master gain before the channel curves,
 //     channel(gain * x), as the Composed mode applies master then channel; version 1.2 keeps gain * channel(x).
@@ -235,6 +235,25 @@ enum DisplayEnum
 #define kCurveBlue 3
 #define kCurveAlpha 4
 #define kCurveNb 5
+
+// The order of the curves in the Luminance master curve mode (see luminanceModeColor())
+enum class LuminanceOrder
+{
+    eGainThenChannel,  // version 1: gain * channel(x)
+    eMasterThenChannel, // version 2: channel(gain * x), the order of the Composed mode
+};
+
+// The parameter values of a ColorLookupProcessor
+struct ColorLookupProcessorArgs
+{
+    double rangeMin;
+    double rangeMax;
+    bool clampBlack;
+    bool clampWhite;
+    LuminanceMathEnum luminanceMath;
+    bool masterOnAlpha;
+    LuminanceOrder luminanceOrder;
+};
 
 class ColorLookupProcessorBase
     : public ImageProcessor
@@ -369,20 +388,14 @@ public:
     ColorLookupProcessor(ImageEffect &instance,
                          const RenderArguments &args,
                          ParametricParam  *lookupTableParam,
-                         double rangeMin,
-                         double rangeMax,
-                         bool clampBlack,
-                         bool clampWhite,
-                         LuminanceMathEnum luminanceMath,
-                         bool masterOnAlpha,
-                         bool masterFirst)
-        : ColorLookupProcessorBase(instance, clampBlack, clampWhite)
+                         const ColorLookupProcessorArgs& a)
+        : ColorLookupProcessorBase(instance, a.clampBlack, a.clampWhite)
         , _lookupTableParam(lookupTableParam)
-        , _rangeMin( (std::min)(rangeMin, rangeMax) )
-        , _rangeMax( (std::max)(rangeMin, rangeMax) )
-        , _luminanceMath( luminanceMath )
-        , _masterOnAlpha(masterOnAlpha)
-        , _masterFirst(masterFirst)
+        , _rangeMin( (std::min)(a.rangeMin, a.rangeMax) )
+        , _rangeMax( (std::max)(a.rangeMin, a.rangeMax) )
+        , _luminanceMath(a.luminanceMath)
+        , _masterOnAlpha(a.masterOnAlpha)
+        , _luminanceOrder(a.luminanceOrder)
     {
         // build the LUT
         assert(_lookupTableParam);
@@ -607,46 +620,54 @@ private:
     }
 
     // The colour given by the Luminance master curve mode, from normalized r, g, b, with the gain of
-    // the master curve on the luminance l, master(l) / l, and the channel curves. Version 2 applies
-    // them in the order of the Composed mode (and of the tests/nuke reference, master then channel):
-    // channel(gain * x); version 1 applies the gain to the channel curves: gain * channel(x).
+    // the master curve on the luminance l, master(l) / l, and the channel curves: version 2 applies
+    // them in the order of the Composed mode, master then channel, channel(gain * x); version 1
+    // applies the gain to the channel curves, gain * channel(x) (see LuminanceOrder).
     // Where l is small, the gain could be huge (or negative, for l <= 0): below the luminance
-    // kLuminanceModeEpsilon, the result goes linearly from the one with the gain at that luminance
-    // to the master and channel curves applied to each channel, in the same order, reached at
-    // l <= 0 (issue #411). With identity channel curves, for a grey both give master(l).
+    // kLuminanceModeEpsilon, the result is t * withGain(l) + (1 - t) * perChannel, with
+    // t = l / kLuminanceModeEpsilon, where perChannel is the master and channel curves applied to
+    // each channel, in the same order (issue #411). It is continuous at kLuminanceModeEpsilon and at 0,
+    // where it is perChannel, and bounded: t * master(l) / l = master(l) / kLuminanceModeEpsilon.
+    // For a grey with identity channel curves, withGain(l) and perChannel are both master(l), so the
+    // result is master(l) at all luminances.
     std::array<float, 3> luminanceModeColor(float r,
                                             float g,
                                             float b) const
     {
         constexpr double kLuminanceModeEpsilon = 1e-3;
+        const bool masterFirst = (_luminanceOrder == LuminanceOrder::eMasterThenChannel);
         const double l = luminance(r, g, b, _luminanceMath);
         const std::array<float, 3> x = {r, g, b};
-        // the result with the gain of the master curve at the luminance lum
-        const auto withGain = [&](double lum) {
-            const double coef = interpolate(nComponents, static_cast<float>(lum)) / lum;
+        // the result with the gain of the master curve at the luminance l (> 0)
+        const auto withGain = [&]() {
+            const double coef = interpolate(nComponents, static_cast<float>(l)) / l;
             std::array<float, 3> out;
-            for (int c = 0; c < 3; ++c) {
-                const double v = _masterFirst ? interpolate( c, static_cast<float>(coef * x[c]) ) : ( coef * interpolate(c, x[c]) );
+            for (std::size_t c = 0; c < 3; ++c) {
+                const int component = static_cast<int>(c);
+                const double v = masterFirst ? interpolate( component, static_cast<float>(coef * x[c]) ) : ( coef * interpolate(component, x[c]) );
                 out[c] = static_cast<float>( clamp<float>(v, 1) );
             }
 
             return out;
         };
         if (l >= kLuminanceModeEpsilon) {
-            return withGain(l);
+            return withGain();
         }
         std::array<float, 3> perChannel;
-        for (int c = 0; c < 3; ++c) {
-            perChannel[c] = clamp<float>(_masterFirst ? interpolate( c, interpolate(nComponents, x[c]) ) : interpolate( nComponents, interpolate(c, x[c]) ), 1);
+        for (std::size_t c = 0; c < 3; ++c) {
+            const int component = static_cast<int>(c);
+            perChannel[c] = clamp<float>(masterFirst ? interpolate( component, interpolate(nComponents, x[c]) ) : interpolate( nComponents, interpolate(component, x[c]) ), 1);
         }
         if ( !(l > 0.) ) { // also for NaN
             return perChannel;
         }
         const double t = l / kLuminanceModeEpsilon;
-        const std::array<float, 3> gained = withGain(kLuminanceModeEpsilon);
+        const std::array<float, 3> gained = withGain();
         std::array<float, 3> result;
         for (std::size_t c = 0; c < 3; ++c) {
-            result[c] = static_cast<float>(t * gained[c] + (1. - t) * perChannel[c]);
+            const double v = t * gained[c] + (1. - t) * perChannel[c];
+            // a gain beyond the float range (a tiny l): the per-channel result
+            result[c] = std::isfinite(v) ? static_cast<float>(v) : perChannel[c];
         }
 
         return result;
@@ -749,23 +770,12 @@ private:
     double _rangeMax;
     LuminanceMathEnum _luminanceMath;
     bool _masterOnAlpha;
-    bool _masterFirst;
+    LuminanceOrder _luminanceOrder;
 };
 
 #define HISTOGRAM_BINS 256
 
 // the parameter values of a ColorLookupProcessor
-struct ColorLookupProcessorArgs
-{
-    double rangeMin;
-    double rangeMax;
-    bool clampBlack;
-    bool clampWhite;
-    LuminanceMathEnum luminanceMath;
-    bool masterOnAlpha;
-    bool masterFirst; // Luminance mode: the master gain before the channel curves (version 2)
-};
-
 struct RGBAValues
 {
     double r, g, b, a;
@@ -1223,11 +1233,11 @@ ColorLookupPlugin::makeProcessor(BitDepthEnum dstBitDepth,
 {
     switch (dstBitDepth) {
         case eBitDepthUByte:
-            return std::make_unique<ColorLookupProcessor<unsigned char, nComponents, 255, 255, masterCurveMode> >(*this, args, _lookupTable, a.rangeMin, a.rangeMax, a.clampBlack, a.clampWhite, a.luminanceMath, a.masterOnAlpha, a.masterFirst);
+            return std::make_unique<ColorLookupProcessor<unsigned char, nComponents, 255, 255, masterCurveMode> >(*this, args, _lookupTable, a);
         case eBitDepthUShort:
-            return std::make_unique<ColorLookupProcessor<unsigned short, nComponents, 65535, 65535, masterCurveMode> >(*this, args, _lookupTable, a.rangeMin, a.rangeMax, a.clampBlack, a.clampWhite, a.luminanceMath, a.masterOnAlpha, a.masterFirst);
+            return std::make_unique<ColorLookupProcessor<unsigned short, nComponents, 65535, 65535, masterCurveMode> >(*this, args, _lookupTable, a);
         case eBitDepthFloat:
-            return std::make_unique<ColorLookupProcessor<float, nComponents, 1, 1023, masterCurveMode> >(*this, args, _lookupTable, a.rangeMin, a.rangeMax, a.clampBlack, a.clampWhite, a.luminanceMath, a.masterOnAlpha, a.masterFirst);
+            return std::make_unique<ColorLookupProcessor<float, nComponents, 1, 1023, masterCurveMode> >(*this, args, _lookupTable, a);
         default:
             return nullptr;
     }
@@ -1249,7 +1259,8 @@ ColorLookupPlugin::renderForComponents(const RenderArguments &args,
     MasterCurveModeEnum masterCurveMode = (MasterCurveModeEnum)_masterCurveMode->getValueAtTime(time);
     const bool masterOnAlpha = _masterOnAlpha->getValueAtTime(time);
     const ColorLookupProcessorArgs procArgs = {
-        rangeMin, rangeMax, clampBlack, clampWhite, luminanceMath, masterOnAlpha, _majorVersion >= 2
+        rangeMin, rangeMax, clampBlack, clampWhite, luminanceMath, masterOnAlpha,
+        (_majorVersion >= 2) ? LuminanceOrder::eMasterThenChannel : LuminanceOrder::eGainThenChannel
     };
     std::unique_ptr<ColorLookupProcessorBase> proc;
     switch (masterCurveMode) {

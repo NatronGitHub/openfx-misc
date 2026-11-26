@@ -951,7 +951,8 @@ for _op in MERGE_MASKABLE_OPERATORS + ["over"]:
         nuke_inputs=["Ba01", "Aa01"], clips={"Source": "Ba01", "A": "Aa01"},
         channels="rgba", tolerance=1e-4))
 # A disconnected (#328): the checked output channels are B's where B's
-# checkbox is on, else 0; the unchecked output channels are B's.
+# checkbox is on, else 0; the unchecked output channels are B's; Mask and
+# Mix apply.
 _B_NONE = {"BChannelsR": 0, "BChannelsG": 0, "BChannelsB": 0, "BChannelsA": 0}
 _OUT_ALPHA = {"OutputChannelsR": 0, "OutputChannelsG": 0, "OutputChannelsB": 0}
 for _major in (None, 2, 1):
@@ -974,6 +975,13 @@ for _major in (None, 2, 1):
              (ofx_id("MergePlugin"), dict(_B_NONE, **_OUT_ALPHA)),
              nuke_inputs=["Ba01"], clips={"Source": "Ba01"},
              channels="rgba", **_kw),
+        case("Merge%s over, A disconnected, B channels rgb, mask and mix 0.5"
+             % _version,
+             ("Merge2", dict(MASKED, Bchannels="rgb", mix=.5)),
+             (ofx_id("MergePlugin"), {"BChannelsA": 0, "mix": .5}),
+             nuke_inputs=["Ba01", None, "mask"],
+             clips={"Source": "Ba01", "Mask": "mask"},
+             channels="rgba", tolerance=1e-4, **_kw),
     ]
 CASES += [
     case("Merge over, mask and mix 0.5",
@@ -2301,8 +2309,7 @@ CASES += [
          **dict(VIEWS, input=None)),
 ]
 
-# The clean plate without a C input is transparent black, as the
-# reference's clean plate generator without an input (#328). (After the
+# The clean plate without a C input is transparent black (#328). (After the
 # IBKGizmoV3 cases: the first case of a plug-in gives the node whose knob
 # order test_param_order.py compares.)
 CASES.append(case(
@@ -2344,8 +2351,8 @@ for _center in (False, True):
         row_order="TopBottom"))
 CASES += [
     # cells of 20x20 with a gap of 4: the 32x32 images are scaled by 0.5.
-    # Not compared: the right margin (x 60 to 64, outside the cells): the
-    # reference repeats edge pixels there, and ContactSheet does not.
+    # Not compared: the right margin (x 60 to 64, outside the cells), which
+    # ContactSheet leaves black; it differs there.
     _contact_sheet("2x3 cells, gap 4, scale 0.5", 64, 44, 2, 3,
                    ["ramp", None, "checker", "checker", "ramp"], gap=4,
                    region=(0, 0, 60, 44)),

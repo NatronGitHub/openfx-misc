@@ -1070,6 +1070,9 @@ tests=(
     # is A's alpha, 0.5 (#328). Merge 3 uses B's A checkbox.
     "Merge 2 Alpha-only B R off|net.sf.openfx.MergePlugin|filter|float|notidentity+comps=Alpha+mean=0.5||-m 2 -i A=solid:0.4,0.4,0.4,0.5#alpha -i Source=solid:0.3,0.3,0.3,0.6#alpha BChannelsR=0 -i Mask=none --frames 0"
     "Merge 1 Alpha-only B R off|net.sf.openfx.MergePlugin|filter|float|notidentity+comps=Alpha+mean=0.5||-m 1 -i A=solid:0.4,0.4,0.4,0.5#alpha -i Source=solid:0.3,0.3,0.3,0.6#alpha BChannelsR=0 -i Mask=none --frames 0"
+    # A disconnected, Alpha-only: Merge 2 uses B's R checkbox for the alpha (off: 0); Merge 3 its A checkbox (B)
+    "Merge 2 Alpha-only A disconnected B R off|net.sf.openfx.MergePlugin|filter|float|notidentity+comps=Alpha+mean=0||-m 2 -i A=none -i Source=solid:0.3,0.3,0.3,0.6#alpha BChannelsR=0 -i Mask=none --frames 0"
+    "Merge Alpha-only A disconnected B R off|net.sf.openfx.MergePlugin|filter|float|identity+comps=Alpha+mean=0.6||-i A=none -i Source=solid:0.3,0.3,0.3,0.6#alpha BChannelsR=0 -i Mask=none --frames 0"
     "Merge Alpha-only B R off|net.sf.openfx.MergePlugin|filter|float|notidentity+comps=Alpha+mean=0.8||-i A=solid:0.4,0.4,0.4,0.5#alpha -i Source=solid:0.3,0.3,0.3,0.6#alpha BChannelsR=0 -i Mask=none --frames 0"
     "Merge alpha masking multiply|net.sf.openfx.MergePlugin|filter|float|mean=0.43,0.43,0.43,0.8||-i A=solid:0.4,0.4,0.4,0.5 -i Source=solid:0.3,0.3,0.3,0.6 operation=multiply screenAlpha=1 -i Mask=none --frames 0"
     "Merge 2 alpha masking multiply|net.sf.openfx.MergePlugin|filter|float|mean=0.12,0.12,0.12,0.8||-m 2 -i A=solid:0.4,0.4,0.4,0.5 -i Source=solid:0.3,0.3,0.3,0.6 operation=multiply screenAlpha=1 -i Mask=none --frames 0"
