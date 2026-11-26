@@ -33,6 +33,7 @@
 #include "ofxsRGBAProcessing.h"
 #include "ofxsMacros.h"
 #include "ofxsThreadSuite.h"
+#include "SoftEdge.h"
 
 using namespace OFX;
 
@@ -112,20 +113,11 @@ enum class CopyRectangleVersion
     e3 = 3, // fractional rectangle, smoothstep fade
 };
 
-// TODO: move to SupportExt (the same as Crop's)
-// smoothstep(t) = 3t^2 - 2t^3 for t in [0,1], 0 below, 1 above
-static inline
-double
-smoothstep(double t)
+// The softness version of a major version: the only place that maps one to the other
+static constexpr CopyRectangleVersion
+versionOf(unsigned majorVersion)
 {
-    if (t <= 0.) {
-        return 0.;
-    }
-    if (t >= 1.) {
-        return 1.;
-    }
-
-    return t * t * (3. - 2. * t);
+    return (majorVersion >= 3) ? CopyRectangleVersion::e3 : CopyRectangleVersion::e2;
 }
 
 // Version 3: the factor along one axis of the rectangle [r1, r2), in pixels at render scale 1, at the pixel whose
@@ -150,13 +142,13 @@ softnessFactorV3(double r1,
         return 0.;
     }
     if (dLow <= dHigh) {
-        return smoothstep( (dLow + 0.5) / (s + 1.) );
+        return SoftEdge::smoothstep( (dLow + 0.5) / (s + 1.) );
     }
     if ( !(p1 > r2 - s) ) {
         return 1.;
     }
 
-    return smoothstep( (dHigh + 0.5) / (s + 1.) );
+    return SoftEdge::smoothstep( (dHigh + 0.5) / (s + 1.) );
 }
 
 // Version 3, along x: the pixels before r1 rounded up are not in the rectangle either, and without softness the
@@ -278,76 +270,20 @@ private:
     {
         assert(nComponents == 1 || nComponents == 3 || nComponents == 4);
         if (_version >= CopyRectangleVersion::e3) {
-            processV3(procWindow, rs);
-
-            return;
+            process<CopyRectangleVersion::e3>(procWindow, rs);
+        } else {
+            process<CopyRectangleVersion::e2>(procWindow, rs);
         }
-        float yMultiplier, xMultiplier;
-        float tmpPix[nComponents];
+    }
 
-        //assert(filter == _filter);
-        for (int y = procWindow.y1; y < procWindow.y2; ++y) {
-            if ( _effect.abort() ) {
-                break;
-            }
-
-            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
-
-            // distance to the nearest rectangle area horizontal edge
-            int yDistance =  (std::min)(y - _rectangle.y1, _rectangle.y2 - 1 - y);
-
-            // handle softness
-            bool yInRectangle = y >= _rectangle.y1 && y < _rectangle.y2;
-            if (yInRectangle) {
-                ///apply softness only within the rectangle
-                yMultiplier = yDistance < _softness ? yDistance / (float)_softness : 1.f;
-            } else {
-                yMultiplier = 1.f;
-            }
-
-            for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
-                // distance to the nearest rectangle area vertical edge
-                int xDistance =  (std::min)(x - _rectangle.x1, _rectangle.x2 - 1 - x);
-                // handle softness
-                bool xInRectangle = x >= _rectangle.x1 && x < _rectangle.x2;
-
-                if (xInRectangle) {
-                    ///apply softness only within the rectangle
-                    xMultiplier = xDistance < _softness ? xDistance / (float)_softness : 1.f;
-                } else {
-                    xMultiplier = 1.f;
-                }
-
-                const PIX *srcPixB = _srcImgB ? (const PIX*)_srcImgB->getPixelAddress(x, y) : NULL;
-
-                if (xInRectangle && yInRectangle) {
-                    const PIX *srcPixA = _srcImgA ? (const PIX*)_srcImgA->getPixelAddress(x, y) : NULL;
-                    float multiplier = xMultiplier * yMultiplier;
-
-                    for (int k = 0; k < nComponents; ++k) {
-                        if (!_process[(nComponents) == 1 ? 3 : k]) {
-                            tmpPix[k] = srcPixB ? srcPixB[k] : 0.f;
-                        } else {
-                            PIX A = srcPixA ? srcPixA[k] : PIX();
-                            PIX B = srcPixB ? srcPixB[k] : PIX();
-                            tmpPix[k] = A *  multiplier + B * (1.f - multiplier);
-                        }
-                    }
-                    ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPixB, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
-                } else {
-                    for (int k = 0; k < nComponents; ++k) {
-                        dstPix[k] = srcPixB ? srcPixB[k] : PIX();
-                    }
-                }
-            }
-        }
-    } // multiThreadProcessImages
-
-    // Version 3: the factor is computed in pixels at render scale 1, from the pixel edges and centres
-    void processV3(const OfxRectI& procWindow,
-                   const OfxPointD& rs)
+    // A is mixed over B by the multiplier of the version, in the rectangle. Version 2: in the integer
+    // rectangle, a linear fade in pixels at the render scale. Version 3: the factor is computed in pixels at
+    // render scale 1, from the pixel edges and centres, and the rectangle is where it is positive.
+    template<CopyRectangleVersion version>
+    void process(const OfxRectI& procWindow,
+                 const OfxPointD& rs)
     {
-        // the rectangle and the softness in pixels at render scale 1
+        // version 3: the rectangle and the softness in pixels at render scale 1
         const double x1 = _rectangleCanonical.x1 / _par;
         const double x2 = _rectangleCanonical.x2 / _par;
         const double y1 = _rectangleCanonical.y1;
@@ -360,13 +296,44 @@ private:
             if ( _effect.abort() ) {
                 break;
             }
+
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
-            const double yFactor = softnessFactorV3(y1, y2, y / rs.y, (y + 0.5) / rs.y, sy);
+
+            double yFactor = 0.; // version 3
+            float yMultiplier = 1.f; // version 2
+            bool yInRectangle = false; // version 2
+            if (version >= CopyRectangleVersion::e3) {
+                yFactor = softnessFactorV3(y1, y2, y / rs.y, (y + 0.5) / rs.y, sy);
+            } else {
+                // distance to the nearest rectangle area horizontal edge
+                const int yDistance =  (std::min)(y - _rectangle.y1, _rectangle.y2 - 1 - y);
+                yInRectangle = y >= _rectangle.y1 && y < _rectangle.y2;
+                if (yInRectangle) {
+                    ///apply softness only within the rectangle
+                    yMultiplier = yDistance < _softness ? yDistance / (float)_softness : 1.f;
+                }
+            }
+
             for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
-                const double xFactor = (yFactor <= 0.) ? 0. : softnessFactorV3X(x1, x2, x / rs.x, (x + 0.5) / rs.x, sx);
-                const float multiplier = static_cast<float>(xFactor * yFactor);
+                float multiplier;
+                bool inRectangle;
+                if (version >= CopyRectangleVersion::e3) {
+                    const double xFactor = (yFactor <= 0.) ? 0. : softnessFactorV3X(x1, x2, x / rs.x, (x + 0.5) / rs.x, sx);
+                    multiplier = static_cast<float>(xFactor * yFactor);
+                    inRectangle = multiplier > 0.f;
+                } else {
+                    // distance to the nearest rectangle area vertical edge
+                    const int xDistance =  (std::min)(x - _rectangle.x1, _rectangle.x2 - 1 - x);
+                    const bool xInRectangle = x >= _rectangle.x1 && x < _rectangle.x2;
+                    ///apply softness only within the rectangle
+                    const float xMultiplier = (xInRectangle && xDistance < _softness) ? xDistance / (float)_softness : 1.f;
+                    multiplier = xMultiplier * yMultiplier;
+                    inRectangle = xInRectangle && yInRectangle;
+                }
+
                 const PIX *srcPixB = _srcImgB ? (const PIX*)_srcImgB->getPixelAddress(x, y) : NULL;
-                if (multiplier > 0.f) {
+
+                if (inRectangle) {
                     const PIX *srcPixA = _srcImgA ? (const PIX*)_srcImgA->getPixelAddress(x, y) : NULL;
                     for (int k = 0; k < nComponents; ++k) {
                         if (!_process[(nComponents) == 1 ? 3 : k]) {
@@ -385,7 +352,7 @@ private:
                 }
             }
         }
-    } // processV3
+    } // process
 };
 
 
@@ -417,7 +384,7 @@ public:
         _srcClipA = fetchClip(kClipA);
         assert( _srcClipA && (!_srcClipA->isConnected() || _srcClipA->getPixelComponents() == ePixelComponentAlpha || _srcClipA->getPixelComponents() == ePixelComponentRGB || _srcClipA->getPixelComponents() == ePixelComponentRGBA) );
         _srcClipB = fetchClip(kClipB);
-        assert( _srcClipB && (!_srcClipA->isConnected() || _srcClipB->getPixelComponents() == ePixelComponentAlpha || _srcClipB->getPixelComponents() == ePixelComponentRGB || _srcClipB->getPixelComponents() == ePixelComponentRGBA) );
+        assert( _srcClipB && (!_srcClipB->isConnected() || _srcClipB->getPixelComponents() == ePixelComponentAlpha || _srcClipB->getPixelComponents() == ePixelComponentRGB || _srcClipB->getPixelComponents() == ePixelComponentRGBA) );
         _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
 
@@ -781,7 +748,7 @@ ImageEffect*
 CopyRectanglePluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                                          ContextEnum /*context*/)
 {
-    return new CopyRectanglePlugin(handle, (majorVersion >= 3) ? CopyRectangleVersion::e3 : CopyRectangleVersion::e2);
+    return new CopyRectanglePlugin( handle, versionOf(majorVersion) );
 }
 
 static void
@@ -870,7 +837,7 @@ CopyRectanglePluginFactory<majorVersion>::describeInContext(ImageEffectDescripto
         param->setDoubleType(eDoubleTypeXYAbsolute);
         ofxsSetDefaultCoordinateSystemNormalised(*param); // see ofxsNormalisedDefaults.h (#236)
         // version 3: the middle half of the project (#282)
-        if (majorVersion >= 3) {
+        if (versionOf(majorVersion) >= CopyRectangleVersion::e3) {
             param->setDefault(0.25, 0.25);
         } else {
             param->setDefault(0., 0.);
@@ -890,7 +857,7 @@ CopyRectanglePluginFactory<majorVersion>::describeInContext(ImageEffectDescripto
         param->setLabel(kParamRectangleInteractSizeLabel);
         param->setDoubleType(eDoubleTypeXY);
         ofxsSetDefaultCoordinateSystemNormalised(*param); // see ofxsNormalisedDefaults.h (#236)
-        if (majorVersion >= 3) {
+        if (versionOf(majorVersion) >= CopyRectangleVersion::e3) {
             param->setDefault(0.5, 0.5);
         } else {
             param->setDefault(1., 1.);
@@ -927,7 +894,7 @@ CopyRectanglePluginFactory<majorVersion>::describeInContext(ImageEffectDescripto
         param->setRange(0., 100.);
         param->setDisplayRange(0., 100.);
         param->setIncrement(1.);
-        param->setHint( (majorVersion >= 3) ? kParamSoftnessHint : kParamSoftnessHintV2 );
+        param->setHint( (versionOf(majorVersion) >= CopyRectangleVersion::e3) ? kParamSoftnessHint : kParamSoftnessHintV2 );
         if (page) {
             page->addChild(*param);
         }
