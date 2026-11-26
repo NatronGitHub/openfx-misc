@@ -80,6 +80,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kClipAHint "The input you intend to dissolve from."
 #define kClipB "B"
 #define kClipBHint "The input you intend to dissolve to."
+// in the filter context, B is the mandated Source clip (ofxImageEffectContexts.rst, The Filter Context)
+inline const char*
+clipBName(ContextEnum context)
+{
+    return (context == eContextFilter) ? kOfxImageEffectSimpleSourceClipName : kClipB;
+}
 
 #ifdef OFX_EXTENSIONS_NATRON
 #define OFX_COMPONENTS_OK(c) ((c)== ePixelComponentAlpha || (c) == ePixelComponentXY || (c) == ePixelComponentRGB || (c) == ePixelComponentRGBA)
@@ -111,7 +117,7 @@ public:
         _srcClipA = fetchClip(kClipA);
         assert( _srcClipA && (!_srcClipA->isConnected() || OFX_COMPONENTS_OK(_srcClipA->getPixelComponents())) );
 
-        _srcClipB = fetchClip(getContext() == eContextFilter ? kOfxImageEffectSimpleSourceClipName : kClipB);
+        _srcClipB = fetchClip( clipBName( getContext() ) );
         assert( _srcClipB && (!_srcClipB->isConnected() || OFX_COMPONENTS_OK(_srcClipB->getPixelComponents())) );
 
         _dissolveIn = fetchIntParam(kParamIn);
@@ -484,7 +490,7 @@ TimeDissolvePluginFactory::describeInContext(ImageEffectDescriptor &desc,
 {
     {
         ClipDescriptor *srcClip;
-        srcClip = desc.defineClip(context == eContextFilter ? kOfxImageEffectSimpleSourceClipName : kClipB);
+        srcClip = desc.defineClip( clipBName(context) );
         srcClip->setHint(kClipBHint);
         srcClip->setOptional(true);
         srcClip->addSupportedComponent(ePixelComponentNone);
