@@ -81,34 +81,33 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "resolution (e.g. a preview at reduced quality), the image goes through unchanged and the statistics are " \
     "not updated."
 #define kPluginIdentifier "net.sf.openfx.ImageStatistics"
-// (#236, in the current minor version, not released yet) on hosts that ignore normalised defaults
-//              (e.g. DaVinci Resolve), the default rectangle is the project's, not (1,1) pixels
-// (#66, in the current minor version, not released yet) any render scale is accepted (OFX 1.1 hosts
-//              such as VEGAS): below full resolution, the image goes through and nothing is analyzed.
-//              On Natron only, getRegionOfDefinition still fails below full resolution: Natron
-//              uses that failure as its render scale probe, and then renders at scale 1.
+// History:
+// version 1.0: initial version
+// version 1.1: analysis frame range and Auto Crop (#140)
+// version 1.2: the S.Dev. of fewer than 2 pixels, and the skewness and kurtosis of fewer than 3 and 4
+//              pixels, are 0 instead of infinity; a disconnected input renders black instead of
+//              crashing; the default rectangle is the project's on hosts that ignore normalised
+//              defaults (#236); any render scale is accepted, nothing is analyzed below full
+//              resolution (#66)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 2 // Increment this when you have fixed a bug or made it faster.
-// 1.2: the S.Dev. of fewer than 2 pixels, and the skewness and kurtosis of fewer than 3 and 4 pixels,
-//      are 0 instead of infinity (an infinite parameter value gives NaN when interpolated, NaN audit);
-//      a NULL Source image (disconnected input) renders black instead of crashing (SupportExt copyPixels)
 
 // With Auto Update, render() writes the statistics params (setValueAtTime), so it must not
 // run concurrently on the same instance (on several tiles or frames): render whole images
 // only, one render at a time per instance. The output is a copy of the input either way.
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 1
+#define kSupportsMultipleClipPARs false
+#define kSupportsMultipleClipDepths false
+#define kRenderThreadSafety eRenderInstanceSafe
+
+// Whether the analysis can run at this render scale.
 // OFX has no way to refuse a render scale: an OFX 1.1 host such as VEGAS renders at any scale (and
 // shows the source when an action fails), so every scale is accepted. The statistics are only
 // computed at render scale 1: at another scale, the effect is an identity (the output is a copy of
 // the input anyway) and the analysis is skipped (#66). Natron is the exception: it probes render
 // scale support by calling getRegionOfDefinition at scale 0.5, and renders the plug-in at scale 1
 // (in proxy mode and in a zoomed-out viewer) if that fails, so getRegionOfDefinition fails there.
-#define kSupportsMultipleClipPARs false
-#define kSupportsMultipleClipDepths false
-#define kRenderThreadSafety eRenderInstanceSafe
-
-// whether the analysis can run at this render scale (see above)
 bool
 isFullResolution(const OfxPointD& renderScale)
 {
@@ -1474,8 +1473,7 @@ bool
 ImageStatisticsPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                              OfxRectD & /*rod*/)
 {
-    // Natron's render scale probe (see isFullResolution): failing here makes Natron render this
-    // effect at scale 1, so that the analysis runs. Other hosts get the identity below full resolution.
+    // Natron's render scale probe (see isFullResolution)
     if ( getImageEffectHostDescription()->isNatron && !isFullResolution(args.renderScale) ) {
         throwSuiteStatusException(kOfxStatFailed);
     }
@@ -1492,7 +1490,7 @@ ImageStatisticsPlugin::isIdentity(const IsIdentityArguments &args,
     const double time = args.time;
     bool autoUpdate = _autoUpdate->getValueAtTime(time);
 
-    // no analysis below full resolution: the output is the input
+    // no analysis below full resolution (see isFullResolution): the output is the input
     if ( !autoUpdate || !isFullResolution(args.renderScale) ) {
         identityClip = _srcClip;
 
@@ -1648,8 +1646,8 @@ ImageStatisticsPlugin::changedParam(const InstanceChangedArgs &args,
         _autoCropSize->deleteAllKeys();
     }
     if ( !isFullResolution(args.renderScale) ) {
-        // the analysis runs at full resolution only: tell the user if they asked for it (not for
-        // the Auto Update of a key)
+        // no analysis (see isFullResolution): tell the user if they asked for it (not for the Auto
+        // Update of a key)
         const bool analyzeRequested = doAnalyzeRGBA || doAnalyzeHSVL || doAnalyzeLuma || doAnalyzeAutoCrop ||
                                       doAnalyzeSequenceRGBA || doAnalyzeSequenceHSVL || doAnalyzeSequenceLuma ||
                                       doAnalyzeSequenceAutoCrop;
