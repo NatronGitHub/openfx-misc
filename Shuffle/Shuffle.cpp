@@ -58,23 +58,30 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 3.0: B input is now the default, pass-through when plugin is disabled
 // version 3.1: fix crashes and failed renders in the filter context (with the multiplane suites, its channel
 //              choices list the Source channels), and when the default input (B) is disconnected
-// version 4.0: on hosts without the multiplane suites, the A channels read the A input and the B channels the B input
-//              (version 3 swapped them, which is kept so that version 3 projects render the same)
-//              Also: R, G, B from the color plane of an input and A from another plane was taken for an
-//              identity, so the alpha was not written.
-// version 2.2, 3.2: the same identity fix as in 4.0 (the alpha read from another plane was not written)
-//              In 4.0, 3.2 and 2.2 (unreleased), whether the output has an alpha channel is read from the
-//              outputComponents parameter, so R, G, B from an RGB input and A from an Alpha input is not
-//              taken for an identity of the RGB input (the alpha was 1).
-//              In 4.0 (unreleased, fixed in place), with the multiplane suites, the defaults of R, G, B and A are
-//              found by their labels (B.Color.R...): on hosts without dynamic choices, the fixed indices were
-//              channels of other planes of A (issue #405). Versions 2 and 3 keep the fixed indices.
-// 4.0, 3.2 and 2.2 (unreleased, fixed in place): with the multiplane suites, an Alpha output is an identity only of an
-//              Alpha input read through the A choice (R, G and B, which an Alpha output does not get, were checked too,
-//              so that the RGBA input B was taken for an identity of an Alpha output), and an RGB or RGBA output only of
-//              an input with the same components.
+// version 4.0: on hosts without the multiplane suites, the A channels read the A input and the B channels the B
+//              input (version 3 swapped them); with the multiplane suites, the defaults of R, G, B and A are found
+//              by their labels (B.Color.R...), not by fixed indices (issue #405). Version 3 is kept, obsolete.
+// versions 2.2, 3.2 and 4.0: the output is no longer taken for an identity when it reads A from another plane than
+//              R, G and B, when its alpha comes from another input (from the outputComponents parameter), or, with
+//              the multiplane suites, when the input has other components than the output.
 #define kPluginVersionMajor 4 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinorV2 2 // the minor version of the obsolete version 2
+#define kPluginVersionMinorV3 2 // the minor version of the obsolete version 3
+
+// version 3: B is the default input (passed through when the plug-in is disabled)
+static constexpr unsigned kVersionDefaultB = 3;
+// version 4: on hosts without the multiplane suites, the A channels read A (version 3 swapped A and B)
+static constexpr unsigned kVersionUnswappedAB = 4;
+// version 4: with the multiplane suites, the channel defaults are found by their labels (issue #405)
+static constexpr unsigned kVersionChannelDefaultsByLabel = 4;
+
+// true if the version swaps A and B on hosts without the multiplane suites (version 3)
+static constexpr bool
+swapsAB(unsigned majorVersion)
+{
+    return (kVersionDefaultB <= majorVersion) && (majorVersion < kVersionUnswappedAB);
+}
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -588,15 +595,15 @@ public:
         _channelStringParam[0] = _channelStringParam[1] = _channelStringParam[2] = _channelStringParam[3] = 0;
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert( _dstClip && (1 <= _dstClip->getPixelComponentCount() && _dstClip->getPixelComponentCount() <= 4) );
-        _srcClipDefault = fetchClip(context == eContextGeneral ? (_majorVersion < 3 ? kClipA : kClipB) : kOfxImageEffectSimpleSourceClipName);
+        _srcClipDefault = fetchClip(context == eContextGeneral ? (_majorVersion < kVersionDefaultB ? kClipA : kClipB) : kOfxImageEffectSimpleSourceClipName);
         // the A and B inputs are optional (no components if disconnected)
         assert( _srcClipDefault && (!_srcClipDefault->isConnected() || (1 <= _srcClipDefault->getPixelComponentCount() && _srcClipDefault->getPixelComponentCount() <= 4)) );
         if (context == eContextGeneral) {
-            _srcClipOther = fetchClip(_majorVersion < 3 ? kClipB : kClipA);
+            _srcClipOther = fetchClip(_majorVersion < kVersionDefaultB ? kClipB : kClipA);
             // the A and B inputs are optional (no components if disconnected)
             assert( _srcClipOther && (!_srcClipOther->isConnected() || (1 <= _srcClipOther->getPixelComponentCount() && _srcClipOther->getPixelComponentCount() <= 4)) );
-            _srcClipA = _majorVersion < 3 ? _srcClipDefault : _srcClipOther;
-            _srcClipB = _majorVersion < 3 ? _srcClipOther : _srcClipDefault;
+            _srcClipA = _majorVersion < kVersionDefaultB ? _srcClipDefault : _srcClipOther;
+            _srcClipB = _majorVersion < kVersionDefaultB ? _srcClipOther : _srcClipDefault;
         } else {
             // The filter context only has the Source and Output clips: the A and B channels both read Source
             _srcClipA = _srcClipB = _srcClipDefault;
@@ -737,7 +744,7 @@ private:
     // @param dstPlaneOut [out] If non null, will be set to the plane written to in output
     void onMetadataChanged(MultiPlane::ImagePlaneDesc* dstPlaneOut);
 
-    unsigned int _majorVersion;
+    const unsigned int _majorVersion;
     bool _isFilterContext;
 
     // do not need to delete these, the ImageEffect is managing them for us
@@ -804,7 +811,7 @@ ShufflePlugin::isIdentityInternal(double time,
         InputChannelEnum a = InputChannelEnum( _channelParam[3]->getValueAtTime(time) );
 
         // Version 3 swapped A and B here (and in setupAndProcess()): kept so that version 3 projects render the same
-        const bool swapAB = (_majorVersion == 3);
+        const bool swapAB = swapsAB(_majorVersion);
         if ( (r == eInputChannelAR) && (g == eInputChannelAG) && (b == eInputChannelAB) && (a == eInputChannelAA) && srcClipA && (srcAComponents == dstComponents) ) {
             identityClip = swapAB ? srcClipB : srcClipA;
 
@@ -1062,7 +1069,7 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor,
         channelMap.resize(0);
         break;
     }
-    if (_majorVersion == 3) {
+    if ( swapsAB(_majorVersion) ) {
         // Version 3 read the A channels from the B image and the B channels from the A image
         // (and swapped A and B in isIdentityInternal()): kept so that version 3 projects render the same
         std::swap(srcImgA, srcImgB);
@@ -1720,7 +1727,7 @@ ShufflePlugin::changedParam(const InstanceChangedArgs &args,
        } else*/
     if ( (paramName == kParamClipInfo) && (args.reason == eChangeUserEdit) ) {
         std::string msg;
-        msg += _majorVersion < 3 ? "Input A: " : "Input B: ";
+        msg += _majorVersion < kVersionDefaultB ? "Input A: " : "Input B: ";
         if (!_srcClipDefault) {
             msg += "N/A";
         } else {
@@ -1728,7 +1735,7 @@ ShufflePlugin::changedParam(const InstanceChangedArgs &args,
         }
         msg += "\n";
         if (getContext() == eContextGeneral) {
-            msg += _majorVersion < 3 ? "Input B: " : "Input A: ";
+            msg += _majorVersion < kVersionDefaultB ? "Input B: " : "Input A: ";
             if (!_srcClipOther) {
                 msg += "N/A";
             } else {
@@ -1823,15 +1830,13 @@ template<unsigned int majorVersion>
 void
 ShufflePluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
-    if (majorVersion < kPluginVersionMajor) {
-        desc.setIsObsolete(true);
-    }
+    desc.setIsObsolete(majorVersion < kPluginVersionMajor);
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
-    if (majorVersion >= 4) {
+    if (majorVersion >= kVersionUnswappedAB) {
         desc.setPluginDescription(kPluginDescription kPluginDescriptionDefaultB kPluginDescriptionVersion4);
-    } else if (majorVersion == 3) {
+    } else if ( swapsAB(majorVersion) ) {
         desc.setPluginDescription(kPluginDescription kPluginDescriptionDefaultB kPluginDescriptionVersion3);
     } else {
         desc.setPluginDescription(kPluginDescription);
@@ -2019,7 +2024,7 @@ ShufflePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &des
 #endif
         srcClipB->setTemporalClipAccess(false);
         srcClipB->setSupportsTiles(kSupportsTiles);
-        srcClipB->setOptional(/*this->getMajorVersion() < 3 ? true : */true);
+        srcClipB->setOptional(true);
 
         ClipDescriptor* srcClipA = desc.defineClip(kClipA);
         srcClipA->addSupportedComponent(ePixelComponentRGBA);
@@ -2030,7 +2035,7 @@ ShufflePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &des
 #endif
         srcClipA->setTemporalClipAccess(false);
         srcClipA->setSupportsTiles(kSupportsTiles);
-        srcClipA->setOptional(this->getMajorVersion() < 3 ? false : true);
+        srcClipA->setOptional(this->getMajorVersion() < kVersionDefaultB ? false : true);
     } else {
         ClipDescriptor* srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
         srcClip->addSupportedComponent(ePixelComponentRGBA);
@@ -2152,7 +2157,7 @@ ShufflePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &des
     const std::vector<std::string> clipsForChannels = channelsFromSourceOnly ?
         std::vector<std::string>{kOfxImageEffectSimpleSourceClipName} :
         std::vector<std::string>{kClipA, kClipB};
-    const bool defaultIsA = (this->getMajorVersion() < 3) || channelsFromSourceOnly;
+    const bool defaultIsA = (this->getMajorVersion() < kVersionDefaultB) || channelsFromSourceOnly;
     // The default of a channel choice of the multiplane suites: channel c (0 to 3: R, G, B, A) of the
     // color plane of the default input. Version 4 finds it by its label: on hosts without dynamic
     // choices (the Nuke multiplane extension), the options list every hard-coded plane of A before B,
@@ -2161,7 +2166,7 @@ ShufflePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &des
     const auto setChannelDefault = [&](ChoiceParamDescriptor* param,
                                        int c) {
         const int index = (defaultIsA ? eInputChannelAR : eInputChannelBR) + c;
-        if (this->getMajorVersion() < 4) {
+        if (this->getMajorVersion() < kVersionChannelDefaultsByLabel) {
             param->setDefault(index);
         } else {
             const std::string clip = defaultIsA ? clipsForChannels.front() : std::string(kClipB);
@@ -2184,7 +2189,7 @@ ShufflePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &des
                 param->setLabel(kParamOutputRLabel);
                 param->setHint(kParamOutputRHint);
                 MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true /*addConstants*/, true /*onlyColorPlane*/);
-                param->setDefault(this->getMajorVersion() < 3 ? eInputChannelAR : eInputChannelBR);
+                param->setDefault(this->getMajorVersion() < kVersionDefaultB ? eInputChannelAR : eInputChannelBR);
                 if (page) {
                     page->addChild(*param);
                 }
@@ -2194,7 +2199,7 @@ ShufflePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &des
                 param->setLabel(kParamOutputGLabel);
                 param->setHint(kParamOutputGHint);
                 MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true /*addConstants*/, true /*onlyColorPlane*/);
-                param->setDefault(this->getMajorVersion() < 3 ? eInputChannelAG : eInputChannelBG);
+                param->setDefault(this->getMajorVersion() < kVersionDefaultB ? eInputChannelAG : eInputChannelBG);
                 if (page) {
                     page->addChild(*param);
                 }
@@ -2204,7 +2209,7 @@ ShufflePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &des
                 param->setLabel(kParamOutputBLabel);
                 param->setHint(kParamOutputBHint);
                 MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true /*addConstants*/, true /*onlyColorPlane*/);
-                param->setDefault(this->getMajorVersion() < 3 ? eInputChannelAB : eInputChannelBB);
+                param->setDefault(this->getMajorVersion() < kVersionDefaultB ? eInputChannelAB : eInputChannelBB);
                 if (page) {
                     page->addChild(*param);
                 }
@@ -2222,7 +2227,7 @@ ShufflePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &des
                 param->setLabel(kParamOutputALabel);
                 param->setHint(kParamOutputAHint);
                 MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true /*addConstants*/, true /*onlyColorPlane*/);
-                param->setDefault(this->getMajorVersion() < 3 ? eInputChannelAA : eInputChannelBA);
+                param->setDefault(this->getMajorVersion() < kVersionDefaultB ? eInputChannelAA : eInputChannelBA);
                 if (page) {
                     page->addChild(*param);
                 }
@@ -2264,12 +2269,12 @@ ShufflePluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
 
 // Each major version needs its own factory class: FactoryMainEntryHelper stores
 // the plugin UID in a static shared by all objects of the same class.
-static ShufflePluginFactory<2> p2(kPluginIdentifier, 2);
-mRegisterPluginFactoryInstance(p2)
+static ShufflePluginFactory<2> p_v2(kPluginIdentifier, kPluginVersionMinorV2);
+mRegisterPluginFactoryInstance(p_v2)
 
 // version 3: A and B are swapped on hosts without the multiplane suites (deprecated, kept so that old projects render the same)
-static ShufflePluginFactory<3> p3(kPluginIdentifier, 2);
-mRegisterPluginFactoryInstance(p3)
+static ShufflePluginFactory<3> p_v3(kPluginIdentifier, kPluginVersionMinorV3);
+mRegisterPluginFactoryInstance(p_v3)
 
 static ShufflePluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
