@@ -43,7 +43,9 @@ f="$1"
 
 marker="inline cimg_uint64 _rand_omp_begin() { // openfx-gmic patch (issue #44)"
 # expected number of parallel random loops (rand, noise) and of math parser copy constructors,
-# and number of occurrences of '_rand(),cimg::rng()' (spaces allowed) in CImg.h (G'MIC 4.0.7)
+# and number of occurrences of '_rand(),cimg::rng()' (spaces allowed) in CImg.h (G'MIC 4.0.7;
+# CImg develop has the same counts, with a 'user_macro(0),' initializer between the copy
+# constructor's 'result_end(mp.result_end?...' and its 'rng((cimg::_rand(),cimg::rng())) {')
 nloops=8
 ncopies=1
 nloose=15
@@ -64,14 +66,14 @@ counts() {
     { t = $0; gsub(/^[ \t]+|[ \t]+$/, "", t)
       loose = (t ~ /_rand\(\) *, *cimg::rng\(\)/)
       loop = (prev ~ /cimg_pragma_openmp\(parallel cimg_openmp_if_size\(size\(\),/)
-      copy = (prev ~ /result_end\(mp\.result_end\?/) }
+      copy = (prev ~ /result_end\(mp\.result_end\?/ || (prev == "user_macro(0)," && prev2 ~ /result_end\(mp\.result_end\?/)) }
     t == marker { m++ }
     loop && t == "cimg_uint64 rng = (cimg::_rand(),cimg::rng());" { old++ }
     loop && t == "cimg_uint64 rng = cimg::_rand_omp_begin();" { new++ }
     copy && t == "rng((cimg::_rand(),cimg::rng())) {" { cp++ }
     loose && (loop || copy) { lt++ }
     loose { la++ }
-    t != "" { prev = t }
+    t != "" { prev2 = prev; prev = t }
     END { print m + 0, old + 0, new + 0, cp + 0, lt + 0, la + 0 }' "$1"
 }
 
@@ -117,7 +119,7 @@ BEGIN { inloop = 0; sawfor = 0; insrand = 0; prev = ""; err = 0 }
     if (!sawfor) bad("no omp for loop (barrier) before the write-back")
     sub(/cimg::srand\(rng\)/, "cimg::_rand_omp_end(rng)", line)
     inloop = 0
-  } else if (t == "rng((cimg::_rand(),cimg::rng())) {" && prev ~ /result_end\(mp\.result_end\?/) {
+  } else if (t == "rng((cimg::_rand(),cimg::rng())) {" && (prev ~ /result_end\(mp\.result_end\?/ || (prev == "user_macro(0)," && prev2 ~ /result_end\(mp\.result_end\?/))) {
     sub(/rng\(\(cimg::_rand\(\),cimg::rng\(\)\)\) \{/, "rng(mp.rng) { // openfx-gmic patch (issue #44): the state of the copied parser", line)
   }
   print line
@@ -149,7 +151,7 @@ BEGIN { inloop = 0; sawfor = 0; insrand = 0; prev = ""; err = 0 }
     print "      cimg::srand(rng);"
     print "    }"
   }
-  if (t != "") prev = t
+  if (t != "") { prev2 = prev; prev = t }
 }
 END {
   if (inloop) bad("unterminated parallel random loop")
