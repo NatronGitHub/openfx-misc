@@ -61,10 +61,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginIdentifier "net.sf.openfx.HSVToolPlugin"
 // History:
 // version 1.0: initial version
-// version 1.1: wrap the rotated hue into the hue circle (some rotations gave magenta); non-finite colours are
-//              premultiplied and unpremultiplied to finite values (SupportExt #73, #79), and angles are no longer
-//              converted to int (#178); in the filter and paint contexts, the Output components are those of
-//              Source (issue #190); a non-finite Mask sample is made finite for the output alpha (issue #220);
+// version 1.1: wrap the rotated hue into the hue circle (some rotations gave magenta); NaN/inf-safe
+//              premultiply (SupportExt #73, #79), and angles are no longer converted to int (#178); in the
+//              filter and paint contexts, the Output components are those of Source (issue #190); a non-finite
+//              Mask sample is made finite for the output alpha (issue #220);
 //              with Output Alpha = Source, the output alpha of RGBA images is the source alpha, Premultiply no
 //              longer blackens the image, and the colours are copied without adjustments (issue #322); new Set
 //              Saturation and Set Brightness parameters, off by default (issue #293)

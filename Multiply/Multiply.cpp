@@ -49,7 +49,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
-// version 2.1: non-finite colours are premultiplied and unpremultiplied to finite values (SupportExt #73, #79)
+// version 2.1: NaN/inf-safe premultiply (SupportExt #73, #79)
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 

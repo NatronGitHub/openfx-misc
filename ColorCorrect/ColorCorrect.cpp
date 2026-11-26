@@ -57,9 +57,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 2.0: use kNatronOfxParamProcess* parameters
 // version 2.1: add range params
 // version 2.2: gamma = 0 gives its limit (0 below 1, 1 at 1, FLT_MAX above 1) instead of dividing by zero, and
-//              the results of a small gamma are capped to FLT_MAX; non-finite colours are premultiplied and
-//              unpremultiplied to finite values (SupportExt #73, #79); a NaN value no longer converts NaN to int
-//              for the curve lookup (#178); add the Mix Luminance and Test parameters (default 0 and off) (#289)
+//              the results of a small gamma are capped to FLT_MAX; NaN/inf-safe premultiply
+//              (SupportExt #73, #79); a NaN value no longer converts NaN to int for the curve lookup (#178);
+//              add the Mix Luminance and Test parameters (default 0 and off) (#289)
 // version 3.0: Clamp Black is off by default (#272); Contrast and Gamma also change the negative values, and
 //              Gamma 0 and the small gammas follow the reference (#289, see contrastGammaV3()). Version 2.2 is
 //              kept, obsolete.

@@ -45,7 +45,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
-// version 2.1: non-finite colours are premultiplied and unpremultiplied to finite values (SupportExt #73, #79);
+// version 2.1: NaN/inf-safe premultiply (SupportExt #73, #79);
 //              Invert parameter, off by default: apply the inverse of the matrix (issue #291)
 // version 3.0: Clamp Black is off by default, so that the default node keeps negative values (issue #272).
 //              Version 2.1 is kept, obsolete.

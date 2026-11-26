@@ -48,7 +48,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // History:
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
-// version 2.1: non-finite colours are premultiplied and unpremultiplied to finite values (SupportExt #73, #79);
+// version 2.1: NaN/inf-safe premultiply (SupportExt #73, #79);
 //              the mask-RoD identity test is skipped on hosts without multi-resolution, and premult defaults to
 //              false for a non-RGBA source (#240); the saturation can be negative (complementary colours) (#292)
 // version 3.0: fix ACES AP1 luminance math (version 2 used CCIR 601); Clamp Black is off by default, so that

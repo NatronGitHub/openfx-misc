@@ -47,10 +47,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 // History:
 // version 1.0: initial version
-// version 1.1 (kept for backward compatibility): non-finite colours are premultiplied and unpremultiplied to finite values (SupportExt #73, #79)
+// version 1.1 (kept for backward compatibility): NaN/inf-safe premultiply (SupportExt #73, #79)
 // version 2.0: in "Alpha" and "Image and Alpha" output modes, premultiply RGB by the source alpha
 //              (version 1 premultiplied RGB by the suppress mask);
-//              non-finite colours are premultiplied and unpremultiplied to finite values (SupportExt #73, #79)
+//              NaN/inf-safe premultiply (SupportExt #73, #79)
 // versions 1.1 and 2.0: in the filter and paint contexts, Source is RGBA and the Output components are those of
 //              Source, as the OpenFX spec mandates (issue #190; the Alpha modes remapped Source and Output to RGBA)
 // versions 1.1 and 2.0: an XY Output (never declared, so never given by a host) is no longer rendered as 2

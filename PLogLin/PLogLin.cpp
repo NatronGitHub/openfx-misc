@@ -49,7 +49,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.0: initial version
 // version 1.1: channels with nGamma = 0 (Log to Lin), or linRef <= 0 or density = 0 (Lin to Log), are passed through;
 //              the results are capped to the float range;
-//              non-finite colours are premultiplied and unpremultiplied to finite values (SupportExt #73, #79)
+//              NaN/inf-safe premultiply (SupportExt #73, #79)
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
