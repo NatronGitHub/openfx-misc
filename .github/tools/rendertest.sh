@@ -1539,9 +1539,12 @@ tests=(
     # alpha (c=3: Y).
     "CImgExpression X Y scale 0.5|net.sf.cimg.CImgExpression|filter|float|mean=0.499306,0.499132,0.499306,0.499132+tol=0.0001||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=if(c%2,Y/576,X/720) --scale 0.5"
     "CImgExpression X Y|net.sf.cimg.CImgExpression|filter|float|mean=0.499306,0.499132,0.499306,0.499132+tol=0.0001||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=if(c%2,Y/576,X/720)"
-    # an input whose RoD starts at 100,50 (the 64x48 autocrop.pfm, opaque): X=x+100, Y=y+50, so the means
-    # of X/1000 and Y/1000 are 131.5/1000 and 73.5/1000 (x/1000 would give 31.5/1000)
-    "CImgExpression X Y offset|net.sf.cimg.CImgExpression|filter|float|mean=0.1315,0.0735,0.1315,0.0735+tol=0.0001||-i Source=file:autocrop.pfm@100,50 -i Mask=none expression=if(c%2,Y/1000,X/1000)"
+    # an input whose RoD starts at 100,50 (the 64x48 autocrop.pfm, opaque): CImgExpression does not
+    # support multi-resolution, so hostDemo pads its input to the 720x576 project (openfx #359; with
+    # --ofx11 too, where no clip has another size than the project): X and Y cover the project, and
+    # the means of X/1000 and Y/1000 are 359.5/1000 and 287.5/1000 (an unpadded input would give
+    # 131.5/1000 and 73.5/1000)
+    "CImgExpression X Y offset, padded|net.sf.cimg.CImgExpression|filter|float|mean=0.3595,0.2875,0.3595,0.2875+tol=0.0001||-i Source=file:autocrop.pfm@100,50 -i Mask=none expression=if(c%2,Y/1000,X/1000)"
     # an expression that defines its own X keeps it: no scalar X in front of a vector X (the
     # arguments are split on spaces, so "const X" cannot be given here)
     "CImgExpression vector X|net.sf.cimg.CImgExpression|filter|float|mean=0.5,0.5,0.5,0.5||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=X=[0.5,0.25];X[0]"

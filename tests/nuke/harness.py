@@ -561,16 +561,15 @@ def read_render(case, case_dir, output):
     Pixels outside the output bounds are 0, and so is the alpha of an RGB
     output.
     """
-    x1, y1, x2, y2, _ = case_region(case)
     files = output["files"]
     bx1, by1, bx2, by2 = output["bounds"]
     width, height, _, color = read_pfm(os.path.join(case_dir, files[0]))
     if (width, height) != (bx2 - bx1, by2 - by1):
         raise CaseError("%s is %dx%d, but its bounds are %r"
                         % (files[0], width, height, output["bounds"]))
-    if bx1 < x1 or by1 < y1 or bx2 > x2 or by2 > y2:
-        raise CaseError("the output bounds %r exceed the window"
-                        % (output["bounds"],))
+    # The bounds may exceed the window: a plug-in without tiles renders its whole RoD, e.g. the
+    # project for one without multi-resolution, whose inputs hostDemo pads to the project
+    # (openfx #359). Only the case points are read.
     alpha = None
     if len(files) > 1:
         alpha = read_pfm(os.path.join(case_dir, files[1]))[3]
