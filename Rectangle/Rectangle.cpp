@@ -105,7 +105,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              without one, the shape is drawn as in version 2. Version 2 is kept, obsolete, with its output.
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
-#define kPluginVersionMinorV2 2
+#define kPluginVersionMinorV2 2 // the last minor version of version 2, kept (obsolete)
 
 // version 3: the Softness at the pixel center, and Falloff Smooth by default
 static constexpr unsigned kVersionPixelCenterSoftness = 3;
@@ -173,33 +173,17 @@ public:
         _cornerRadius.x = _cornerRadius.y = 0.;
     }
 
-    void setValues(const OfxPointD& btmLeft,
-                   const OfxPointD& size,
-                   double angle,
-                   const OfxPointD& cornerRadius,
-                   double softness,
-                   const RGBAValues& color0,
-                   const RGBAValues& color1,
-                   double mix,
-                   bool processR,
-                   bool processG,
-                   bool processB,
-                   bool processA,
-                   const ShapeDraw::Options& drawOptions)
+    void setShape(const OfxPointD& btmLeft,
+                  const OfxPointD& size,
+                  double angle,
+                  const OfxPointD& cornerRadius,
+                  double softness)
     {
         _btmLeft = btmLeft;
         _size = size;
         _angle = angle;
         _cornerRadius = cornerRadius;
         _softness = (std::max)(0., softness);
-        _color0 = color0;
-        _color1 = color1;
-        _mix = mix;
-        _processR = processR;
-        _processG = processG;
-        _processB = processB;
-        _processA = processA;
-        _drawOptions = drawOptions;
     }
 };
 
@@ -218,10 +202,11 @@ private:
     void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
 #     ifndef __COVERITY__ // too many coverity[dead_error_line] errors
-        const bool r = _processR && (nComponents != 1);
-        const bool g = _processG && (nComponents >= 2);
-        const bool b = _processB && (nComponents >= 3);
-        const bool a = _processA && (nComponents == 1 || nComponents == 4);
+        const ShapeDraw::ProcessChannels& channels = processChannels();
+        const bool r = channels.r && (nComponents != 1);
+        const bool g = channels.g && (nComponents >= 2);
+        const bool b = channels.b && (nComponents >= 3);
+        const bool a = channels.a && (nComponents == 1 || nComponents == 4);
         if (r) {
             if (g) {
                 if (b) {
@@ -328,11 +313,11 @@ private:
                 double dx = (std::min)(x - btmLeft.x, topRight.x - x);
                 double dy = (std::min)(y - btmLeft.y, topRight.y - y);
 
-                if ( _pixelCenterSoftness && (_softness > 0.) ) {
+                if ( pixelCenterSoftness() && (_softness > 0.) ) {
                     // version 3: the Softness from the pixel center (dx and dy are taken there), over the
                     // Softness plus one pixel, so that it also antialiases the edge
-                    float w = ShapeDraw::softWeight(_drawOptions.falloff, dx, softness.x, 0.5, false) *
-                              ShapeDraw::softWeight(_drawOptions.falloff, dy, softness.y, 0.5, false);
+                    float w = ShapeDraw::softWeight(falloffCurve(), dx, softness.x, 0.5) *
+                              ShapeDraw::softWeight(falloffCurve(), dy, softness.y, 0.5);
                     if ( (r.x > 0) && (r.y > 0) && (dx < r.x) && (dy < r.y) ) {
                         // in a rounded corner: also the weight of the distance to the corner ellipse
                         w = (std::min)( w, cornerSoftWeight( (r.x - dx) / r.x, (r.y - dy) / r.y, r, softness, OfxPointD{0.5, 0.5} ) );
@@ -431,12 +416,12 @@ private:
                                     if (dx >= softness.x) {
                                         tx = 1.f;
                                     } else {
-                                        tx = (float)ShapeDraw::falloff(_drawOptions.falloff, dx / softness.x);
+                                        tx = (float)ShapeDraw::falloff(falloffCurve(), dx / softness.x);
                                     }
                                     if (dy >= softness.y) {
                                         ty = 1.f;
                                     } else {
-                                        ty = (float)ShapeDraw::falloff(_drawOptions.falloff, dy / softness.y);
+                                        ty = (float)ShapeDraw::falloff(falloffCurve(), dy / softness.y);
                                     }
 
                                     // then the corner coeff.
@@ -458,7 +443,7 @@ private:
                                     assert(dellipse >= 0.);
                                     float t = dellipse / _softness;
                                     if (t < 1) {
-                                        t = (float)ShapeDraw::falloff(_drawOptions.falloff, t);
+                                        t = (float)ShapeDraw::falloff(falloffCurve(), t);
                                     }
 
                                     // take the min of the rectangle softness and the corner softness
@@ -521,12 +506,12 @@ private:
                             if (dx >= softness.x) {
                                 tx = 1.f;
                             } else {
-                                tx = (float)ShapeDraw::falloff(_drawOptions.falloff, dx / softness.x);
+                                tx = (float)ShapeDraw::falloff(falloffCurve(), dx / softness.x);
                             }
                             if (dy >= softness.y) {
                                 ty = 1.f;
                             } else {
-                                ty = (float)ShapeDraw::falloff(_drawOptions.falloff, dy / softness.y);
+                                ty = (float)ShapeDraw::falloff(falloffCurve(), dy / softness.y);
                             }
                             float t = tx * ty;
                             if (t >= 1) {
@@ -580,7 +565,7 @@ private:
         const double au = std::abs(u) * r.x;
         const double av = std::abs(v) * r.y;
         if (d <= 0.) {
-            return ShapeDraw::softWeight( _drawOptions.falloff, (std::min)(r.x, r.y), s.y, e.y, false );
+            return ShapeDraw::softWeight( falloffCurve(), (std::min)(r.x, r.y), s.y, e.y );
         }
         // distance to the ellipse along its radius through the pixel center (positive inside), and the Softness
         // and half pixel along that direction (those of x at the side edge, of y at the bottom or top edge)
@@ -588,7 +573,7 @@ private:
         const double sd = (au * s.x + av * s.y) / (au + av);
         const double ed = (au * e.x + av * e.y) / (au + av);
 
-        return ShapeDraw::softWeight(_drawOptions.falloff, dist, sd, ed, false);
+        return ShapeDraw::softWeight(falloffCurve(), dist, sd, ed);
     }
 
     // Render a rotated rectangle. The rectangle is rotated by _angle around its center, in canonical coordinates.
@@ -637,10 +622,10 @@ private:
                 double dx = hs.x - std::abs(lx);
                 double dy = hs.y - std::abs(ly);
 
-                if ( _pixelCenterSoftness && (_softness > 0.) ) {
+                if ( pixelCenterSoftness() && (_softness > 0.) ) {
                     // version 3: as in process(), in canonical coordinates (e: half a pixel)
-                    float w = ShapeDraw::softWeight(_drawOptions.falloff, dx, _softness, e.x, false) *
-                              ShapeDraw::softWeight(_drawOptions.falloff, dy, _softness, e.y, false);
+                    float w = ShapeDraw::softWeight(falloffCurve(), dx, _softness, e.x) *
+                              ShapeDraw::softWeight(falloffCurve(), dy, _softness, e.y);
                     if ( (r.x > 0) && (r.y > 0) && (dx < r.x) && (dy < r.y) ) {
                         const OfxPointD s = {_softness, _softness};
                         w = (std::min)( w, cornerSoftWeight( (r.x - dx) / r.x, (r.y - dy) / r.y, r, s, e ) );
@@ -698,8 +683,8 @@ private:
                                 tmpPix[4] = 1.f;
                             } else {
                                 // compute the non-round rect coeff (tx*ty) first.
-                                float tx = (dx >= _softness) ? 1.f : (float)ShapeDraw::falloff(_drawOptions.falloff,  (std::max)(dx, 0.) / _softness );
-                                float ty = (dy >= _softness) ? 1.f : (float)ShapeDraw::falloff(_drawOptions.falloff,  (std::max)(dy, 0.) / _softness );
+                                float tx = (dx >= _softness) ? 1.f : (float)ShapeDraw::falloff(falloffCurve(),  (std::max)(dx, 0.) / _softness );
+                                float ty = (dy >= _softness) ? 1.f : (float)ShapeDraw::falloff(falloffCurve(),  (std::max)(dy, 0.) / _softness );
 
                                 // then the corner coeff: distance to the ellipse along the radius
                                 double dellipse;
@@ -712,7 +697,7 @@ private:
                                 assert(dellipse >= 0.);
                                 float t = (float)(dellipse / _softness);
                                 if (t < 1) {
-                                    t = (float)ShapeDraw::falloff(_drawOptions.falloff, t);
+                                    t = (float)ShapeDraw::falloff(falloffCurve(), t);
                                 }
 
                                 // take the min of the rectangle softness and the corner softness
@@ -761,8 +746,8 @@ private:
                             tmpPix[3] = (float)_color1.a;
                             tmpPix[4] = 1.f;
                         } else {
-                            float tx = (dx >= _softness) ? 1.f : (float)ShapeDraw::falloff(_drawOptions.falloff, dx / _softness);
-                            float ty = (dy >= _softness) ? 1.f : (float)ShapeDraw::falloff(_drawOptions.falloff, dy / _softness);
+                            float tx = (dx >= _softness) ? 1.f : (float)ShapeDraw::falloff(falloffCurve(), dx / _softness);
+                            float ty = (dy >= _softness) ? 1.f : (float)ShapeDraw::falloff(falloffCurve(), dy / _softness);
                             float t = tx * ty;
                             if (t >= 1) {
                                 tmpPix[0] = (float)_color1.r;
@@ -810,15 +795,9 @@ public:
         , _majorVersion(majorVersion)
         , _srcClip(NULL)
         , _maskClip(NULL)
-        , _processR(NULL)
-        , _processG(NULL)
-        , _processB(NULL)
-        , _processA(NULL)
         , _angle(NULL)
         , _cornerRadius(NULL)
         , _softness(NULL)
-        , _color0(NULL)
-        , _color1(NULL)
         , _expandRoD(NULL)
         , _draw(*this, kParamColor0, kParamColor1)
     {
@@ -829,23 +808,15 @@ public:
         _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
 
-        _processR = fetchBooleanParam(kParamProcessR);
-        _processG = fetchBooleanParam(kParamProcessG);
-        _processB = fetchBooleanParam(kParamProcessB);
-        _processA = fetchBooleanParam(kParamProcessA);
-        assert(_processR && _processG && _processB && _processA);
         _angle = fetchDoubleParam(kParamAngle);
         _cornerRadius = fetchDouble2DParam(kParamCornerRadius);
         _softness = fetchDoubleParam(kParamSoftness);
-        _color0 = fetchRGBAParam(kParamColor0);
-        _color1 = fetchRGBAParam(kParamColor1);
         _expandRoD = fetchBooleanParam(kParamExpandRoD);
-        assert(_angle && _softness && _color0 && _color1 && _expandRoD);
+        assert(_angle && _softness && _expandRoD);
 
-        _mix = fetchDoubleParam(kParamMix);
         _maskApply = ( ofxsMaskIsAlwaysConnected( OFX::getImageEffectHostDescription() ) && paramExists(kParamMaskApply) ) ? fetchBooleanParam(kParamMaskApply) : 0;
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
-        assert(_mix && _maskInvert);
+        assert(_maskInvert);
     }
 
 private:
@@ -880,17 +851,10 @@ private:
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_srcClip;
     Clip *_maskClip;
-    BooleanParam* _processR;
-    BooleanParam* _processG;
-    BooleanParam* _processB;
-    BooleanParam* _processA;
     DoubleParam* _angle;
     Double2DParam* _cornerRadius;
     DoubleParam* _softness;
-    RGBAParam* _color0;
-    RGBAParam* _color1;
     BooleanParam* _expandRoD;
-    DoubleParam* _mix;
     BooleanParam* _maskApply;
     BooleanParam* _maskInvert;
     ShapeDraw::Params _draw; // the Draw options and the colors
@@ -990,24 +954,9 @@ RectanglePlugin::setupAndProcess(RectangleProcessorBase &processor,
     }
     double angle = _angle->getValueAtTime(time);
     double softness = _softness->getValueAtTime(time);
-    const ShapeDraw::Colors<RGBAValues> colors = _draw.colors<RGBAValues>(time);
-    const RGBAValues& color0 = colors.color0;
-    const RGBAValues& color1 = colors.color1;
 
-    bool processR = _processR->getValueAtTime(time);
-    bool processG = _processG->getValueAtTime(time);
-    bool processB = _processB->getValueAtTime(time);
-    bool processA = _processA->getValueAtTime(time);
-    double mix = _mix->getValueAtTime(time);
-
-    processor.setValues(btmLeft, size,
-                        angle,
-                        cornerRadius,
-                        softness,
-                        color0, color1,
-                        mix,
-                        processR, processG, processB, processA,
-                        _draw.options(time));
+    processor.setShape(btmLeft, size, angle, cornerRadius, softness);
+    processor.setDrawValues( _draw.colors(time), _draw.mix(time), _draw.processChannels(time), _draw.options(time) );
     processor.setPixelCenterSoftness(_majorVersion >= kVersionPixelCenterSoftness);
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -1085,29 +1034,22 @@ RectanglePlugin::isIdentity(const IsIdentityArguments &args,
         return false;
     }
     const double time = args.time;
-    double mix = _mix->getValueAtTime(time);
-
-    if (mix == 0. /*|| (!processR && !processG && !processB && !processA)*/) {
+    if (_draw.mix(time) == 0.) {
         identityClip = _srcClip;
 
         return true;
     }
 
     if ( !_draw.changesSource(time, _srcClip) ) {
-        bool processR = _processR->getValueAtTime(time);
-        bool processG = _processG->getValueAtTime(time);
-        bool processB = _processB->getValueAtTime(time);
-        bool processA = _processA->getValueAtTime(time);
-        if (!processR && !processG && !processB && !processA) {
+        const ShapeDraw::ProcessChannels process = _draw.processChannels(time);
+        if (!process.r && !process.g && !process.b && !process.a) {
             identityClip = _srcClip;
 
             return true;
         }
     }
 
-    const ShapeDraw::Colors<RGBAValues> colors = _draw.colors<RGBAValues>(time);
-    const RGBAValues& color0 = colors.color0;
-    const RGBAValues& color1 = colors.color1;
+    const auto [color0, color1] = _draw.colors(time);
     if ( (color0.r == 0.) && (color0.g == 0.) && (color0.b == 0.) && (color0.a == 0.) &&
          (color1.r == 0.) && (color1.g == 0.) && (color1.b == 0.) && (color1.a == 0.) &&
          !_draw.changesSource(time, _srcClip) ) {
@@ -1130,7 +1072,7 @@ RectanglePlugin::isIdentity(const IsIdentityArguments &args,
 bool
 RectanglePlugin::outputIsUnpremultipliedFromOpaque() const
 {
-    return _processA->getValue() && _srcClip && _srcClip->isConnected() &&
+    return _draw.processChannels().a && _srcClip && _srcClip->isConnected() &&
            (_srcClip->getPreMultiplication() == eImageOpaque);
 }
 
@@ -1169,10 +1111,8 @@ RectanglePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                        OfxRectD &rod)
 {
     const double time = args.time;
-    double mix;
 
-    _mix->getValueAtTime(time, mix);
-    if (mix == 0.) {
+    if (_draw.mix(time) == 0.) {
         if ( _srcClip && _srcClip->isConnected() ) {
             // nothing to draw: return default region of definition
             return false;
@@ -1183,9 +1123,7 @@ RectanglePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
             return true;
         }
     }
-    const ShapeDraw::Colors<RGBAValues> colors = _draw.colors<RGBAValues>(time);
-    const RGBAValues& color0 = colors.color0;
-    const RGBAValues& color1 = colors.color1;
+    const auto [color0, color1] = _draw.colors(time);
     GeneratorExtentEnum extent = (GeneratorExtentEnum)_extent->getValue();
     if ( (extent != eGeneratorExtentFormat) &&
          ( (color0.r != 0.) || (color0.g != 0.) || (color0.b != 0.) || (color0.a != 0.) ) ) {

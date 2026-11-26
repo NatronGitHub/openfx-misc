@@ -90,7 +90,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              matches the tests/nuke reference (#288). Version 2 is kept, obsolete, with its output.
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
-#define kPluginVersionMinorV2 2
+#define kPluginVersionMinorV2 2 // the last minor version of version 2, kept (obsolete)
 
 // version 3: the Softness at the pixel center, and Falloff Smooth by default
 static constexpr unsigned kVersionPixelCenterSoftness = 3;
@@ -157,33 +157,27 @@ public:
         _btmLeft.x = _btmLeft.y = _size.x = _size.y = 0.;
     }
 
-    void setValues(const OfxPointD& btmLeft,
-                   const OfxPointD& size,
-                   double angle,
-                   double softness,
-                   bool plinear,
-                   const RGBAValues& color0,
-                   const RGBAValues& color1,
-                   double mix,
-                   bool processR,
-                   bool processG,
-                   bool processB,
-                   bool processA,
-                   const ShapeDraw::Options& drawOptions)
+    void setShape(const OfxPointD& btmLeft,
+                  const OfxPointD& size,
+                  double angle,
+                  double softness,
+                  bool plinear)
     {
         _btmLeft = btmLeft;
         _size = size;
         _angle = angle;
         _softness = (std::max)( 0., (std::min)(softness, 1.) );
         _plinear = plinear;
-        _color0 = color0;
-        _color1 = color1;
-        _mix = mix;
-        _processR = processR;
-        _processG = processG;
-        _processB = processB;
-        _processA = processA;
-        _drawOptions = drawOptions;
+    }
+
+protected:
+    /// ShapeDraw::softWeight() with no other antialiasing, cubed (in double) with Perceptually Linear.
+    float radialSoftWeight(double d,
+                           double softness) const
+    {
+        const double w = SoftEdge::softEdgeWeight(falloffCurve(), d, softness, 0.);
+
+        return static_cast<float>(_plinear ? w * w * w : w);
     }
 };
 
@@ -202,10 +196,11 @@ private:
     void multiThreadProcessImages(const OfxRectI& procWindow, const OfxPointD& rs) OVERRIDE FINAL
     {
 #     ifndef __COVERITY__ // too many coverity[dead_error_line] errors
-        const bool r = _processR && (nComponents != 1);
-        const bool g = _processG && (nComponents >= 2);
-        const bool b = _processB && (nComponents >= 3);
-        const bool a = _processA && (nComponents == 1 || nComponents == 4);
+        const ShapeDraw::ProcessChannels& channels = processChannels();
+        const bool r = channels.r && (nComponents != 1);
+        const bool g = channels.g && (nComponents >= 2);
+        const bool b = channels.b && (nComponents >= 3);
+        const bool a = channels.a && (nComponents == 1 || nComponents == 4);
         if (r) {
             if (g) {
                 if (b) {
@@ -299,7 +294,7 @@ private:
         r.y = r_canonical.y * rs.y;
         // version 3: a Softness narrower than a pixel is drawn as Softness 0 (antialiased), as the tests/nuke
         // reference does
-        const double softness = ( _pixelCenterSoftness && (_softness * (std::min)(r.x, r.y) < 1.) ) ? 0. : _softness;
+        const double softness = ( pixelCenterSoftness() && (_softness * (std::min)(r.x, r.y) < 1.) ) ? 0. : _softness;
 
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if ( _effect.abort() ) {
@@ -311,14 +306,14 @@ private:
             for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
 
-                if ( _pixelCenterSoftness && (softness > 0.) ) {
+                if ( pixelCenterSoftness() && (softness > 0.) ) {
                     // version 3: the Softness at the pixel center (pixel x is centered on x here). A Softness
                     // narrower than a pixel is drawn as Softness 0 (antialiased), as the tests/nuke reference does
                     const double dxc = (r.x > 0.) ? (x - c.x) / r.x : 1.;
                     const double dyc = (r.y > 0.) ? (y - c.y) / r.y : 1.;
                     const bool emptyShape = (r.x <= 0.) || (r.y <= 0.);
                     const float w = emptyShape ? 0.f :
-                                    ShapeDraw::softWeight( _drawOptions.falloff, 1. - std::sqrt(dxc * dxc + dyc * dyc), softness, 0., _plinear );
+                                    radialSoftWeight( 1. - std::sqrt(dxc * dxc + dyc * dyc), softness );
                     setSoftPixel(w, tmpPix);
                     writePixel<PIX, nComponents, maxValue, processR, processG, processB, processA>(tmpPix, srcPix, x, y, dstPix);
                     continue;
@@ -397,7 +392,7 @@ private:
                                 tmpPix[3] = (float)_color1.a;
                                 tmpPix[4] = 1.f;
                             } else {
-                                t = (float)ShapeDraw::falloff(_drawOptions.falloff, t);
+                                t = (float)ShapeDraw::falloff(falloffCurve(), t);
 
                                 if (_plinear) {
                                     // it seems to be the way Nuke does it... I could understand t*t, but why t*t*t?
@@ -458,7 +453,7 @@ private:
         const double sina = std::sin(angleRad);
         const bool empty = (r.x <= 0.) || (r.y <= 0.);
         // version 3: a Softness narrower than a pixel is drawn as Softness 0, as in process()
-        const double softness = ( _pixelCenterSoftness &&
+        const double softness = ( pixelCenterSoftness() &&
                                   (_softness * (std::min)(r.x / pixSize.x, r.y / pixSize.y) < 1.) ) ? 0. : _softness;
 
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
@@ -494,9 +489,9 @@ private:
                     }
                     d_closer = (std::max)(d - h, 0.);
                     d_farther = d + h;
-                    if ( _pixelCenterSoftness && (softness > 0.) ) {
+                    if ( pixelCenterSoftness() && (softness > 0.) ) {
                         // version 3: the Softness at the pixel center (narrower than a pixel: as Softness 0)
-                        setSoftPixel(ShapeDraw::softWeight(_drawOptions.falloff, 1. - d, softness, 0., _plinear), tmpPix);
+                        setSoftPixel(radialSoftWeight(1. - d, softness), tmpPix);
                         writePixel<PIX, nComponents, maxValue, processR, processG, processB, processA>(tmpPix, srcPix, x, y, dstPix);
                         continue;
                     }
@@ -528,7 +523,7 @@ private:
                             tmpPix[3] = (float)_color1.a;
                             tmpPix[4] = 1.f;
                         } else {
-                            t = (float)ShapeDraw::falloff(_drawOptions.falloff, t);
+                            t = (float)ShapeDraw::falloff(falloffCurve(), t);
 
                             if (_plinear) {
                                 t = t * t * t;
@@ -569,13 +564,7 @@ public:
         : GeneratorPlugin(handle, false, kSupportsByte, kSupportsUShort, kSupportsHalf, kSupportsFloat)
         , _majorVersion(majorVersion)
         , _srcClip(NULL)
-        , _processR(NULL)
-        , _processG(NULL)
-        , _processB(NULL)
-        , _processA(NULL)
         , _angle(NULL)
-        , _color0(NULL)
-        , _color1(NULL)
         , _expandRoD(NULL)
         , _draw(*this, kParamColor0, kParamColor1)
     {
@@ -585,23 +574,15 @@ public:
                 ( _srcClip && (!_srcClip->isConnected() || OFX_COMPONENTS_OK(_srcClip->getPixelComponents())) ) );
         _maskClip = fetchClip(getContext() == eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || !_maskClip->isConnected() || _maskClip->getPixelComponents() == ePixelComponentAlpha);
-        _processR = fetchBooleanParam(kParamProcessR);
-        _processG = fetchBooleanParam(kParamProcessG);
-        _processB = fetchBooleanParam(kParamProcessB);
-        _processA = fetchBooleanParam(kParamProcessA);
-        assert(_processR && _processG && _processB && _processA);
         _angle = fetchDoubleParam(kParamAngle);
         _softness = fetchDoubleParam(kParamSoftness);
         _plinear = fetchBooleanParam(kParamPLinear);
-        _color0 = fetchRGBAParam(kParamColor0);
-        _color1 = fetchRGBAParam(kParamColor1);
         _expandRoD = fetchBooleanParam(kParamExpandRoD);
-        assert(_angle && _softness && _plinear && _color0 && _color1 && _expandRoD);
+        assert(_angle && _softness && _plinear && _expandRoD);
 
-        _mix = fetchDoubleParam(kParamMix);
         _maskApply = ( ofxsMaskIsAlwaysConnected( OFX::getImageEffectHostDescription() ) && paramExists(kParamMaskApply) ) ? fetchBooleanParam(kParamMaskApply) : 0;
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
-        assert(_mix && _maskInvert);
+        assert(_maskInvert);
     }
 
 private:
@@ -636,17 +617,10 @@ private:
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_srcClip;
     Clip *_maskClip;
-    BooleanParam* _processR;
-    BooleanParam* _processG;
-    BooleanParam* _processB;
-    BooleanParam* _processA;
     DoubleParam* _angle;
     DoubleParam* _softness;
     BooleanParam* _plinear;
-    RGBAParam* _color0;
-    RGBAParam* _color1;
     BooleanParam* _expandRoD;
-    DoubleParam* _mix;
     BooleanParam* _maskApply;
     BooleanParam* _maskInvert;
     ShapeDraw::Params _draw; // the Draw options and the colors
@@ -738,23 +712,9 @@ RadialPlugin::setupAndProcess(RadialProcessorBase &processor,
     double angle = _angle->getValueAtTime(time);
     double softness = _softness->getValueAtTime(time);
     bool plinear = _plinear->getValueAtTime(time);
-    const ShapeDraw::Colors<RGBAValues> colors = _draw.colors<RGBAValues>(time);
-    const RGBAValues& color0 = colors.color0;
-    const RGBAValues& color1 = colors.color1;
 
-    bool processR = _processR->getValueAtTime(time);
-    bool processG = _processG->getValueAtTime(time);
-    bool processB = _processB->getValueAtTime(time);
-    bool processA = _processA->getValueAtTime(time);
-    double mix = _mix->getValueAtTime(time);
-
-    processor.setValues(btmLeft, size,
-                        angle,
-                        softness, plinear,
-                        color0, color1,
-                        mix,
-                        processR, processG, processB, processA,
-                        _draw.options(time));
+    processor.setShape(btmLeft, size, angle, softness, plinear);
+    processor.setDrawValues( _draw.colors(time), _draw.mix(time), _draw.processChannels(time), _draw.options(time) );
     processor.setPixelCenterSoftness(_majorVersion >= kVersionPixelCenterSoftness);
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -835,29 +795,22 @@ RadialPlugin::isIdentity(const IsIdentityArguments &args,
         return false;
     }
     const double time = args.time;
-    double mix = _mix->getValueAtTime(time);
-
-    if (mix == 0. /*|| (!processR && !processG && !processB && !processA)*/) {
+    if (_draw.mix(time) == 0.) {
         identityClip = _srcClip;
 
         return true;
     }
 
     if ( !_draw.changesSource(time, _srcClip) ) {
-        bool processR = _processR->getValueAtTime(time);
-        bool processG = _processG->getValueAtTime(time);
-        bool processB = _processB->getValueAtTime(time);
-        bool processA = _processA->getValueAtTime(time);
-        if (!processR && !processG && !processB && !processA) {
+        const ShapeDraw::ProcessChannels process = _draw.processChannels(time);
+        if (!process.r && !process.g && !process.b && !process.a) {
             identityClip = _srcClip;
 
             return true;
         }
     }
 
-    const ShapeDraw::Colors<RGBAValues> colors = _draw.colors<RGBAValues>(time);
-    const RGBAValues& color0 = colors.color0;
-    const RGBAValues& color1 = colors.color1;
+    const auto [color0, color1] = _draw.colors(time);
     if ( (color0.r == 0.) && (color0.g == 0.) && (color0.b == 0.) && (color0.a == 0.) &&
          (color1.r == 0.) && (color1.g == 0.) && (color1.b == 0.) && (color1.a == 0.) &&
          !_draw.changesSource(time, _srcClip) ) {
@@ -880,7 +833,7 @@ RadialPlugin::isIdentity(const IsIdentityArguments &args,
 bool
 RadialPlugin::outputIsUnpremultipliedFromOpaque() const
 {
-    return _processA->getValue() && _srcClip && _srcClip->isConnected() &&
+    return _draw.processChannels().a && _srcClip && _srcClip->isConnected() &&
            (_srcClip->getPreMultiplication() == eImageOpaque);
 }
 
@@ -918,9 +871,8 @@ RadialPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                     OfxRectD &rod)
 {
     const double time = args.time;
-    double mix = _mix->getValueAtTime(time);
 
-    if (mix == 0.) {
+    if (_draw.mix(time) == 0.) {
         if ( _srcClip && _srcClip->isConnected() ) {
             // nothing to draw: return default region of definition
             return false;
@@ -931,9 +883,7 @@ RadialPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
             return true;
         }
     }
-    const ShapeDraw::Colors<RGBAValues> colors = _draw.colors<RGBAValues>(time);
-    const RGBAValues& color0 = colors.color0;
-    const RGBAValues& color1 = colors.color1;
+    const auto [color0, color1] = _draw.colors(time);
     GeneratorExtentEnum extent = (GeneratorExtentEnum)_extent->getValue();
     if ( (extent != eGeneratorExtentFormat) &&
          ( (color0.r != 0.) || (color0.g != 0.) || (color0.b != 0.) || (color0.a != 0.) ) ) {

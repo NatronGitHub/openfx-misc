@@ -140,15 +140,9 @@ inline float
 softWeight(FalloffEnum curve,
            double d,
            double softness,
-           double halfPixel,
-           bool plinear)
+           double halfPixel)
 {
-    double w = SoftEdge::softEdgeWeight(curve, d, softness, halfPixel);
-    if (plinear) {
-        w = w * w * w; // perceptually linear
-    }
-
-    return static_cast<float>(w);
+    return static_cast<float>( SoftEdge::softEdgeWeight(curve, d, softness, halfPixel) );
 }
 
 /// The Source pixel srcPixRGBA (RGBA, not normalized), before the shape is drawn over it: Premultiply
@@ -188,47 +182,63 @@ prepareSource(const Options& options,
 struct RGBAValues
 {
     double r, g, b, a;
-    RGBAValues(double v) : r(v), g(v), b(v), a(v) {}
+    explicit RGBAValues(double v) : r(v), g(v), b(v), a(v) {}
 
     RGBAValues() : r(0), g(0), b(0), a(0) {}
 };
 
+/// The colors outside (color0) and inside (color1) of the shape, swapped by Invert.
+struct Colors
+{
+    RGBAValues color0;
+    RGBAValues color1;
+};
+
+/// The checkboxes of the processed channels.
+struct ProcessChannels
+{
+    bool r = false;
+    bool g = false;
+    bool b = false;
+    bool a = false;
+};
+
 /// The members of the Radial and Rectangle processors that do not depend on the shape, and the code that
-/// writes a pixel from the shape color. The derived classes set the protected members in their setValues().
+/// writes a pixel from the shape color. The plug-ins set them with setDrawValues(); the derived
+/// processors read the Source image and the colors.
 class ProcessorBase
     : public ImageProcessor
 {
 protected:
-    const Image *_srcImg;
-    const Image *_maskImg;
-    bool _doMasking;
-    double _mix;
-    bool _maskInvert;
-    bool _processR;
-    bool _processG;
-    bool _processB;
-    bool _processA;
+    const Image *_srcImg = nullptr;
     RGBAValues _color0, _color1;
+
+private:
+    const Image *_maskImg = nullptr;
+    bool _doMasking = false;
+    double _mix = 1.;
+    bool _maskInvert = false;
+    ProcessChannels _process;
     Options _drawOptions; // Premultiply, Replace, Invert, Falloff
-    bool _pixelCenterSoftness; // version 3: the Softness is computed at the pixel center (see softWeight())
+    bool _pixelCenterSoftness = false; // version 3: the Softness is computed at the pixel center (see softWeight())
 
 public:
-    ProcessorBase(ImageEffect &instance)
+    explicit ProcessorBase(ImageEffect &instance)
         : ImageProcessor(instance)
-        , _srcImg(NULL)
-        , _maskImg(NULL)
-        , _doMasking(false)
-        , _mix(1.)
-        , _maskInvert(false)
-        , _processR(false)
-        , _processG(false)
-        , _processB(false)
-        , _processA(false)
-        , _color0(0.)
-        , _color1(0.)
-        , _drawOptions()
-        , _pixelCenterSoftness(false)
     {
+    }
+
+    /// The colors (swapped by Invert), Mix, the processed channels and the Draw options at the render time.
+    void setDrawValues(const Colors& colors,
+                       double mix,
+                       const ProcessChannels& process,
+                       const Options& drawOptions)
+    {
+        _color0 = colors.color0;
+        _color1 = colors.color1;
+        _mix = mix;
+        _process = process;
+        _drawOptions = drawOptions;
     }
 
     /** @brief set the src image */
@@ -256,6 +266,21 @@ public:
     }
 
 protected:
+    const ProcessChannels& processChannels() const
+    {
+        return _process;
+    }
+
+    FalloffEnum falloffCurve() const
+    {
+        return _drawOptions.falloff;
+    }
+
+    bool pixelCenterSoftness() const
+    {
+        return _pixelCenterSoftness;
+    }
+
     // tmpPix (RGBA and the shape weight) for the shape weight w: Color 0 (w = 0) to Color 1 (w = 1)
     void setSoftPixel(float w,
                       float tmpPix[5]) const
@@ -309,14 +334,6 @@ protected:
     }
 };
 
-/// The colors outside (color0) and inside (color1) of the shape, swapped by Invert.
-template<class RGBA>
-struct Colors
-{
-    RGBA color0;
-    RGBA color1;
-};
-
 /// The parameters of the Draw options, and the colors they apply to.
 class Params
 {
@@ -356,11 +373,10 @@ public:
         return o;
     }
 
-    /// The colors at time, swapped by Invert. RGBA has members r, g, b and a (double).
-    template<class RGBA>
-    Colors<RGBA> colors(double time) const
+    /// The colors at time, swapped by Invert.
+    Colors colors(double time) const
     {
-        Colors<RGBA> c;
+        Colors c;
         _color0->getValueAtTime(time, c.color0.r, c.color0.g, c.color0.b, c.color0.a);
         _color1->getValueAtTime(time, c.color1.r, c.color1.g, c.color1.b, c.color1.a);
         if ( _invert->getValueAtTime(time) ) {
@@ -386,19 +402,34 @@ public:
         return ( (comps == ePixelComponentRGB) || (comps == ePixelComponentRGBA) ) && _premult->getValueAtTime(time);
     }
 
-    /// The checkboxes of the processed channels.
-    struct ProcessChannels
+    /// The R, G, B and A checkboxes at time.
+    ProcessChannels processChannels(double time) const
     {
-        bool r;
-        bool g;
-        bool b;
-        bool a;
-    };
+        ProcessChannels p;
+        p.r = _processR->getValueAtTime(time);
+        p.g = _processG->getValueAtTime(time);
+        p.b = _processB->getValueAtTime(time);
+        p.a = _processA->getValueAtTime(time);
+
+        return p;
+    }
 
     /// The R, G, B and A checkboxes, at the current time (for the clip preferences).
     ProcessChannels processChannels() const
     {
-        return { _processR->getValue(), _processG->getValue(), _processB->getValue(), _processA->getValue() };
+        ProcessChannels p;
+        p.r = _processR->getValue();
+        p.g = _processG->getValue();
+        p.b = _processB->getValue();
+        p.a = _processA->getValue();
+
+        return p;
+    }
+
+    /// Mix at time.
+    double mix(double time) const
+    {
+        return _mix->getValueAtTime(time);
     }
 
     /// true if Mix is 1 and no Mask applies, at the current time (for the clip preferences).
