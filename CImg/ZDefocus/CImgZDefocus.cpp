@@ -37,6 +37,7 @@
 #include "ofxsCoords.h"
 #include "ofxsCopier.h" // fillBlack
 #include "ofxsNormalisedDefaults.h"
+#include "ofxsOpenMP.h" // ofxsPinOpenMPRuntime
 #ifdef OFX_EXTENSIONS_NATRON
 #include "ofxNatron.h"
 #endif
@@ -1074,6 +1075,9 @@ ZDefocusPlugin::getCustomKernel(const RenderArguments &args)
 void
 ZDefocusPlugin::render(const RenderArguments &args)
 {
+    // keep the OpenMP runtime of CImg's parallel regions loaded once the plug-in is unloaded
+    // (not a CImgFilterPluginHelper, whose render() does it)
+    ofxsPinOpenMPRuntime();
     const double time = args.time;
     const OfxRectI& renderWindow = args.renderWindow;
 

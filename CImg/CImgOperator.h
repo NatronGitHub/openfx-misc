@@ -27,6 +27,7 @@
 #define Misc_CImgOperator_h
 
 #include "CImgFilter.h"
+#include "ofxsOpenMP.h" // ofxsPinOpenMPRuntime
 
 class CImgOperatorPluginHelperBase
     : public CImgFilterPluginHelperBase

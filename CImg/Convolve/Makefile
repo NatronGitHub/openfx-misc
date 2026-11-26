@@ -26,6 +26,12 @@ include $(TOP_SRCDIR)/Makefile.master
 VPATH += $(TOP_SRCDIR)/CImg
 CXXFLAGS += -I$(TOP_SRCDIR)/CImg
 
+# openmp, as ../CImgSubplugin.mk (not included here: this Makefile has its own CImg.h rule)
+ifeq ($(OPENMP),1)
+  CXXFLAGS += -Dcimg_use_openmp -fopenmp
+  LINKFLAGS += -fopenmp
+endif
+
 $(OBJECTPATH)/CImgConvolve.o: CImgConvolve.cpp CImgFFTConvolve.h CImgFilter.h CImg.h
 
 # CImg.h and, with FFT=pocketfft, pocketfft_hdronly.h, made by ../Makefile (CImg.h is the same for
