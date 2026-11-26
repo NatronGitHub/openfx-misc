@@ -114,7 +114,8 @@
 #include "ofxsMaskMix.h"
 #include "ofxsLut.h"
 #include "ofxsCoords.h"
-#include "ofxsNonFinite.h" // clampToFloatRange, clampToUnit, finiteSample
+#include "ofxsNonFinite.h" // clampToFloatRange, finiteSample
+#include "KeyerUtils.h"
 
 #define DISABLE_LL // define to disable the luminance level of luminance match (not yet implemented)
 
@@ -122,6 +123,8 @@
 using namespace OFX;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
+
+using KeyerUtils::finiteSampleToFloat;
 
 #define kPluginName "PIK"
 #define kPluginGrouping "Keyer"
@@ -927,13 +930,6 @@ private:
 
 
 template<class PIX, int maxValue>
-static float
-sampleToFloat(PIX value)
-{
-    return (maxValue == 1) ? value : (value / (float)maxValue);
-}
-
-template<class PIX, int maxValue>
 static PIX
 floatToSample(float value)
 {
@@ -1240,17 +1236,9 @@ private:
                 const PIX *bgPix = (const PIX *)  ( ( ( _ubc || _ubl || (_outputMode == eOutputModeComposite) ) && _bgImg ) ? _bgImg->getPixelAddress(x, y) : 0 );
                 const PIX *inMaskPix = (const PIX *)  (_inMaskImg ? _inMaskImg->getPixelAddress(x, y) : 0);
                 const PIX *outMaskPix = (const PIX *)  (_outMaskImg ? _outMaskImg->getPixelAddress(x, y) : 0);
-                float inMask = inMaskPix ? sampleToFloat<PIX, maxValue>(*inMaskPix) : 0.f;
-                if ( (_sourceAlpha == eSourceAlphaAddToInsideMask) && fgPix ) {
-                    // take the max of inMask and the source Alpha (an RGB Fg is opaque, as when the host
-                    // maps it to RGBA: fgPix[3] would be the next pixel's red)
-                    inMask = (std::max)( inMask, (fgComponents == 4) ? clampToFloatRange( sampleToFloat<PIX, maxValue>(fgPix[3]) ) : 1.f );
-                }
-                float outMask = outMaskPix ? sampleToFloat<PIX, maxValue>(*outMaskPix) : 0.f;
-
-                // clamp inMask and outMask in the [0,1] range (NaN gives 0)
-                inMask = clampToUnit(inMask);
-                outMask = clampToUnit(outMask);
+                const PIX *addedFgPix = (_sourceAlpha == eSourceAlphaAddToInsideMask) ? fgPix : nullptr;
+                const auto [inMask, outMask] =
+                    KeyerUtils::masks<PIX, maxValue>( inMaskPix, outMaskPix, KeyerUtils::insideMaskFromSource<PIX, maxValue>(addedFgPix, fgComponents == 4) );
 
                 float fg[4] = {0., 0., 0., 1.};
                 float pfg[4] = {0., 0., 0., 1.};
@@ -1261,12 +1249,12 @@ private:
                 // the divisions by the (positive) alpha bias are kept in the float range
                 if (fgPix) {
                     for (int i = 0; i < fgComponents; ++i) {
-                        fg[i] = clampToFloatRange( sampleToFloat<PIX, maxValue>(fgPix[i]) );
+                        fg[i] = finiteSampleToFloat<PIX, maxValue>(fgPix[i]);
                     }
                 }
                 if (pfgPix) {
                     for (int i = 0; i < pfgComponents; ++i) {
-                        pfg[i] = clampToFloatRange( sampleToFloat<PIX, maxValue>(pfgPix[i]) );
+                        pfg[i] = finiteSampleToFloat<PIX, maxValue>(pfgPix[i]);
                         if (i < 3) {
                             pfg[i] = clampToFloatRange(pfg[i] / _alphaBias[i]);
                         }
@@ -1274,7 +1262,7 @@ private:
                 }
                 if (cPix && !_useColor) {
                     for (int i = 0; i < cComponents; ++i) {
-                        c[i] = clampToFloatRange( sampleToFloat<PIX, maxValue>(cPix[i]) );
+                        c[i] = finiteSampleToFloat<PIX, maxValue>(cPix[i]);
                         if (i < 3) {
                             c[i] = clampToFloatRange(c[i] / _alphaBias[i]);
                         }
@@ -1283,7 +1271,7 @@ private:
 
                 if ( bgPix && (_ubc || _ubl) ) {
                     for (int i = 0; i < bgComponents; ++i) {
-                        bg[i] = clampToFloatRange( sampleToFloat<PIX, maxValue>(bgPix[i]) );
+                        bg[i] = finiteSampleToFloat<PIX, maxValue>(bgPix[i]);
                     }
                 }
 
