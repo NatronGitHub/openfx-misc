@@ -25,6 +25,7 @@
 #include <cfloat> // DBL_MAX
 #include <algorithm>
 #include <memory>
+#include <array>
 
 #if !( defined(_WIN32) || defined(__WIN32__) || defined(WIN32) )
 #define GL_GLEXT_PROTOTYPES
@@ -108,6 +109,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //     "Master Curve on Alpha" parameter (default off: the alpha curve is used alone, as before)
 // 2.0 (issue #290) the defaults follow the node of the same name: Master Curve Mode is Composed and Master Curve on
 //     Alpha is checked; version 1.2 is kept, obsolete, with the old defaults (Standard, off), for existing projects
+//     (2.0 and 1.2 are unreleased, fixed in place, issue #411) Luminance master curve mode: below a luminance l of 1e-3,
+//     the result is t * (the result with the gain) + (1 - t) * (the master curve applied to each channel), t = l / 1e-3,
+//     which is the latter at a luminance of 0 or less, instead of a gain master(1e-8) / 1e-8 that gave huge values. The Luminance mode was in 1.1 (Natron 2.5.0): this
+//     bug fix (minor bump, 1.2) changes Natron 2.5 projects that use it, on pixels of near-zero or negative luminance.
+//     (2.0, unreleased, fixed in place) the Luminance mode applies the master gain before the channel curves,
+//     channel(gain * x), as the Composed mode applies master then channel; version 1.2 keeps gain * channel(x).
 #define kPluginIdentifier "net.sf.openfx.ColorLookupPlugin"
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
@@ -228,6 +235,25 @@ enum DisplayEnum
 #define kCurveBlue 3
 #define kCurveAlpha 4
 #define kCurveNb 5
+
+// The order of the curves in the Luminance master curve mode (see luminanceModeColor())
+enum class LuminanceOrder
+{
+    eGainThenChannel,  // version 1: gain * channel(x)
+    eMasterThenChannel, // version 2: channel(gain * x), the order of the Composed mode
+};
+
+// The parameter values of a ColorLookupProcessor
+struct ColorLookupProcessorArgs
+{
+    double rangeMin;
+    double rangeMax;
+    bool clampBlack;
+    bool clampWhite;
+    LuminanceMathEnum luminanceMath;
+    bool masterOnAlpha;
+    LuminanceOrder luminanceOrder;
+};
 
 class ColorLookupProcessorBase
     : public ImageProcessor
@@ -362,18 +388,14 @@ public:
     ColorLookupProcessor(ImageEffect &instance,
                          const RenderArguments &args,
                          ParametricParam  *lookupTableParam,
-                         double rangeMin,
-                         double rangeMax,
-                         bool clampBlack,
-                         bool clampWhite,
-                         LuminanceMathEnum luminanceMath,
-                         bool masterOnAlpha)
-        : ColorLookupProcessorBase(instance, clampBlack, clampWhite)
+                         const ColorLookupProcessorArgs& a)
+        : ColorLookupProcessorBase(instance, a.clampBlack, a.clampWhite)
         , _lookupTableParam(lookupTableParam)
-        , _rangeMin( (std::min)(rangeMin, rangeMax) )
-        , _rangeMax( (std::max)(rangeMin, rangeMax) )
-        , _luminanceMath( luminanceMath )
-        , _masterOnAlpha(masterOnAlpha)
+        , _rangeMin( (std::min)(a.rangeMin, a.rangeMax) )
+        , _rangeMax( (std::max)(a.rangeMin, a.rangeMax) )
+        , _luminanceMath(a.luminanceMath)
+        , _masterOnAlpha(a.masterOnAlpha)
+        , _luminanceOrder(a.luminanceOrder)
     {
         // build the LUT
         assert(_lookupTableParam);
@@ -495,12 +517,10 @@ private:
                         }
                         case eMasterCurveModeLuminance: {
                             // see https://github.com/Beep6581/RawTherapee/blob/3ff2519302e3bc529b111462a4697ac4dfba30c4/rtengine/curves.h#L992
-                            double l = (std::max)(luminance(r, g, b, _luminanceMath), 1.e-8f); // avoid division by zero
-                            // apply the master curve to the luminance, and
-                            double coef = interpolate(nComponents, l) / l;
-                            tmpPix[0] = clamp<float>(coef * interpolate(0, r), 1) * maxValue;
-                            tmpPix[1] = clamp<float>(coef * interpolate(1, g), 1) * maxValue;
-                            tmpPix[2] = clamp<float>(coef * interpolate(2, b), 1) * maxValue;
+                            const std::array<float, 3> rgb = luminanceModeColor(r, g, b);
+                            tmpPix[0] = rgb[0] * maxValue;
+                            tmpPix[1] = rgb[1] * maxValue;
+                            tmpPix[2] = rgb[2] * maxValue;
                             break;
                         }
                     }
@@ -582,12 +602,10 @@ private:
                         }
                         case eMasterCurveModeLuminance: {
                             // see https://github.com/Beep6581/RawTherapee/blob/3ff2519302e3bc529b111462a4697ac4dfba30c4/rtengine/curves.h#L992
-                            double l = (std::max)(luminance(r, g, b, _luminanceMath), 1.e-8f); // avoid division by zero
-                            // apply the master curve to the luminance, and
-                            double coef = interpolate(nComponents, l) / l;
-                            tmpPix[0] = static_cast<float>( clamp<float>(coef * interpolate(0, r), 1) );
-                            tmpPix[1] = static_cast<float>( clamp<float>(coef * interpolate(1, g), 1) );
-                            tmpPix[2] = static_cast<float>( clamp<float>(coef * interpolate(2, b), 1) );
+                            const std::array<float, 3> rgb = luminanceModeColor(r, g, b);
+                            tmpPix[0] = rgb[0];
+                            tmpPix[1] = rgb[1];
+                            tmpPix[2] = rgb[2];
                             tmpPix[3] = interpolate(3, unpPix[3]);
                             break;
                         }
@@ -599,6 +617,60 @@ private:
                 dstPix += nComponents;
             }
         }
+    }
+
+    // The colour given by the Luminance master curve mode, from normalized r, g, b, with the gain of
+    // the master curve on the luminance l, master(l) / l, and the channel curves: version 2 applies
+    // them in the order of the Composed mode, master then channel, channel(gain * x); version 1
+    // applies the gain to the channel curves, gain * channel(x) (see LuminanceOrder).
+    // Where l is small, the gain could be huge (or negative, for l <= 0): below the luminance
+    // kLuminanceModeEpsilon, the result is t * withGain(l) + (1 - t) * perChannel, with
+    // t = l / kLuminanceModeEpsilon, where perChannel is the master and channel curves applied to
+    // each channel, in the same order (issue #411). It is continuous at kLuminanceModeEpsilon and at 0,
+    // where it is perChannel, and bounded: t * master(l) / l = master(l) / kLuminanceModeEpsilon.
+    // For a grey with identity channel curves, withGain(l) and perChannel are both master(l), so the
+    // result is master(l) at all luminances.
+    std::array<float, 3> luminanceModeColor(float r,
+                                            float g,
+                                            float b) const
+    {
+        constexpr double kLuminanceModeEpsilon = 1e-3;
+        const bool masterFirst = (_luminanceOrder == LuminanceOrder::eMasterThenChannel);
+        const double l = luminance(r, g, b, _luminanceMath);
+        const std::array<float, 3> x = {r, g, b};
+        // the result with the gain of the master curve at the luminance l (> 0)
+        const auto withGain = [&]() {
+            const double coef = interpolate(nComponents, static_cast<float>(l)) / l;
+            std::array<float, 3> out;
+            for (std::size_t c = 0; c < 3; ++c) {
+                const int component = static_cast<int>(c);
+                const double v = masterFirst ? interpolate( component, static_cast<float>(coef * x[c]) ) : ( coef * interpolate(component, x[c]) );
+                out[c] = static_cast<float>( clamp<float>(v, 1) );
+            }
+
+            return out;
+        };
+        if (l >= kLuminanceModeEpsilon) {
+            return withGain();
+        }
+        std::array<float, 3> perChannel;
+        for (std::size_t c = 0; c < 3; ++c) {
+            const int component = static_cast<int>(c);
+            perChannel[c] = clamp<float>(masterFirst ? interpolate( component, interpolate(nComponents, x[c]) ) : interpolate( nComponents, interpolate(component, x[c]) ), 1);
+        }
+        if ( !(l > 0.) ) { // also for NaN
+            return perChannel;
+        }
+        const double t = l / kLuminanceModeEpsilon;
+        const std::array<float, 3> gained = withGain();
+        std::array<float, 3> result;
+        for (std::size_t c = 0; c < 3; ++c) {
+            const double v = t * gained[c] + (1. - t) * perChannel[c];
+            // a gain beyond the float range (a tiny l): the per-channel result
+            result[c] = std::isfinite(v) ? static_cast<float>(v) : perChannel[c];
+        }
+
+        return result;
     }
 
     // on input to interpolate, value should be normalized to the [0-1] range
@@ -698,20 +770,10 @@ private:
     double _rangeMax;
     LuminanceMathEnum _luminanceMath;
     bool _masterOnAlpha;
+    LuminanceOrder _luminanceOrder;
 };
 
 #define HISTOGRAM_BINS 256
-
-// the parameter values of a ColorLookupProcessor
-struct ColorLookupProcessorArgs
-{
-    double rangeMin;
-    double rangeMax;
-    bool clampBlack;
-    bool clampWhite;
-    LuminanceMathEnum luminanceMath;
-    bool masterOnAlpha;
-};
 
 struct RGBAValues
 {
@@ -867,8 +929,10 @@ class ColorLookupPlugin
     : public ImageEffect
 {
 public:
-    ColorLookupPlugin(OfxImageEffectHandle handle)
+    ColorLookupPlugin(OfxImageEffectHandle handle,
+                      unsigned majorVersion)
         : ImageEffect(handle)
+        , _majorVersion(majorVersion)
         , _dstClip(NULL)
         , _srcClip(NULL)
         , _maskClip(NULL)
@@ -1063,6 +1127,7 @@ private:
 
 
 private:
+    const unsigned _majorVersion;
     Clip *_dstClip;
     Clip *_srcClip;
     Clip *_maskClip;
@@ -1167,11 +1232,11 @@ ColorLookupPlugin::makeProcessor(BitDepthEnum dstBitDepth,
 {
     switch (dstBitDepth) {
         case eBitDepthUByte:
-            return std::make_unique<ColorLookupProcessor<unsigned char, nComponents, 255, 255, masterCurveMode> >(*this, args, _lookupTable, a.rangeMin, a.rangeMax, a.clampBlack, a.clampWhite, a.luminanceMath, a.masterOnAlpha);
+            return std::make_unique<ColorLookupProcessor<unsigned char, nComponents, 255, 255, masterCurveMode> >(*this, args, _lookupTable, a);
         case eBitDepthUShort:
-            return std::make_unique<ColorLookupProcessor<unsigned short, nComponents, 65535, 65535, masterCurveMode> >(*this, args, _lookupTable, a.rangeMin, a.rangeMax, a.clampBlack, a.clampWhite, a.luminanceMath, a.masterOnAlpha);
+            return std::make_unique<ColorLookupProcessor<unsigned short, nComponents, 65535, 65535, masterCurveMode> >(*this, args, _lookupTable, a);
         case eBitDepthFloat:
-            return std::make_unique<ColorLookupProcessor<float, nComponents, 1, 1023, masterCurveMode> >(*this, args, _lookupTable, a.rangeMin, a.rangeMax, a.clampBlack, a.clampWhite, a.luminanceMath, a.masterOnAlpha);
+            return std::make_unique<ColorLookupProcessor<float, nComponents, 1, 1023, masterCurveMode> >(*this, args, _lookupTable, a);
         default:
             return nullptr;
     }
@@ -1193,7 +1258,8 @@ ColorLookupPlugin::renderForComponents(const RenderArguments &args,
     MasterCurveModeEnum masterCurveMode = (MasterCurveModeEnum)_masterCurveMode->getValueAtTime(time);
     const bool masterOnAlpha = _masterOnAlpha->getValueAtTime(time);
     const ColorLookupProcessorArgs procArgs = {
-        rangeMin, rangeMax, clampBlack, clampWhite, luminanceMath, masterOnAlpha
+        rangeMin, rangeMax, clampBlack, clampWhite, luminanceMath, masterOnAlpha,
+        (_majorVersion >= 2) ? LuminanceOrder::eMasterThenChannel : LuminanceOrder::eGainThenChannel
     };
     std::unique_ptr<ColorLookupProcessorBase> proc;
     switch (masterCurveMode) {
@@ -1978,7 +2044,7 @@ ImageEffect*
 ColorLookupPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                          ContextEnum /*context*/)
 {
-    return new ColorLookupPlugin(handle);
+    return new ColorLookupPlugin(handle, majorVersion);
 }
 
 static ColorLookupPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);

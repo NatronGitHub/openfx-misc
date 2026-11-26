@@ -36,6 +36,8 @@ EXCLUDED = {
         "output channel",
     "net.sf.openfx.RGBToHSV": "Nuke's Colorspace is a different node",
     "net.sf.openfx.RGBToHSL": "Nuke's Colorspace is a different node",
+    "net.sf.openfx.HSVToRGB": "Nuke's Colorspace is a different node",
+    "net.sf.openfx.HSLToRGB": "Nuke's Colorspace is a different node",
     "net.sf.openfx.RGBToYCbCr709": "Nuke's Colorspace is a different node",
     "net.sf.openfx.RGB709ToXYZ": "Nuke's Colorspace is a different node",
     "net.sf.openfx.RGB709ToLab": "Nuke's Colorspace is a different node",

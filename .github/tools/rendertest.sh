@@ -504,6 +504,8 @@ hostdemo() {
 # connected input). The clips of inputs 10 to 15 are named 10 to 15; in ContactSheet 1, they are
 # named 01, 11, 21, 31, 41 and 51 (it wrote the digits in reverse order, #401).
 cs_none10="10 11 12 13 14 15"
+cs_none1=$(for i in $(seq 1 9) $cs_none10; do printf -- ' -i %s=none' "$i"; done)
+cs1_none1=$(for i in $(seq 1 9) 01 11 21 31 41 51; do printf -- ' -i %s=none' "$i"; done)
 cs_none2=$(for i in $(seq 2 9) $cs_none10; do printf -- ' -i %s=none' "$i"; done)
 cs_none3=$(for i in $(seq 3 9) $cs_none10; do printf -- ' -i %s=none' "$i"; done)
 # input 10 only (with Source), in ContactSheet 2 and 1
@@ -894,6 +896,9 @@ tests=(
     "PIK Rec.709 Bg lum/chroma|net.sf.openfx.PIK|general|float|mean=0.5012,0.3865,0.2059,0.52||-i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=none -i Bg=solid:0.6,0.3,0.2,1 -i InM=solid:0.5,0.5,0.5,0.5 -i OutM=none screenType=2 color=0.1,0.9,0.15 screenClipMin=0.1 screenClipMax=0.6 colorspace=0 ubl=1 ubc=1 alphaBias=0.2,0.8,0.3 screenReplaceColor=0.8,0.3,0.2 insideReplaceColor=0.3,0.2,0.9 rgbal=0"
     # show=2 (Clean Plate) with a Pick screen: the screen color divided by the alpha bias, which
     # is always normalized with Rec. 709, so that all versions and colorspaces give the same output
+    # Clean Plate with C disconnected and a screen type other than Pick: transparent black (#328)
+    "PIK clean plate C disconnected|net.sf.openfx.PIK|general|float|notidentity+mean=0,0,0,0||-i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=1 show=2"
+    "PIK 1 clean plate C disconnected|net.sf.openfx.PIK|general|float|notidentity+mean=0,0,0,0||-m 1 -i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=1 show=2"
     "PIK 1 AP1 clean plate|net.sf.openfx.PIK|general|float|mean=0.3182,0.7158,0.3182,1||-m 1 -i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0.1,0.9,0.15 colorspace=3 alphaBias=0.2,0.8,0.3 show=2"
     "PIK AP1 clean plate|net.sf.openfx.PIK|general|float|mean=0.3182,0.7158,0.3182,1||-i Fg=solid:0.12,0.8,0.18,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0.1,0.9,0.15 colorspace=3 alphaBias=0.2,0.8,0.3 show=2 rgbal=0"
     # render scale 0.5 (the means are those of the full-scale renders), tiles
@@ -1061,6 +1066,14 @@ tests=(
     # Merge 3 (#277) matches the tests/nuke reference (MergeV3 in Merge.cpp); Merge 2 (and 1) keep their results.
     # Alpha masking, multiply, A (0.4, a 0.5) and B (0.3, b 0.6): A(1-b) + B(1-a) + AB = 0.16 + 0.15 + 0.12 = 0.43,
     # alpha a+b-ab = 0.8 (Merge 2: AB = 0.12); B transparent: A, unchanged (Merge 2: 0)
+    # Merge 1 and 2 on Alpha-only images: B's R checkbox controls the alpha; with it unchecked, A over B
+    # is A's alpha, 0.5 (#328). Merge 3 uses B's A checkbox.
+    "Merge 2 Alpha-only B R off|net.sf.openfx.MergePlugin|filter|float|notidentity+comps=Alpha+mean=0.5||-m 2 -i A=solid:0.4,0.4,0.4,0.5#alpha -i Source=solid:0.3,0.3,0.3,0.6#alpha BChannelsR=0 -i Mask=none --frames 0"
+    "Merge 1 Alpha-only B R off|net.sf.openfx.MergePlugin|filter|float|notidentity+comps=Alpha+mean=0.5||-m 1 -i A=solid:0.4,0.4,0.4,0.5#alpha -i Source=solid:0.3,0.3,0.3,0.6#alpha BChannelsR=0 -i Mask=none --frames 0"
+    # A disconnected, Alpha-only: Merge 2 uses B's R checkbox for the alpha (off: 0); Merge 3 its A checkbox (B)
+    "Merge 2 Alpha-only A disconnected B R off|net.sf.openfx.MergePlugin|filter|float|notidentity+comps=Alpha+mean=0||-m 2 -i A=none -i Source=solid:0.3,0.3,0.3,0.6#alpha BChannelsR=0 -i Mask=none --frames 0"
+    "Merge Alpha-only A disconnected B R off|net.sf.openfx.MergePlugin|filter|float|identity+comps=Alpha+mean=0.6||-i A=none -i Source=solid:0.3,0.3,0.3,0.6#alpha BChannelsR=0 -i Mask=none --frames 0"
+    "Merge Alpha-only B R off|net.sf.openfx.MergePlugin|filter|float|notidentity+comps=Alpha+mean=0.8||-i A=solid:0.4,0.4,0.4,0.5#alpha -i Source=solid:0.3,0.3,0.3,0.6#alpha BChannelsR=0 -i Mask=none --frames 0"
     "Merge alpha masking multiply|net.sf.openfx.MergePlugin|filter|float|mean=0.43,0.43,0.43,0.8||-i A=solid:0.4,0.4,0.4,0.5 -i Source=solid:0.3,0.3,0.3,0.6 operation=multiply screenAlpha=1 -i Mask=none --frames 0"
     "Merge 2 alpha masking multiply|net.sf.openfx.MergePlugin|filter|float|mean=0.12,0.12,0.12,0.8||-m 2 -i A=solid:0.4,0.4,0.4,0.5 -i Source=solid:0.3,0.3,0.3,0.6 operation=multiply screenAlpha=1 -i Mask=none --frames 0"
     "Merge 1 alpha masking multiply|net.sf.openfx.MergePlugin|filter|float|mean=0.12,0.12,0.12,0.8||-m 1 -i A=solid:0.4,0.4,0.4,0.5 -i Source=solid:0.3,0.3,0.3,0.6 operation=multiply screenAlpha=1 -i Mask=none --frames 0"
@@ -1655,6 +1668,14 @@ tests=(
     # the first row goes from left to right (RightLeft would put input 1, 0.5, at the bottom left)
     "ContactSheet Snake first row|net.sf.openfx.ContactSheetOFX|filter|float|mean=1,1,1,1||-i Source=solid:1,1,1,1 -i 1=solid:0.5,0.5,0.5,1 -i 2=solid:0.25,0.25,0.25,1${cs_none3} resolution=64,64 rowsColumns=2,2 colOrder=2 --frames 0 --window 4,4,12,12"
     "ContactSheet Snake empty|net.sf.openfx.ContactSheetOFX|filter|float|mean=0,0,0,0||-i Source=solid:1,1,1,1 -i 1=solid:0.5,0.5,0.5,1 -i 2=solid:0.25,0.25,0.25,1${cs_none3} resolution=64,64 rowsColumns=2,2 colOrder=2 --frames 0 --window 4,36,12,44"
+    # Gap (#305): in ContactSheet 2, the 2x2 cells are 28x28 pixels ((64 - 8) / 2), with the gap on their
+    # left and bottom sides: the image of Source starts at x = 8 (it fits 20 pixels, scaled by the
+    # cubic filter). ContactSheet 1 put half the gap on each side of 32x32 cells: it starts at x = 4.
+    "ContactSheet gap|net.sf.openfx.ContactSheetOFX|filter|float|mean=0,0,0,0||-i Source=solid:1,1,1,1${cs_none1} resolution=64,64 rowsColumns=2,2 gap=8 --frames 0 --window 2,12,6,16"
+    "ContactSheet gap image|net.sf.openfx.ContactSheetOFX|filter|float|mean=1,1,1,1||-i Source=solid:1,1,1,1${cs_none1} resolution=64,64 rowsColumns=2,2 gap=8 --frames 0 --window 10,12,14,16"
+    # the same at render scale 0.5 (the image is x 4 to 14, y 4 to 12 there), which checks the RoI
+    "ContactSheet gap image scale 0.5|net.sf.openfx.ContactSheetOFX|filter|float|mean=1,1,1,1||-i Source=solid:1,1,1,1${cs_none1} resolution=64,64 rowsColumns=2,2 gap=8 --frames 0 --scale 0.5 --window 6,6,12,10"
+    "ContactSheet 1 gap|net.sf.openfx.ContactSheetOFX|filter|float|mean=1,1,1,1||-m 1 -i Source=solid:1,1,1,1${cs1_none1} resolution=64,64 rowsColumns=2,2 gap=8 --frames 0 --window 4,12,8,16"
     # input 10 (#401): 4x4 cells of 32x32 pixels, top to bottom: input 10 is in the third row from the
     # top (y 32 to 64) and the third column (x 64 to 96). Its clip is "10" in ContactSheet 2, "01" in 1.
     "ContactSheet input 10|net.sf.openfx.ContactSheetOFX|filter|float|mean=0.5,0.5,0.5,1||-i Source=solid:1,1,1,1 -i 10=solid:0.5,0.5,0.5,1${cs_only10} resolution=128,128 rowsColumns=4,4 rowOrder=0 --frames 0 --window 68,36,76,44"

@@ -159,6 +159,12 @@ enum MergePluginEnum
 //      context, used by Natron, is unchanged.
 // 1.1 and 2.1 (unreleased, fixed in place): with Alpha-only images, B is not passed through when B's R checkbox,
 //      which controls the alpha in these versions, is unchecked (issue #328).
+// 1.1, 2.1 and 3.0 (unreleased, fixed in place, issue #328): with A disconnected (and an operator that gives B
+//      with B alone, or any operator in version 1), the output channels are B's channels whose B checkbox is on,
+//      else 0, and the unchecked output channels are B's (B was copied whole, and the unchecked output channels
+//      were 0); Mask and Mix apply. Natron 2.5 shipped Merge 1.0 and 2.0: its projects change only with A
+//      disconnected and a B or output channel checkbox off (with all the B checkboxes on, the result is still B)
+//      (bug fix, minor bump).
 // 3.0 (unreleased, fixed in place): in the general context, the time domain is the frame range of B, or of
 //      A with the new "Range From" parameter (default B), instead of the host default (issue #277).
 //      Rendered images are unchanged. Versions 1 and 2 keep the host default, with no parameter.
@@ -876,9 +882,19 @@ private:
                 // one A input, even if none is connected.
                 // This behavior was introduced in version 2.0.
                 if ( _srcImgAs.size() == 0 && ( isIdentityForBOnlyVersioned(f, _majorVersion) || _majorVersion == 1 ) ) {
+                    // B alone: the checked output channels are B's channels whose B checkbox is on, else 0,
+                    // and the unchecked output channels are B's (issue #328; matches tests/nuke). Before,
+                    // B was copied whole, and the unchecked output channels were 0.
                     const PIX *srcPixB = (const PIX *)  (_srcImgB ? _srcImgB->getPixelAddress(x, y) : 0);
                     for (int c = 0; c < nComponents; ++c) {
-                        dstPix[c] = (_outputChannels[nComponents > 1 ? c : 3] && srcPixB) ? srcPixB[c] : 0;
+                        const bool bChannel = _bChannels[alphaFromA ? 3 : c];
+                        tmpPix[c] = (bChannel && srcPixB) ? static_cast<float>(srcPixB[c]) : 0.f;
+                    }
+                    ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPixB, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
+                    for (int c = 0; c < nComponents; ++c) {
+                        if (!_outputChannels[nComponents > 1 ? c : 3]) {
+                            dstPix[c] = srcPixB ? srcPixB[c] : 0;
+                        }
                     }
                 } else {
                     // process the first connected A input first
@@ -1750,13 +1766,11 @@ MergePlugin::isIdentity(const IsIdentityArguments &args,
         _outputChannels[c]->getValueAtTime(time, outputChannels[c]);
         _bChannels[c]->getValueAtTime(time, srcBChannels[c]);
     }
-    {
-        // versions 1 and 2, Alpha-only images: B's R checkbox controls the alpha channel, as in the
-        // processor (issue #328)
-        const int nComponents = _dstClip->getPixelComponentCount();
-        if ( (nComponents == 1) && !alphaUsesAChannel( nComponents, getMajorVersion() ) ) {
-            srcBChannels[3] = srcBChannels[0];
-        }
+    const int nComponents = _dstClip->getPixelComponentCount();
+    // versions 1 and 2, Alpha-only images: B's R checkbox controls the alpha channel, as in the
+    // processor (issue #328)
+    if ( (nComponents == 1) && !alphaUsesAChannel( nComponents, getMajorVersion() ) ) {
+        srcBChannels[3] = srcBChannels[0];
     }
     if (!outputChannels[0] && !outputChannels[1] && !outputChannels[2] && !outputChannels[3] && plane == kFnOfxImagePlaneColour) {
         identityClip = _srcClipB;
@@ -1765,7 +1779,9 @@ MergePlugin::isIdentity(const IsIdentityArguments &args,
     }
 
     // For each checked output channels, if srcB channel is unchecked, we are not identity
-    for (int i = 0; i < 4; ++i) {
+    // (Alpha-only images only have the alpha channel)
+    const int firstChannel = (nComponents == 1) ? 3 : 0;
+    for (int i = firstChannel; i < 4; ++i) {
         if (!outputChannels[i]) {
             continue;
         }

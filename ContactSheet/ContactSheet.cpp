@@ -74,13 +74,24 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "The cells are populated row by row, in the order given by Row Order (the first row is the bottom one by default) " \
     "and Column Order. A sheet with fewer images than cells keeps the size and place of every cell: " \
     "its images fill the first rows, and the other rows are empty, unless Center Rows is checked.\n" \
-    "Each image is scaled to fit its cell, minus the gap, keeping its aspect ratio."
+    "Each cell is a whole number of pixels: (Resolution - Gap) / Columns wide and (Resolution - Gap) / Rows high, rounded, " \
+    "and the cells start at the bottom left corner of the output, so that the Gap is on the left and bottom sides of each cell, " \
+    "and on the right and top sides of the sheet.\n" \
+    "Each image is scaled to fit its cell minus the gap, keeping its aspect ratio, with a smooth (cubic) filter, " \
+    "and it is black outside its input. The output has square pixels (on hosts that support clips of different pixel " \
+    "aspect ratios): Resolution is in square pixels, and the inputs may have any pixel aspect ratio."
 #define kPluginIdentifier "net.sf.openfx.ContactSheetOFX"
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 // 2.0: (unreleased) the clips of inputs 10 to 15 (and 10 to 127 in Natron) are named "10", "11", ...:
 //      ContactSheet 1 wrote the digits in reverse order ("01", "11", "21", ...; issue #401). Version 1 is kept,
-//      obsolete, with the old clip names.
+//      obsolete, with the old clip names and the old layout.
+//      (unreleased, fixed in place, issue #305) new layout and resampling: the cells are a whole number of
+//      pixels, (Resolution - Gap) / Columns (or Rows), rounded, from the bottom left corner, with the gap on their
+//      left and bottom sides (it was half the gap on each side, in cells that divide the output evenly); the
+//      image is at its exact (sub-pixel) place, resampled with the cubic filter (it was box-filtered into whole
+//      pixels); the output pixel aspect ratio is 1 on hosts that support multiple clip PARs (it was the one of
+//      the inputs), and the inputs may have different PARs. The tests/nuke cases of ContactSheet match.
 // 1.1: (unreleased) the Snake column order, the Center Rows option, and the hints that say how the cells are placed;
 //      a click with Enable Selection sets Selection Frame to first + the frame index, as the overlay reads it
 //      (it was the frame index alone, so the highlighted cell was not the clicked one unless Frame Range starts at 0);
@@ -92,14 +103,14 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
-#define kSupportsMultipleClipPARs false
 #define kSupportsMultipleClipDepths false
 #define kRenderThreadSafety eRenderFullySafe
 
 #define kParamResolution "resolution"
 #define kParamResolutionLabel "Resolution"
 #define kParamResolutionHint \
-    "Resolution of the output image, in pixels."
+    "Resolution of the output image, in pixels. They are square pixels on hosts that support clips of different pixel aspect ratios; " \
+    "on other hosts, they have the pixel aspect ratio that the host gives the output (usually the one of the project)."
 
 #define kParamRowsColumns "rowsColumns"
 #define kParamRowsColumnsLabel "Rows/Columns"
@@ -109,13 +120,14 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamGap "gap"
 #define kParamGapLabel "Gap"
 #define kParamGapHint \
-"Gap in pixels around each input or frame."
+"Gap in pixels between the images, and around them: on the left and bottom sides of each cell, and on the right and top sides of the sheet. " \
+"(ContactSheet 1: half the gap on each side of each cell.)"
 
 #define kParamCenter "center"
 #define kParamCenterLabel "Center"
 #define kParamCenterHint \
-"Center the image of each input or frame in its cell. The image is scaled to fit its cell, minus the gap, keeping its aspect ratio: " \
-"if its aspect ratio is not the one of the cell, it is at the bottom left of the cell when this is not checked. " \
+"Center the image of each input or frame in its cell, minus the gap. The image is scaled to fit there, keeping its aspect ratio: " \
+"if its aspect ratio is not the one of the cell, it is at the bottom left of the cell (after the gap) when this is not checked. " \
 "This does not move the cells: see Center Rows."
 
 #define kParamCenterRows "centerRows"
@@ -222,6 +234,15 @@ public:
     ContactSheet::Grid getGrid(double time, int count) const;
 
 private:
+    // The format of an input in its pixels at render scale 1 (its RoD if it has no format), and
+    // its pixel aspect ratio.
+    struct SourceFormat
+    {
+        OfxRectI format;
+        double par;
+    };
+    SourceFormat getSourceFormat(int i, double time) const;
+
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
@@ -246,6 +267,7 @@ private:
 
     void updateGUI();
 
+    const unsigned _majorVersion;
     // do not need to delete these, the ImageEffect is managing them for us
     Clip* _dstClip;
     std::vector<Clip *> _srcClip;
@@ -267,6 +289,7 @@ ContactSheetPlugin::ContactSheetPlugin(OfxImageEffectHandle handle,
                                        bool numerousInputs,
                                        unsigned majorVersion)
     : ImageEffect(handle)
+    , _majorVersion(majorVersion)
     , _dstClip(NULL)
     , _srcClip(numerousInputs ? kClipSourceCountNumerous : kClipSourceCount)
     , _resolution(NULL)
@@ -320,6 +343,11 @@ ContactSheetPlugin::getGrid(double time,
     _rowsColumns->getValueAtTime(time, grid.rows, grid.columns);
     grid.topBottom = (_rowOrder->getValueAtTime(time) == eRowOrderTopBottom);
     grid.columnOrder = toColumnOrder( _colOrder->getValueAtTime(time) );
+    if (_majorVersion >= 2) {
+        int w, h;
+        _resolution->getValueAtTime(time, w, h);
+        ContactSheet::setWholePixelCells( &grid, w, h, _gap->getValueAtTime(time), _dstClip->getPixelAspectRatio() );
+    }
     if ( _centerRows->getValueAtTime(time) ) {
         // the images fill the cells up to the last one of the last connected input
         int lastConnected = -1;
@@ -332,6 +360,27 @@ ContactSheetPlugin::getGrid(double time,
     }
 
     return grid;
+}
+
+ContactSheetPlugin::SourceFormat
+ContactSheetPlugin::getSourceFormat(int i,
+                                    double time) const
+{
+    SourceFormat f;
+    _srcClip[i]->getFormat(f.format);
+    f.par = _srcClip[i]->getPixelAspectRatio();
+    if ( OFX::Coords::rectIsEmpty(f.format) ) {
+        // no format is available, use the RoD instead
+        const OfxRectD rod = _srcClip[i]->getRegionOfDefinition(time);
+        const OfxPointD rs1 = {1., 1.};
+        if ( OFX::Coords::rectIsEmpty(rod) || !(f.par > 0.) ) {
+            f.format = OfxRectI{0, 0, 0, 0};
+        } else {
+            Coords::toPixelEnclosing(rod, rs1, f.par, &f.format);
+        }
+    }
+
+    return f;
 }
 
 void
@@ -367,7 +416,7 @@ ContactSheetPlugin::render(const OFX::RenderArguments &args)
     OfxRectD rod;
     {
         int w, h;
-        _resolution->getValue(w, h);
+        _resolution->getValueAtTime(time, w, h);
         double par = _dstClip->getPixelAspectRatio();
         OfxPointD rs1 = {1., 1.};
         OfxRectI rodpixel = {0, 0, w, h};
@@ -386,10 +435,42 @@ ContactSheetPlugin::render(const OFX::RenderArguments &args)
     int i = 0;
     while (framesLeft > 0 && i < (int)_srcClip.size()) {
         Clip *srcClip = _srcClip[i];
-        assert( kSupportsMultipleClipPARs   || !srcClip || srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+        // version 2 supports multiple clip PARs (see describe())
+        assert( _majorVersion >= 2 || !srcClip || srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
         assert( kSupportsMultipleClipDepths || !srcClip || srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
 
         int clipCount = (std::min)(framesLeft, count); // number of frames from this clip
+        if (_majorVersion >= 2) {
+            const SourceFormat sf = getSourceFormat(i, time);
+            for (int frame = 0; frame < clipCount; ++frame) {
+                OfxRectD cellRoD;
+                if ( !ContactSheet::cellRoD(count * i + frame, grid, rod, &cellRoD) ) {
+                    continue;
+                }
+                const std::optional<ContactSheet::Placement> placement =
+                    ContactSheet::placeInCell(sf.format, sf.par, cellRoD, gap, center, dstPar);
+                if (!placement) {
+                    continue;
+                }
+                OfxRectD cellClipped;
+                if ( !Coords::rectIntersection(renderWindowCanonical, cellRoD, &cellClipped) ||
+                     !srcClip || !srcClip->isConnected() ) {
+                    continue;
+                }
+                const double srcTime = absolute ? (first + frame) : (time + first + frame);
+                auto_ptr<const Image> src( srcClip->fetchImage(srcTime) );
+                if ( src.get() ) {
+#                 ifndef NDEBUG
+                    checkBadRenderScaleOrField(src, args);
+#                 endif
+                    ContactSheet::checkImageFormat(*this, *src);
+                    ContactSheet::drawPlacedImage(src.get(), dst.get(), *placement, sf.format, args.renderWindow, args.renderScale);
+                }
+            }
+            framesLeft -= clipCount;
+            ++i;
+            continue;
+        }
         OfxRectD srcFormatCanonical;
         {
             OfxRectI srcFormat;
@@ -461,7 +542,7 @@ ContactSheetPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &
     OfxRectD rod;
     {
         int w, h;
-        _resolution->getValue(w, h);
+        _resolution->getValueAtTime(time, w, h);
         double par = _dstClip->getPixelAspectRatio();
         OfxPointD rs1 = {1., 1.};
         OfxRectI rodpixel = {0, 0, w, h};
@@ -476,6 +557,29 @@ ContactSheetPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &
     int i = 0;
     while (framesLeft > 0 && i < (int)_srcClip.size()) {
         int clipCount = (std::min)(framesLeft, count); // number of frames from this clip
+        if (_majorVersion >= 2) {
+            const SourceFormat sf = getSourceFormat(i, time);
+            const double dstPar = _dstClip->getPixelAspectRatio();
+            OfxRectD srcRoI = {0., 0., 0., 0.};
+            for (int frame = 0; frame < clipCount; ++frame) {
+                OfxRectD cellRoD;
+                if ( !ContactSheet::cellRoD(count * i + frame, grid, rod, &cellRoD) ) {
+                    continue;
+                }
+                const std::optional<ContactSheet::Placement> placement =
+                    ContactSheet::placeInCell(sf.format, sf.par, cellRoD, gap, center, dstPar);
+                const std::optional<OfxRectD> frameRoI = placement ?
+                    ContactSheet::placedImageRoI(args.regionOfInterest, *placement, sf.format, sf.par, dstPar, args.renderScale) :
+                    std::nullopt;
+                if (frameRoI) {
+                    Coords::rectBoundingBox(srcRoI, *frameRoI, &srcRoI);
+                }
+            }
+            rois.setRegionOfInterest(*_srcClip[i], srcRoI);
+            framesLeft -= clipCount;
+            ++i;
+            continue;
+        }
         OfxRectD srcFormatCanonical;
         {
             OfxRectI srcFormat;
@@ -592,7 +696,11 @@ ContactSheetPlugin::getClipPreferences(OFX::ClipPreferencesSetter & clipPreferen
     OfxRectI format = {0, 0, 0, 0};
     _resolution->getValue(format.x2, format.y2);
     clipPreferences.setOutputFormat(format);
-    //clipPreferences.setPixelAspectRatio(*_dstClip, par);
+    if ( (_majorVersion >= 2) && getImageEffectHostDescription()->supportsMultipleClipPARs ) {
+        // Resolution is in square pixels; other hosts give the output the pixel aspect ratio of the
+        // inputs, and the images are fitted in canonical coordinates
+        clipPreferences.setPixelAspectRatio(*_dstClip, 1.);
+    }
 }
 
 void
@@ -916,7 +1024,8 @@ ContactSheetPluginFactory<majorVersion>::describe(OFX::ImageEffectDescriptor &de
     desc.setSupportsTiles(kSupportsTiles);
     desc.setTemporalClipAccess(true);
     desc.setRenderTwiceAlways(false);
-    desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
+    // version 2 makes square output pixels and fits inputs of any pixel aspect ratio
+    desc.setSupportsMultipleClipPARs(majorVersion >= 2);
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
 #ifdef OFX_EXTENSIONS_NUKE
     // Enable transform by the host.
