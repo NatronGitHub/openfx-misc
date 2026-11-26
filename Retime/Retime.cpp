@@ -66,25 +66,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginIdentifier "net.sf.openfx.Retime"
 // History:
 // version 1.0: initial version
-// version 1.1: a NULL Source image (disconnected input; render is called although isIdentity returned true,
-//              e.g. by hostDemo) renders black instead of crashing (SupportExt copyPixels);
-//              (#309, not released yet) the Box filter, and the Before and After parameters (default Original,
-//              the behaviour without them), were added; the time domain is still the input frame range (or
-//              set by Duration on hosts without parametric parameters), as in Natron 2.5, so that old projects
-//              and the nodes downstream see the same frame range.
-// version 2.0: in the general context, the time domain (output frame range) follows the speed: it ends where
-//              the integrated speed covers the input frame range (version 1: the input frame range at any
-//              speed), except with the Duration parameter, which still sets it; the default filter is Box, and
-//              Before and After default to Hold; Box averages the source frames from the output time to Shutter
-//              frames after it (source frame n covers n to n+1), and Nearest takes the source frame at the
-//              middle of that interval (version 1: the nearest frame, half frames rounded up); the Shutter
-//              parameter (default 1) sets its length. The input is reversed as whole frames (Reverse input:
-//              output time 0 is the end of the last frame; a decreasing warp curve likewise), and None and
-//              Linear read the start of the source interval of the output frame, which differs from the source
-//              time at the output time when the input plays backwards (version 1: output time 0 reads the last
-//              frame) (#309). In the Retimer context, Box and Nearest read the frame at the source time
-//              (rounded down). Version 1 is kept, obsolete, for old projects;
-//              its Box filter (not released either) uses the same interval, with a shutter of 1.
+// version 1.1: a NULL Source image (disconnected input) renders black instead of crashing; the Box filter, and
+//              the Before and After parameters (default Original: the behaviour without them) (#309).
+// version 2.0: in the general context, the output frame range follows the speed (except with Duration); source
+//              frame n covers the times n to n+1: Box averages the source frames from the output time to Shutter
+//              (new, default 1) frames after it, Nearest takes the one at the middle of that interval (it was the
+//              nearest frame, half frames rounded up), and None and Linear read its start, also when the input
+//              is reversed; the defaults are Box and Hold (#309). Version 1 is kept, obsolete.
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 #define kPluginVersionMinorV1 1 // the minor version of the obsolete version 1
@@ -118,12 +106,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamFilterOptionLinear "Linear", "Blend the two nearest images with linear interpolation.", "linear"
 #define kParamFilterOptionBox "Box", "Average the input frames covered by the output frame (from the output time to Shutter frames after it, mapped to the input time), each weighted by the part of it that is covered (input frame n covers the times from n to n+1). At speed 1, this is the input frame; faster speeds blend several frames (motion blur, e.g. at speed 2 output frame 2 averages input frames 4 and 5), at most " STRINGISE(kBoxMaxFrames) " frames plus a partial frame at each end; slower speeds show each input frame on several output frames. At the ends of the input frame range, the frames outside it are read according to Before/After, so the first and last frames fade (to black, or to what the input gives there) unless Before/After is Hold. In the Retimer context, where the host only gives the source time of the current frame, Box (and Nearest) read the frame at that time (rounded down).", "box"
 
-// The major versions, whose behaviours differ (see the History)
-enum class RetimeVersion
-{
-    e1 = 1,
-    e2 = 2,
-};
+// version 2: source frame n covers the times n to n+1 (Box, Nearest, Shutter, Reverse input), the time
+// domain follows the speed, and the defaults are Box and Hold (see the History)
+static constexpr unsigned kVersionFrameIntervals = 2;
 
 enum FilterEnum
 {
@@ -237,13 +222,13 @@ private:
     ChoiceParam  *_before;
     ChoiceParam  *_after;
     DoubleParam  *_shutter; /**< @brief version 2 only. */
-    const RetimeVersion _version; /**< @brief the major version: Nearest rounding, time domain */
+    const unsigned _majorVersion; /**< @brief Nearest rounding, time domain (see kVersionFrameIntervals) */
 
 public:
     /** @brief ctor */
     RetimePlugin(OfxImageEffectHandle handle,
                  bool supportsParametricParameter,
-                 RetimeVersion version)
+                 unsigned majorVersion)
         : ImageEffect(handle)
         , _dstClip(NULL)
         , _srcClip(NULL)
@@ -256,7 +241,7 @@ public:
         , _before(NULL)
         , _after(NULL)
         , _shutter(NULL)
-        , _version(version)
+        , _majorVersion(majorVersion)
     {
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -285,7 +270,7 @@ public:
         _before = fetchChoiceParam(kParamBefore);
         _after = fetchChoiceParam(kParamAfter);
         assert(_filter && _before && _after);
-        if (_version >= RetimeVersion::e2) {
+        if (_majorVersion >= kVersionFrameIntervals) {
             _shutter = fetchDoubleParam(kParamShutter);
             assert(_shutter);
             updateShutterEnabled();
@@ -643,7 +628,7 @@ RetimePlugin::getSourceTime(double time)
         if (reverse_input) {
             // version 2: the input reversed as whole frames (source frame n covers n to n+1), so that output
             // time 0 is the end of the last frame; version 1: the last frame
-            const double end = (_version >= RetimeVersion::e2) ? srcRange.max + 1. : srcRange.max;
+            const double end = (_majorVersion >= kVersionFrameIntervals) ? srcRange.max + 1. : srcRange.max;
             sourceTime = end - _speed->integrate(srcRange.min, time);
         } else {
             sourceTime = srcRange.min + _speed->integrate(srcRange.min, time);
@@ -651,7 +636,7 @@ RetimePlugin::getSourceTime(double time)
         if (_warp) {
             // version 2: the input range as whole frames (the last frame ends at srcRange.max + 1), so that
             // a decreasing warp curve reverses the input as Reverse input does; version 1: to the last frame
-            const double r = srcRange.max - srcRange.min + ( (_version >= RetimeVersion::e2) ? 1. : 0. );
+            const double r = srcRange.max - srcRange.min + ( (_majorVersion >= kVersionFrameIntervals) ? 1. : 0. );
             if (r != 0.) {
                 sourceTime = srcRange.min + r * _warp->getValue(0, time, (sourceTime - srcRange.min) / r);
             }
@@ -671,7 +656,7 @@ RetimePlugin::getSourceFrames(double time,
 {
     const FilterEnum filter = (FilterEnum)_filter->getValueAtTime(time);
     double sourceTime = getSourceTime(time);
-    if ( (_version >= RetimeVersion::e2) && ( (filter == eFilterNone) || (filter == eFilterLinear) ) ) {
+    if ( (_majorVersion >= kVersionFrameIntervals) && ( (filter == eFilterNone) || (filter == eFilterLinear) ) ) {
         // version 2: None and Linear read the start of the source interval of the output frame (or field),
         // which is sourceTime if the source time increases, and the source time at the end of the output
         // frame if it decreases (Reverse input, a negative speed, a decreasing warp curve)
@@ -692,7 +677,7 @@ RetimePlugin::getSourceFrames(double time,
         if (!frames->boxed) {
             frames->box.clear();
         }
-    } else if ( (filter == eFilterNearest) && (_version >= RetimeVersion::e2) ) {
+    } else if ( (filter == eFilterNearest) && (_majorVersion >= kVersionFrameIntervals) ) {
         // version 2: the frame at the middle of the source interval (frame n covers n to n+1); in the
         // Retimer context (no interval), the frame at the source time, as Box
         const std::optional<OfxRangeD> interval = getSourceInterval(time, fieldToRender, getShutter(time));
@@ -1071,7 +1056,7 @@ RetimePlugin::getTimeDomain(OfxRangeD &range)
         return true;
     }
     // Version 1 (as in Natron 2.5): the input time domain
-    if (_version < RetimeVersion::e2) {
+    if (_majorVersion < kVersionFrameIntervals) {
         return false;
     }
     // From the speed: the output starts with the input (the speed is integrated from there) and ends
@@ -1351,7 +1336,7 @@ RetimePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc
 
     // version 1: Original (the default) asks the input for frames outside its range, as before these params
     // existed; version 2: Hold
-    const BeforeAfterEnum beforeAfterDefault = (majorVersion >= 2) ? eBeforeAfterHold : eBeforeAfterOriginal;
+    const BeforeAfterEnum beforeAfterDefault = (majorVersion >= kVersionFrameIntervals) ? eBeforeAfterHold : eBeforeAfterOriginal;
     defineBeforeAfterParam(desc, page, kParamBefore, kParamBeforeLabel, kParamBeforeHint, beforeAfterDefault);
     defineBeforeAfterParam(desc, page, kParamAfter, kParamAfterLabel, kParamAfterHint, beforeAfterDefault);
     // the filter comes after Before and After (#390)
@@ -1362,7 +1347,7 @@ RetimePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc
         assert(param->getNOptions() == eFilterNone);
         param->appendOption(kParamFilterOptionNone);
         assert(param->getNOptions() == eFilterNearest);
-        if (majorVersion >= 2) {
+        if (majorVersion >= kVersionFrameIntervals) {
             param->appendOption(kParamFilterOptionNearest);
         } else {
             param->appendOption(kParamFilterOptionNearestV1);
@@ -1371,12 +1356,12 @@ RetimePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc
         param->appendOption(kParamFilterOptionLinear);
         assert(param->getNOptions() == eFilterBox);
         param->appendOption(kParamFilterOptionBox);
-        param->setDefault( (int)( (majorVersion >= 2) ? kParamFilterDefault : kParamFilterDefaultV1 ) );
+        param->setDefault( (int)( (majorVersion >= kVersionFrameIntervals) ? kParamFilterDefault : kParamFilterDefaultV1 ) );
         if (page) {
             page->addChild(*param);
         }
     }
-    if (majorVersion >= 2) {
+    if (majorVersion >= kVersionFrameIntervals) {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamShutter);
         param->setLabel(kParamShutterLabel);
         param->setHint(kParamShutterHint);
@@ -1400,7 +1385,7 @@ RetimePluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
     // false in Nuke 8 to 11.1, whose parametric suite is broken (Support, NatronGitHub/openfx#351)
     const bool supportsParametricParameter = getImageEffectHostDescription()->supportsParametricParameter;
 
-    return new RetimePlugin(handle, supportsParametricParameter, (majorVersion >= 2) ? RetimeVersion::e2 : RetimeVersion::e1);
+    return new RetimePlugin(handle, supportsParametricParameter, majorVersion);
 }
 
 static RetimePluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);

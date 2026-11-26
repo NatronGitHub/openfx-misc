@@ -54,18 +54,16 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginIdentifier "net.sf.openfx.CheckerBoardPlugin"
 // history:
 // 1.0 initial version
-//     (no version change) removed the XY render branch: Output never declares XY, so the generator
-//     never offers it and a conforming host never gives it; other components give kOfxStatErrFormat
-//     (issue #226). Output is unchanged.
-// 2.0 the box size is rounded to the nearest pixel (at full size, after the pixel aspect ratio,
-//     then scaled by the render scale), and the center lines are 3 pixels wide by default, as in the CheckerBoard node of the
-//     same name. The Grid Origin param: the boxes may start from the bottom-left corner instead of
-//     the center (the default). With Extent Default and Source connected, Bottom Left starts from
-//     the Source RoD (the output RoD); Center uses the project, as in 1.0 (#285).
-//     Version 1.0 is kept (obsolete), with its defaults and output; the unreleased 1.1 (Grid
-//     Origin) is now 2.0.
+// 2.0 the box size is rounded to the nearest pixel (at full size, after the pixel aspect ratio, then
+//     scaled by the render scale), and the center lines are 3 pixels wide by default; the Grid Origin
+//     param starts the boxes from the center (the default, from the project) or the bottom-left corner
+//     (the Source RoD with Extent Default and Source connected) (#285). Version 1 is kept, obsolete.
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinorV1 0 // the minor version of the obsolete version 1
+
+// version 2: the box size rounded to whole pixels, Grid Origin, and 3-pixel center lines by default
+static constexpr unsigned kVersionRoundedBoxes = 2;
 
 #define kSupportsByte true
 #define kSupportsUShort true
@@ -418,7 +416,7 @@ public:
         _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
 
         _boxSize = fetchDouble2DParam(kParamBoxSize);
-        if (_majorVersion >= 2) {
+        if (_majorVersion >= kVersionRoundedBoxes) {
             _gridOrigin = fetchChoiceParam(kParamGridOrigin);
         }
         _color0 = fetchRGBAParam(kParamColor0);
@@ -429,7 +427,7 @@ public:
         _lineWidth = fetchDoubleParam(kParamLineWidth);
         _centerlineColor = fetchRGBAParam(kParamCenterLineColor);
         _centerlineWidth = fetchDoubleParam(kParamCenterLineWidth);
-        assert(_size && _boxSize && (_gridOrigin || _majorVersion < 2) && _color0 && _color1 && _color2 && _color3 && _lineColor && _lineWidth && _centerlineColor && _centerlineWidth);
+        assert(_size && _boxSize && (_gridOrigin || _majorVersion < kVersionRoundedBoxes) && _color0 && _color1 && _color2 && _color3 && _lineColor && _lineWidth && _centerlineColor && _centerlineWidth);
     }
 
 private:
@@ -516,7 +514,7 @@ CheckerBoardPlugin::setupAndProcess(CheckerBoardProcessorBase &processor,
     double centerlineWidth;
     _centerlineWidth->getValueAtTime(time, centerlineWidth);
     const GridOriginEnum gridOrigin = _gridOrigin ? static_cast<GridOriginEnum>( _gridOrigin->getValueAtTime(time) ) : eGridOriginCenter;
-    const BoxSizeEnum boxSizeRounding = (_majorVersion >= 2) ? BoxSizeEnum::eRounded : BoxSizeEnum::eExact;
+    const BoxSizeEnum boxSizeRounding = (_majorVersion >= kVersionRoundedBoxes) ? BoxSizeEnum::eRounded : BoxSizeEnum::eExact;
     OfxRectD rod = {0, 0, 0, 0};
     if ( !getRegionOfDefinition(time, rod) ) {
         // Extent Default. Bottom Left: the host's default RoD, the Source RoD if Source is connected.
@@ -604,10 +602,8 @@ CheckerBoardPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
-    desc.setPluginDescription(majorVersion >= 2 ? kPluginDescription : kPluginDescriptionV1);
-    if (majorVersion < 2) {
-        desc.setIsObsolete(true);
-    }
+    desc.setPluginDescription(majorVersion >= kVersionRoundedBoxes ? kPluginDescription : kPluginDescriptionV1);
+    desc.setIsObsolete(majorVersion < kPluginVersionMajor);
 
     desc.addSupportedContext(eContextGenerator);
     desc.addSupportedContext(eContextGeneral);
@@ -683,7 +679,7 @@ CheckerBoardPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor
     }
 
     // gridOrigin
-    if (majorVersion >= 2) {
+    if (majorVersion >= kVersionRoundedBoxes) {
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamGridOrigin);
         param->setLabel(kParamGridOriginLabel);
         param->setHint(kParamGridOriginHint);
@@ -702,7 +698,7 @@ CheckerBoardPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor0);
         param->setLabel(kParamColor0Label);
-        param->setHint(majorVersion >= 2 ? kParamColor0Hint : kParamColor0HintV1);
+        param->setHint(majorVersion >= kVersionRoundedBoxes ? kParamColor0Hint : kParamColor0HintV1);
         param->setDefault(0.1, 0.1, 0.1, 1.0);
         param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
         param->setDisplayRange(0, 0, 0, 0, 1, 1, 1, 1);
@@ -716,7 +712,7 @@ CheckerBoardPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor1);
         param->setLabel(kParamColor1Label);
-        param->setHint(majorVersion >= 2 ? kParamColor1Hint : kParamColor1HintV1);
+        param->setHint(majorVersion >= kVersionRoundedBoxes ? kParamColor1Hint : kParamColor1HintV1);
         param->setDefault(0.5, 0.5, 0.5, 1.0);
         param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
         param->setDisplayRange(0, 0, 0, 0, 1, 1, 1, 1);
@@ -730,7 +726,7 @@ CheckerBoardPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor2);
         param->setLabel(kParamColor2Label);
-        param->setHint(majorVersion >= 2 ? kParamColor2Hint : kParamColor2HintV1);
+        param->setHint(majorVersion >= kVersionRoundedBoxes ? kParamColor2Hint : kParamColor2HintV1);
         param->setDefault(0.1, 0.1, 0.1, 1.0);
         param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
         param->setDisplayRange(0, 0, 0, 0, 1, 1, 1, 1);
@@ -744,7 +740,7 @@ CheckerBoardPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor3);
         param->setLabel(kParamColor3Label);
-        param->setHint(majorVersion >= 2 ? kParamColor3Hint : kParamColor3HintV1);
+        param->setHint(majorVersion >= kVersionRoundedBoxes ? kParamColor3Hint : kParamColor3HintV1);
         param->setDefault(0.5, 0.5, 0.5, 1.0);
         param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
         param->setDisplayRange(0, 0, 0, 0, 1, 1, 1, 1);
@@ -803,7 +799,7 @@ CheckerBoardPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamCenterLineWidth);
         param->setLabel(kParamCenterLineWidthLabel);
         param->setHint(kParamCenterLineWidthHint);
-        param->setDefault(majorVersion >= 2 ? 3 : 1);
+        param->setDefault(majorVersion >= kVersionRoundedBoxes ? 3 : 1);
         param->setRange(0., DBL_MAX);
         param->setDisplayRange(0, 10);
         param->setAnimates(true); // can animate
@@ -824,8 +820,8 @@ CheckerBoardPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle han
 // Each major version has its own factory class (FactoryMainEntryHelper stores the plugin UID in a
 // static shared by all the objects of a class).
 static CheckerBoardPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
-static CheckerBoardPluginFactory<1> p1(kPluginIdentifier, 0); // 1.0, obsolete (Natron 2.5.0)
+static CheckerBoardPluginFactory<1> p_v1(kPluginIdentifier, kPluginVersionMinorV1); // obsolete (Natron 2.5.0)
 mRegisterPluginFactoryInstance(p)
-mRegisterPluginFactoryInstance(p1)
+mRegisterPluginFactoryInstance(p_v1)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

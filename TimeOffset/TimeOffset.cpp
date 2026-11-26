@@ -67,12 +67,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamRoundingModeOptionWhole "Whole Frames", "Truncate Time Offset toward zero to a whole number of frames (e.g. 5.7 gives 5, -5.5 gives -5).", "whole"
 #define kParamRoundingModeOptionFractional "Fractional Time", "Use the exact Time Offset, which may ask the input for times between frames (the frame range is still offset by the truncated value).", "fractional"
 
-// The major versions (see the History)
-enum class TimeOffsetVersion
-{
-    e1 = 1, // an integer offset
-    e2 = 2, // a fractional offset, and Mode
-};
+// version 2: a fractional offset, and Mode (version 1: an integer offset)
+static constexpr unsigned kVersionFractionalOffset = 2;
 
 enum RoundingModeEnum
 {
@@ -101,7 +97,7 @@ class TimeOffsetPlugin
 {
 public:
     /** @brief ctor */
-    TimeOffsetPlugin(OfxImageEffectHandle handle, TimeOffsetVersion version);
+    TimeOffsetPlugin(OfxImageEffectHandle handle, unsigned majorVersion);
 
 private:
     /* Override the render */
@@ -118,11 +114,14 @@ private:
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
     double getSourceTime(double time) const;
+    // the Time Offset parameter value (an integer in version 1)
+    double getTimeOffsetValue(double time) const;
     // the offset applied to the time (Mode: Whole Frames truncates it), and to the frame range (truncated)
     double getTimeOffset(double time) const;
     double getFrameRangeOffset(double time) const;
 
 private:
+    const unsigned _majorVersion;
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;            /**< @brief Mandated output clips */
     Clip *_srcClip;            /**< @brief Mandated input clips */
@@ -134,8 +133,9 @@ private:
 };
 
 TimeOffsetPlugin::TimeOffsetPlugin(OfxImageEffectHandle handle,
-                                   TimeOffsetVersion version)
+                                   unsigned majorVersion)
     : ImageEffect(handle)
+    , _majorVersion(majorVersion)
     , _dstClip(NULL)
     , _srcClip(NULL)
     , _time_offset(NULL)
@@ -152,7 +152,7 @@ TimeOffsetPlugin::TimeOffsetPlugin(OfxImageEffectHandle handle,
                            _srcClip->getPixelComponents() == ePixelComponentRGB ||
                            _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
 
-    if (version >= TimeOffsetVersion::e2) {
+    if (_majorVersion >= kVersionFractionalOffset) {
         _roundingMode = fetchChoiceParam(kParamRoundingMode);
         _time_offset_v2 = fetchDoubleParam(kParamTimeOffset);
     } else {
@@ -170,13 +170,22 @@ TimeOffsetPlugin::TimeOffsetPlugin(OfxImageEffectHandle handle,
 // basic plugin render function, just a skelington to instantiate templates from
 
 double
+TimeOffsetPlugin::getTimeOffsetValue(double t) const
+{
+    if (_majorVersion >= kVersionFractionalOffset) {
+        return _time_offset_v2->getValueAtTime(t); // no animation
+    }
+
+    return _time_offset->getValueAtTime(t); // no animation
+}
+
+double
 TimeOffsetPlugin::getTimeOffset(double t) const
 {
-    if (_time_offset) {
-        return _time_offset->getValueAtTime(t); // no animation
-    }
-    const double offset = _time_offset_v2->getValueAtTime(t); // no animation
-    const bool whole = static_cast<RoundingModeEnum>( _roundingMode->getValue() ) == eRoundingModeWhole;
+    const double offset = getTimeOffsetValue(t);
+    // version 1 has no Mode: its integer offset is a whole number of frames
+    const bool whole = (_majorVersion < kVersionFractionalOffset) ||
+                       static_cast<RoundingModeEnum>( _roundingMode->getValue() ) == eRoundingModeWhole;
 
     return whole ? std::trunc(offset) : offset;
 }
@@ -184,11 +193,7 @@ TimeOffsetPlugin::getTimeOffset(double t) const
 double
 TimeOffsetPlugin::getFrameRangeOffset(double t) const
 {
-    if (_time_offset) {
-        return _time_offset->getValueAtTime(t); // no animation
-    }
-
-    return std::trunc( _time_offset_v2->getValueAtTime(t) ); // no animation
+    return std::trunc( getTimeOffsetValue(t) );
 }
 
 // figure the frame we should be retiming from
@@ -372,7 +377,7 @@ TimeOffsetPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
     // roundingMode (version 2), first
-    if (majorVersion >= 2) {
+    if (majorVersion >= kVersionFractionalOffset) {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamRoundingMode);
         param->setLabel(kParamRoundingModeLabel);
         param->setHint(kParamRoundingModeHint);
@@ -388,7 +393,7 @@ TimeOffsetPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &
     }
 
     // time_offset: fractional in version 2
-    if (majorVersion >= 2) {
+    if (majorVersion >= kVersionFractionalOffset) {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamTimeOffset);
         param->setLabel(kParamTimeOffsetLabel);
         param->setHint(kParamTimeOffsetHint);
@@ -443,7 +448,7 @@ ImageEffect*
 TimeOffsetPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
                                                       ContextEnum /*context*/)
 {
-    return new TimeOffsetPlugin(handle, (majorVersion >= 2) ? TimeOffsetVersion::e2 : TimeOffsetVersion::e1);
+    return new TimeOffsetPlugin(handle, majorVersion);
 }
 
 static TimeOffsetPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
