@@ -1386,6 +1386,18 @@ tests=(
     # 0.5 / 3 (an offset would give 1.25)
     "HSVTool set saturation|net.sf.openfx.HSVToolPlugin|filter|*|notidentity+mean=0.6,0.675,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none outputAlpha=0 clampBlack=0 setSaturation=1 saturationAdjustment=0.2"
     "HSVTool set brightness|net.sf.openfx.HSVToolPlugin|filter|*|notidentity+mean=0.16667,0.33333,0.5,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none outputAlpha=0 clampBlack=0 setBrightness=1 brightnessAdjustment=0.5"
+    # The adjustments are weighted by the Output Alpha coefficient (issue #293): the saturation range
+    # (0, 0.5) with rolloff 0.5 gives (0.25, 0.5, 0.75) a saturation coefficient of 2/3 and a hue
+    # coefficient of 1. With Output Alpha = Hue, the saturation is set to 0.2 (alpha 1); version 1
+    # weights by min(all), 2/3: saturation 2/3 + 2/3 * (0.2 - 2/3) = 0.35556, min 0.48333, G 0.61667.
+    "HSVTool set saturation, rolloff, output hue|net.sf.openfx.HSVToolPlugin|filter|*|notidentity+mean=0.6,0.675,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none outputAlpha=1 clampBlack=0 setSaturation=1 saturationAdjustment=0.2 saturationRange=0,0.5 saturationRangeRolloff=0.5"
+    "HSVTool 1 set saturation, rolloff, output hue|net.sf.openfx.HSVToolPlugin|filter|*|notidentity+mean=0.48333,0.61667,0.75,1||-m 1 -i Source=solid:0.25,0.5,0.75,1 -i Mask=none outputAlpha=1 clampBlack=0 setSaturation=1 saturationAdjustment=0.2 saturationRange=0,0.5 saturationRangeRolloff=0.5"
+    # The adjusted brightness is clamped to zero (issue #293); version 1 clamps it only with Set Brightness:
+    # an offset of -1 gives the brightness -0.25, and the colour -1/3 times the source
+    "HSVTool set brightness negative|net.sf.openfx.HSVToolPlugin|filter|float|notidentity+mean=0,0,0,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none outputAlpha=0 clampBlack=0 setBrightness=1 brightnessAdjustment=-0.5"
+    "HSVTool brightness negative|net.sf.openfx.HSVToolPlugin|filter|float|notidentity+mean=0,0,0,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none outputAlpha=0 clampBlack=0 brightnessAdjustment=-1"
+    "HSVTool 1 set brightness negative|net.sf.openfx.HSVToolPlugin|filter|float|notidentity+mean=0,0,0,1||-m 1 -i Source=solid:0.25,0.5,0.75,1 -i Mask=none outputAlpha=0 clampBlack=0 setBrightness=1 brightnessAdjustment=-0.5"
+    "HSVTool 1 brightness negative|net.sf.openfx.HSVToolPlugin|filter|float|notidentity+mean=-0.08333,-0.16667,-0.25,1||-m 1 -i Source=solid:0.25,0.5,0.75,1 -i Mask=none outputAlpha=0 clampBlack=0 brightnessAdjustment=-1"
     # DenoiseSharpen, RGB color model, R unchecked: B is denoised (issue #323)
     "DenoiseSharpen B, not R|net.sf.openfx.DenoiseSharpen|filter|float|notidentity+changed:Source||--frames 0 -i Source=file:convsrc.pfm -i Mask=none analysisLock=1 colorModel=3 NatronOfxParamProcessR=0 crbbNoiseLevelHigh=0.02"
     # ImageStatistics: the analysis buttons (pressed with -s, instanceChanged with
