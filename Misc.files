@@ -62,7 +62,6 @@ MatteMonitor/MatteMonitor.cpp
 Merge/Merge.cpp
 Mirror/Mirror.cpp
 Misc/KeyerUtils.h
-Misc/SoftEdge.h
 Misc/randomGenerator.cpp
 Misc/randomGenerator.H
 MixViews/MixViews.cpp
@@ -129,6 +128,7 @@ SideBySide/SideBySide.cpp
 SlitScan/SlitScan.cpp
 SpriteSheet/SpriteSheet.cpp
 SupportExt/ofxsCopier.h
+SupportExt/ofxsCurves.h
 SupportExt/ofxsFilter.h
 SupportExt/ofxsFormatResolution.h
 SupportExt/ofxsGenerator.cpp

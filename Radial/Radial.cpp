@@ -175,7 +175,7 @@ protected:
     float radialSoftWeight(double d,
                            double softness) const
     {
-        const double w = SoftEdge::softEdgeWeight(falloffCurve(), d, softness, 0.);
+        const double w = ofxsSoftEdgeWeight(falloffCurve(), d, softness, 0.);
 
         return static_cast<float>(_plinear ? w * w * w : w);
     }
@@ -1150,7 +1150,7 @@ RadialPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc
     }
 
     // falloff
-    ShapeDraw::describeFalloffParam(desc, page, (majorVersion >= kVersionPixelCenterSoftness) ? ShapeDraw::FalloffEnum::eFalloffSmooth : ShapeDraw::FalloffEnum::eFalloffQuadratic);
+    ShapeDraw::describeFalloffParam(desc, page, (majorVersion >= kVersionPixelCenterSoftness) ? OfxsCurveEnum::eSmooth : OfxsCurveEnum::eQuadratic);
 
     // color1
     {

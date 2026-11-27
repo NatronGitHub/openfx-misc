@@ -36,6 +36,7 @@
 #include "ofxsCopier.h"
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
+#include "ofxsCurves.h"
 #ifdef OFX_EXTENSIONS_NATRON
 #include "ofxNatron.h"
 #endif
@@ -344,7 +345,7 @@ static double
 dissolveWeight(double x,
                bool linear)
 {
-    return linear ? x : x * x * (3. - 2. * x);
+    return linear ? x : ofxsCurveInUnit(OfxsCurveEnum::eSmooth, x); // x in (0, 1): the smoothstep
 }
 
 // copy the getSources() results to the non-NULL output pointers

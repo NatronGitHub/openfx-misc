@@ -33,7 +33,7 @@
 #include "ofxsRGBAProcessing.h"
 #include "ofxsMacros.h"
 #include "ofxsThreadSuite.h"
-#include "SoftEdge.h"
+#include "ofxsCurves.h"
 
 using namespace OFX;
 
@@ -132,13 +132,13 @@ softnessFactorV3(double r1,
         return 0.;
     }
     if (dLow <= dHigh) {
-        return SoftEdge::smoothstep( (dLow + 0.5) / (s + 1.) );
+        return ofxsCurve( OfxsCurveEnum::eSmooth, (dLow + 0.5) / (s + 1.) );
     }
     if ( !(p1 > r2 - s) ) {
         return 1.;
     }
 
-    return SoftEdge::smoothstep( (dHigh + 0.5) / (s + 1.) );
+    return ofxsCurve( OfxsCurveEnum::eSmooth, (dHigh + 0.5) / (s + 1.) );
 }
 
 // Version 3, along x: the pixels before r1 rounded up are not in the rectangle either, and without softness the
