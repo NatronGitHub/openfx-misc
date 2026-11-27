@@ -41,16 +41,24 @@ which locks a destroyed mutex) and starts its crash reporter
 (`Resolve -reportCrash ...`). If the script can't quit Resolve (no scripting
 connection) or it doesn't quit in time, the tests leave it running and print
 its pid: quit it by hand. `--keep DIR` keeps Resolve's output
-(`resolve.log`) and the exported frames (`caseN.png`).
+(`resolve.log`), its logs, the exported frames (`caseN.png`) and each
+case's Fusion tool ID and inputs (`caseN-inputs.txt`).
 
 Each case is a Fusion composition clip on its own timeline: the plug-in's
 Fusion tool (`ofx.<plug-in identifier>`) connected to `MediaOut1`. Comps
 made with `fu.NewComp()` can't render in Resolve.
 
-Resolve loads the plug-ins of `OFX_PLUGIN_PATH` as well as those of its
-usual folders and of its cache; when a plug-in is found twice, it keeps
-the newer version (its log says "Newer version of plugin is found in ...").
-Its log is
-`~/Library/Application Support/Blackmagic Design/DaVinci Resolve/logs/ResolveDebug.txt`.
+Resolve's log is
+`~/Library/Application Support/Blackmagic Design/DaVinci Resolve/logs/ResolveDebug.txt`
+(with `davinci_resolve.log`). At the end of a session both are copied to the
+work directory, and the lines about a termination signal, a crash dump, an
+uncaught exception or an unsupported plug-in are printed.
+
+When a bundle registers several major versions of a plug-in, Resolve's log
+says it keeps only the newest one ("ignoring plugin ... Newer version of plugin is found"; also
+"duplicate plugin with id ... found, ignore it"), so obsolete majors can't
+be tested in Resolve. Before each case, the harness checks in Resolve's
+plug-in cache that the plug-in was loaded only from the prefix.
+
 Resolve caches plug-in descriptions in
 `~/Library/Application Support/Blackmagic Design/DaVinci Resolve/OFXPluginCacheV2.xml`.

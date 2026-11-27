@@ -9,16 +9,27 @@ Fusion/FusionToolReference.md). See README.md for what the tests need.
 import base64
 import importlib.util
 import os
+import shutil
 import struct
 import subprocess
 import sys
 import time
+import xml.etree.ElementTree as ElementTree
 import zlib
 
 DEFAULT_APP = "/Applications/DaVinci Resolve/DaVinci Resolve.app"
 SCRIPT_MODULE = ("/Library/Application Support/Blackmagic Design/"
                  "DaVinci Resolve/Developer/Scripting/Modules/"
                  "DaVinciResolveScript.py")
+
+SUPPORT = os.path.expanduser("~/Library/Application Support/"
+                             "Blackmagic Design/DaVinci Resolve")
+# Resolve's logs of its last launch, copied to the work directory.
+LOGS = ("ResolveDebug.txt", "davinci_resolve.log")
+PLUGIN_CACHE = os.path.join(SUPPORT, "OFXPluginCacheV2.xml")
+# Lines of ResolveDebug.txt worth reporting.
+LOG_PATTERNS = ("Caught termination signal", "[CRASH DUMP]",
+                "uncaught exception", "not supported on this platform")
 
 # Seconds to wait for Resolve to accept a scripting connection, and to quit.
 CONNECT_TIMEOUT = 180
@@ -91,6 +102,41 @@ def load_script_module(executable):
                                  "%s" % ex) from ex
     # The module replaces itself with fusionscript in sys.modules.
     return sys.modules[name]
+
+
+def plugin_bundles(plugin, cache=PLUGIN_CACHE):
+    """The bundles Resolve loaded a plug-in from, per its plug-in cache.
+
+    Args:
+        plugin: the OFX plug-in identifier.
+        cache: Resolve's OFXPluginCacheV2.xml.
+
+    Returns:
+        A sorted list of (bundle path, major version), empty if the cache
+        is missing or does not list the plug-in.
+    """
+    try:
+        root = ElementTree.parse(cache).getroot()
+    except (OSError, ElementTree.ParseError):
+        return []
+    found = set()
+    for bundle in root.iter("bundle"):
+        binary = bundle.find("binary")
+        path = binary.get("bundle_path", "") if binary is not None else ""
+        for desc in bundle.iter("plugin"):
+            if desc.get("name") == plugin:
+                found.add((path, desc.get("major_version", "")))
+    return sorted(found)
+
+
+def log_findings(path):
+    """The lines of a Resolve log that match LOG_PATTERNS."""
+    try:
+        with open(path, errors="replace") as log:
+            return [line.rstrip() for line in log
+                    if any(p in line for p in LOG_PATTERNS)]
+    except OSError:
+        return []
 
 
 def is_running():
@@ -221,6 +267,7 @@ class Session:
         self._log = None
         self._project = None
         self._project_name = "openfx-misc-tests-%d" % os.getpid()
+        self.log_findings = []  # see LOG_PATTERNS, set by stop()
         self._cases = 0
 
     def __enter__(self):
@@ -305,7 +352,19 @@ class Session:
                 print("Resolve (pid %d) is still running: quit it by hand"
                       % self._proc.pid, file=sys.stderr)
             self._proc = None
+            self._copy_logs()
         self._close_log()
+
+    def _copy_logs(self):
+        """Copies Resolve's logs to the work directory and scans them."""
+        for name in LOGS:
+            src = os.path.join(SUPPORT, "logs", name)
+            if os.path.isfile(src):
+                shutil.copy(src, os.path.join(self.work, name))
+        self.log_findings = log_findings(
+            os.path.join(self.work, LOGS[0]))
+        for line in self.log_findings:
+            print("Resolve log: %s" % line, file=sys.stderr)
 
     def _close_log(self):
         if self._log is not None:
@@ -382,6 +441,12 @@ class Session:
         comp = item.GetFusionCompByIndex(1) if item else None
         if comp is None:
             raise RenderError("cannot insert a Fusion composition")
+        plugins = os.path.join(self.prefix, "OFX", "Plugins") + os.sep
+        foreign = [path for path, _ in plugin_bundles(plugin)
+                   if not path.startswith(plugins)]
+        if foreign:
+            raise RenderError("Resolve also loaded %s from %s"
+                              % (plugin, ", ".join(foreign)))
         comp.SetActiveTool()  # nothing selected: AddTool connects nothing
         tool = comp.AddTool("ofx." + plugin)
         if tool is None:
