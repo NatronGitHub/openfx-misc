@@ -898,6 +898,11 @@ tests=(
     # the Enable)
     "PIK luminance level green|net.sf.openfx.PIK|general|float|mean=0.2692,0.2769,0.2846,0.388||-i Fg=solid:0.5,1.2,0.4,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0.2,0.8,0.1 lmEnable=1 llEnable=1 luma=0.3 rgbal=0"
     "PIK 1 luminance level|net.sf.openfx.PIK|general|float|mean=0.5615,0.6231,0.5923,0.6154||-m 1 -i Fg=solid:0.6,0.7,0.9,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0.1,0.2,0.8 lmEnable=1 llEnable=1 luma=0.5"
+    # A screen color with negative components: they count as 0 in the key (alpha 0.1667, 0.6875 in
+    # version 1), not in the screen subtraction (red and green above 1); RGBA Legal raises alpha to 1
+    "PIK negative screen color|net.sf.openfx.PIK|general|float|mean=1.0167,1.1167,0.65,1||-i Fg=solid:0.6,0.7,0.9,1 -i PFg=none -i C=solid:-0.5,-0.5,0.3,1 -i Bg=none -i InM=none -i OutM=none screenType=1"
+    "PIK negative screen color RGBA legal off|net.sf.openfx.PIK|general|float|mean=1.0167,1.1167,0.65,0.1667||-i Fg=solid:0.6,0.7,0.9,1 -i PFg=none -i C=solid:-0.5,-0.5,0.3,1 -i Bg=none -i InM=none -i OutM=none screenType=1 rgbal=0"
+    "PIK 1 negative screen color|net.sf.openfx.PIK|general|float|mean=0.7563,0.8562,0.8062,0.6875||-m 1 -i Fg=solid:0.6,0.7,0.9,1 -i PFg=none -i C=solid:-0.5,-0.5,0.3,1 -i Bg=none -i InM=none -i OutM=none screenType=1"
     # Luminance Match with a Screen Range of 0: opaque, without screen subtraction (the output is Fg)
     "PIK screen range 0|net.sf.openfx.PIK|general|float|mean=0.31,0.348,0.6,1||-i Fg=solid:0.31,0.348,0.6,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0.1,0.2,0.8 lmEnable=1 level=0"
     # PIK: a soft screen replace color with zero Rec.709 luminance (was 0/0 = NaN where alpha

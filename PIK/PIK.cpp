@@ -155,7 +155,7 @@ using KeyerUtils::finiteSampleToFloat;
     "\n" \
     "The basic equation used to extract the key in PIK is (in the case of \"green\" keying):\n" \
     "alpha = 1 if Bg, (Ag-Ar*rw-Ab*gbw) or (Bg-Br*rw-Bb*gbw) is zero or negative, else 1-(Ag-Ar*rw-Ab*gbw)/(Bg-Br*rw-Bb*gbw)\n" \
-    "A is input PFg and B is input C, rw is the value of \"Red Weight\" and gbw is the value of \"Green/Blue Weight\".\n" \
+    "A is input PFg and B is input C, rw is the value of \"Red Weight\" and gbw is the value of \"Green/Blue Weight\". Since version 2, negative components of B count as 0 in its key (Br, Bb), but not in the screen subtraction.\n" \
     "\n" \
     "See also:\n" \
     "- https://web.archive.org/web/20220524000628/http://www.opticalenquiry.com/nuke/index.php?title=The_Keyer_Nodes#IBK\n" \
@@ -192,7 +192,8 @@ using KeyerUtils::finiteSampleToFloat;
 //              saturated screen-like colors). Unreleased, then fixed in place: the Luminance Level (with its
 //              Enable) is implemented, the Screen Range scales the screen color in the luminance match, a
 //              Screen Range of 0 or less gives an opaque matte without screen subtraction (it used the
-//              limit), and Autolevels also limits the two other channels to the screen channel.
+//              limit), Autolevels also limits the two other channels to the screen channel, and negative
+//              screen color components count as 0 in the screen key (not in the despill).
 //              Version 1 keeps them all hidden and off.
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
@@ -625,6 +626,7 @@ protected:
     bool _ss; // Screen Subtraction: Have the keyer subtract the foreground or just premult.
     bool _clampAlpha; // Clamp: Clamp matte to 0-1.
     bool _rgbal = false; // RGBA Legal: the alpha is at least the luminance of the screen-subtracted color.
+    bool _positiveScreenKey = false; // the screen key ignores negative screen color components (version 2)
     double _screenClipMin;
     double _screenClipMax;
     ReplaceEnum _screenReplace;
@@ -689,6 +691,9 @@ public:
 
     // RGBA Legal (a setter rather than one more positional argument of setValues())
     void setRGBALegal(bool rgbal) { _rgbal = rgbal; }
+    // version 2: negative screen color components count as 0 in the screen key (not in the despill or
+    // the luminance match)
+    void setPositiveScreenKey(bool positiveScreenKey) { _positiveScreenKey = positiveScreenKey; }
 
     void setSrcImgs(const Image *fgImg,
                     const Image *pfgImg,
@@ -854,7 +859,10 @@ protected:
         if (pKey <= 0.) {
             return 1.;
         }
-        const double cKey = c[k] - c[0] * _redWeight - c[o] * _blueGreenWeight;
+        // (version 2: negative components of c count as 0; c[k] is positive here)
+        const double c0 = _positiveScreenKey ? (std::max)(c[0], 0.f) : c[0];
+        const double cO = _positiveScreenKey ? (std::max)(c[o], 0.f) : c[o];
+        const double cKey = c[k] - c0 * _redWeight - cO * _blueGreenWeight;
         if (cKey <= 0.) {
             return 1.;
         }
@@ -2181,6 +2189,7 @@ PIKPlugin::setupAndProcess(PIKProcessorBase &processor,
                         sourceAlpha, insideReplace, insideReplaceColor, noKey, ubl, ubc, colorspace, outputMode,
                         /*legacyColorspace=*/_majorVersion < 2);
     processor.setRGBALegal(rgbal);
+    processor.setPositiveScreenKey(_majorVersion >= 2);
     processor.setDstImg( dst.get() );
     processor.setSrcImgs( fg.get(), ( /*!noKey &&*/ !( _pfgClip && _pfgClip->isConnected() ) ) ? fg.get() : pfg.get(), c.get(), bg.get(), inMask.get(), outMask.get() );
     processor.setRenderWindow(args.renderWindow, args.renderScale);

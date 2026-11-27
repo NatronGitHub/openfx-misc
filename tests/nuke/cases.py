@@ -422,6 +422,10 @@ IMAGES = {
     "depth2": _const(2., 2., 2., 1.),
     "screen": _const(.1, .2, .8, 1.),
     "screen_green": _const(.2, .8, .1, 1.),
+    # PIK: a screen colour with negative components, and two foregrounds.
+    "screen_negative": _const(-.5, -.5, .3, 1.),
+    "fg_bright": _const(.6, .7, .9, 1.),
+    "fg_dark": _const(.31, .348, .6, 1.),
     # The Roto shape of ROTO_RECT, as an OFX Roto input: white inside
     # [8, 24) x [8, 24), transparent black outside.
     "rect": {
@@ -1300,6 +1304,16 @@ CASES += [
                          "luma": 1., "ll_enable": True}),
          (ofx_id("PIK"), {**PIK_BLUE, "lmEnable": 1, "level": 2.,
                           "luma": 1., "llEnable": 1}), **PIK_INPUTS),
+    # Negative screen colour components count as 0 in the key, not in the
+    # screen subtraction (RGB above 1, alpha raised to 1 by RGBA Legal).
+    case("PIK C-blue, negative screen colour, bright Fg (IBKGizmoV3)",
+         ("IBKGizmoV3", {"st": "C-blue"}), (ofx_id("PIK"), PIK_BLUE),
+         **{**PIK_INPUTS, "nuke_inputs": ["fg_bright", "screen_negative"],
+            "clips": {"Source": "fg_bright", "C": "screen_negative"}}),
+    case("PIK C-blue, negative screen colour, dark Fg (IBKGizmoV3)",
+         ("IBKGizmoV3", {"st": "C-blue"}), (ofx_id("PIK"), PIK_BLUE),
+         **{**PIK_INPUTS, "nuke_inputs": ["fg_dark", "screen_negative"],
+            "clips": {"Source": "fg_dark", "C": "screen_negative"}}),
     # A screen range of 0: opaque, without screen subtraction.
     case("PIK C-blue, luminance match, screen range 0 (IBKGizmoV3)",
          ("IBKGizmoV3", {"st": "C-blue", "lm_enable": True, "level": 0.}),
