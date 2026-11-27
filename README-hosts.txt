@@ -153,7 +153,9 @@ Caveats/Bugs:
   box). Since NatronGitHub/openfx#351, BaseDoubleParam::getDefaultCoordinateSystem() returns
   canonical when the property is absent, instead of throwing.
 - kOfxParamTypeInteger2D kOfxParamTypeInteger3D are not supported (crash when opening the parameters
-  page), at least in Generators
+  page), at least in Generators. This no longer crashes in Resolve 21.2: ColorWheel's Int2D Frame
+  Range and its hidden Int2D format Size work. Source: maintainer test, 2026-11-27,
+  openfx-misc 3dfdaf7 with SupportExt e0498f4 (closes NatronGitHub/openfx-supportext#219).
 - kOfxImageEffectInstancePropSequentialRender property is missing on the host and the Image Effect
   descriptor (but exists on the image effect instance). See the "missing in Resolve" comments in
   openfx Support's ofxsImageEffect.cpp and TimeBuffer.cpp. Since NatronGitHub/openfx#351,
@@ -255,6 +257,12 @@ Misc:
   (ofxTestLog.txt with openfx before 1.5.1)
 - the OFX plugins cache is in
   "/Library/Application Support/Blackmagic Design/DaVinci Resolve/OFXPluginCache.xml"
+- Resolve 21.2 also loads the plug-ins of OFX_PLUGIN_PATH when it is started from Terminal with
+  that variable set (e.g. OFX_PLUGIN_PATH=<prefix>/OFX/Plugins).
+  The free Resolve 21.2 has no external scripting (the Preferences option, and access from another
+  process, are Studio only): scripts run inside Resolve (Workspace > Scripts, or the Console).
+  Source: maintainer test, 2026-11-27, and Resolve's Developer/Scripting/README.md; see
+  https://github.com/NatronGitHub/openfx-misc/issues/437.
 
 * Nuke
 

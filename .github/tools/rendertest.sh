@@ -9,6 +9,8 @@
 # RENDERTEST_ONLY=ERE: only the renders whose label (the first field of the test
 # list below) matches the extended regular expression ERE, e.g. ^CImgConvolve.
 # RENDERTEST_TIMEOUT=N: kill a hostDemo run after N seconds (default 300; not on Windows).
+# RENDERTEST_GPU=require: fail if hostDemo can't render with OpenGL (by default, the renders with
+# --gpu=opengl in their arguments are skipped then, see below).
 # The plugins are the *.ofx.bundle found under the DIRs, which should be the
 # build directories of one configuration, e.g. Misc/Linux-64-release
 # CImg/Linux-64-release. Without DIRs, the *-$CONFIG directories of the source
@@ -79,8 +81,8 @@ trap 'rm -rf "$work"' EXIT
 # (hostDemo --no-std-paths). Skip the openfx submodule (not our plugins),
 # DebugProxy (debug builds only, it wraps the plugin named by
 # $OFX_DEBUGPROXY_BINARY), Test (for developers) and Shadertoy (it only renders
-# with OpenGL, which hostDemo does not provide). The prunes match names, so
-# that they also work with explicit DIRs.
+# with OpenGL): these two are only added for the OpenGL renders (gl_path below). The prunes
+# match names, so that they also work with explicit DIRs.
 if [ $# -eq 0 ]; then
     filter="*-${CONFIG:-release}"
     set -- .
@@ -107,8 +109,20 @@ if [ ${#dirs[@]} -eq 0 ]; then
     exit 1
 fi
 OFX_PLUGIN_PATH=$(IFS=:; echo "${dirs[*]}")
+# The plugin path of the OpenGL renders (--gpu=opengl): also the directories of Test and Shadertoy
+# (in a CMake install tree, they are already there)
+gl_dirs=("${dirs[@]}")
+while IFS= read -r d; do
+    [ -n "$d" ] || continue
+    case "$d" in /*) ;; *) d=$top/${d#./} ;; esac
+    case " ${gl_dirs[*]} " in *" $d "*) ;; *) gl_dirs+=("$d") ;; esac
+done < <(cd "$top" && find "$@" \( -name openfx -o -name DebugProxy \) -prune -o \
+             \( -name Test.ofx.bundle -o -name Shadertoy.ofx.bundle \) -path "$filter/*.ofx.bundle" -print -prune |
+             sed 's,/[^/]*$,,' | sort -u)
+gl_path=$(IFS=:; echo "${gl_dirs[*]}")
 # Windows: a native list (C:\...;D:\...), for the native hostDemo
 [ $windows = 0 ] || OFX_PLUGIN_PATH=$(cygpath -w -p "$OFX_PLUGIN_PATH")
+[ $windows = 0 ] || gl_path=$(cygpath -w -p "$gl_path")
 export OFX_PLUGIN_PATH
 echo "OFX_PLUGIN_PATH=$OFX_PLUGIN_PATH"
 # debug builds (*-debug directories, or RENDERTEST_DEBUG=1, e.g. for a CMake install
@@ -235,6 +249,9 @@ for k in renders:
         errors.append("t=%s: output depth %s, expected %s" % (k.get("time"), o["depth"], depth))
     if o["nan"]:
         errors.append("t=%s: %d unwritten (NaN) pixels" % (k.get("time"), o["nan"]))
+    if refs.get("gpu") == "1" and (not k["render"].get("openGL") or k["render"].get("cpuRetry")):
+        # --gpu=opengl: rendered with OpenGL, without a CPU retry
+        errors.append("t=%s: not rendered with OpenGL: %s" % (k.get("time"), k.get("render")))
     if k is renders[0]:
         out0 = o
 renders = [k for k in renders if not k.get("view")]
@@ -469,6 +486,25 @@ hostdemo() {
     return "$status"
 }
 
+# Does hostDemo render with OpenGL here (--gpu=opengl: openfx#367, built with
+# OFX_HOSTSUPPORT_OPENGL, with an OpenGL context)? An older hostDemo rejects the option, one built
+# without it says so, one without a context warns: all name the option. A capable one only says
+# that the dummy plugin is not found. Without it, the renders with --gpu=opengl are skipped.
+gpu_ok=0
+( OFX_PLUGIN_PATH=$work/none; export OFX_PLUGIN_PATH; hostdemo gpuprobe.log --gpu=opengl -p rendertest.probe ) || true
+if ! grep -q -e '--gpu' gpuprobe.log && grep -q 'not found' gpuprobe.log; then
+    gpu_ok=1
+    echo "hostDemo renders with OpenGL (--gpu=opengl)"
+    "$HOSTDEMO" --gpu-renderers 2> /dev/null | sed 's/^/  /' || true
+else
+    echo "note: hostDemo does not render with OpenGL here (--gpu=opengl): its renders are skipped"
+    grep -e '--gpu' gpuprobe.log | sed 's/^/  | /' || true
+    if [ "${RENDERTEST_GPU:-}" = require ]; then
+        echo "rendertest: RENDERTEST_GPU=require, but hostDemo does not render with OpenGL here"
+        exit 1
+    fi
+fi
+
 # The renders, one per line: "label|plugin id|context|depths|expected output|
 # known bug|hostDemo arguments" (no quotes in the arguments: they are split
 # into words). depths: * for byte, short and float. The plugins all support
@@ -508,6 +544,9 @@ tests=(
     "Constant float|net.sf.openfx.ConstantPlugin|general|float|mean=0.25,0.5,0.75,1||-i Source=none color=0.25,0.5,0.75,1"
     # Output Components Alpha: the colour's alpha only
     "Constant Alpha|net.sf.openfx.ConstantPlugin|general|*|comps=Alpha+mean=0.5||-i Source=none color=1,0,1,0.5 outputComponents=Alpha"
+    # RGB output, on a host that supports it (hostDemo --components: the default is RGBA and Alpha)
+    "Constant RGB|net.sf.openfx.ConstantPlugin|general|*|comps=RGB+mean=1,0,1||--components rgba,rgb,alpha -i Source=none color=1,0,1,0.5 outputComponents=RGB"
+    "CheckerBoard RGB|net.sf.openfx.CheckerBoardPlugin|general|*|comps=RGB+nonconst||--components rgba,rgb,alpha -i Source=none outputComponents=RGB"
     "CheckerBoard|net.sf.openfx.CheckerBoardPlugin|general|*|nonconst||-i Source=none"
     "ColorBars|net.sf.openfx.ColorBars|general|*|nonconst||-i Source=none"
     # Constant 1.1, Infinite (#284): an infinite RoD, so a window out of the format (as in
@@ -1173,6 +1212,7 @@ tests=(
     # inputs differ, so that reading A for B (or B for A) fails.
     "Shuffle|net.sf.openfx.ShufflePlugin|general|*|mean=0.75,0.5,0.25,1||-i A=solid:0.25,0.5,0.75,1 -i B=solid:0.25,0.5,0.75,1 outputR=8 outputB=6"
     "Shuffle B|net.sf.openfx.ShufflePlugin|general|float|mean=0.75,0.5,0.25,1||-i A=ramp -i B=solid:0.25,0.5,0.75,1 outputR=8 outputB=6"
+    "Shuffle RGB|net.sf.openfx.ShufflePlugin|general|*|comps=RGB+mean=0.75,0.5,0.25||--components rgba,rgb,alpha -i A=solid:0.25,0.5,0.75,1 -i B=solid:0.25,0.5,0.75,1 outputR=8 outputB=6 outputComponents=RGB"
     # ErodeBlur remaps and clamps the values (here only the alpha, the default) even when the blur
     # does nothing (size 0.25: (0.5 - 0.125) / 0.875), and the Blur Alpha Threshold zeroes the alpha
     # even when a box-type filter does not blur (issue #324); with the default (Quasi-Gaussian)
@@ -1795,9 +1835,14 @@ tests=(
     "ContactSheet input 10|net.sf.openfx.ContactSheetOFX|filter|float|mean=0.5,0.5,0.5,1||-i Source=solid:1,1,1,1 -i 10=solid:0.5,0.5,0.5,1${cs_only10} resolution=128,128 rowsColumns=4,4 rowOrder=0 --frames 0 --window 68,36,76,44"
     "ContactSheet 1 input 10|net.sf.openfx.ContactSheetOFX|filter|float|mean=0.5,0.5,0.5,1||-m 1 -i Source=solid:1,1,1,1 -i 01=solid:0.5,0.5,0.5,1${cs1_only10} resolution=128,128 rowsColumns=4,4 rowOrder=0 --frames 0 --window 68,36,76,44"
     "AppendClip dissolve 4 after|net.sf.openfx.AppendClip|general|*|identity+mean=0.5,0.5,0.5,1||-i 1=default -i 2=solid:0.5,0.5,0.5,1 crossDissolve=4 --frames 27"
+    # OpenGL renders (hostDemo --gpu=opengl; skipped if hostDemo has no OpenGL context here): every
+    # render must be done with OpenGL. Shadertoy's default shader mixes iChannel0 with a sine
+    # pattern whose blue follows iTime; TestOpenGL draws its red rectangle over the scaled Source.
+    "Shadertoy OpenGL|net.sf.openfx.Shadertoy|general|*|mean=0.511,0.505,0.5,1+framesdiffer||--gpu=opengl -i iChannel0=ramp"
+    "TestOpenGL OpenGL|net.sf.openfx.TestOpenGL|filter|*|mean=0.489,0.443,0.443,0.537+changed:Source||--gpu=opengl -i Source=ramp"
 )
 
-n=0 failed=() xfailed=()
+n=0 failed=() xfailed=() skipped=()
 for t in "${tests[@]}"; do
     IFS='|' read -r label id ctx depths expect bug args <<< "$t"
     if [ -n "$RENDERTEST_ONLY" ] && ! echo "$label" | grep -E -e "$RENDERTEST_ONLY" > /dev/null; then
@@ -1820,10 +1865,12 @@ for t in "${tests[@]}"; do
         # (for the full render that a tile is compared to)
         # shellcheck disable=SC2086
         set -- $args
-        frames=2 views=2 scale=() nowindow=()
+        frames=2 views=2 scale=() nowindow=() gpu=0
         while [ $# -gt 0 ]; do
             case "$1" in
                 --frames) f=${2//[^,]/}; frames=$(( ${#f} + 1 )) ;;
+                # an OpenGL render (with Test and Shadertoy in the plugin path)
+                --gpu=opengl) gpu=1 ;;
                 # hostDemo --ofx14 and --ofx11 render one view
                 --ofx14|--ofx11) views=1 ;;
                 --scale) scale=(--scale "$2") ;;
@@ -1831,7 +1878,12 @@ for t in "${tests[@]}"; do
             if [ "$1" = --window ]; then shift; else nowindow+=("$1"); fi
             shift
         done
-        refs=("frames=$frames" "views=$views") refok=1
+        if [ $gpu = 1 ] && [ $gpu_ok = 0 ]; then
+            printf 'SKIP  %-26s hostDemo does not render with OpenGL here\n' "$name"
+            skipped+=("$name")
+            continue
+        fi
+        refs=("frames=$frames" "views=$views" "gpu=$gpu") refok=1
         for e in ${expect//+/ }; do
             case "$e" in
                 changed:*)
@@ -1876,7 +1928,9 @@ for t in "${tests[@]}"; do
         # $args is split into words on purpose
         # shellcheck disable=SC2086
         t0=$(date +%s)
-        if hostdemo run.log -p "$id" -c "$ctx" -d "$depth" --format pfm -o out --report report.json $args; then
+        if ( [ $gpu = 0 ] || export OFX_PLUGIN_PATH=$gl_path
+             # shellcheck disable=SC2086
+             hostdemo run.log -p "$id" -c "$ctx" -d "$depth" --format pfm -o out --report report.json $args ); then
             refs+=("elapsed=$(( $(date +%s) - t0 ))")
             result=$(check report.json "$depth" "$expect" "${refs[@]}") && ok=1 || ok=0
         else
@@ -1924,7 +1978,7 @@ if [ $n = 0 ]; then
     exit 1
 fi
 echo
-echo "rendertest: $((n - ${#failed[@]} - ${#xfailed[@]})) passed, ${#xfailed[@]} known bugs (XFAIL), ${#failed[@]} failed, $n renders in $(( $(date +%s) - start ))s"
+echo "rendertest: $((n - ${#failed[@]} - ${#xfailed[@]} - ${#skipped[@]})) passed, ${#xfailed[@]} known bugs (XFAIL), ${#failed[@]} failed, ${#skipped[@]} skipped (no OpenGL), $n renders in $(( $(date +%s) - start ))s"
 if [ ${#failed[@]} -ne 0 ]; then
     printf 'failed: %s\n' "${failed[@]}"
     exit 1
