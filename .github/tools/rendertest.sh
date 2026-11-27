@@ -594,6 +594,15 @@ tests=(
     "Keyer key color red|net.sf.openfx.KeyerPlugin|general|short float|mean=1,0,0,0||-i Source=solid:1,0,0,1 -i Bg=none -i InM=none -i OutM=none mode=1 keyColor=1,0,0"
     "Keyer key color red gray|net.sf.openfx.KeyerPlugin|general|short float|mean=0.5,0.5,0.5,0.5||-i Source=solid:0.5,0.5,0.5,1 -i Bg=none -i InM=none -i OutM=none mode=1 keyColor=1,0,0"
     "Keyer max|net.sf.openfx.KeyerPlugin|general|short float|mean=0.2,0.4,0.8,0.8||-i Source=solid:0.2,0.4,0.8,1 -i Bg=none -i InM=none -i OutM=none mode=6"
+    # Green Screen: 1 - (G - max(R, B)) = 0.3 for (0.1, 0.8, 0.1), version 2 only
+    "Keyer green screen|net.sf.openfx.KeyerPlugin|general|short float|mean=0.1,0.8,0.1,0.3||-i Source=solid:0.1,0.8,0.1,1 -i Bg=none -i InM=none -i OutM=none mode=8"
+    # A = B = C = 0, D = 0.5: at or below A, the key is 0, also if B <= 0 (black is transparent)
+    "Keyer at A|net.sf.openfx.KeyerPlugin|general|short float|mean=0,0,0,0||-i Source=solid:0,0,0,1 -i Bg=none -i InM=none -i OutM=none softnessLower=0 center=0 softnessUpper=0.5"
+    # Combine with the Source alpha 0.5: Intersect 0.625 * 0.5, Union 0.625 + 0.5 - 0.625 * 0.5;
+    # in version 1, Intersect gives 0.75 * 0.5
+    "Keyer combine intersect|net.sf.openfx.KeyerPlugin|general|short float|mean=0.625,0.625,0.625,0.3125||-i Source=solid:0.625,0.625,0.625,0.5 -i Bg=none -i InM=none -i OutM=none combine=1"
+    "Keyer combine union|net.sf.openfx.KeyerPlugin|general|short float|mean=0.625,0.625,0.625,0.8125||-i Source=solid:0.625,0.625,0.625,0.5 -i Bg=none -i InM=none -i OutM=none combine=2"
+    "Keyer 1 combine intersect|net.sf.openfx.KeyerPlugin|general|short float|mean=0.625,0.625,0.625,0.375||-m 1 -i Source=solid:0.625,0.625,0.625,0.5 -i Bg=none -i InM=none -i OutM=none combine=1"
     # version 1 (deprecated) keeps its polarity and defaults (A = 0.5, B = C = 1): the background
     # key 0.25, alpha 0.75; inverted, 0.25
     "Keyer 1|net.sf.openfx.KeyerPlugin|general|short float|mean=0.625,0.625,0.625,0.75||-m 1 -i Source=solid:0.625,0.625,0.625,1 -i Bg=none -i InM=none -i OutM=none"
