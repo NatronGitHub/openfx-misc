@@ -1873,6 +1873,8 @@ for _steps in (1, 2, 3, 5):
 
 # ---------------------------------------------------------------- Filter
 CIMG = "net.sf.cimg."
+# the plug-in compared with the reference's weighted-structuring-element erode
+FILTER_ERODE = CIMG + "CImgFilterErode"
 CASES += [
     case("Blur defaults (size 0)", ("Blur", {}), (CIMG + "CImgBlur", {}),
          input="ramp", channels="rgba"),
@@ -2029,16 +2031,6 @@ CASES += [
                                                      "blur": .5}),
          ("eu.cimg.ErodeBlur", {"size": 3, "blur": .5}), input="mask",
          channels="rgba", tolerance=1e-3),
-    case("FilterErode size 1 box (ErodeSmoothCImg)",
-         ("FilterErode", {"size": 1}),
-         (CIMG + "CImgErodeSmooth", {"size": [1, 1], "filter": "Box",
-                                     "NatronOfxParamProcessR": 0,
-                                     "NatronOfxParamProcessG": 0,
-                                     "NatronOfxParamProcessB": 0,
-                                     "NatronOfxParamProcessA": 1}),
-         input="mask", channels="rgba", tolerance=1e-3),
-    # MedianCImg 3: the size is a radius per axis, rounded half up, default
-    # 3 (a 7x7 box), with the edge pixels repeated, as in the reference.
     case("Median defaults (MedianCImg defaults)", ("Median", {}),
          (CIMG + "CImgMedian", {}), input="hash", channels="rgba",
          nuke_par=1),
@@ -2640,11 +2632,68 @@ for _name, _x, _y, _knobs, _params, _disparity in _RECONVERGE:
                              dict(_ofx_point, **_params), _disparity))
 
 
+# ------------------------------------------------------- FilterErodeCImg
+# A minimum (erode, positive size) or maximum (dilate) over a weighted
+# structuring element of width 2|size|+1 per axis; the alpha channel only by
+# default (the "defaults" cases), all four channels in the others.
+_FE_RGBA = {"NatronOfxParamProcessR": 1, "NatronOfxParamProcessG": 1,
+            "NatronOfxParamProcessB": 1}
+
+
+def _filter_erode(name, size, image, nuke_filter=None):
+    """A FilterErodeCImg case on all channels (size: one value or (x, y))."""
+    knobs = {"channels": "rgba", "size": list(size)
+             if isinstance(size, tuple) else size}
+    params = dict(_FE_RGBA, size=list(size) if isinstance(size, tuple)
+                  else [size, size])
+    if nuke_filter:
+        knobs["filter"] = nuke_filter
+        params["filter"] = nuke_filter.capitalize()
+    return case(name, ("FilterErode", knobs), (FILTER_ERODE, params),
+                input=image, channels="rgba")
+
+
+CASES += [
+    case("FilterErode defaults (FilterErodeCImg defaults)",
+         ("FilterErode", {}), (FILTER_ERODE, {}), input="mask",
+         channels="rgba"),
+    case("FilterErode defaults on a checker (FilterErodeCImg defaults)",
+         ("FilterErode", {}), (FILTER_ERODE, {}), input="checker",
+         channels="rgba"),
+] + [
+    _filter_erode("FilterErode %s size %s (FilterErodeCImg)" % (_f, _s), _s,
+                  "hash", _f)
+    for _f in ("box", "triangle", "quadratic", "gaussian")
+    for _s in (1, -1.5, .5)
+] + [
+    _filter_erode("FilterErode box size -2.5 on the impulse", -2.5,
+                  "impulse"),
+    _filter_erode("FilterErode gaussian size 3 on the mask", 3, "mask",
+                  "gaussian"),
+    # values outside [0, 1]
+    _filter_erode("FilterErode quadratic size 1 on the checker", 1,
+                  "checker", "quadratic"),
+    _filter_erode("FilterErode triangle size -1 on the checker", -1,
+                  "checker", "triangle"),
+    _filter_erode("FilterErode size 1, 2 (FilterErodeCImg 1, 2)", (1, 2),
+                  "hash"),
+    # different signs: the y pass first
+    _filter_erode("FilterErode dilate x 1, erode y 2", (-1, 2), "hash"),
+    _filter_erode("FilterErode gaussian size 2, -0.5", (2, -.5), "hash",
+                  "gaussian"),
+    # a size of 0 erodes with a width of 1 (Quadratic, Gaussian: not nothing)
+    _filter_erode("FilterErode gaussian size 0", 0, "hash", "gaussian"),
+    _filter_erode("FilterErode quadratic size 0, 1", (0, 1), "hash",
+                  "quadratic"),
+    _filter_erode("FilterErode size 1 on premultiplied input", 1,
+                  "premult"),
+]
+
 # ---------------------------------------------- More common-use cases
 CASES += [
-    case("FilterErode size 0 (ErodeSmoothCImg size 0)",
+    case("FilterErode size 0 (FilterErodeCImg size 0)",
          ("FilterErode", {"size": 0}),
-         (CIMG + "CImgErodeSmooth", {}), input="mask", channels="rgba"),
+         (FILTER_ERODE, {"size": [0, 0]}), input="mask", channels="rgba"),
     case("Radial softness 0",
          ("Radial", {"area": [100, 100, 600, 476], "softness": 0}),
          (ofx_id("Radial"), {"bottomLeft": [cx(100), 100],
@@ -2697,13 +2746,12 @@ KNOWN = {
         "IDistort uv = rgb, blur = blue",
         "IDistort uv = rgb, blur = blue, blur scale 4",
         "STMap uv = rgb, blur = blue (1), blur scale 3"],
-    # ErodeBlurCImg and ErodeSmoothCImg are other filters than the reference
-    # nodes (see #315).
+    # ErodeBlurCImg is another filter than the reference's blur-based erode
+    # (see #315).
     315: [
         "Erode (blur) defaults (ErodeBlur)",
         "Erode (blur) size -3, blur 0.5 (ErodeBlur -3)",
-        "Erode (blur) size 3, blur 0.5",
-        "FilterErode size 1 box (ErodeSmoothCImg)"],
+        "Erode (blur) size 3, blur 0.5"],
     DOCUMENTED: [
         "Log2Lin lin2log", "ColorWheel defaults, whole disc",
         "ColorWheel gamma 1, whole disc",

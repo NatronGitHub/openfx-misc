@@ -279,7 +279,8 @@ grouping).
 * EdgeDetectCImg: Perform edge detection by computing the image gradient magnitude.
 * EdgeExtend: Fill a matte (i.e. a non-opaque color image with an alpha channel) by extending the edges of the matte.
 * ErodeBlurCImg: Erode or dilate a mask by smoothing.
-* ErodeSmoothCImg: Erode or dilate input stream using a [normalized power-weighted filter](http://dx.doi.org/10.1109/ICPR.2004.1334273).
+* ErodeSmoothCImg (obsolete, replaced by FilterErodeCImg): Erode or dilate input stream using a [normalized power-weighted filter](http://dx.doi.org/10.1109/ICPR.2004.1334273).
+* FilterErodeCImg: Erode or dilate by a weighted structuring element (box, triangle, quadratic or Gaussian), with fractional sizes.
 * G'MIC Expression: Quickly generate or process image from mathematical formula evaluated for each pixel.
 * GodRays: Average an image over a range of transforms, or create crepuscular rays.
 * InpaintCImg: Inpaint the areas indicated by the Mask input using patch-based inpainting.

@@ -1236,6 +1236,13 @@ tests=(
     # 1,1 after the PAR); tiles must render as the full image
     "CImgMedian scale 0.5 tile|net.sf.cimg.CImgMedian|filter|float|nonconst+tile||-i Source=checker:8 -i Mask=none size=3,1 --scale 0.5 --frames 0 --window 50,50,150,125"
     "CImgErode scale 0.5 tile|net.sf.cimg.CImgErode|filter|float|nonconst+tile||-i Source=checker:8 -i Mask=none size=2.5,-1.5 --scale 0.5 --frames 0 --window 50,50,150,125"
+    # FilterErodeCImg: the alpha channel only by default; size 0 (box) is an identity; DilateCImg-like spread of
+    # the impulse at (32, 24) with size -1 (box): the x weight of the next pixel is 2/PAR/2 + 0.5 - 1 = 0.9375
+    "CImgFilterErode defaults|net.sf.cimg.CImgFilterErode|filter|float|notidentity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none"
+    "CImgFilterErode size 0|net.sf.cimg.CImgFilterErode|filter|float|identity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none size=0,0"
+    "CImgFilterErode dilate impulse x|net.sf.cimg.CImgFilterErode|filter|float|tol=1e-4+mean=0.9375,0.9375,0.9375,1||-i Source=file:impulse.pfm -i Mask=none size=-1,-1 NatronOfxParamProcessR=1 NatronOfxParamProcessG=1 NatronOfxParamProcessB=1 --frames 0 --window 31,24,32,25"
+    "CImgFilterErode tile|net.sf.cimg.CImgFilterErode|filter|float|nonconst+tile||-i Source=checker:8 -i Mask=none size=2.5,-1.5 filter=3 NatronOfxParamProcessR=1 --frames 0 --window 100,100,300,250"
+    "CImgFilterErode scale 0.5 tile|net.sf.cimg.CImgFilterErode|filter|float|nonconst+tile||-i Source=checker:8 -i Mask=none size=3,1 filter=2 NatronOfxParamProcessR=1 --scale 0.5 --frames 0 --window 50,50,150,125"
     # (no NaN or infinite input: hostDemo rejects non-finite solids and PFM files; the MedianCImg history
     # comment documents NaNs)
     "CImgMedian 2 defaults|net.sf.cimg.CImgMedian|filter|float|notidentity+changed:Source||-m 2 -i Source=file:impulse.pfm -i Mask=none"

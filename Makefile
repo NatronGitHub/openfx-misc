@@ -108,6 +108,7 @@ CImg/Distance \
 CImg/Equalize \
 CImg/Erode \
 CImg/ErodeSmooth \
+CImg/FilterErode \
 CImg/Expression \
 CImg/Guided \
 CImg/HistEQ \
