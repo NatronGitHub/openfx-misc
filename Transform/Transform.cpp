@@ -77,10 +77,17 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              such as VEGAS, and DaVinci Resolve), the default center is the project centre, not the
 //              bottom left corner. In existing projects on those hosts, an untouched center moves to
 //              the image centre, which changes the output.
-#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 // 1.1 (Transform, TransformMasked, DirBlur): the Lanczos4, Lanczos6 and Sinc4 filters (appended options) and the
 //      Prefilter Downscaling checkbox (after Black Outside, off) (issue #270); the default output is unchanged.
+// 2.0 (Transform, TransformMasked): Prefilter Downscaling is on by default (issue #270), so that scaling down
+//      filters the image instead of aliasing; version 1 is obsolete, with the same output as before.
+//      DirBlur stays at version 1 (Prefilter Downscaling off by default).
+#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMajorPrefilterOff 1 // the obsolete version, Prefilter Downscaling off by default
+#define kPluginVersionMinorPrefilterOff 1
+#define kPluginDirBlurVersionMajor 1
+#define kPluginDirBlurVersionMinor 1
 
 #define kParamSrcClipChanged "srcClipChanged"
 
@@ -443,7 +450,22 @@ TransformPlugin::changedClip(const InstanceChangedArgs &args,
     }
 }
 
-mDeclarePluginFactory(TransformPluginFactory, {ofxsThreadSuiteCheck();}, {});
+// Prefilter Downscaling (kParamFilterPrefilter, defined by Transform3x3DescribeInContextEnd) is on by
+// default from version 2 of Transform and TransformMasked (issue #270).
+static
+void
+TransformPluginDescribePrefilterDefault(ImageEffectDescriptor &desc,
+                                        unsigned int majorVersion)
+{
+    BooleanParamDescriptor* param = dynamic_cast<BooleanParamDescriptor*>( desc.getParamDescriptor(kParamFilterPrefilter) );
+
+    assert(param);
+    if (param) {
+        param->setDefault(majorVersion > kPluginVersionMajorPrefilterOff);
+    }
+}
+
+mDeclarePluginFactoryVersioned(TransformPluginFactory, {ofxsThreadSuiteCheck();}, {});
 static
 void
 TransformPluginDescribeInContext(ImageEffectDescriptor &desc,
@@ -455,11 +477,13 @@ TransformPluginDescribeInContext(ImageEffectDescriptor &desc,
     ofxsTransformDescribeParams(desc, page, NULL, /*isOpen=*/ true, /*oldParams=*/ true, /*hasAmount=*/ true, /*noTranslate=*/ false);
 }
 
+template<unsigned int majorVersion>
 void
-TransformPluginFactory::describe(ImageEffectDescriptor &desc)
+TransformPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
+    desc.setIsObsolete(majorVersion < kPluginVersionMajor);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -468,9 +492,10 @@ TransformPluginFactory::describe(ImageEffectDescriptor &desc)
     ofxsSetOverlayInteractDescriptorV2(desc, new TransformOverlayDescriptorOldParamsV2);
 }
 
+template<unsigned int majorVersion>
 void
-TransformPluginFactory::describeInContext(ImageEffectDescriptor &desc,
-                                          ContextEnum context)
+TransformPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
+                                                        ContextEnum context)
 {
     // make some pages and to things in
     PageParamDescriptor *page = Transform3x3DescribeInContextBegin(desc, context, false);
@@ -478,6 +503,7 @@ TransformPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     TransformPluginDescribeInContext(desc, context, page);
 
     Transform3x3DescribeInContextEnd(desc, context, page, false, Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur, eTransform3x3FilteringSincPrefilter); // opt-in (issue #270)
+    TransformPluginDescribePrefilterDefault(desc, majorVersion);
 
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
@@ -491,19 +517,22 @@ TransformPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
 }
 
+template<unsigned int majorVersion>
 ImageEffect*
-TransformPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                       ContextEnum /*context*/)
+TransformPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
+                                                     ContextEnum /*context*/)
 {
     return new TransformPlugin(handle, false, false);
 }
 
-mDeclarePluginFactory(TransformMaskedPluginFactory, {ofxsThreadSuiteCheck();}, {});
+mDeclarePluginFactoryVersioned(TransformMaskedPluginFactory, {ofxsThreadSuiteCheck();}, {});
+template<unsigned int majorVersion>
 void
-TransformMaskedPluginFactory::describe(ImageEffectDescriptor &desc)
+TransformMaskedPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginMaskedName);
+    desc.setIsObsolete(majorVersion < kPluginVersionMajor);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginMaskedDescription);
 
@@ -512,9 +541,10 @@ TransformMaskedPluginFactory::describe(ImageEffectDescriptor &desc)
     ofxsSetOverlayInteractDescriptorV2(desc, new TransformOverlayDescriptorOldParamsV2);
 }
 
+template<unsigned int majorVersion>
 void
-TransformMaskedPluginFactory::describeInContext(ImageEffectDescriptor &desc,
-                                                ContextEnum context)
+TransformMaskedPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
+                                                              ContextEnum context)
 {
     // make some pages and to things in
     PageParamDescriptor *page = Transform3x3DescribeInContextBegin(desc, context, true);
@@ -522,6 +552,7 @@ TransformMaskedPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     TransformPluginDescribeInContext(desc, context, page);
 
     Transform3x3DescribeInContextEnd(desc, context, page, true, Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur, eTransform3x3FilteringSincPrefilter); // opt-in (issue #270)
+    TransformPluginDescribePrefilterDefault(desc, majorVersion);
 
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
@@ -535,9 +566,10 @@ TransformMaskedPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
 }
 
+template<unsigned int majorVersion>
 ImageEffect*
-TransformMaskedPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                             ContextEnum /*context*/)
+TransformMaskedPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
+                                                           ContextEnum /*context*/)
 {
     return new TransformPlugin(handle, true, false);
 }
@@ -586,11 +618,15 @@ DirBlurPluginFactory::createInstance(OfxImageEffectHandle handle,
     return new TransformPlugin(handle, true, true);
 }
 
-static TransformPluginFactory p1(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-static TransformMaskedPluginFactory p2(kPluginMaskedIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-static DirBlurPluginFactory p3(kPluginDirBlurIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static TransformPluginFactory<kPluginVersionMajor> p1(kPluginIdentifier, kPluginVersionMinor);
+static TransformMaskedPluginFactory<kPluginVersionMajor> p2(kPluginMaskedIdentifier, kPluginVersionMinor);
+static DirBlurPluginFactory p3(kPluginDirBlurIdentifier, kPluginDirBlurVersionMajor, kPluginDirBlurVersionMinor);
+static TransformPluginFactory<kPluginVersionMajorPrefilterOff> p1v1(kPluginIdentifier, kPluginVersionMinorPrefilterOff);
+static TransformMaskedPluginFactory<kPluginVersionMajorPrefilterOff> p2v1(kPluginMaskedIdentifier, kPluginVersionMinorPrefilterOff);
 mRegisterPluginFactoryInstance(p1)
 mRegisterPluginFactoryInstance(p2)
 mRegisterPluginFactoryInstance(p3)
+mRegisterPluginFactoryInstance(p1v1)
+mRegisterPluginFactoryInstance(p2v1)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

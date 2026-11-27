@@ -139,6 +139,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //      input format into the "from" points (issue #270); "Set to input rod" is unchanged.
 // 1.1 and 2.1: the Lanczos4, Lanczos6 and Sinc4 filters (appended options) and the
 //      Prefilter Downscaling checkbox (after Black Outside, off) (issue #270); the default output is unchanged.
+// 2.1 (version 2 is not released yet, so this is fixed in place; version 1 is unchanged): Prefilter
+//      Downscaling is on by default, and with two pins enabled the transform is a similarity of the pixel
+//      grid, not of canonical coordinates (they differ when the pixel aspect ratio is not 1) (issue #270).
 
 #define POINT_SIZE 5
 // Pick tolerance in screen pixels, through kOfxInteractPropPixelScale. As in RectangleInteract and
@@ -441,7 +444,24 @@ CornerPinPlugin::getInverseTransformCanonical(OfxTime time,
         success = homo3x3.setAffineFromThreePoints(p[0][0], p[0][1], p[0][2], p[1][0], p[1][1], p[1][2]);
         break;
     case 2:
-        success = homo3x3.setSimilarityFromTwoPoints(p[0][0], p[0][1], p[1][0], p[1][1]);
+        if (_majorVersion >= 2) {
+            // a similarity of the pixel grid (issue #270): the same rotation and uniform scale in pixels
+            // whatever the pixel aspect ratio (version 1: a similarity in canonical coordinates)
+            const double par = _srcClip ? _srcClip->getPixelAspectRatio() : 1.;
+            Point3D q[2][2];
+            for (int i = 0; i < 2; ++i) {
+                for (int j = 0; j < 2; ++j) {
+                    q[i][j] = Point3D(p[i][j].x / par, p[i][j].y, 1.);
+                }
+            }
+            success = homo3x3.setSimilarityFromTwoPoints(q[0][0], q[0][1], q[1][0], q[1][1]);
+            if (success) {
+                // back to canonical coordinates
+                homo3x3 = ofxsMatScale(par, 1.) * homo3x3 * ofxsMatScale(1. / par, 1.);
+            }
+        } else {
+            success = homo3x3.setSimilarityFromTwoPoints(p[0][0], p[0][1], p[1][0], p[1][1]);
+        }
         break;
     case 1:
         success = homo3x3.setTranslationFromOnePoint(p[0][0], p[1][0]);
@@ -1805,6 +1825,14 @@ CornerPinPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &d
     CornerPinPluginDescribeInContext(desc, context, page);
 
     Transform3x3DescribeInContextEnd(desc, context, page, false, Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur, eTransform3x3FilteringSincPrefilter); // opt-in (issue #270)
+    if (majorVersion >= 2) {
+        // Prefilter Downscaling is on by default (issue #270)
+        BooleanParamDescriptor* param = dynamic_cast<BooleanParamDescriptor*>( desc.getParamDescriptor(kParamFilterPrefilter) );
+        assert(param);
+        if (param) {
+            param->setDefault(true);
+        }
+    }
 
     // srcClipChanged
     {
@@ -1856,6 +1884,14 @@ CornerPinMaskedPluginFactory<majorVersion>::describeInContext(ImageEffectDescrip
     CornerPinPluginDescribeInContext(desc, context, page);
 
     Transform3x3DescribeInContextEnd(desc, context, page, true, Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur, eTransform3x3FilteringSincPrefilter); // opt-in (issue #270)
+    if (majorVersion >= 2) {
+        // Prefilter Downscaling is on by default (issue #270)
+        BooleanParamDescriptor* param = dynamic_cast<BooleanParamDescriptor*>( desc.getParamDescriptor(kParamFilterPrefilter) );
+        assert(param);
+        if (param) {
+            param->setDefault(true);
+        }
+    }
 
     // srcClipChanged
     {

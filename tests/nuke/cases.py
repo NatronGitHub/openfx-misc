@@ -1565,6 +1565,70 @@ CASES.append(case(
     (TRANSFORM, {"scale": [.5, .5], "center": CENTRE["ofx"]}),
     input="checker", region=(9, 9, 23, 23), channels="rgba",
     tolerance=1e-3))
+# The sinc-based filters (Lanczos4, Lanczos6, Sinc4), as the filters above.
+for _filter in ("Lanczos4", "Lanczos6", "Sinc4"):
+    CASES.append(case(
+        "Transform filter %s, translate 0.3,0.6" % _filter,
+        ("Transform", {"translate": [.3, .6], "filter": _filter}),
+        (TRANSFORM, {"translate": [cx(.3), .6], "filter": _filter}),
+        input="checker", region=INNER, channels="rgba", tolerance=1e-3))
+# Minification: Prefilter Downscaling (on by default from version 2, #270)
+# widens the kernel by the scale-down factor, as the reference does; version
+# 1 (off by default) samples the kernel at its unscaled size.
+_MINIFY = dict(input="checker", region=(9, 9, 23, 23), channels="rgba",
+               tolerance=1e-3)
+for _name, _nuke, _ofx in (
+        ("scale 0.4,0.7", {"scale": [.4, .7]}, {"scale": [.4, .7]}),
+        ("scale 1.5,0.8", {"scale": [1.5, .8]}, {"scale": [1.5, .8]}),
+        ("Lanczos4 scale 0.5", {"scale": .5, "filter": "Lanczos4"},
+         {"scale": [.5, .5], "filter": "Lanczos4"}),
+        ("Mitchell scale 0.5", {"scale": .5, "filter": "Mitchell"},
+         {"scale": [.5, .5], "filter": "Mitchell"})):
+    CASES.append(case(
+        "Transform %s, checker (minification)" % _name,
+        ("Transform", dict(_nuke, center=CENTRE["nuke"])),
+        (TRANSFORM, dict(_ofx, center=CENTRE["ofx"])), **_MINIFY))
+CASES.append(case(
+    "Transform 1 cubic, scale 0.5 (minification, no prefilter)",
+    ("Transform", {"scale": .5, "center": CENTRE["nuke"]}),
+    (TRANSFORM, {"scale": [.5, .5], "center": CENTRE["ofx"]}), major=1,
+    **_MINIFY))
+# Shear: the reference does not widen the kernel.
+CASES.append(case(
+    "Transform skewX 1, checker",
+    ("Transform", {"skewX": 1, "center": CENTRE["nuke"]}),
+    (TRANSFORM, {"skewX": 1, "center": CENTRE["ofx"]}), **_MINIFY))
+CASES += [
+    case("Reformat 2 scale 0.5 (no prefilter)",
+         ("Reformat", {"type": "scale", "scale": .5}),
+         (ofx_id("Reformat"), {"reformatType": "Scale",
+                               "reformatScale": [.5, .5]}),
+         input="checker", channels="rgba", tolerance=1e-3, major=2),
+    # a perspective that shrinks the image
+    case("CornerPin2D shrink, checker",
+         ("CornerPin2D", {"from1": [0, 0], "from2": [32, 0],
+                          "from3": [32, 32], "from4": [0, 32],
+                          "to1": [8, 9], "to2": [22, 8], "to3": [24, 23],
+                          "to4": [9, 21]}),
+         (ofx_id("CornerPinPlugin"), {
+             "from1": [0, 0], "from2": [cx(32), 0], "from3": [cx(32), 32],
+             "from4": [0, 32], "to1": [cx(8), 9], "to2": [cx(22), 8],
+             "to3": [cx(24), 23], "to4": [cx(9), 21]}),
+         input="checker", region=(10, 10, 21, 20), channels="rgba",
+         tolerance=1e-3),
+    case("Card3D scale 0.5",
+         ("Card3D", {"scaling": [.5, .5, 1]}),
+         (ofx_id("Card3D"), {"format": "Size", "size": [cx(32), 32],
+                             "cardScaling": [.5, .5, 1]}),
+         input="checker", region=(9, 9, 23, 23), channels="rgba",
+         tolerance=1e-3),
+    case("Card3D 1 scale 0.5 (no prefilter)",
+         ("Card3D", {"scaling": [.5, .5, 1]}),
+         (ofx_id("Card3D"), {"format": "Size", "size": [cx(32), 32],
+                             "cardScaling": [.5, .5, 1]}),
+         input="checker", region=(9, 9, 23, 23), channels="rgba",
+         tolerance=1e-3, major=1),
+]
 CASES += [
     case("TransformMasked translate 3,-2 with a mask",
          ("TransformMasked", dict(MASKED, translate=[3, -2],
@@ -2600,16 +2664,37 @@ CASES += [
 DOCUMENTED = 318
 KNOWN = {
     270: [
-        "Transform rotate 30", "Transform scale 1.5,0.8",
+        # rotations: the reference's filtering is softer (0.01 on the ramp)
+        "Transform rotate 30", "Card3D rotate z 30",
+        "Card3D skew x 20, rotate z 30",
+        # the same, plus the soft edge of the transformed image (black
+        # outside); the mapping itself matches inside the image
         "Transform translate, scale, skew, rotate (order)",
-        "Transform cubic, scale 0.5 (minification)",
+        "Card3D rotate y 20, z 30",
+        # 1.2e-3 to 1.6e-3, not explained yet (the rounding of the sample
+        # positions to 1/64 pixel, as below, would give about that much)
         "CornerPin2D four pins", "CornerPin2D 2 pin(s) enabled",
-        "CornerPin2D 3 pin(s) enabled", "Reformat scale 0.5 defaults",
-        "Reformat scale 0.5, black outside", "Card3D rotate z 30",
-        "Card3D rotate y 20, z 30", "Card3D skew x 20, rotate z 30"] + [
+        "CornerPin2D 3 pin(s) enabled",
+        # shear: Prefilter Downscaling widens the kernel, the reference does
+        # not (needs a shear-invariant width in SupportExt)
+        "Transform skewX 0.3", "Transform skewY 0.3",
+        "Transform skewX 1, checker",
+        # minification on a hard-edged checker: 0.002 to 0.06, not explained
+        # yet (with scale 0.5 and Cubic or Mitchell, they match)
+        "Transform scale 0.4,0.7, checker (minification)",
+        "Transform scale 1.5,0.8, checker (minification)",
+        "Transform Lanczos4 scale 0.5, checker (minification)",
+        "CornerPin2D shrink, checker",
+        # the previous major versions (no prefilter by default) alias
+        "Transform 1 cubic, scale 0.5 (minification, no prefilter)",
+        "Reformat 2 scale 0.5 (no prefilter)",
+        "Card3D 1 scale 0.5 (no prefilter)"] + [
+            # the reference rounds sample positions to 1/64 pixel (exact
+            # with that rounding, except Mitchell: 1.3e-3), and its Lanczos
+            # and Sinc kernels differ
             "Transform filter %s, translate 0.3,0.6" % _f for _f in (
                 "Bilinear", "Cubic", "Keys", "Simon", "Rifman", "Mitchell",
-                "Parzen", "Notch")],
+                "Parzen", "Notch", "Lanczos4", "Lanczos6", "Sinc4")],
     279: ["ShuffleCopy defaults"],
     288: [
         # version 2 (obsolete): the Softness at the pixel corner nearest to the center (Radial) or without the

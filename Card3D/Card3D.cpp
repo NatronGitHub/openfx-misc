@@ -82,14 +82,18 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              longer, infinite or NaN shutter gives an infinite region of definition.
 //              (Known, not changed here: Directional Blur does nothing, since getInverseTransformCanonical()
 //              ignores the amount.)
-#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 // 1.1: importing a chan or Boujou file no longer sets NaN or infinite rotation and focal length keys (NaN audit);
 //      a transform matrix whose inverse overflows (huge entries, e.g. a concatenated source transform) is reported as not invertible (SupportExt #229)
 // 1.1: the Lanczos4, Lanczos6 and Sinc4 filters (appended options) and the
 //      Prefilter Downscaling checkbox (after Black Outside, off) (issue #270); the default output is unchanged.
 // 1.1: declares multiple clip PARs, so that hosts accept the output PAR of the Output Format
 //      (getClipPreferences set it with the Source connected, which the spec only allows then).
+// 2.0: Prefilter Downscaling is on by default (issue #270), so that scaling down filters the image instead
+//      of aliasing; version 1 is obsolete, with the same output as before.
+#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMajorPrefilterOff 1 // the obsolete version, Prefilter Downscaling off by default
+#define kPluginVersionMinorPrefilterOff 1
 
 #define kParamSrcClipChanged "srcClipChanged"
 
@@ -2072,14 +2076,16 @@ Card3DPlugin::changedClip(const InstanceChangedArgs &args,
     }
 }
 
-mDeclarePluginFactory(Card3DPluginFactory, {ofxsThreadSuiteCheck();}, {});
+mDeclarePluginFactoryVersioned(Card3DPluginFactory, {ofxsThreadSuiteCheck();}, {});
 
 
+template<unsigned int majorVersion>
 void
-Card3DPluginFactory::describe(ImageEffectDescriptor &desc)
+Card3DPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
+    desc.setIsObsolete(majorVersion < kPluginVersionMajor);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -2092,9 +2098,10 @@ Card3DPluginFactory::describe(ImageEffectDescriptor &desc)
 
 
 
+template<unsigned int majorVersion>
 void
-Card3DPluginFactory::describeInContext(ImageEffectDescriptor &desc,
-                                          ContextEnum context)
+Card3DPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
+                                                     ContextEnum context)
 {
     // make some pages and to things in
     PageParamDescriptor *page = Transform3x3DescribeInContextBegin(desc, context, false);
@@ -2326,6 +2333,14 @@ Card3DPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
 
     Transform3x3DescribeInContextEnd(desc, context, page, false, Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur, eTransform3x3FilteringSincPrefilter); // opt-in (issue #270)
+    if (majorVersion > kPluginVersionMajorPrefilterOff) {
+        // Prefilter Downscaling is on by default (issue #270)
+        BooleanParamDescriptor* param = dynamic_cast<BooleanParamDescriptor*>( desc.getParamDescriptor(kParamFilterPrefilter) );
+        assert(param);
+        if (param) {
+            param->setDefault(true);
+        }
+    }
 
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
@@ -2350,15 +2365,18 @@ Card3DPluginFactory::describeInContext(ImageEffectDescriptor &desc,
     }
 }
 
+template<unsigned int majorVersion>
 ImageEffect*
-Card3DPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                       ContextEnum /*context*/)
+Card3DPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
+                                                  ContextEnum /*context*/)
 {
     return new Card3DPlugin(handle);
 }
 
 
-static Card3DPluginFactory p1(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static Card3DPluginFactory<kPluginVersionMajor> p1(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p1)
+static Card3DPluginFactory<kPluginVersionMajorPrefilterOff> p1v1(kPluginIdentifier, kPluginVersionMinorPrefilterOff);
+mRegisterPluginFactoryInstance(p1v1)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
