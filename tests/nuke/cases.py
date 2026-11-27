@@ -518,6 +518,22 @@ OFX_LENS_TWIST = dict(OFX_LENS_ANAMORPHIC, k2=.05, center=[.1, .2],
                       anamorphicTwist=20, anamorphicScale=[1.2, .9])
 
 
+# The exact inverse of the Nuke model with K1 = 0.1 only (center 0, pixel
+# aspect ratio PAR): see the "exact inverse" case. x and y are normalised by
+# the same length, WIDTH / 2: the model normalises by the larger half size of
+# the format, in pixels (here WIDTH = HEIGHT).
+_LENS_NORM_X = "(%r * (x + 0.5 - %g) / %g)" % (PAR, WIDTH / 2, WIDTH / 2)
+_LENS_NORM_Y = "((y + 0.5 - %g) / %g)" % (HEIGHT / 2, WIDTH / 2)
+_LENS_RADIUS2 = "(%s * %s + %s * %s)" % (
+    _LENS_NORM_X, _LENS_NORM_X, _LENS_NORM_Y, _LENS_NORM_Y)
+# the distorted radius over the undistorted one
+_LENS_RATIO = "(2 / (1 + sqrt(1 - 4 * 0.1 * %s)))" % _LENS_RADIUS2
+_LENS_EXACT_U = "(%s * %s * %g / %r + %g) / %d" % (
+    _LENS_NORM_X, _LENS_RATIO, WIDTH / 2, PAR, WIDTH / 2, WIDTH)
+_LENS_EXACT_V = "(%s * %s * %g + %g) / %d" % (
+    _LENS_NORM_Y, _LENS_RATIO, WIDTH / 2, HEIGHT / 2, HEIGHT)
+
+
 def lens_map(layer):
     """The nuke_post that copies a LensDistortion2 STMap layer to R and G.
 
@@ -1784,16 +1800,19 @@ CASES += [
     # created from the menu (nuke.nodes gives STMap, so the cases set it).
     # Redistort: tolerance 2e-3, as STMap (the reference rounds the sub-pixel
     # sample positions).
+    # Undistort: ours is the exact inverse of our Redistort; the reference
+    # host's inversion is approximate (its tooltip: "not an exact process"),
+    # and ours differs from it by up to 0.0117 and 0.0059.
     case("LensDistortion k1 0.1 (default: undistort)",
          ("LensDistortion2", {"output": "Undistort",
                               "distortionDenominator0": .1}),
          (ofx_id("LensDistortion"), {"k1": .1}),
-         input="ramp", region=INNER, channels="rgba", tolerance=1e-3),
+         input="ramp", region=INNER, channels="rgba", tolerance=0.0125),
     case("LensDistortion k1 -0.1, undistort",
          ("LensDistortion2", {"output": "Undistort",
-                              "distortionDenominator0": -.1}),
-         (ofx_id("LensDistortion"), {"k1": -.1, "direction": "Undistort"}),
-         input="ramp", region=INNER, channels="rgba", tolerance=1e-3),
+                              "distortionDenominator0": -0.1}),
+         (ofx_id("LensDistortion"), {"k1": -0.1, "direction": "Undistort"}),
+         input="ramp", region=INNER, channels="rgba", tolerance=0.0065),
     case("LensDistortion k1 0.1, redistort (distort)",
          ("LensDistortion2", {"output": "Redistort",
                               "distortionDenominator0": .1}),
@@ -1825,13 +1844,35 @@ CASES += [
                                          outputMode="STMap")),
          nuke_post=lens_map("backward"),
          input="ramp", region=INNER, channels="rg", tolerance=1e-5),
+    # Undistort: ours is the exact inverse of our Redistort; the reference
+    # host's inversion is approximate (its tooltip: "not an exact process"),
+    # and ours differs from it by up to 0.0067 in u, v (0.2 pixel) in the
+    # compared region. Where the model has no inverse (the bottom-left corner
+    # and the pixel 26,5), ours is transparent black: no source position maps
+    # there, which only happens with extreme parameters (beyond a fold of the
+    # model). The compared region (x from 8, y from 10) leaves out those
+    # pixels and the ones next to them.
     case("LensDistortion STMap undistort, k1 0.1, k2 0.05, center 0.1,0.2",
          ("LensDistortion2", dict(LENS_K1K2C, output="STMap")),
          (ofx_id("LensDistortion"), dict(OFX_LENS_K1K2C,
                                          direction="Undistort",
                                          outputMode="STMap")),
          nuke_post=lens_map("forward"),
-         input="ramp", region=INNER, channels="rg", tolerance=2e-4),
+         input="ramp", region=(8, 10, 27, 27), channels="rg", tolerance=0.0075),
+    # Our own exactness: with K1 only, the inverse has a closed form (with r
+    # the normalised radius of the output pixel, the source is at r times
+    # 2 / (1 + sqrt(1 - 4 K1 r^2))); the reference host only evaluates it,
+    # with an Expression node. Our Undistort STMap matches it to 3e-5 in u,
+    # v (1e-3 pixel: our Newton solver stops at a step of 1e-4 pixel, with a
+    # finite-difference Jacobian; it differs by up to 2.3e-5, in the
+    # corners), on the whole inner region (the model has an inverse
+    # everywhere there).
+    case("LensDistortion STMap undistort k1 0.1, exact inverse",
+         ("Expression", {"expr0": _LENS_EXACT_U, "expr1": _LENS_EXACT_V,
+                         "expr2": "1", "expr3": "1"}),
+         (ofx_id("LensDistortion"), {"k1": .1, "direction": "Undistort",
+                                     "outputMode": "STMap"}),
+         input="ramp", region=INNER, channels="rg", tolerance=3e-5),
     case("LensDistortion STMap distort, squeeze 2, asymmetric 0.1,0.05",
          ("LensDistortion2", dict(LENS_ANAMORPHIC, output="STMap")),
          (ofx_id("LensDistortion"), dict(OFX_LENS_ANAMORPHIC,
@@ -1845,7 +1886,9 @@ CASES += [
                                          outputMode="STMap")),
          nuke_post=lens_map("backward"),
          input="ramp", region=INNER, channels="rg", tolerance=1e-5),
-    # Undistort (the default) with Twist and Scale
+    # Undistort (the default) with Twist and Scale. Twist 45, Scale 2,0.5: the
+    # model has no inverse over a diagonal band of the image (124 of the 484
+    # compared pixels), where ours is transparent black (DOCUMENTED, below).
     case("LensDistortion twist 45, scale 2,0.5, undistort",
          ("LensDistortion2", dict(LENS_TWIST, output="Undistort",
                                   anamorphicTwist=45,
@@ -1853,14 +1896,38 @@ CASES += [
          (ofx_id("LensDistortion"), dict(OFX_LENS_TWIST, anamorphicTwist=45,
                                          anamorphicScale=[2, .5])),
          input="ramp", region=INNER, channels="rgba", tolerance=2e-3),
+    # Undistort: ours is the exact inverse of our Redistort; the reference
+    # host's inversion is approximate (its tooltip: "not an exact process"),
+    # and ours differs from it by up to 0.025 (0.2 to 0.4 pixel on the ramp)
+    # in the compared region. Where the model has no inverse (the bottom-right
+    # corner, rows 5 to 7), ours is transparent black, as above: the compared
+    # region (x 7 to 25, y from 10) leaves out those pixels and the ones next
+    # to them.
     case("LensDistortion twist 20, scale 1.2,0.9, undistort",
          ("LensDistortion2", dict(LENS_TWIST, output="Undistort")),
          (ofx_id("LensDistortion"), dict(OFX_LENS_TWIST)),
-         input="ramp", region=INNER, channels="rgba", tolerance=2e-3),
+         input="ramp", region=(7, 10, 26, 27), channels="rgba", tolerance=0.027),
+    # Where the model minifies (Scale above 1, or a negative K1, with
+    # Redistort), ours stretches the filter's kernel over the footprint of
+    # the output pixel in the source (with the one-pixel kernel, these three
+    # cases differ by 0.013 to 0.017). "twist 20, scale 1.2,0.9, redistort"
+    # and "k1 -0.1, redistort" differ by 1.97e-3 and 1.99e-3 (the shape of
+    # the stretched kernel): tolerance 2.5e-3, for a margin.
     case("LensDistortion twist 20, scale 1.2,0.9, redistort",
          ("LensDistortion2", dict(LENS_TWIST, output="Redistort")),
          (ofx_id("LensDistortion"), dict(OFX_LENS_TWIST, direction="Distort")),
+         input="ramp", region=INNER, channels="rgba", tolerance=2.5e-3),
+    case("LensDistortion scale 1.5,1.5, redistort",
+         ("LensDistortion2", {"output": "Redistort", "lens": "Anamorphic",
+                              "anamorphicScale": [1.5, 1.5]}),
+         (ofx_id("LensDistortion"), {"anamorphicScale": [1.5, 1.5],
+                                     "direction": "Distort"}),
          input="ramp", region=INNER, channels="rgba", tolerance=2e-3),
+    case("LensDistortion k1 -0.1, redistort",
+         ("LensDistortion2", {"output": "Redistort",
+                              "distortionDenominator0": -0.1}),
+         (ofx_id("LensDistortion"), {"k1": -0.1, "direction": "Distort"}),
+         input="ramp", region=INNER, channels="rgba", tolerance=2.5e-3),
 ]
 for _steps in (1, 2, 3, 5):
     CASES.append(case(
@@ -2616,20 +2683,6 @@ KNOWN = {
         # extra pixel (Rectangle), and Quadratic by default
         "Radial 2 area 100,100-600,476 softness 1", "Radial 2 softness 0.3, plinear",
         "Rectangle 2 softness 40"],
-    # the reference's Undistort is not the exact inverse of its Redistort:
-    # its forward map differs by 0.02 to 0.1 pixel away from the corners, and
-    # by pixels near them (see the STMap case)
-    302: [
-        "LensDistortion k1 0.1 (default: undistort)",
-        "LensDistortion k1 -0.1, undistort",
-        "LensDistortion STMap undistort, k1 0.1, k2 0.05, center 0.1,0.2",
-        # the map matches (see the STMap case), but where it minifies (Scale
-        # 1.2), the reference's Cubic resampling differs by up to 0.1 pixel
-        "LensDistortion twist 20, scale 1.2,0.9, redistort",
-        # Undistort with Twist and Scale: as above, and where the model has no
-        # inverse ours is transparent black, the reference's is finite
-        "LensDistortion twist 45, scale 2,0.5, undistort",
-        "LensDistortion twist 20, scale 1.2,0.9, undistort"],
     352: [
         "IDistort, alpha 0.5, premultiplied",
         "STMap uv = rgb, premultiplied, alpha 0.5",
@@ -2649,7 +2702,11 @@ KNOWN = {
         "Reformat to box 20x12 fit, box PAR = PAR",
         "Reformat to box 20x12 fit, reference black outside",
         "Blur size 4 on the ramp (edges)", "Convolve2 3x3 kernel, edges",
-        "Radial softness 0", "Radial softness 0.001", "Roto no clip, Source in a box"] + [
+        "Radial softness 0", "Radial softness 0.001", "Roto no clip, Source in a box",
+        # Where the model has no inverse, ours is transparent black: no
+        # source position maps there (only with extreme parameters, beyond a
+        # fold of the model)
+        "LensDistortion twist 45, scale 2,0.5, undistort"] + [
             "Ramp %s, horizontal" % _t
             for _t in ("linear", "plinear", "smooth0", "smooth1", "smooth")],
 }
