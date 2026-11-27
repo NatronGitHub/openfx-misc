@@ -1900,7 +1900,9 @@ private:
         _ubl->setEnabled(doSomething && doScreenSubtraction);
         _ubc->setEnabled(doSomething && doScreenSubtraction);
         // the Colorspace gives the luminances of Luminance Match and RGBA Legal, which change the matte
-        _colorspace->setEnabled( doSomething && ( doScreenSubtraction || (doScreenMatte && !noKey && (lmEnable || rgbal) ) ) );
+        // (version 2 only: both are ignored in version 1, even if a script sets them)
+        const bool lumaChangesMatte = (_majorVersion >= 2) && (lmEnable || rgbal);
+        _colorspace->setEnabled( doSomething && ( doScreenSubtraction || (doScreenMatte && !noKey && lumaChangesMatte) ) );
     }
 
 private:
