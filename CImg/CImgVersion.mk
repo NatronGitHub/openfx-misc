@@ -48,6 +48,17 @@ CIMG_SHA256=adf13c3e991f6812c2db484ff07aa614421830117924590d3def10e8ac6a485b
 #   a variable, e.g. 'y=1+x;log(y);y' gave log(1 + x) (GreycLab/CImg#502)
 # - cimg-abs-peephole.sh: the same for abs(maxabs()) -> absmaxabs() (and minabs), e.g.
 #   'abs(m=maxabs(a,b,c));m' gave abs(maxabs(a,b,c)) for m (GreycLab/CImg#502, also in CImg 4.0.7)
+# - cimg-fusion-guards.sh: the fusions of '+', '-', '*' and '/' with the code of an operand
+#   rewrote the code of a variable assigned in that operand, e.g. 'z=1+(y=x*2);y' gave NaN
+#   instead of 2*x (GreycLab/CImg#502, NatronGitHub/openfx-gmic#232)
+# - cimg-vector-assign.sh: the vector assignments 'V = expr' and '(V) = expr' let the opcode that
+#   computed the value write into V while it still read V, or take the slot of another variable, e.g. 'A=[1,2,3,4];B=[0,1,1,0];(A)=mul(A,B,2);A' gave
+#   2,2,4,4 instead of 2,1,4,3 (GreycLab/CImg#505, NatronGitHub/openfx-gmic#245)
+# - cimg-same-reuse.sh: same(A,B) wrote its result into a live temporary when A or B has as many
+#   values as that temporary's slot number, e.g. 'a=1;sin(a)+same(vector36(a),vector36(a))' gave
+#   2 instead of sin(1) + 1 (NatronGitHub/openfx-gmic#246)
+# - cimg-hypot-layout.sh: hypot() with one or two values on CImg develop's new layout of the norm
+#   opcodes (overflow and underflow); does nothing on CImg 4.0.8 (NatronGitHub/openfx-gmic#244)
 # - cimg-fftw-no-cleanup-at-unload.sh: ~FFTW3_static() no longer calls fftw_cleanup_threads(): at
 #   dlclose, FFTW's detached workers were still exiting through the unmapped code (crash after the
 #   render with FFT=fftw3; GreycLab/CImg#500). Changes nothing in CImg.h's other code.
@@ -59,8 +70,8 @@ CIMG_SHA256=adf13c3e991f6812c2db484ff07aa614421830117924590d3def10e8ac6a485b
 # fftw_cleanup_threads() after each FFT (4.0.8 moved it to unload, which the script above removes),
 # and pocketfft itself (cimg_use_pocketfft, GreycLab/CImg#497).
 # CMakeLists.txt reads these variables: keep each on one line, as a plain "NAME=value" assignment.
-CIMG_PATCHES_FROM=522199a19f587940e33214f587c493b3d725ca10
-CIMG_PATCHES=patches/cimg-omp-rand.sh patches/cimg-vvar2.sh patches/cimg-vargkth2.sh patches/cimg-log1p-peephole.sh patches/cimg-abs-peephole.sh patches/cimg-fftw-no-cleanup-at-unload.sh patches/cimg-msvc-snprintf.sh
+CIMG_PATCHES_FROM=d3c0c802628c47378c72c519088746a4421457d4
+CIMG_PATCHES=patches/cimg-omp-rand.sh patches/cimg-vvar2.sh patches/cimg-vargkth2.sh patches/cimg-log1p-peephole.sh patches/cimg-abs-peephole.sh patches/cimg-fusion-guards.sh patches/cimg-vector-assign.sh patches/cimg-same-reuse.sh patches/cimg-hypot-layout.sh patches/cimg-fftw-no-cleanup-at-unload.sh patches/cimg-msvc-snprintf.sh
 
 # pocketfft (FFT=pocketfft), C++ header-only version, at a pinned commit of its 'cpp' branch: the
 # same commit and checksum as openfx-gmic's Makefile

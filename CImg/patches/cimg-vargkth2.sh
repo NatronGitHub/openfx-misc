@@ -15,7 +15,9 @@
 # avoided (openfx-misc, which copies this script, forbids it).
 #
 # Running it again on a patched file does nothing, and so does running it on a CImg.h whose
-# mp_vargkth2 already returns 0, '_cimg_mp_vfunc2(0);' (an upstream fix). The script fails in any
+# mp_vargkth2 already returns 0, '_cimg_mp_vfunc2(0);' (an upstream fix), or on a CImg.h whose
+# vargkth() counts from 1 with any number of arguments (CImg develop 9338835 and later: then
+# mp_vargkth2's 1 is right, openfx-gmic#235). The script fails in any
 # other case: mp_vargkth2 missing or with another body, including upstream fixes that test for NaN
 # (e.g. 'e1==e1?0:1' or 'cimg::type<double>::is_nan(e1)?1:0', which openfx-misc's rule forbids:
 # review them by hand), or after a GMICVER bump (then check what upstream changed, and update or
@@ -28,6 +30,10 @@ head="static double mp_vargkth2(_cimg_math_parser& mp) {"
 old="_cimg_mp_vfunc2(1);"
 fixed0="_cimg_mp_vfunc2(0);"
 marker="_cimg_mp_vfunc2(0); // openfx-gmic patch: 0-based index, as mp_vargkth"
+# the n-argument form's index, in _mp_vargkth(): 0-based (CImg 4.0.8) or 1-based (CImg develop
+# 9338835 and later, as the scalar argkth(), openfx-gmic#235)
+nzero="cimg_for_inX(vec,1,vec.width() - 1,ind) if (vec[ind]==val) return ind - 1.;"
+none="cimg_for_inX(vec,1,vec.width() - 1,ind) if (vec[ind]==val) return ind;"
 
 fail() {
   echo "Error: $f: $1" >&2
@@ -36,13 +42,15 @@ fail() {
   exit 1
 }
 
-# counts <file>: "<mp_vargkth2 definitions> <bodies returning 1> <fixed bodies> <markers>"
+# counts <file>: "<mp_vargkth2 definitions> <bodies returning 1> <fixed bodies> <markers>
+# <0-based n-argument forms> <1-based n-argument forms>"
 counts() {
-  awk -v head="$head" -v old="$old" -v fixed0="$fixed0" -v marker="$marker" '
+  awk -v head="$head" -v old="$old" -v fixed0="$fixed0" -v marker="$marker" -v nzero="$nzero" -v none="$none" '
     { t = $0; gsub(/^[ \t]+|[ \t]+$/, "", t) }
     infn { if (t == old) o++; else if (t == fixed0) z++; else if (t == marker) m++; infn = 0 }
     t == head { h++; infn = 1 }
-    END { print h + 0, o + 0, z + 0, m + 0 }' "$1"
+    t == nzero { n0++ } t == none { n1++ }
+    END { print h + 0, o + 0, z + 0, m + 0, n0 + 0, n1 + 0 }' "$1"
 }
 
 case "$f" in
@@ -56,6 +64,13 @@ if awk -v cr="$cr" 'index($0, cr) { found = 1; exit } END { exit !found }' "$f";
 fi
 
 set -- `counts "$f"`
+[ $(($5 + $6)) = 1 ] || fail "expected the n-argument form of vargkth() to return 'ind - 1.' or 'ind', found $5 and $6"
+if [ "$6" = 1 ]; then
+  [ "$1" = 1 ] && [ "$2" = 1 ] && [ "$4" = 0 ] ||
+    fail "vargkth() counts from 1 here, but mp_vargkth2 doesn't return 1 (or is patched): review it"
+  echo "$f: vargkth() counts from 1 with any number of arguments (CImg 9338835): not patched (openfx-gmic#235)"
+  exit 0
+fi
 if [ "$1" = 1 ] && [ "$4" = 1 ]; then
   echo "$f: already patched (vargkth() with 2 arguments, CImg#501)"
   exit 0

@@ -1554,6 +1554,24 @@ tests=(
     "CImgExpression vector X|net.sf.cimg.CImgExpression|filter|float|mean=0.5,0.5,0.5,0.5||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=X=[0.5,0.25];X[0]"
     # the '*' (parallel evaluation) prefix stays the first character of the expression
     "CImgExpression * prefix|net.sf.cimg.CImgExpression|filter|float|mean=0.5,0.5,0.5,0.5||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=*0.5"
+    # Math parser fixes of openfx-gmic's CImg patches (CImg/CImgVersion.mk), on CImg 4.0.8.
+    # cimg-fusion-guards.sh (openfx-gmic#232): '+', '-', '*' and '/' fused with the last opcode of an
+    # operand that is an assignment, and so rewrote the variable: y must be 2x (mean 719 on the 720
+    # columns; NaN without the patch), 2i (i without), and i/2 (i without)
+    "CImgExpression assign in + operand|net.sf.cimg.CImgExpression|filter|float|mean=719,719,719,719||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=z=1+(y=x*2);y"
+    "CImgExpression assign in - operand|net.sf.cimg.CImgExpression|filter|float|mean=0.5,1,1.5,2||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=z=1-(y=i*2);y"
+    "CImgExpression assign in * operand|net.sf.cimg.CImgExpression|filter|float|mean=0.125,0.25,0.375,0.5||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=z=2*(y=i/2);y"
+    "CImgExpression assign in / operand|net.sf.cimg.CImgExpression|filter|float|mean=0.125,0.25,0.375,0.5||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=z=(y=i/2)/3;y"
+    # cimg-vector-assign.sh (openfx-gmic#245): '(V)=f(V,...)' wrote into V while f() read it (2,2,4,4
+    # instead of 2,1,4,3), and '(A)=B' after 'B=sort(A)' took B's slot (size 0 instead of 3)
+    "CImgExpression (V)= aliasing|net.sf.cimg.CImgExpression|filter|float|mean=0.5,0.25,1,0.75||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=A=[1,2,3,4];B=[0,1,1,0];(A)=mul(A,B,2);A[c]/4"
+    "CImgExpression (V)= in place|net.sf.cimg.CImgExpression|filter|float|mean=0.75,0.75,0.75,0.75||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=A=[3,1,2];B=sort(A);(A)=B;size(B)/4"
+    # cimg-same-reuse.sh (openfx-gmic#246): same() of two N-value vectors wrote its result into slot
+    # N, which may be a live temporary: sin(1) + 1 (2 without the patch). The issue's vector36 is
+    # slot 36 in a bare CImg parser; CImgExpression first defines T and K (X and Y only when used),
+    # so a is slot 37 and sin(a) slot 38: vector38. T and K must stay small integers (render time 0,
+    # scale 1), or they take constant slots and the case no longer reaches the bug
+    "CImgExpression same() result slot|net.sf.cimg.CImgExpression|filter|float|mean=1.841471,1.841471,1.841471,1.841471+tol=0.0001||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=a=1;sin(a)+same(vector38(a),vector38(a))"
     # symmetric_eigen() on the rank-deficient structure tensors of flat images and ramps
     # (GreycLab/gmic#221: NaN eigenvectors when the compiler contracts to FMAs): no NaN
     # output pixels (the float outputs are checked for NaN)
