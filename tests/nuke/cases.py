@@ -1860,12 +1860,13 @@ CASES += [
     # Where the model minifies (Scale above 1, or a negative K1, with
     # Redistort), ours stretches the filter's kernel over the footprint of
     # the output pixel in the source (with the one-pixel kernel, these three
-    # cases differ by 0.013 to 0.017). Tolerance 3e-3 where ours differs by
-    # 1.97e-3 and 1.99e-3: the kernel's shape where it is stretched.
+    # cases differ by 0.013 to 0.017). "twist 20, scale 1.2,0.9, redistort"
+    # and "k1 -0.1, redistort" differ by 1.97e-3 and 1.99e-3 (the shape of
+    # the stretched kernel): tolerance 2.5e-3, for a margin.
     case("LensDistortion twist 20, scale 1.2,0.9, redistort",
          ("LensDistortion2", dict(LENS_TWIST, output="Redistort")),
          (ofx_id("LensDistortion"), dict(OFX_LENS_TWIST, direction="Distort")),
-         input="ramp", region=INNER, channels="rgba", tolerance=3e-3),
+         input="ramp", region=INNER, channels="rgba", tolerance=2.5e-3),
     case("LensDistortion scale 1.5,1.5, redistort",
          ("LensDistortion2", {"output": "Redistort", "lens": "Anamorphic",
                               "anamorphicScale": [1.5, 1.5]}),
@@ -1874,9 +1875,9 @@ CASES += [
          input="ramp", region=INNER, channels="rgba", tolerance=2e-3),
     case("LensDistortion k1 -0.1, redistort",
          ("LensDistortion2", {"output": "Redistort",
-                              "distortionDenominator0": -.1}),
-         (ofx_id("LensDistortion"), {"k1": -.1, "direction": "Distort"}),
-         input="ramp", region=INNER, channels="rgba", tolerance=3e-3),
+                              "distortionDenominator0": -0.1}),
+         (ofx_id("LensDistortion"), {"k1": -0.1, "direction": "Distort"}),
+         input="ramp", region=INNER, channels="rgba", tolerance=2.5e-3),
 ]
 for _steps in (1, 2, 3, 5):
     CASES.append(case(

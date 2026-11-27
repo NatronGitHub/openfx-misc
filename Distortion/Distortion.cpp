@@ -1454,14 +1454,20 @@ lensFootprint(const DistortionModel &model,
 
         return finiteOrIdentity( {x1 - sx, x2 - sx, y1 - sy, y2 - sy} );
     }
-    double x1, y1, x2, y2;
-    (void)toOutput(sx + 1., sy, &x1, &y1); // closed form: always converged
+    // closed form: always converged. The base is computed too (not assumed to be the pixel center), in
+    // case the solve that gave (sx, sy) did not converge.
+    double x0, y0, x1, y1, x2, y2;
+    (void)toOutput(sx, sy, &x0, &y0);
+    (void)toOutput(sx + 1., sy, &x1, &y1);
     (void)toOutput(sx, sy + 1., &x2, &y2);
     // the output position over the source one
-    const Jacobian d = {x1 - (x + 0.5), x2 - (x + 0.5), y1 - (y + 0.5), y2 - (y + 0.5)};
+    const Jacobian d = {x1 - x0, x2 - x0, y1 - y0, y2 - y0};
     const double det = d.xx * d.yy - d.xy * d.yx;
+    // singular, or NaN: one pixel (tested before dividing: -ffinite-math-only may drop the checks after it)
+    if ( !(std::abs(det) > 0.) ) {
+        return kIdentityJacobian;
+    }
 
-    // a zero (or not finite) determinant gives a non-finite inverse: one pixel
     return finiteOrIdentity( {d.yy / det, -d.xy / det, -d.yx / det, d.xx / det} );
 }
 
@@ -1513,6 +1519,27 @@ addBlurToFootprint(const Jacobian &j,
 
 // the largest blur, in pixels (for an infinite source RoD)
 constexpr double kMaxBlurPixels = 1e5;
+
+// The largest blur of IDistort and STMap, in pixels at the render scale: the size of the source RoD (at least
+// 1, and finite for an infinite RoD). PAR: the output's, as the render's coordinates.
+static double
+sourceSizePixels(const OfxRectD &srcRod,
+                 const OfxPointD &renderScale,
+                 double par)
+{
+    const double w = (srcRod.x2 - srcRod.x1) * renderScale.x / par;
+    const double h = (srcRod.y2 - srcRod.y1) * renderScale.y;
+
+    return (std::min)( (std::max)( 1., (std::max)(w, h) ), kMaxBlurPixels );
+}
+
+// the widest separable kernel, in pixels, for a largest blur maxBlur: a wild UV gradient or model must not
+// cost hours either
+static double
+separableMaxWidth(double maxBlur)
+{
+    return 2 * maxBlur + 1;
+}
 
 // the BC-spline family (Mitchell and Netravali, 1988), for |t| < 2
 static double
@@ -1877,8 +1904,7 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
     int srcy2 = int(std::floor(_format.y2));
     //}
     const double maxBlur = _maxBlur;
-    // the widest separable kernel, in pixels: a wild UV gradient or model must not cost hours either
-    const double maxWidth = 2 * maxBlur + 1;
+    const double maxWidth = separableMaxWidth(maxBlur); // the widest separable kernel
     float tmpPix[4] = {0.f, 0.f, 0.f, 0.f};
     SeparableWeights blurWeightsX, blurWeightsY; // reused by the separable blur
     for (int y = procWindow.y1; y < procWindow.y2; y++) {
@@ -3549,10 +3575,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
     // the largest blur (IDistort, STMap; LensDistortion 5: the widest kernel is 2 * maxBlur + 1 pixels): the
     // size of the source RoD, in pixels at the render scale (at least 1, and finite for an infinite RoD)
     if ( _srcClip && _srcClip->isConnected() ) {
-        const OfxRectD srcRod = _srcClip->getRegionOfDefinition(time);
-        const double w = (srcRod.x2 - srcRod.x1) * args.renderScale.x / par;
-        const double h = (srcRod.y2 - srcRod.y1) * args.renderScale.y;
-        maxBlur = (std::min)( (std::max)( 1., (std::max)(w, h) ), kMaxBlurPixels );
+        maxBlur = sourceSizePixels(_srcClip->getRegionOfDefinition(time), args.renderScale, par);
     }
     bool blackOutside = _blackOutside->getValueAtTime(time);
     double mix = _mix->getValueAtTime(time);
@@ -4053,10 +4076,10 @@ DistortionPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
                                  (filter != eFilterImpulse);
         double maxWidth = 1.;
         if (stretchable) {
-            const OfxRectD srcRod = _srcClip->getRegionOfDefinition(time);
-            const double w = (srcRod.x2 - srcRod.x1) * args.renderScale.x / par;
-            const double h = (srcRod.y2 - srcRod.y1) * args.renderScale.y;
-            maxWidth = 2 * (std::min)( (std::max)( 1., (std::max)(w, h) ), kMaxBlurPixels ) + 1;
+            // as in setupAndProcess (the output's PAR)
+            const double dstPar = _dstClip->getPixelAspectRatio();
+            maxWidth = separableMaxWidth( sourceSizePixels(_srcClip->getRegionOfDefinition(time), args.renderScale,
+                                                           (dstPar > 0.) ? dstPar : 1.) );
         }
         double widest = 1.; // the widest kernel (in source pixels) at the points below
         // undistort/distort take pixel coordinates, do not divide by renderScale
