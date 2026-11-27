@@ -1243,6 +1243,13 @@ tests=(
     "CImgFilterErode dilate impulse x|net.sf.cimg.CImgFilterErode|filter|float|tol=1e-4+mean=0.9375,0.9375,0.9375,1||-i Source=file:impulse.pfm -i Mask=none size=-1,-1 NatronOfxParamProcessR=1 NatronOfxParamProcessG=1 NatronOfxParamProcessB=1 --frames 0 --window 31,24,32,25"
     "CImgFilterErode tile|net.sf.cimg.CImgFilterErode|filter|float|nonconst+tile||-i Source=checker:8 -i Mask=none size=2.5,-1.5 filter=3 NatronOfxParamProcessR=1 --frames 0 --window 100,100,300,250"
     "CImgFilterErode scale 0.5 tile|net.sf.cimg.CImgFilterErode|filter|float|nonconst+tile||-i Source=checker:8 -i Mask=none size=3,1 filter=2 NatronOfxParamProcessR=1 --scale 0.5 --frames 0 --window 50,50,150,125"
+    # FilterErodeCImg on values near the largest float (+-3.4e38; hostDemo rejects infinite inputs): the
+    # weighted terms 1 - w*(1-v) and w*v stay finite and the centre weight 1 gives v itself, so the output is
+    # the input (a NaN output pixel would fail hostDemo)
+    "CImgFilterErode erode huge|net.sf.cimg.CImgFilterErode|filter|float|tol=1e33+mean=-3.4e38,0.5,0.5,1||-i Source=solid:-3.4e38,0.5,0.5,1 -i Mask=none size=0.5,0.5 NatronOfxParamProcessR=1"
+    "CImgFilterErode dilate huge|net.sf.cimg.CImgFilterErode|filter|float|tol=1e33+mean=3.4e38,0.5,0.5,1||-i Source=solid:3.4e38,0.5,0.5,1 -i Mask=none size=-0.5,-0.5 NatronOfxParamProcessR=1"
+    # ErodeSmoothCImg (obsolete, hidden from the menus) still loads and renders
+    "CImgErodeSmooth obsolete|net.sf.cimg.CImgErodeSmooth|filter|float|notidentity+changed:Source||-i Source=checker:8 -i Mask=none size=5,5"
     # (no NaN or infinite input: hostDemo rejects non-finite solids and PFM files; the MedianCImg history
     # comment documents NaNs)
     "CImgMedian 2 defaults|net.sf.cimg.CImgMedian|filter|float|notidentity+changed:Source||-m 2 -i Source=file:impulse.pfm -i Mask=none"

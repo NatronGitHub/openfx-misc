@@ -49,7 +49,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName          "ErodeSmoothCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
-    "Obsolete: FilterErodeCImg replaces this plug-in, which is kept for existing projects.\n" \
+    "Obsolete: this plug-in is kept for existing projects. For an erosion or dilation with fractional sizes, see FilterErodeCImg (a different filter: a weighted minimum or maximum).\n" \
     "Erode or dilate input stream using a normalized power-weighted filter.\n" \
     "This gives a smoother result than the Erode or Dilate node.\n" \
     "See \"Robust local max-min filters by normalized power-weighted filtering\" by L.J. van Vliet, " \
@@ -64,7 +64,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 1.0: initial version
 // version 2.0: use kNatronOfxParamProcess* parameters
 // version 2.1: NaN/inf-safe premultiply (SupportExt #73, #79); obsolete (hidden from the menus, still loaded by
-//              existing projects): FilterErodeCImg replaces it
+//              existing projects); see FilterErodeCImg
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
@@ -587,7 +587,7 @@ mDeclarePluginFactory(CImgErodeSmoothPluginFactory, {ofxsThreadSuiteCheck();}, {
 void
 CImgErodeSmoothPluginFactory::describe(ImageEffectDescriptor& desc)
 {
-    // FilterErodeCImg replaces this plug-in: hosts keep it for existing projects but do not offer it
+    // obsolete: hosts keep it for existing projects but do not offer it
     desc.setIsObsolete(true);
     // basic labels
     desc.setLabel(kPluginName);

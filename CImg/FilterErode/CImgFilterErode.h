@@ -34,6 +34,8 @@
 #include <vector>
 #include <limits>
 
+#include <atomic>
+
 #include "ofxsMacros.h"
 #include "ofxsCoords.h"
 
@@ -49,7 +51,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "A positive size erodes, a negative size dilates, on each axis. The structuring element is the Filter, " \
     "of width 2*|size|+1 pixels (x: the size divided by the pixel aspect ratio), sampled at the pixels around " \
     "the current pixel: each pixel within it has a weight w between 0 and 1 (1 at the centre). Eroding gives " \
-    "the minimum of v + (1-w)*(1-v) over these pixels (v: the pixel value, so a weight of 0 gives 1), and " \
+    "the minimum of 1 - w*(1-v) over these pixels (v: the pixel value, so a weight of 0 gives 1), and " \
     "dilating the maximum of w*v: on a 0-1 mask, the edge moves by the size, with a soft transition of about " \
     "one pixel. A size of 0 erodes with a width of 1 pixel: no change with the Box and Triangle filters, a slight " \
     "erosion with the others. When the two sizes have different signs, y is processed first. Pixels outside the " \
@@ -99,6 +101,16 @@ enum FilterErodeFilterEnum
 
 #define kParamFilterErodeFilterDefault eFilterErodeFilterBox
 
+// the support of the Quadratic (the quadratic B-spline) and Gaussian weights, in units of the width D
+constexpr double kFilterErodeSupportQuadraticGaussian = 1.5;
+// the value at 0 of the quadratic B-spline (its weights are divided by it, to be 1 at the centre)
+constexpr double kFilterErodeQuadraticCentre = 0.75;
+// filterErodePass() runs in parallel (OpenMP, as CImg) when the image has at least this many pixels
+[[maybe_unused]] constexpr int kFilterErodeParallelPixels = 4096;
+
+enum class FilterErodeAxis { eX, eY };
+enum class FilterErodeOperation { eErode, eDilate };
+
 // The weights of the structuring element along one axis, for a width D >= 1 in pixels: w[i] is the weight of
 // the pixel at offset i - radius (the result has 2*radius+1 elements, the outer ones not 0, w[radius] = 1).
 inline std::vector<double>
@@ -107,7 +119,7 @@ filterErodeWeights(FilterErodeFilterEnum filter,
 {
     // the support of the weights: |d| < D/2 + 1/2 (box), D (triangle), 1.5*D (quadratic, gaussian)
     const double support = (filter == eFilterErodeFilterBox) ? (D / 2 + 0.5) :
-                           (filter == eFilterErodeFilterTriangle ? D : 1.5 * D);
+                           (filter == eFilterErodeFilterTriangle ? D : kFilterErodeSupportQuadraticGaussian * D);
     // the largest offset strictly inside the support
     const int radius = (std::max)(0, (int)std::ceil(support) - 1);
     std::vector<double> w(2 * radius + 1);
@@ -123,11 +135,12 @@ filterErodeWeights(FilterErodeFilterEnum filter,
             break;
         case eFilterErodeFilterQuadratic: {
             const double t = d / D;
-            v = ( (t < 0.5) ? (0.75 - t * t) : ( (t < 1.5) ? 0.5 * (1.5 - t) * (1.5 - t) : 0. ) ) / 0.75;
+            v = ( (t < 0.5) ? (kFilterErodeQuadraticCentre - t * t) : ( (t < 1.5) ? 0.5 * (1.5 - t) * (1.5 - t) : 0. ) ) /
+                kFilterErodeQuadraticCentre;
             break;
         }
         case eFilterErodeFilterGaussian:
-            v = (d < 1.5 * D) ? std::pow(2., -(2 * d / D) * (2 * d / D)) : 0.;
+            v = (d < kFilterErodeSupportQuadraticGaussian * D) ? std::pow(2., -(2 * d / D) * (2 * d / D)) : 0.;
             break;
         }
         w[i + radius] = v;
@@ -136,36 +149,43 @@ filterErodeWeights(FilterErodeFilterEnum filter,
     return w;
 }
 
-// One pass of the filter along x (axis 'x') or y of img, with Nearest boundary conditions: for each pixel, the
-// minimum (erode) of v + (1-w)*(1-v), or the maximum (dilate) of w*v, over the pixels of nonzero weight w.
-// NaN values are left out (the result is NaN only if all are NaN). Returns false if the render was aborted.
+// One pass of the filter along an axis of img, with Nearest boundary conditions: for each pixel, the minimum
+// (erode) of 1 - w*(1-v), or the maximum (dilate) of w*v, over the pixels of nonzero weight w (v at w = 1, so
+// that infinite values stay infinite). NaN values are left out (the result is NaN only if all are NaN).
+// Returns false if the render was aborted (img is then partly filtered).
 inline bool
 filterErodePass(cimg_library::CImg<cimgpix_t>& img,
-                char axis,
-                bool erode,
+                FilterErodeAxis axis,
+                FilterErodeOperation operation,
                 const std::vector<double>& w)
 {
     const int radius = (int)w.size() / 2;
     if ( img.is_empty() || (radius == 0) ) {
         return true;
     }
-    const int n = (axis == 'x') ? img.width() : img.height(); // the length of a line
-    const int lines = (axis == 'x') ? img.height() : img.width();
-    const std::ptrdiff_t step = (axis == 'x') ? 1 : img.width(); // between two pixels of a line
-    const std::ptrdiff_t lineStep = (axis == 'x') ? img.width() : 1; // between two lines
-    for (int c = 0; c < img.spectrum(); ++c) {
-        if ( tls::gImageEffect && tls::gImageEffect->abort() ) {
-            return false;
-        }
-        cimgpix_t* const plane = img.data(0, 0, 0, c);
-        std::vector<cimgpix_t> line(n);
+    const bool alongX = (axis == FilterErodeAxis::eX);
+    const bool erode = (operation == FilterErodeOperation::eErode);
+    const int n = alongX ? img.width() : img.height(); // the length of a line
+    const int linesPerChannel = alongX ? img.height() : img.width();
+    const int lines = linesPerChannel * img.spectrum();
+    const std::ptrdiff_t step = alongX ? 1 : img.width(); // between two pixels of a line
+    const std::ptrdiff_t lineStep = alongX ? img.width() : 1; // between two lines of a channel
+    std::atomic<bool> aborted(false);
+    cimg_pragma_openmp(parallel if ( (int)img.size() >= kFilterErodeParallelPixels ))
+    {
+        std::vector<cimgpix_t> line(n); // a copy of the line being filtered, one per thread
+        cimg_pragma_openmp(for)
         for (int l = 0; l < lines; ++l) {
-            cimgpix_t* const p = plane + l * lineStep;
+            if ( aborted || cimgRenderAborted() ) {
+                aborted = true;
+                continue; // a loop of an OpenMP for cannot be left early
+            }
+            cimgpix_t* const p = img.data(0, 0, 0, l / linesPerChannel) + (l % linesPerChannel) * lineStep;
             for (int i = 0; i < n; ++i) {
                 line[i] = p[i * step];
             }
             for (int i = 0; i < n; ++i) {
-                double best = erode ? std::numeric_limits<double>::infinity() : -std::numeric_limits<double>::infinity();
+                double best = 0.;
                 bool found = false;
                 for (int k = -radius; k <= radius; ++k) {
                     const double wk = w[k + radius];
@@ -173,10 +193,10 @@ filterErodePass(cimg_library::CImg<cimgpix_t>& img,
                         continue;
                     }
                     const double v = line[(std::min)( (std::max)(i + k, 0), n - 1 )];
-                    if ( std::isnan(v) ) {
+                    const double t = (wk >= 1.) ? v : (erode ? 1. - wk * (1. - v) : wk * v);
+                    if ( std::isnan(t) ) {
                         continue;
                     }
-                    const double t = erode ? v + (1. - wk) * (1. - v) : wk * v;
                     if ( !found || (erode ? (t < best) : (t > best)) ) {
                         best = t;
                         found = true;
@@ -187,7 +207,7 @@ filterErodePass(cimg_library::CImg<cimgpix_t>& img,
         }
     }
 
-    return true;
+    return !aborted;
 }
 
 struct CImgFilterErodeParams
@@ -239,10 +259,10 @@ public:
         // the 2D weight is the product of the x and y weights, so the filter is separable (each pass keeps
         // the order of the values); each axis erodes (size >= 0) or dilates by the sign of its own size, y first
         // (this matters only when the signs differ)
-        if ( !filterErodePass(cimg, 'y', params.sy >= 0, weights(params.filter, params.sy, args.renderScale.y) ) ) {
+        if ( !filterErodePass(cimg, FilterErodeAxis::eY, operation(params.sy), weights(params.filter, params.sy, args.renderScale.y) ) ) {
             return;
         }
-        filterErodePass(cimg, 'x', params.sx >= 0, weights(params.filter, params.sx, args.renderScale.x) );
+        filterErodePass(cimg, FilterErodeAxis::eX, operation(params.sx), weights(params.filter, params.sx, args.renderScale.x) );
     }
 
     virtual bool isIdentity(const OFX::IsIdentityArguments &args,
@@ -256,6 +276,12 @@ public:
     virtual int getBoundary(const CImgFilterErodeParams& /*params*/) OVERRIDE FINAL { return 1; }
 
 private:
+    // a size of 0 or more erodes
+    static FilterErodeOperation operation(double size)
+    {
+        return (size >= 0.) ? FilterErodeOperation::eErode : FilterErodeOperation::eDilate;
+    }
+
     // the weights along one axis (with a size of 0, the Quadratic and Gaussian weights of width 1 still reach
     // the next pixels)
     static std::vector<double> weights(FilterErodeFilterEnum filter,

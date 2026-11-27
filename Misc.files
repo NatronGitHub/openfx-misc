@@ -15,6 +15,7 @@ CImg/CImgErode.cpp
 CImg/CImgErodeSmooth.cpp
 CImg/CImgExpression.cpp
 CImg/CImgFilter.cpp
+CImg/CImgFilterErode.cpp
 CImg/CImgGuided.cpp
 CImg/CImgHistEQ.cpp
 CImg/CImgNoise.cpp

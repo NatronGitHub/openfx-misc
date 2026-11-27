@@ -2031,6 +2031,8 @@ CASES += [
                                                      "blur": .5}),
          ("eu.cimg.ErodeBlur", {"size": 3, "blur": .5}), input="mask",
          channels="rgba", tolerance=1e-3),
+    # MedianCImg 3: the size is a radius per axis, rounded half up, default
+    # 3 (a 7x7 box), with the edge pixels repeated, as in the reference.
     case("Median defaults (MedianCImg defaults)", ("Median", {}),
          (CIMG + "CImgMedian", {}), input="hash", channels="rgba",
          nuke_par=1),
@@ -2746,9 +2748,9 @@ KNOWN = {
         "IDistort uv = rgb, blur = blue",
         "IDistort uv = rgb, blur = blue, blur scale 4",
         "STMap uv = rgb, blur = blue (1), blur scale 3"],
-    # ErodeBlurCImg is another filter than the reference's blur-based erode
-    # (see #315).
-    315: [
+    # ErodeBlurCImg blurs with a triangle filter and remaps with other
+    # thresholds than the reference.
+    433: [
         "Erode (blur) defaults (ErodeBlur)",
         "Erode (blur) size -3, blur 0.5 (ErodeBlur -3)",
         "Erode (blur) size 3, blur 0.5"],
@@ -2814,11 +2816,11 @@ ISSUES = {
     310: 'FrameBlend: blends 6 frames by default',
     311: 'Anaglyph, MixViews, SideBySide, JoinViews: limited to the...',
     314: 'EdgeDetectCImg: no Prewitt, no threshold, no single alpha...',
-    315: 'ErodeCImg/DilateCImg, ErodeBlurCImg, ErodeSmoothCImg, Med...',
     316: 'ConvolveCImg: per-channel kernels by default',
     317: 'Compatibility tests that cannot be automated yet',
     318: 'Document the behaviours that come from OFX: black outside...',
     319: 'AppendClip: first output frame, fade curve, cross-dissolve',
     320: 'TimeDissolve: the dissolve starts before the In frame',
     352: 'IDistort, STMap: Unpremult UV, and the blur near edges and...',
+    433: 'ErodeBlurCImg: output differs from the reference blur-base...',
 }

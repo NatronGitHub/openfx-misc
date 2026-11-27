@@ -135,20 +135,6 @@ medianOf(std::vector<cimgpix_t>::iterator first,
     return (lower + *mid) / 2;
 }
 
-// true if the host asks to abort the render; only the thread that runs the render (OpenMP thread 0, the one
-// whose CImgAbortScope is set) asks the host
-static bool
-medianRenderAborted()
-{
-#if cimg_use_openmp!=0
-    if ( omp_get_thread_num() ) {
-        return false;
-    }
-#endif
-
-    return tls::gImageEffect && tls::gImageEffect->abort();
-}
-
 // Median filter of radius (rx, ry >= 0) of each channel of img; pixels outside img get the value of the nearest
 // pixel, and NaNs are left out of the window (see medianOf()). With threshold > 0, only the centre value v0 and
 // the values v with |v - v0| <= threshold are used. Returns false if the render was aborted (img is then partly
@@ -174,7 +160,7 @@ medianFilter(cimg_library::CImg<cimgpix_t>& img,
         cimg_pragma_openmp(for collapse(2))
         for (int c = 0; c < src.spectrum(); ++c) {
             for (int y = 0; y < h; ++y) {
-                if ( aborted || medianRenderAborted() ) {
+                if ( aborted || cimgRenderAborted() ) {
                     aborted = true;
                     continue; // a loop of an OpenMP for cannot be left early
                 }

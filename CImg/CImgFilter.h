@@ -122,6 +122,21 @@ gImageEffectAbort()
     }
 }
 
+// true if the host asks to abort the render, without throwing (for plug-in code with its own OpenMP loops,
+// which cannot leave a parallel loop with an exception): only the thread that runs the render (OpenMP thread 0,
+// the one whose CImgAbortScope is set) asks the host; the others return false
+inline bool
+cimgRenderAborted()
+{
+#  if cimg_use_openmp!=0
+    if ( omp_get_thread_num() ) {
+        return false;
+    }
+#  endif
+
+    return tls::gImageEffect && tls::gImageEffect->abort();
+}
+
 // sets the effect checked by the CImg abort test in the current thread,
 // and restores the previous value on exit (including on exceptions)
 class CImgAbortScope
