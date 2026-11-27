@@ -518,16 +518,20 @@ OFX_LENS_TWIST = dict(OFX_LENS_ANAMORPHIC, k2=.05, center=[.1, .2],
                       anamorphicTwist=20, anamorphicScale=[1.2, .9])
 
 
-# The exact inverse of the Nuke model with K1 = 0.1 only (center 0, PAR
-# PAR, normalised by half the width): see the "exact inverse" case.
-_LX = "(%r * (x + 0.5 - %g) / %g)" % (PAR, WIDTH / 2, WIDTH / 2)
-_LY = "((y + 0.5 - %g) / %g)" % (HEIGHT / 2, WIDTH / 2)
-_LR2 = "(%s * %s + %s * %s)" % (_LX, _LX, _LY, _LY)
-_LS = "(2 / (1 + sqrt(1 - 4 * 0.1 * %s)))" % _LR2
+# The exact inverse of the Nuke model with K1 = 0.1 only (center 0, pixel
+# aspect ratio PAR): see the "exact inverse" case. x and y are normalised by
+# the same length, WIDTH / 2: the model normalises by the larger half size of
+# the format, in pixels (here WIDTH = HEIGHT).
+_LENS_NORM_X = "(%r * (x + 0.5 - %g) / %g)" % (PAR, WIDTH / 2, WIDTH / 2)
+_LENS_NORM_Y = "((y + 0.5 - %g) / %g)" % (HEIGHT / 2, WIDTH / 2)
+_LENS_RADIUS2 = "(%s * %s + %s * %s)" % (
+    _LENS_NORM_X, _LENS_NORM_X, _LENS_NORM_Y, _LENS_NORM_Y)
+# the distorted radius over the undistorted one
+_LENS_RATIO = "(2 / (1 + sqrt(1 - 4 * 0.1 * %s)))" % _LENS_RADIUS2
 _LENS_EXACT_U = "(%s * %s * %g / %r + %g) / %d" % (
-    _LX, _LS, WIDTH / 2, PAR, WIDTH / 2, WIDTH)
+    _LENS_NORM_X, _LENS_RATIO, WIDTH / 2, PAR, WIDTH / 2, WIDTH)
 _LENS_EXACT_V = "(%s * %s * %g + %g) / %d" % (
-    _LY, _LS, WIDTH / 2, HEIGHT / 2, HEIGHT)
+    _LENS_NORM_Y, _LENS_RATIO, WIDTH / 2, HEIGHT / 2, HEIGHT)
 
 
 def lens_map(layer):
