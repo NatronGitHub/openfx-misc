@@ -891,6 +891,12 @@ tests=(
     # Luminance Match, and in version 1); only the alpha changes
     "PIK luminance level|net.sf.openfx.PIK|general|float|mean=0.5615,0.6231,0.5923,0.7636||-i Fg=solid:0.6,0.7,0.9,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0.1,0.2,0.8 lmEnable=1 llEnable=1 luma=0.5 rgbal=0"
     "PIK luminance level off|net.sf.openfx.PIK|general|float|mean=0.5615,0.6231,0.5923,0.8768||-i Fg=solid:0.6,0.7,0.9,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0.1,0.2,0.8 lmEnable=1 llEnable=0 luma=0.5 rgbal=0"
+    # Luminance Level 1 with Screen Range 2: the blue excess of the screen color times 2 (1.2) is capped
+    # at 1 (alpha 0.0769 without the cap, 0.2364 without the Enable)
+    "PIK luminance level screen range 2|net.sf.openfx.PIK|general|float|mean=0.1154,0.1308,0.1231,0.1354||-i Fg=solid:0.3,0.5,1.6,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0.1,0.2,0.8 lmEnable=1 llEnable=1 luma=1 level=2 rgbal=0"
+    # Luminance Level 0.3 on a green screen: the green excess is weighted by 0.3 (alpha 0.2777 without
+    # the Enable)
+    "PIK luminance level green|net.sf.openfx.PIK|general|float|mean=0.2692,0.2769,0.2846,0.388||-i Fg=solid:0.5,1.2,0.4,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0.2,0.8,0.1 lmEnable=1 llEnable=1 luma=0.3 rgbal=0"
     "PIK 1 luminance level|net.sf.openfx.PIK|general|float|mean=0.5615,0.6231,0.5923,0.6154||-m 1 -i Fg=solid:0.6,0.7,0.9,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0.1,0.2,0.8 lmEnable=1 llEnable=1 luma=0.5"
     # Luminance Match with a Screen Range of 0: opaque, without screen subtraction (the output is Fg)
     "PIK screen range 0|net.sf.openfx.PIK|general|float|mean=0.31,0.348,0.6,1||-i Fg=solid:0.31,0.348,0.6,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0.1,0.2,0.8 lmEnable=1 level=0"
