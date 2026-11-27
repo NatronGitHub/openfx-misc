@@ -1,10 +1,12 @@
-"""Renders openfx-misc plug-ins with DaVinci Resolve (see README.md)."""
+"""Checks the results of openfx_misc_tests.py, run in Resolve (README.md)."""
 
+import os
 import struct
 import zlib
 
 import pytest
 
+import openfx_misc_tests
 import resolve_harness
 
 # One 8-bit step, plus one for rounding.
@@ -50,29 +52,69 @@ def test_decode_png():
                                          rows[y][3 * x:3 * x + 3]]
 
 
-@pytest.mark.resolve
-def test_checkerboard_defaults(resolve_session):
-    """CheckerBoard with its defaults: 64-pixel boxes from the centre.
+def _case(results, name):
+    for case in results.get("cases", []):
+        if case.get("name") == name:
+            return case
+    pytest.fail("case %s is not in results.json" % name)
+    return None
 
-    The boxes around the centre alternate between color0/color2 (0.1) and
-    color1/color3 (0.5), with alpha 1. The pixels are 32 pixels from the
-    centre, away from the centre lines.
-    """
-    image = resolve_session.render_generator(
-        "net.sf.openfx.CheckerBoardPlugin", {})
-    width, height = resolve_session.size
-    assert (image.width, image.height) == (width, height)
-    cx, cy = width // 2, height // 2
-    corners = [image.pixel(cx + dx, cy + dy)
-               for dx, dy in ((-32, -32), (32, -32), (32, 32), (-32, 32))]
-    for value in corners:
-        assert value[0] == pytest.approx(value[1], abs=TOLERANCE)
-        assert value[0] == pytest.approx(value[2], abs=TOLERANCE)
-        if image.channels == 4:
-            assert value[3] == pytest.approx(1.0, abs=TOLERANCE)
-    # Diagonal boxes have the same colour; neighbours differ.
-    assert corners[0][0] == pytest.approx(corners[2][0], abs=TOLERANCE)
-    assert corners[1][0] == pytest.approx(corners[3][0], abs=TOLERANCE)
-    dark, light = sorted((corners[0][0], corners[1][0]))
-    assert dark == pytest.approx(0.1, abs=TOLERANCE), corners
-    assert light == pytest.approx(0.5, abs=TOLERANCE), corners
+
+@pytest.mark.resolve
+def test_run(results):
+    """The scratch project was set up and deleted."""
+    assert not results.get("error"), results.get("error")
+    assert results.get("settings") and all(results["settings"].values()), \
+        results.get("settings")
+    assert results.get("project_deleted") is True
+
+
+@pytest.mark.resolve
+def test_plugins_from_prefix(results):
+    """Each plug-in was loaded only from OFX_PLUGIN_PATH (Resolve's cache)."""
+    path = results.get("ofx_plugin_path")
+    assert path, "Resolve was not started with OFX_PLUGIN_PATH"
+    dirs = [os.path.join(d, "") for d in path.split(":") if d]
+    for case in results.get("cases", []):
+        for tool in case.get("tools", []):
+            bundles = [b for b, _ in tool.get("bundles", [])]
+            assert bundles, "%s is not in Resolve's plug-in cache" % (
+                tool["plugin"])
+            foreign = [b for b in bundles
+                       if not any(b.startswith(d) for d in dirs)]
+            assert not foreign, "%s also loaded from %s" % (tool["plugin"],
+                                                            foreign)
+
+
+@pytest.mark.resolve
+@pytest.mark.parametrize("case", openfx_misc_tests.CASES,
+                         ids=[c["name"] for c in openfx_misc_tests.CASES])
+def test_case(results, results_dir, case):
+    """The exported frame has the expected pixel values."""
+    result = _case(results, case["name"])
+    assert not result.get("error"), result.get("error")
+    for tool in result["tools"]:
+        assert tool.get("reg_id"), tool
+        for name, done in tool.get("set", {}).items():
+            assert done.get("inputs") and None not in done.get("read", [None]), \
+                "param %s of %s: %s" % (name, tool["plugin"], done)
+    frame = result["frames"].get("png") or {}
+    assert frame.get("success") and frame.get("file"), frame
+    with open(os.path.join(results_dir, frame["file"]), "rb") as f:
+        image = resolve_harness.decode_png(f.read())
+    assert [image.width, image.height] == results["size"]
+    for (x, y), rgb in case["checks"]:
+        value = image.pixel(x, y)[:3]
+        assert value == pytest.approx(list(rgb), abs=TOLERANCE), (
+            "pixel (%d, %d): %s, expected %s" % (x, y, value, rgb))
+
+
+@pytest.mark.resolve
+def test_resolve_log(results_dir):
+    """Resolve's log of the run has no termination signal or crash."""
+    log = resolve_harness.copy_logs(results_dir)
+    if log is None:
+        pytest.skip("Resolve's log is older than the results: quit Resolve "
+                    "first")
+    crashes = resolve_harness.log_findings(log, resolve_harness.CRASH_PATTERNS)
+    assert not crashes, "\n".join(crashes)

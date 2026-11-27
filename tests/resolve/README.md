@@ -1,64 +1,82 @@
 # DaVinci Resolve tests
 
-These tests start DaVinci Resolve with an openfx-misc install, build small
-Fusion comps around our plug-ins through Resolve's scripting API, export a
-frame and check its pixels. They catch Resolve-specific problems that
-hostDemo can't show (see the Resolve section of `README-hosts.txt`). They are
-local tests: CI does not run them (#437).
+These tests render openfx-misc plug-ins in DaVinci Resolve and check the
+pixels. They catch Resolve-specific problems that hostDemo can't show (see
+the Resolve section of `README-hosts.txt`). They are local and manual: CI
+does not run them (#437).
 
-- `resolve_harness.py`: starts and stops Resolve, builds and renders a case,
-  and decodes the exported PNG.
-- `test_resolve.py`, `conftest.py`, `pytest.ini`: the pytest suite.
-  `test_decode_png` needs no Resolve.
+The free Resolve can't be scripted from outside: external scripting (the
+`DaVinciResolveScript` module in another process) is a Studio feature. So a
+script runs inside Resolve, from its Workspace > Scripts menu, and writes a
+results directory; pytest checks it afterwards.
 
-## Requirements
-
-- macOS, with DaVinci Resolve 21.1.2 or later (free or Studio; `ExportFrame`
-  is new in 21.1.2) in `/Applications/DaVinci Resolve/`, or `--resolve APP`. Its scripting module
-  is `/Library/Application Support/Blackmagic Design/DaVinci Resolve/Developer/Scripting/Modules/DaVinciResolveScript.py`.
-- External scripting allowed in Resolve: Preferences > System > General >
-  External scripting using: Local, set once by hand. It is off by default:
-  the first run (free Resolve 21.2, `-nogui`) got no connection in 180 s and
-  skipped. The README of Resolve's scripting API documents this preference
-  for Studio; whether the free version offers it is still unchecked.
-- An openfx-misc install: `cmake --install build --prefix PREFIX`. Resolve
-  gets its plug-ins from `OFX_PLUGIN_PATH=PREFIX/OFX/Plugins`.
-- No Resolve already running: the tests start their own, and never attach
-  to, or quit, one that someone is using.
-- pytest (MacPorts: `/opt/local/bin/pytest-3.11`).
+- `openfx_misc_tests.py`: the in-Resolve script, and the cases (`CASES`).
+- `install-script.sh`: copies the script into Resolve's Scripts menu.
+- `test_resolve.py`, `conftest.py`, `pytest.ini`: the checks.
+- `resolve_harness.py`: results, Resolve's logs and PNG decoding.
 
 ## Running
 
-    pytest tests/resolve --ofx-prefix PREFIX --launch-resolve [--resolve APP] [--resolve-gui] [--keep DIR]
+1. Install the bundles to a prefix:
+   `cmake --install build --prefix PREFIX`.
+2. Install the script: `tests/resolve/install-script.sh PREFIX`. It copies
+   `openfx_misc_tests.py` to
+   `~/Library/Application Support/Blackmagic Design/DaVinci Resolve/Fusion/Scripts/Utility/`
+   and prints the next command. Run it again after changing the script.
+3. Save your work and quit Resolve, then start it from Terminal with the
+   prefix's plug-ins:
 
-Resolve is a GUI application, so nothing starts without `--launch-resolve`.
-It starts with `-nogui` unless `--resolve-gui` is given. A session creates
-one scratch project (`openfx-misc-tests-<pid>`, with DaVinci YRGB colour
-science and 256x256 timelines), deletes it at the end, and quits Resolve
-by script, waiting up to 60 s. It never sends Resolve a signal: on
-SIGTERM, Resolve 21.2 crashes at exit (a shutdown race in its Fairlight page,
-which locks a destroyed mutex) and starts its crash reporter
-(`Resolve -reportCrash ...`). If the script can't quit Resolve (no scripting
-connection) or it doesn't quit in time, the tests leave it running and print
-its pid: quit it by hand. `--keep DIR` keeps Resolve's output
-(`resolve.log`), its logs, the exported frames (`caseN.png`) and each
-case's Fusion tool ID and inputs (`caseN-inputs.txt`).
+       OFX_PLUGIN_PATH=PREFIX/OFX/Plugins "/Applications/DaVinci Resolve/DaVinci Resolve.app/Contents/MacOS/Resolve"
 
-Each case is a Fusion composition clip on its own timeline: the plug-in's
-Fusion tool (`ofx.<plug-in identifier>`) connected to `MediaOut1`. Comps
-made with `fu.NewComp()` can't render in Resolve.
+4. Run Workspace > Scripts > Utility > openfx_misc_tests. Workspace >
+   Console shows its progress, and "results in DIR" at the end. It should
+   take under a minute, and it switches projects while it runs.
+5. Quit Resolve normally (DaVinci Resolve > Quit). Don't kill it: on
+   SIGTERM, Resolve 21.2 crashes at exit (a shutdown race in its Fairlight
+   page, which locks a destroyed mutex).
+6. Run `pytest tests/resolve` (MacPorts: `/opt/local/bin/pytest-3.11`). It
+   checks the newest results directory, or the one given with
+   `--results DIR`.
 
-Resolve's log is
-`~/Library/Application Support/Blackmagic Design/DaVinci Resolve/logs/ResolveDebug.txt`
-(with `davinci_resolve.log`). At the end of a session both are copied to the
-work directory, and the lines about a termination signal, a crash dump, an
-uncaught exception or an unsupported plug-in are printed.
+## What the script does
 
-When a bundle registers several major versions of a plug-in, Resolve's log
-says it keeps only the newest one ("ignoring plugin ... Newer version of plugin is found"; also
-"duplicate plugin with id ... found, ignore it"), so obsolete majors can't
-be tested in Resolve. Before each case, the harness checks in Resolve's
-plug-in cache that the plug-in was loaded only from the prefix.
+It needs Resolve 21.1.2 or later (`Timeline.ExportFrame`), free or Studio.
+It creates a scratch project `openfx-misc-tests-<timestamp>` (DaVinci YRGB
+colour science, so values pass through, and 256x256 timelines). Each case is
+a Fusion composition clip on its own timeline: the plug-ins' Fusion tools
+(`ofx.<plug-in identifier>`), chained, the last one connected to
+`MediaOut1`. (Comps made with `fu.NewComp()` can't render in Resolve.) OFX
+params are set through the Fusion inputs whose IDs match the param name
+(`color` sets `colorRed`, `colorGreen`... if those exist). Frame 0 is exported
+with `Timeline.ExportFrame` as PNG, and for the first case also as TIFF and
+EXR, to see which formats work. Then the scratch project is deleted, the
+project that was open is reopened, and Resolve keeps running: the script
+never quits it.
 
-Resolve caches plug-in descriptions in
-`~/Library/Application Support/Blackmagic Design/DaVinci Resolve/OFXPluginCacheV2.xml`.
+The results go to `~/openfx-misc-resolve-results/<timestamp>/`, or under
+`$OPENFX_MISC_RESOLVE_RESULTS` if Resolve was started with it; a
+`config.json` in that root, `{"output_root": "DIR"}`, moves them to DIR.
+A results directory holds `results.json` (Resolve's version, the
+`OFX_PLUGIN_PATH`, Resolve's OFX effect IDs and, per case, each tool's Fusion
+RegID, all its input IDs with their types and limits, what was set and read
+back, and the export results with the PNG bit depth), `log.txt` and the
+frames.
+
+## What pytest checks
+
+- The scratch project was set up and deleted.
+- Each plug-in was loaded only from `OFX_PLUGIN_PATH`, per Resolve's plug-in
+  cache (`~/Library/Application Support/Blackmagic Design/DaVinci Resolve/OFXPluginCacheV2.xml`,
+  which Resolve rewrites at each start, as the script records it). Another
+  install, e.g. in `/Library/OFX/Plugins`, would make the results
+  ambiguous. Also, when a bundle registers several major versions of a
+  plug-in, Resolve keeps only the newest ("ignoring plugin ... Newer version
+  of plugin is found" in its log), so obsolete majors can't be tested here.
+- Each case: the tools were created, their params set, and the PNG has the
+  expected values at a few pixels (within 2/255).
+- Resolve's log of the run (`~/Library/Application Support/Blackmagic Design/DaVinci Resolve/logs/ResolveDebug.txt`,
+  and `davinci_resolve.log`), copied into the results directory once
+  Resolve has quit, has no termination signal or crash dump. Before Resolve
+  quits, this check skips.
+
+Without results, the Resolve checks skip; `test_decode_png` needs no Resolve.
