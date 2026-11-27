@@ -1,38 +1,128 @@
-"""Helpers of the DaVinci Resolve tests: results, Resolve's log, PNG files.
+"""Helpers of the DaVinci Resolve tests (see README.md).
 
-openfx_misc_tests.py runs inside Resolve and writes a results directory;
-test_resolve.py checks it with these helpers (see README.md).
+openfx_misc_tests.lua runs inside Resolve and prints its results as a JSON
+line between RESULTS_BEGIN and RESULTS_END on Resolve's stdout
+(resolve-stdout.log). prepare_run() turns the newest block into a results
+directory, which test_resolve.py checks with the other helpers.
 """
 
 import json
 import os
 import shutil
 import struct
+import xml.etree.ElementTree as ElementTree
 import zlib
 
 SUPPORT = os.path.expanduser("~/Library/Application Support/"
                              "Blackmagic Design/DaVinci Resolve")
+PLUGIN_CACHE = os.path.join(SUPPORT, "OFXPluginCacheV2.xml")
 # Resolve's logs of its last launch.
 LOGS = ("ResolveDebug.txt", "davinci_resolve.log")
 # Lines of ResolveDebug.txt worth reporting.
 LOG_PATTERNS = ("Caught termination signal", "[CRASH DUMP]",
                 "uncaught exception", "not supported on this platform")
 CRASH_PATTERNS = LOG_PATTERNS[:3]
+# Resolve writes its logs when it quits, like the end of resolve-stdout.log:
+# logs written within this many seconds of it are from the same session.
+SAME_SESSION = 600
+
+RESULTS_BEGIN = "OPENFX-MISC-RESULTS-BEGIN"
+RESULTS_END = "OPENFX-MISC-RESULTS-END"
+STDOUT_LOG = "resolve-stdout.log"
+# Pixel values: one 8-bit step, plus one for rounding.
+TOLERANCE = 2.0 / 255
 
 
-def latest_results(root):
-    """The newest results directory under root, or None.
+def config_dir():
+    """$OPENFX_MISC_RESOLVE_RESULTS, or ~/openfx-misc-resolve-results."""
+    return (os.environ.get("OPENFX_MISC_RESOLVE_RESULTS")
+            or os.path.expanduser("~/openfx-misc-resolve-results"))
 
-    A results directory is a subdirectory with a results.json; their names
-    are timestamps, so the newest sorts last.
+
+def results_blocks(text):
+    """The results that openfx_misc_tests.lua printed, oldest first.
+
+    Returns:
+        A list of dicts, one per complete BEGIN/END block.
+
+    Raises:
+        ValueError: a block is not valid JSON.
     """
+    blocks = []
+    body = None
+    for line in text.splitlines():
+        if line.startswith(RESULTS_BEGIN):
+            body = []
+        elif line.startswith(RESULTS_END) and body is not None:
+            blocks.append(json.loads("\n".join(body)))
+            body = None
+        elif body is not None:
+            body.append(line)
+    return blocks
+
+
+def newest_results(log):
+    """The newest results block of a log file, or None."""
     try:
-        names = sorted(os.listdir(root))
+        with open(log, errors="replace") as f:
+            blocks = results_blocks(f.read())
     except OSError:
         return None
-    runs = [os.path.join(root, n) for n in names
-            if os.path.isfile(os.path.join(root, n, "results.json"))]
-    return runs[-1] if runs else None
+    return blocks[-1] if blocks else None
+
+
+def plugin_bundles(plugin, cache=PLUGIN_CACHE):
+    """[bundle path, major version] pairs of plugin in Resolve's cache."""
+    try:
+        root = ElementTree.parse(cache).getroot()
+    except (OSError, ElementTree.ParseError):
+        return []
+    found = set()
+    for bundle in root.iter("bundle"):
+        binary = bundle.find("binary")
+        path = binary.get("bundle_path", "") if binary is not None else ""
+        for desc in bundle.iter("plugin"):
+            if desc.get("name") == plugin:
+                found.add((path, desc.get("major_version", "")))
+    return [list(item) for item in sorted(found)]
+
+
+def _as_list(value):
+    """The Lua encoder writes empty tables as {}; read them as lists."""
+    return value if isinstance(value, list) else []
+
+
+def prepare_run(log, cache=PLUGIN_CACHE):
+    """Makes the results directory of the newest block of log.
+
+    The directory is <root>/<stamp> (root and stamp from the block). It gets
+    a copy of the log, the exported frames (<case>.<ext>, from the paths the
+    script wrote), and results.json: the block, with each frame's "file" and
+    each tool's plug-in cache "bundles" added. Running it again is harmless.
+
+    Returns:
+        The directory, or None if the log has no results block.
+    """
+    results = newest_results(log)
+    if results is None:
+        return None
+    run = os.path.join(results["root"], results["stamp"])
+    os.makedirs(run, exist_ok=True)
+    shutil.copy2(log, os.path.join(run, STDOUT_LOG))  # keeps its mtime
+    for case in _as_list(results.get("cases")):
+        frames = case.get("frames") or {}
+        for fmt, frame in frames.items():
+            path = frame.get("path")
+            frame["file"] = None
+            if path and os.path.isfile(path):
+                name = "%s.%s" % (case["name"], fmt)
+                shutil.copy(path, os.path.join(run, name))
+                frame["file"] = name
+        for tool in _as_list(case.get("tools")):
+            tool["bundles"] = plugin_bundles(tool["plugin"], cache)
+    with open(os.path.join(run, "results.json"), "w") as f:
+        json.dump(results, f, indent=1, sort_keys=True)
+    return run
 
 
 def load_results(run):
@@ -41,20 +131,78 @@ def load_results(run):
         return json.load(f)
 
 
-def copy_logs(run):
-    """Copies Resolve's logs into run if they are newer than results.json.
+def plugin_problems(results):
+    """Plug-ins missing from Resolve's cache, or loaded from elsewhere than
+    OFX_PLUGIN_PATH: a list of messages."""
+    path = results.get("ofx_plugin_path")
+    if not path:
+        return ["Resolve was not started with OFX_PLUGIN_PATH"]
+    dirs = [os.path.join(d, "") for d in path.split(":") if d]
+    problems = []
+    for case in _as_list(results.get("cases")):
+        for tool in _as_list(case.get("tools")):
+            bundles = [b for b, _ in tool.get("bundles", [])]
+            if not bundles:
+                problems.append("%s is not in Resolve's plug-in cache"
+                                % tool["plugin"])
+            foreign = [b for b in bundles
+                       if not any(b.startswith(d) for d in dirs)]
+            if foreign:
+                problems.append("%s also loaded from %s"
+                                % (tool["plugin"], ", ".join(foreign)))
+    return problems
 
-    Resolve writes the end of its log when it quits, after the script, so
-    the logs are collected by the pytest side.
+
+def case_problems(result, run, size):
+    """What is wrong with one case's result: a list of messages.
+
+    Args:
+        result: the case's entry in results.json.
+        run: the results directory.
+        size: the expected [width, height] of the frame.
+    """
+    if result.get("error"):
+        return [result["error"]]
+    problems = []
+    for tool in _as_list(result.get("tools")):
+        if not tool.get("reg_id"):
+            problems.append("no RegID for %s" % tool.get("plugin"))
+        for name, done in (tool.get("set") or {}).items():
+            read = _as_list(done.get("read"))
+            if not _as_list(done.get("inputs")) or None in read or not read:
+                problems.append("param %s of %s: %s"
+                                % (name, tool["plugin"], done))
+    frame = (result.get("frames") or {}).get("png") or {}
+    if not frame.get("success") or not frame.get("file"):
+        return problems + ["no PNG frame: %s" % frame]
+    with open(os.path.join(run, frame["file"]), "rb") as f:
+        image = decode_png(f.read())
+    if [image.width, image.height] != list(size):
+        return problems + ["frame is %dx%d, expected %dx%d"
+                           % (image.width, image.height, size[0], size[1])]
+    for x, y, rgb in _as_list(result.get("checks")):
+        value = image.pixel(x, y)[:3]
+        if any(abs(v - e) > TOLERANCE for v, e in zip(value, rgb)):
+            problems.append("pixel (%d, %d) is %s, expected %s"
+                            % (x, y, [round(v, 4) for v in value], rgb))
+    return problems
+
+
+def copy_logs(run):
+    """Copies Resolve's logs of the run's session into run.
+
+    They are from the same session if written within SAME_SESSION seconds
+    of the run's resolve-stdout.log.
 
     Returns:
         The path of the copied ResolveDebug.txt, or None.
     """
-    since = os.path.getmtime(os.path.join(run, "results.json"))
+    since = os.path.getmtime(os.path.join(run, STDOUT_LOG))
     copied = None
     for name in LOGS:
         src = os.path.join(SUPPORT, "logs", name)
-        if os.path.isfile(src) and os.path.getmtime(src) >= since:
+        if os.path.isfile(src) and abs(os.path.getmtime(src) - since) <= \
+                SAME_SESSION:
             dst = os.path.join(run, name)
             shutil.copy(src, dst)
             if name == LOGS[0]:

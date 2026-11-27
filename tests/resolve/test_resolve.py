@@ -1,16 +1,25 @@
-"""Checks the results of openfx_misc_tests.py, run in Resolve (README.md)."""
+"""Checks the results of openfx_misc_tests.lua, run in Resolve (README.md)."""
 
 import os
 import struct
+import subprocess
 import zlib
 
 import pytest
 
-import openfx_misc_tests
 import resolve_harness
 
-# One 8-bit step, plus one for rounding.
-TOLERANCE = 2.0 / 255
+HERE = os.path.dirname(os.path.abspath(__file__))
+FIXTURES = os.path.join(HERE, "fixtures")
+FUSCRIPT = ("/Applications/DaVinci Resolve/DaVinci Resolve.app/Contents/"
+            "Libraries/Fusion/fuscript")
+CACHE = """<cache version="ResolveHostV1">
+<bundle><binary bundle_path="{prefix}/OFX/Plugins/Misc.ofx.bundle" path="x" />
+<plugin name="net.sf.openfx.CheckerBoardPlugin" major_version="2" />
+<plugin name="net.sf.openfx.ConstantPlugin" major_version="1" />
+<plugin name="net.sf.openfx.Invert" major_version="2" />
+</bundle></cache>
+"""
 
 
 def _png(width, height, rows, filters):
@@ -52,12 +61,95 @@ def test_decode_png():
                                          rows[y][3 * x:3 * x + 3]]
 
 
-def _case(results, name):
-    for case in results.get("cases", []):
-        if case.get("name") == name:
-            return case
-    pytest.fail("case %s is not in results.json" % name)
-    return None
+def _write_frames(results, size):
+    """Writes the PNG of each case: black, with its check pixels set."""
+    for case in results["cases"]:
+        frame = case["frames"].get("png")
+        if not frame or not frame.get("success"):
+            continue
+        width, height = size
+        rows = [[0] * (3 * width) for _ in range(height)]
+        for x, y, rgb in case["checks"]:
+            rows[y][3 * x:3 * x + 3] = [round(v * 255) for v in rgb]
+        with open(frame["path"], "wb") as f:
+            f.write(_png(width, height, rows, [0] * height))
+
+
+def _check_sample_run(tmp_path, log_text):
+    """prepare_run and the checks on a log, with frames and a cache made up."""
+    root = tmp_path / "results"
+    root.mkdir()
+    prefix = str(tmp_path / "prefix")
+    log = tmp_path / resolve_harness.STDOUT_LOG
+    log.write_text(log_text.replace("@ROOT@", str(root))
+                   .replace("@PREFIX@", prefix))
+    cache = tmp_path / "cache.xml"
+    cache.write_text(CACHE.format(prefix=prefix))
+    _write_frames(resolve_harness.newest_results(str(log)), (256, 256))
+    run = resolve_harness.prepare_run(str(log), str(cache))
+    results = resolve_harness.load_results(run)
+    assert resolve_harness.plugin_problems(results) == []
+    for case in results["cases"]:
+        assert resolve_harness.case_problems(case, run, results["size"]) == [], \
+            case["name"]
+    return run, results
+
+
+def test_sample_log(tmp_path):
+    """The results block and host description of a sample log (no Resolve)."""
+    with open(os.path.join(FIXTURES, "sample-stdout.txt")) as f:
+        text = f.read()
+    run, results = _check_sample_run(tmp_path, text)
+    assert results["stamp"] == "20261128-000000"
+    assert [c["name"] for c in results["cases"]] == [
+        "checkerboard_defaults", "constant_color", "invert_checkerboard"]
+    assert os.path.isfile(os.path.join(run, "checkerboard_defaults.png"))
+    descriptions = resolve_harness.host_descriptions(text)
+    assert len(descriptions) == 1  # the repeated dump is merged
+    with open(os.path.join(FIXTURES, "sample-host-description.txt")) as f:
+        expected = f.read()
+    assert resolve_harness.host_description_entry(
+        results["resolve_version"], descriptions) == expected
+
+
+def test_sample_wrong_pixel(tmp_path):
+    """A wrong pixel, a foreign bundle and a missing frame are reported."""
+    with open(os.path.join(FIXTURES, "sample-stdout.txt")) as f:
+        text = f.read()
+    run, results = _check_sample_run(tmp_path, text)
+    case = results["cases"][0]
+    with open(os.path.join(run, case["frames"]["png"]["file"]), "wb") as f:
+        f.write(_png(256, 256, [[0] * 768] * 256, [0] * 256))
+    assert any("pixel" in p for p in
+               resolve_harness.case_problems(case, run, results["size"]))
+    case["tools"][0]["bundles"].append(["/elsewhere/Misc.ofx.bundle", "1"])
+    assert any("also loaded" in p for p in
+               resolve_harness.plugin_problems(results))
+    case["frames"]["png"]["file"] = None
+    assert any("no PNG" in p for p in
+               resolve_harness.case_problems(case, run, results["size"]))
+
+
+@pytest.mark.skipif(not os.access(FUSCRIPT, os.X_OK),
+                    reason="no Resolve fuscript to run Lua")
+def test_lua_script_with_fake_resolve(tmp_path):
+    """openfx_misc_tests.lua runs with a fake Resolve (fuscript, offline)."""
+    root = tmp_path / "results"
+    root.mkdir()
+    env = dict(os.environ, OPENFX_MISC_RESOLVE_RESULTS=str(root),
+               OFX_PLUGIN_PATH="@PREFIX@/OFX/Plugins")
+    proc = subprocess.run(
+        [FUSCRIPT, "-l", "lua", "-q", "fake_resolve.lua",
+         "openfx_misc_tests.lua"], cwd=HERE, env=env, check=False,
+        stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT, timeout=60)
+    text = proc.stdout.decode("utf-8", "replace")
+    assert proc.returncode == 0, text
+    assert "openfx-misc tests: done" in text, text
+    sub = tmp_path / "check"
+    sub.mkdir()
+    _, results = _check_sample_run(sub, text.replace(str(root), "@ROOT@"))
+    assert results["project_deleted"] is True
 
 
 @pytest.mark.resolve
@@ -72,82 +164,43 @@ def test_run(results):
 @pytest.mark.resolve
 def test_plugins_from_prefix(results):
     """Each plug-in was loaded only from OFX_PLUGIN_PATH (Resolve's cache)."""
-    path = results.get("ofx_plugin_path")
-    assert path, "Resolve was not started with OFX_PLUGIN_PATH"
-    dirs = [os.path.join(d, "") for d in path.split(":") if d]
-    for case in results.get("cases", []):
-        for tool in case.get("tools", []):
-            bundles = [b for b, _ in tool.get("bundles", [])]
-            assert bundles, "%s is not in Resolve's plug-in cache" % (
-                tool["plugin"])
-            foreign = [b for b in bundles
-                       if not any(b.startswith(d) for d in dirs)]
-            assert not foreign, "%s also loaded from %s" % (tool["plugin"],
-                                                            foreign)
+    problems = resolve_harness.plugin_problems(results)
+    assert not problems, "\n".join(problems)
 
 
 @pytest.mark.resolve
-@pytest.mark.parametrize("case", openfx_misc_tests.CASES,
-                         ids=[c["name"] for c in openfx_misc_tests.CASES])
 def test_case(results, results_dir, case):
-    """The exported frame has the expected pixel values."""
-    result = _case(results, case["name"])
-    assert not result.get("error"), result.get("error")
-    for tool in result["tools"]:
-        assert tool.get("reg_id"), tool
-        for name, done in tool.get("set", {}).items():
-            assert done.get("inputs") and None not in done.get("read", [None]), \
-                "param %s of %s: %s" % (name, tool["plugin"], done)
-    frame = result["frames"].get("png") or {}
-    assert frame.get("success") and frame.get("file"), frame
-    with open(os.path.join(results_dir, frame["file"]), "rb") as f:
-        image = resolve_harness.decode_png(f.read())
-    assert [image.width, image.height] == results["size"]
-    for (x, y), rgb in case["checks"]:
-        value = image.pixel(x, y)[:3]
-        assert value == pytest.approx(list(rgb), abs=TOLERANCE), (
-            "pixel (%d, %d): %s, expected %s" % (x, y, value, rgb))
+    """A case's tools were set up and its frame has the expected pixels."""
+    if case is None:
+        pytest.skip("no openfx_misc_tests results")
+    found = [c for c in results.get("cases", []) if c.get("name") == case]
+    assert found, "case %s is not in the results" % case
+    problems = resolve_harness.case_problems(found[0], results_dir,
+                                             results["size"])
+    assert not problems, "\n".join(problems)
 
 
 @pytest.mark.resolve
 def test_resolve_log(results_dir):
-    """Resolve's log of the run has no termination signal or crash."""
+    """Resolve's log of the session has no termination signal or crash."""
     log = resolve_harness.copy_logs(results_dir)
     if log is None:
-        pytest.skip("Resolve's log is older than the results: it is from "
-                    "another session")
+        pytest.skip("Resolve's log is not from this session (quit Resolve "
+                    "before running pytest)")
     crashes = resolve_harness.log_findings(log, resolve_harness.CRASH_PATTERNS)
     assert not crashes, "\n".join(crashes)
-
-
-FIXTURES = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                        "fixtures")
-
-
-def test_host_descriptions_sample():
-    """The extraction of a sample dump (no Resolve needed)."""
-    with open(os.path.join(FIXTURES, "sample-stdout.txt")) as f:
-        descriptions = resolve_harness.host_descriptions(f.read())
-    assert len(descriptions) == 1  # the repeated dump is merged
-    with open(os.path.join(FIXTURES, "sample-host-description.txt")) as f:
-        expected = f.read()
-    assert resolve_harness.host_description_entry(
-        "21.2.0.6", descriptions) == expected
 
 
 @pytest.mark.resolve
 def test_host_description(results, results_dir):
     """Writes Resolve's OFX host description to host-description.txt."""
-    log = os.path.join(results_dir, openfx_misc_tests.STDOUT_LOG)
-    if not os.path.isfile(log):
-        pytest.skip("no %s in the results: start Resolve with the command "
-                    "that install-script.sh prints" % openfx_misc_tests.STDOUT_LOG)
+    log = os.path.join(results_dir, resolve_harness.STDOUT_LOG)
     with open(log, errors="replace") as f:
         descriptions = resolve_harness.host_descriptions(f.read())
     if not descriptions:
         pytest.skip("no host description in %s: build the prefix with "
                     "-DCMAKE_CXX_FLAGS=-DDEBUG_HOSTDESCRIPTION (README.md)"
-                    % openfx_misc_tests.STDOUT_LOG)
+                    % resolve_harness.STDOUT_LOG)
     entry = resolve_harness.host_description_entry(
         results.get("resolve_version"), descriptions)
     with open(os.path.join(results_dir, "host-description.txt"), "w") as f:

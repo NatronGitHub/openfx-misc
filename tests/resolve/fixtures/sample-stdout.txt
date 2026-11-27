@@ -1,4 +1,6 @@
-# Sample for test_resolve.py (shortened, made-up values), not a real Resolve dump.
+# Sample for test_resolve.py, not a real Resolve log: a shortened, made-up host
+# description, and the output of openfx_misc_tests.lua with fake_resolve.lua
+# (@ROOT@ and @PREFIX@ are replaced by the test).
 log4cxx: No appender could be found for logger (BtCommon).
 21.2.0.0006 macOS/Clang arm64
 OFX host description follows
@@ -11,6 +13,16 @@ supportedContexts=OfxImageEffectContextFilter,OfxImageEffectContextGenerator
 suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,
 OFX DebugProxy: host description finished
 QWidget::setMinimumSize: (m_DrawerWidget/UiDrawerWidget) The largest allowed size is (16777215,16777215)
+openfx-misc tests: starting run 20261128-000000
+openfx-misc tests: checkerboard_defaults: png true nil
+openfx-misc tests: checkerboard_defaults: tif false fake: png only
+openfx-misc tests: checkerboard_defaults: exr false fake: png only
+openfx-misc tests: constant_color: png true nil
+openfx-misc tests: invert_checkerboard: png true nil
+OPENFX-MISC-RESULTS-BEGIN 20261128-000000
+{"cases":[{"checks":[[160,96,[0.1,0.1,0.1]],[96,96,[0.5,0.5,0.5]],[160,160,[0.5,0.5,0.5]],[96,160,[0.1,0.1,0.1]]],"frames":{"exr":{"error":"fake: png only","path":"@ROOT@/20261128-000000-checkerboard_defaults.exr","success":false},"png":{"height":256,"path":"@ROOT@/20261128-000000-checkerboard_defaults.png","success":true,"width":256},"tif":{"error":"fake: png only","path":"@ROOT@/20261128-000000-checkerboard_defaults.tif","success":false}},"name":"checkerboard_defaults","tools":[{"inputs":[{"INPS_DataType":"Number","INPS_ID":"boxSize","INPS_Name":"boxSize"},{"INPS_DataType":"Number","INPS_ID":"color0","INPS_Name":"color0"}],"plugin":"net.sf.openfx.CheckerBoardPlugin","reg_id":"ofx.net.sf.openfx.CheckerBoardPlugin","set":{}}]},{"checks":[[128,128,[0.25,0.5,0.75]],[10,245,[0.25,0.5,0.75]]],"frames":{"png":{"height":256,"path":"@ROOT@/20261128-000000-constant_color.png","success":true,"width":256}},"name":"constant_color","tools":[{"inputs":[{"INPS_DataType":"Number","INPS_ID":"colorRed","INPS_Name":"colorRed"},{"INPS_DataType":"Number","INPS_ID":"colorGreen","INPS_Name":"colorGreen"},{"INPS_DataType":"Number","INPS_ID":"colorBlue","INPS_Name":"colorBlue"},{"INPS_DataType":"Number","INPS_ID":"colorAlpha","INPS_Name":"colorAlpha"}],"plugin":"net.sf.openfx.ConstantPlugin","reg_id":"ofx.net.sf.openfx.ConstantPlugin","set":{"color":{"inputs":["colorRed","colorGreen","colorBlue","colorAlpha"],"read":[0.25,0.5,0.75,1]}}}]},{"checks":[[160,96,[0.9,0.9,0.9]],[96,96,[0.5,0.5,0.5]]],"frames":{"png":{"height":256,"path":"@ROOT@/20261128-000000-invert_checkerboard.png","success":true,"width":256}},"name":"invert_checkerboard","tools":[{"inputs":[{"INPS_DataType":"Number","INPS_ID":"boxSize","INPS_Name":"boxSize"},{"INPS_DataType":"Number","INPS_ID":"color0","INPS_Name":"color0"}],"plugin":"net.sf.openfx.CheckerBoardPlugin","reg_id":"ofx.net.sf.openfx.CheckerBoardPlugin","set":{}},{"inputs":[{"INPS_DataType":"Image","INPS_ID":"Source","INPS_Name":"Source"},{"INPS_DataType":"Number","INPS_ID":"processR","INPS_Name":"processR"},{"INPS_DataType":"Number","INPS_ID":"processA","INPS_Name":"processA"}],"plugin":"net.sf.openfx.Invert","reg_id":"ofx.net.sf.openfx.Invert","set":{"processA":{"inputs":["processA"],"read":[0]}},"source_input":"Source"}]}],"lua":"Lua 5.1","ofx_effects":["x"],"ofx_plugin_path":"@PREFIX@/OFX/Plugins","previous_project_reloaded":true,"project_deleted":true,"resolve_version":"21.2.0.6","root":"@ROOT@","settings":{"colorScienceMode":true,"timelineResolutionHeight":true,"timelineResolutionWidth":true},"size":[256,256],"stamp":"20261128-000000","studio":false}
+OPENFX-MISC-RESULTS-END 20261128-000000
+openfx-misc tests: done (run 20261128-000000): quit Resolve normally, then run `pytest tests/resolve` in the openfx-misc checkout
 OFX host description follows
 OFX API version 1.4
 hostName=DaVinciResolveLite
