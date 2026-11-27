@@ -152,6 +152,11 @@ def _hues01(x, y):
     return _hue_wheel(x, y, 48.)
 
 
+def _negative(x, y):
+    del x, y  # uniform
+    return -.1, -.2, -.3, 1.
+
+
 def _checker_image(x, y):
     c = _checker(x, y)
     return -.25 + 1.75 * c, 1. - 1.25 * c, .5 * c, 1.
@@ -279,6 +284,11 @@ IMAGES = {
                  "0.5 + (-0.5 * (x - 15.5) - 0.8660254 * (y - 15.5)) / 16",
                  "1"),
         "py": _hues,
+    },
+    # The uniform negative colour (-0.1, -0.2, -0.3); opaque.
+    "negative": {
+        "nuke": ("-0.1", "-0.2", "-0.3", "1"),
+        "py": _negative,
     },
     # 4x4 checks of (-0.25, 1, 0) and (1.5, -0.25, 0.5); opaque.
     "checker": {
@@ -550,6 +560,33 @@ def lens_map(layer):
             "copy['to1'].setValue('rgba.green')\n"
             "n = copy" % (layer, layer))
 
+
+# HSVTool: a saturation range with rolloff and Set Saturation 0.9.
+HSV_SAT_ROLLOFF = {"satsrcs": [.2, .4], "satrolloffrange": .2,
+                   "setsaturation": True, "saturation": .9}
+OFX_HSV_SAT_ROLLOFF = {"saturationRange": [.2, .4],
+                       "saturationRangeRolloff": .2, "setSaturation": 1,
+                       "saturationAdjustment": .9}
+# HSVTool: the three ranges with rolloffs, a hue rotation, and Set
+# Saturation and Set Brightness.
+HSV_ALL_RANGES = {"huesrcs": [40., 80.], "huerolloffrange": 30.,
+                  "huerotation": 60., "satsrcs": [.2, .6],
+                  "satrolloffrange": .2, "setsaturation": True,
+                  "saturation": .8, "brtsrcs": [.5, .8],
+                  "brtrolloffrange": .2, "setbrightness": True,
+                  "brightness": .7}
+OFX_HSV_ALL_RANGES = {"hueRange": [40., 80.], "hueRangeRolloff": 30.,
+                      "hueRotation": 60., "saturationRange": [.2, .6],
+                      "saturationRangeRolloff": .2, "setSaturation": 1,
+                      "saturationAdjustment": .8,
+                      "brightnessRange": [.5, .8],
+                      "brightnessRangeRolloff": .2, "setBrightness": 1,
+                      "brightnessAdjustment": .7}
+# HSVTool: saturation and brightness ranges that include the "negative"
+# image, whose saturation is -2 and brightness -0.1.
+HSV_NEGATIVE_RANGES = {"satsrcs": [-3., 1.], "brtsrcs": [-1., 1.]}
+OFX_HSV_NEGATIVE_RANGES = {"saturationRange": [-3., 1.],
+                           "brightnessRange": [-1., 1.]}
 
 CASES = []
 
@@ -846,23 +883,19 @@ CASES += [
     # default, 1 for all hues here): the saturation and brightness rolloffs
     # only select the pixels that are adjusted.
     case("HSVTool force saturation 0.9, saturation rolloff",
-         ("HSVTool", {"satsrcs": [.2, .4], "satrolloffrange": .2,
-                      "setsaturation": True, "saturation": .9}),
-         (ofx_id("HSVToolPlugin"), {"saturationRange": [.2, .4],
-                                    "saturationRangeRolloff": .2,
-                                    "setSaturation": 1,
-                                    "saturationAdjustment": .9}),
+         ("HSVTool", HSV_SAT_ROLLOFF),
+         (ofx_id("HSVToolPlugin"), OFX_HSV_SAT_ROLLOFF),
          input="hues", channels="rgba", tolerance=1e-4),
     case("HSVTool force saturation 0.9, saturation rolloff, output "
          "saturation",
-         ("HSVTool", {"satsrcs": [.2, .4], "satrolloffrange": .2,
-                      "setsaturation": True, "saturation": .9,
-                      "Conversion": "saturation"}),
-         (ofx_id("HSVToolPlugin"), {"saturationRange": [.2, .4],
-                                    "saturationRangeRolloff": .2,
-                                    "setSaturation": 1,
-                                    "saturationAdjustment": .9,
-                                    "outputAlpha": 2}),
+         ("HSVTool", dict(HSV_SAT_ROLLOFF, Conversion="saturation")),
+         (ofx_id("HSVToolPlugin"), dict(OFX_HSV_SAT_ROLLOFF, outputAlpha=2)),
+         input="hues", channels="rgba", tolerance=1e-4),
+    # Output Alpha = Source: the alpha is not written, and the adjustments are
+    # weighted by the default (hue) coefficient.
+    case("HSVTool force saturation 0.9, saturation rolloff, output source",
+         ("HSVTool", dict(HSV_SAT_ROLLOFF, output="none")),
+         (ofx_id("HSVToolPlugin"), dict(OFX_HSV_SAT_ROLLOFF, outputAlpha=0)),
          input="hues", channels="rgba", tolerance=1e-4),
     case("HSVTool brightness 0.3, hue rotation 30, brightness rolloff, "
          "output brightness",
@@ -874,57 +907,65 @@ CASES += [
                                     "brightnessAdjustment": .3,
                                     "hueRotation": 30., "outputAlpha": 3}),
          input="hues", channels="rgba", tolerance=1e-4),
+] + [
     case("HSVTool hue range 40-80, rotation 60, force saturation and "
-         "brightness, output min(all)",
-         ("HSVTool", {"huesrcs": [40., 80.], "huerolloffrange": 30.,
-                      "huerotation": 60., "satsrcs": [.2, .6],
-                      "satrolloffrange": .2, "setsaturation": True,
-                      "saturation": .8, "brtsrcs": [.5, .8],
-                      "brtrolloffrange": .2, "setbrightness": True,
-                      "brightness": .7, "Conversion": "all"}),
-         (ofx_id("HSVToolPlugin"), {"hueRange": [40., 80.],
-                                    "hueRangeRolloff": 30.,
-                                    "hueRotation": 60.,
-                                    "saturationRange": [.2, .6],
-                                    "saturationRangeRolloff": .2,
-                                    "setSaturation": 1,
-                                    "saturationAdjustment": .8,
-                                    "brightnessRange": [.5, .8],
-                                    "brightnessRangeRolloff": .2,
-                                    "setBrightness": 1,
-                                    "brightnessAdjustment": .7,
-                                    "outputAlpha": 7}),
-         input="hues", channels="rgba", tolerance=1e-4),
-    case("HSVTool hue range 40-80, rotation 60, force saturation and "
-         "brightness, output hue",
-         ("HSVTool", {"huesrcs": [40., 80.], "huerolloffrange": 30.,
-                      "huerotation": 60., "satsrcs": [.2, .6],
-                      "satrolloffrange": .2, "setsaturation": True,
-                      "saturation": .8, "brtsrcs": [.5, .8],
-                      "brtrolloffrange": .2, "setbrightness": True,
-                      "brightness": .7, "Conversion": "hue"}),
-         (ofx_id("HSVToolPlugin"), {"hueRange": [40., 80.],
-                                    "hueRangeRolloff": 30.,
-                                    "hueRotation": 60.,
-                                    "saturationRange": [.2, .6],
-                                    "saturationRangeRolloff": .2,
-                                    "setSaturation": 1,
-                                    "saturationAdjustment": .8,
-                                    "brightnessRange": [.5, .8],
-                                    "brightnessRangeRolloff": .2,
-                                    "setBrightness": 1,
-                                    "brightnessAdjustment": .7,
-                                    "outputAlpha": 1}),
-         input="hues", channels="rgba", tolerance=1e-4),
-    # The adjusted brightness is clamped to zero.
-    case("HSVTool force brightness -0.5", ("HSVTool", {
-        "setbrightness": True, "brightness": -.5}),
+         "brightness, output " + _output,
+         ("HSVTool", dict(HSV_ALL_RANGES, Conversion=_conversion)),
+         (ofx_id("HSVToolPlugin"), dict(OFX_HSV_ALL_RANGES,
+                                        outputAlpha=_option)),
+         input="hues", channels="rgba", tolerance=1e-4)
+    for _output, _conversion, _option in (
+        ("hue", "hue", 1), ("min(hue,saturation)", "min(hue,sat)", 4),
+        ("min(hue,brightness)", "min(hue,brt)", 5),
+        ("min(saturation,brightness)", "min(sat,brt)", 6),
+        ("min(all)", "all", 7))
+] + [
+    # The adjusted brightness is clamped to zero: the result, not the
+    # target (in the rolloff, -0.5 at weight 0.5 on 0.6 gives 0.05).
+    case("HSVTool force brightness -0.5",
+         ("HSVTool", {"setbrightness": True, "brightness": -.5}),
          (ofx_id("HSVToolPlugin"), {"setBrightness": 1,
                                     "brightnessAdjustment": -.5}),
          input="hues", tolerance=1e-4),
-    case("HSVTool brightness -0.7", ("HSVTool", {"brightness": -.7}),
+    case("HSVTool force brightness -0.5, brightness rolloff, output "
+         "brightness",
+         ("HSVTool", {"brtsrcs": [.9, 1.1], "brtrolloffrange": .3,
+                      "setbrightness": True, "brightness": -.5,
+                      "Conversion": "brightness"}),
+         (ofx_id("HSVToolPlugin"), {"brightnessRange": [.9, 1.1],
+                                    "brightnessRangeRolloff": .3,
+                                    "setBrightness": 1,
+                                    "brightnessAdjustment": -.5,
+                                    "outputAlpha": 3}),
+         input="hues", channels="rgba", tolerance=1e-4),
+    case("HSVTool brightness -0.7",
+         ("HSVTool", {"brightness": -.7}),
          (ofx_id("HSVToolPlugin"), {"brightnessAdjustment": -.7}),
          input="hues", tolerance=1e-4),
+    # Negative colours: (-0.1, -0.2, -0.3) has the brightness -0.1 and the
+    # saturation -2. Within the ranges, the adjusted saturation and
+    # brightness are clamped to 0 (black, or grey with a brightness offset);
+    # with a saturation range of (-1, 1), it is left unchanged.
+    case("HSVTool negative colour, ranges include it, hue rotation 30",
+         ("HSVTool", dict(HSV_NEGATIVE_RANGES, huerotation=30.)),
+         (ofx_id("HSVToolPlugin"), dict(OFX_HSV_NEGATIVE_RANGES,
+                                        hueRotation=30.)),
+         input="negative", tolerance=1e-5),
+    case("HSVTool negative colour, ranges include it, brightness 0.5",
+         ("HSVTool", dict(HSV_NEGATIVE_RANGES, brightness=.5)),
+         (ofx_id("HSVToolPlugin"), dict(OFX_HSV_NEGATIVE_RANGES,
+                                        brightnessAdjustment=.5)),
+         input="negative", tolerance=1e-5),
+    case("HSVTool negative colour, saturation range (-1, 1), hue rotation 30",
+         ("HSVTool", dict(HSV_NEGATIVE_RANGES, satsrcs=[-1., 1.],
+                          huerotation=30.)),
+         (ofx_id("HSVToolPlugin"), dict(OFX_HSV_NEGATIVE_RANGES,
+                                        saturationRange=[-1., 1.],
+                                        hueRotation=30.)),
+         input="negative", tolerance=1e-5),
+    # TODO(#293 follow-up): the hue range 0-40 with rolloff 30 (no wrap
+    # below 0 degrees) and an inverted hue range (350-20) differ: add them
+    # with known=<issue> once the hue keyer issue is filed.
     case("Invert defaults", ("Invert", {}), (ofx_id("Invert"), {}),
          input="Aa", channels="rgba"),
     case("Invert clamp", ("Invert", {"clamp": True}), (ofx_id("Invert"), {}),

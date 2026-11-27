@@ -24,6 +24,7 @@
 #include <cmath>
 #include <cfloat> // DBL_MAX
 #include <algorithm>
+#include <limits>
 
 #include "ofxsProcessing.H"
 #include "ofxsMaskMix.h"
@@ -69,10 +70,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              longer blackens the image, and the colours are copied without adjustments (issue #322); new Set
 //              Saturation and Set Brightness parameters, off by default (issue #293)
 // version 2.0: Clamp Black is off by default, so that the default node keeps negative values (issue #272).
-//              The adjustments are weighted by the coefficient that Output Alpha selects (min(all) with Output
-//              Alpha = Source), instead of min(all); the other ranges, rolloffs included, only select the
-//              pixels that are adjusted. The adjusted brightness is clamped to zero, as the saturation
-//              (issue #293; in version 1.1, only with Set Brightness). Version 1.1 is kept, obsolete.
+//              The adjustments are weighted by the coefficient that Output Alpha selects (the hue coefficient
+//              with Output Alpha = Source), instead of min(all); the other ranges, rolloffs included, only
+//              select the pixels that are adjusted. The adjusted brightness is clamped to zero, as the
+//              saturation is (issue #293; in version 1.1, only with Set Brightness). Both versions: the
+//              Saturation and Brightness Ranges may be negative, and the Saturation Range above 1 (issue #293). Version 1.1 is kept, obsolete.
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 #define kPluginVersionMinorV1 1 // the minor version of the obsolete version 1
@@ -142,7 +144,10 @@ static constexpr unsigned kVersionOutputAlphaWeight = 2;
 #define kParamSaturationRangeRolloffHint "Interval around Saturation Range, in the same units as saturation, where the saturation coefficient decreases progressively to zero (see Output Alpha)."
 #define kParamSetSaturation "setSaturation"
 #define kParamSetSaturationLabel "Set Saturation"
-#define kParamSetSaturationHint "When checked, the saturation of the colors within the range is set to Saturation Adjustment (the result is clamped to zero), instead of being offset by it, and Saturation Adjustment Gain is not used. In the rolloff, the saturation goes progressively from its value to Saturation Adjustment. Src and Dst Color then set Saturation Adjustment to the saturation of Dst Color."
+#define kParamSetSaturationHintPrefix "When checked, the saturation of the colors within the range is set to Saturation Adjustment (the result is clamped to zero), instead of being offset by it, and Saturation Adjustment Gain is not used."
+#define kParamSetSaturationHintV1 " In the rolloff, the saturation goes progressively from its value to Saturation Adjustment."
+#define kParamSetSaturationHintV2 " Where the Output Alpha coefficient is between 0 and 1, the saturation goes progressively from its value to Saturation Adjustment."
+#define kParamSetSaturationHintSuffix " Src and Dst Color then set Saturation Adjustment to the saturation of Dst Color."
 
 #define kGroupBrightness "brightness"
 #define kGroupBrightnessLabel "Brightness"
@@ -162,7 +167,10 @@ static constexpr unsigned kVersionOutputAlphaWeight = 2;
 #define kParamBrightnessRangeRolloffHint "Interval around Brightness Range, in the same units as brightness, where the brightness coefficient decreases progressively to zero (see Output Alpha)."
 #define kParamSetBrightness "setBrightness"
 #define kParamSetBrightnessLabel "Set Brightness"
-#define kParamSetBrightnessHint "When checked, the brightness of the colors within the range is set to Brightness Adjustment (the result is clamped to zero), instead of being offset by it, and Brightness Adjustment Gain is not used. In the rolloff, the brightness goes progressively from its value to Brightness Adjustment. Src and Dst Color then set Brightness Adjustment to the brightness of Dst Color."
+#define kParamSetBrightnessHintPrefix "When checked, the brightness of the colors within the range is set to Brightness Adjustment (the result is clamped to zero), instead of being offset by it, and Brightness Adjustment Gain is not used."
+#define kParamSetBrightnessHintV1 " In the rolloff, the brightness goes progressively from its value to Brightness Adjustment."
+#define kParamSetBrightnessHintV2 " Where the Output Alpha coefficient is between 0 and 1, the brightness goes progressively from its value to Brightness Adjustment."
+#define kParamSetBrightnessHintSuffix " Src and Dst Color then set Brightness Adjustment to the brightness of Dst Color."
 
 #define kParamClampBlack "clampBlack"
 #define kParamClampBlackLabel "Clamp Black"
@@ -174,8 +182,8 @@ static constexpr unsigned kVersionOutputAlphaWeight = 2;
 
 #define kParamOutputAlpha "outputAlpha"
 #define kParamOutputAlphaLabel "Output Alpha"
-#define kParamOutputAlphaHint "Output alpha channel. This can either be the source alpha, one of the coefficients for hue, saturation, brightness, or a combination of those. If it is not source alpha, the image on output are unpremultiplied, even if input is premultiplied."
-#define kParamOutputAlphaHintWeight "\nThe adjustments are weighted by the selected coefficient (by min(all) with Source). A pixel is adjusted only if it is within all three ranges, rolloffs included: with Hue, for example, the saturation and brightness rolloffs only select the pixels, and the adjustments are not reduced there."
+#define kParamOutputAlphaHint "Output alpha channel. This can either be the source alpha, one of the coefficients for hue, saturation, brightness, or a combination of those. If it is not source alpha, the output image is unpremultiplied, even if the input is premultiplied."
+#define kParamOutputAlphaHintWeight "\nThe adjustments are weighted by the selected coefficient (by the Hue coefficient with Source). A pixel is adjusted only if it is within all three ranges, rolloffs included: with Hue, for example, the saturation and brightness rolloffs only select the pixels, and the adjustments are not reduced there."
 #define kParamOutputAlphaOptionSource "Source", "Alpha channel is kept unmodified.", "source"
 #define kParamOutputAlphaOptionHue "Hue", "Set Alpha to the Hue modification mask.", "hue"
 #define kParamOutputAlphaOptionSaturation "Saturation", "Set Alpha to the Saturation modification mask.", "saturation"
@@ -221,9 +229,9 @@ static bool gHostSupportsDefaultCoordinateSystem = true; // for kParamDefaultsNo
 /* algorithm:
    - convert to HSV
    - compute H, S, and V coefficients: 1 within range, dropping to 0 at range+-rolloff
-   - compute min of the three coeffs. coeff = min(hcoeff,scoeff,vcoeff)
-   - if global coeff is 0, don't change anything.
-   - else, adjust hue by hueRotation*coeff, etc.
+   - if min(h,s,v) is 0 (the pixel is outside one of the ranges), don't change anything.
+   - else, adjust hue by hueRotation*coeff, etc., where coeff is the coefficient that Output Alpha
+     selects (version 2; Hue for Source), or min(h,s,v) (version 1)
    - convert back to RGB
 
    - when setting srcColor: compute hueRange, satRange, valRange (as empty ranges), set rolloffs to (50,0.3,0.3)
@@ -258,9 +266,10 @@ struct HSVToolValues
     double valAdjustGain;
     double valRolloff;
     bool setVal; // Set Brightness: valAdjust is the brightness within the range, not an offset
-    // version 2 (kVersionOutputAlphaWeight): the adjustments are weighted by the Output Alpha coefficient,
-    // not by min(all), and the adjusted brightness is clamped to zero (also with setVal in version 1)
-    bool outputAlphaWeight;
+    // the adjustments are weighted by the Output Alpha coefficient (outputAlphaCoeff()), not by min(all)
+    bool weightByOutputAlpha;
+    // the adjusted brightness is clamped to zero
+    bool clampBrightness;
     HSVToolValues()
     {
         hueRange[0] = hueRange[1] = 0.;
@@ -279,7 +288,8 @@ struct HSVToolValues
         valAdjustGain = 1.;
         valRolloff = 0.;
         setVal = false;
-        outputAlphaWeight = false;
+        weightByOutputAlpha = false;
+        clampBrightness = false;
     }
 
     // true if hsvtool() changes the hue, saturation or brightness of the pixels whose range
@@ -330,33 +340,42 @@ angleWithinRange(double h,
              (h0 <= h && h <= h1) );
 }
 
-// the range coefficient that Output Alpha selects, min(all) for Source
+// the hue, saturation and brightness range coefficients of a pixel: 1 within the range, going to 0 in the rolloff
+struct RangeCoeffs
+{
+    float h;
+    float s;
+    float v;
+
+    float all() const { return (std::min)((std::min)(h, s), v); }
+};
+
+// the range coefficient that Output Alpha selects; for Source (which writes no coefficient), the hue
+// coefficient, the default choice
 static inline
 float
 outputAlphaCoeff(OutputAlphaEnum outputAlpha,
-                 float hcoeff,
-                 float scoeff,
-                 float vcoeff)
+                 const RangeCoeffs& k)
 {
     switch (outputAlpha) {
-    case eOutputAlphaHue:
-        return hcoeff;
-    case eOutputAlphaSaturation:
-        return scoeff;
-    case eOutputAlphaBrightness:
-        return vcoeff;
-    case eOutputAlphaHueSaturation:
-        return (std::min)(hcoeff, scoeff);
-    case eOutputAlphaHueBrightness:
-        return (std::min)(hcoeff, vcoeff);
-    case eOutputAlphaSaturationBrightness:
-        return (std::min)(scoeff, vcoeff);
     case eOutputAlphaSource:
+    case eOutputAlphaHue:
+        return k.h;
+    case eOutputAlphaSaturation:
+        return k.s;
+    case eOutputAlphaBrightness:
+        return k.v;
+    case eOutputAlphaHueSaturation:
+        return (std::min)(k.h, k.s);
+    case eOutputAlphaHueBrightness:
+        return (std::min)(k.h, k.v);
+    case eOutputAlphaSaturationBrightness:
+        return (std::min)(k.s, k.v);
     case eOutputAlphaAll:
         break;
     }
 
-    return (std::min)((std::min)(hcoeff, scoeff), vcoeff);
+    return k.all();
 }
 
 // Exponentiation by squaring
@@ -594,17 +613,16 @@ public:
         _mix = mix;
     } // setValues
 
-    void hsvtool(float r,
-                 float g,
-                 float b,
-                 float *hcoeff,
-                 float *scoeff,
-                 float *vcoeff,
-                 float *rout,
-                 float *gout,
-                 float *bout)
+    // returns the range coefficients of the pixel
+    RangeCoeffs hsvtool(float r,
+                        float g,
+                        float b,
+                        float *rout,
+                        float *gout,
+                        float *bout)
     {
         float h, s, v;
+        RangeCoeffs k;
 
         Color::rgb_to_hsv(r, g, b, &h, &s, &v);
 
@@ -615,7 +633,7 @@ public:
         const double h1prolloff = _values.hueRangeWithRolloff[1];
         // the affected
         if ( angleWithinRange(h, h0, h1) ) {
-            *hcoeff = 1.f;
+            k.h = 1.f;
         } else {
             double c0 = 0.;
             double c1 = 0.;
@@ -626,41 +644,41 @@ public:
             if ( angleWithinRange(h, h1, h1prolloff) ) {
                 c1 = angleCoeff10(h, h1, h1prolloff);
             }
-            *hcoeff = (float)(std::max)(c0, c1);
+            k.h = (float)(std::max)(c0, c1);
         }
         const double s0 = _values.satRange[0];
         const double s1 = _values.satRange[1];
         const double s0mrolloff = s0 - _values.satRolloff;
         const double s1prolloff = s1 + _values.satRolloff;
         if ( (s0 <= s) && (s <= s1) ) {
-            *scoeff = 1.f;
+            k.s = 1.f;
         } else if ( (s0mrolloff <= s) && (s <= s0) ) {
-            *scoeff = (float)(s - s0mrolloff) / (float)_values.satRolloff;
+            k.s = (float)(s - s0mrolloff) / (float)_values.satRolloff;
         } else if ( (s1 <= s) && (s <= s1prolloff) ) {
-            *scoeff = (float)(s1prolloff - s) / (float)_values.satRolloff;
+            k.s = (float)(s1prolloff - s) / (float)_values.satRolloff;
         } else {
-            *scoeff = 0.f;
+            k.s = 0.f;
         }
         const double v0 = _values.valRange[0];
         const double v1 = _values.valRange[1];
         const double v0mrolloff = v0 - _values.valRolloff;
         const double v1prolloff = v1 + _values.valRolloff;
         if ( (v0 <= v) && (v <= v1) ) {
-            *vcoeff = 1.f;
+            k.v = 1.f;
         } else if ( (v0mrolloff <= v) && (v <= v0) ) {
-            *vcoeff = (float)(v - v0mrolloff) / (float)_values.valRolloff;
+            k.v = (float)(v - v0mrolloff) / (float)_values.valRolloff;
         } else if ( (v1 <= v) && (v <= v1prolloff) ) {
-            *vcoeff = (float)(v1prolloff - v) / (float)_values.valRolloff;
+            k.v = (float)(v1prolloff - v) / (float)_values.valRolloff;
         } else {
-            *vcoeff = 0.f;
+            k.v = 0.f;
         }
         // a NaN h, s or v (from a NaN pixel) fails every range test above and gives a coefficient
         // of 0, so coeffAll is 0 and the pixel is left unchanged (NaN)
-        const float coeffAll = (std::min)((std::min)(*hcoeff, *scoeff), *vcoeff);
-        // the weight of the adjustments: the Output Alpha coefficient (version 2), which is at least
-        // coeffAll, or coeffAll (version 1). Only the pixels within all three ranges (coeffAll > 0) are
+        const float coeffAll = k.all();
+        // the weight of the adjustments: the Output Alpha coefficient (version 2; the hue coefficient for
+        // Source), which is at least coeffAll, or coeffAll (version 1). Only the pixels within all three ranges (coeffAll > 0) are
         // adjusted.
-        const float coeff = _values.outputAlphaWeight ? outputAlphaCoeff(_outputAlpha, *hcoeff, *scoeff, *vcoeff) : coeffAll;
+        const float coeff = _values.weightByOutputAlpha ? outputAlphaCoeff(_outputAlpha, k) : coeffAll;
         // without adjustments, copy the pixel: the HSV round trip is not exact (isIdentity relies on this)
         if ( (coeffAll <= 0.) || !_adjustsColor ) {
             *rout = r;
@@ -684,8 +702,7 @@ public:
             } else {
                 v += coeff * ( (float)_values.valAdjust + (_values.valAdjustGain - 1.) * (v - (v0 + v1) / 2) );
             }
-            // Set Brightness (new in version 1.1) and version 2 clamp the brightness to zero, as the saturation
-            if ( (_values.setVal || _values.outputAlphaWeight) && (v < 0) ) {
+            if (_values.clampBrightness && (v < 0) ) {
                 v = 0;
             }
             h *= OFXS_HUE_CIRCLE / 360.;
@@ -701,6 +718,8 @@ public:
             *gout = (std::min)(1.f, *gout);
             *bout = (std::min)(1.f, *bout);
         }
+
+        return k;
     } // hsvtool
 
 private:
@@ -740,15 +759,14 @@ public:
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, _premult, _premultChannel);
-                float hcoeff, scoeff, vcoeff;
-                hsvtool(unpPix[0], unpPix[1], unpPix[2], &hcoeff, &scoeff, &vcoeff, &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                const RangeCoeffs k = hsvtool(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                 // keep the source alpha (replaced below if Output Alpha is not Source): ofxsPremultMaskMixPix
                 // premultiplies by tmpPix[3] and mixes it into the output alpha
                 tmpPix[3] = unpPix[3];
                 ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, premultOut, _premultChannel, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
                 // if output alpha is not source alpha, set it to the right value
                 if ( (nComponents == 4) && (_outputAlpha != eOutputAlphaSource) ) {
-                    float a = outputAlphaCoeff(_outputAlpha, hcoeff, scoeff, vcoeff);
+                    float a = outputAlphaCoeff(_outputAlpha, k);
                     if (_doMasking) {
                         // we do, get the pixel from the mask
                         const PIX* maskPix = _maskImg ? (const PIX *)_maskImg->getPixelAddress(x, y) : 0;
@@ -1341,7 +1359,9 @@ HSVToolPlugin::getValuesAtTime(double time) const
     values.valAdjustGain = _brightnessAdjustmentGain->getValueAtTime(time);
     values.valRolloff = _brightnessRangeRolloff->getValueAtTime(time);
     values.setVal = _setBrightness->getValueAtTime(time);
-    values.outputAlphaWeight = (_majorVersion >= kVersionOutputAlphaWeight);
+    values.weightByOutputAlpha = (_majorVersion >= kVersionOutputAlphaWeight);
+    // Set Brightness (new in version 1.1) always clamps; the offset clamps from version 2 on
+    values.clampBrightness = values.setVal || (_majorVersion >= kVersionOutputAlphaWeight);
 
     return values;
 }
@@ -2153,7 +2173,10 @@ HSVToolPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &des
             param->setDimensionLabels("", ""); // the two values have the same meaning (they just define a range)
             param->setDefault(0., 1.);
             param->setDoubleType(eDoubleTypePlain);
-            param->setRange(0., 0., 1., 1.);
+            // negative colours have a negative saturation or brightness, and colours outside [0,1] a
+            // saturation above 1: the range is not limited (issue #293)
+            param->setRange( -std::numeric_limits<double>::max(), -std::numeric_limits<double>::max(),
+                             std::numeric_limits<double>::max(), std::numeric_limits<double>::max() );
             param->setDisplayRange(0., 0., 1, 1);
             param->setUseHostNativeOverlayHandle(false);
             if (group) {
@@ -2206,7 +2229,9 @@ HSVToolPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &des
             // after the rolloff, as in the node of the same name (issue #293)
             BooleanParamDescriptor *param = desc.defineBooleanParam(kParamSetSaturation);
             param->setLabel(kParamSetSaturationLabel);
-            param->setHint(kParamSetSaturationHint);
+            param->setHint( (majorVersion >= kVersionOutputAlphaWeight) ?
+                            kParamSetSaturationHintPrefix kParamSetSaturationHintV2 kParamSetSaturationHintSuffix :
+                            kParamSetSaturationHintPrefix kParamSetSaturationHintV1 kParamSetSaturationHintSuffix );
             param->setDefault(false);
             param->setAnimates(true);
             param->setLayoutHint(eLayoutHintDivider); // last parameter in the group
@@ -2237,7 +2262,9 @@ HSVToolPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &des
             param->setDimensionLabels("", ""); // the two values have the same meaning (they just define a range)
             param->setDefault(0., 1.);
             param->setDoubleType(eDoubleTypePlain);
-            param->setRange(0., 0., DBL_MAX, DBL_MAX);
+            // negative colours have a negative brightness: the range is not limited (issue #293)
+            param->setRange( -std::numeric_limits<double>::max(), -std::numeric_limits<double>::max(),
+                             std::numeric_limits<double>::max(), std::numeric_limits<double>::max() );
             param->setDisplayRange(0., 0., 1, 1);
             param->setUseHostNativeOverlayHandle(false);
             if (group) {
@@ -2289,7 +2316,9 @@ HSVToolPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &des
             // after the rolloff, as in the node of the same name (issue #293)
             BooleanParamDescriptor *param = desc.defineBooleanParam(kParamSetBrightness);
             param->setLabel(kParamSetBrightnessLabel);
-            param->setHint(kParamSetBrightnessHint);
+            param->setHint( (majorVersion >= kVersionOutputAlphaWeight) ?
+                            kParamSetBrightnessHintPrefix kParamSetBrightnessHintV2 kParamSetBrightnessHintSuffix :
+                            kParamSetBrightnessHintPrefix kParamSetBrightnessHintV1 kParamSetBrightnessHintSuffix );
             param->setDefault(false);
             param->setAnimates(true);
             param->setLayoutHint(eLayoutHintDivider); // last parameter in the group

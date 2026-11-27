@@ -1392,6 +1392,12 @@ tests=(
     # weights by min(all), 2/3: saturation 2/3 + 2/3 * (0.2 - 2/3) = 0.35556, min 0.48333, G 0.61667.
     "HSVTool set saturation, rolloff, output hue|net.sf.openfx.HSVToolPlugin|filter|*|notidentity+mean=0.6,0.675,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none outputAlpha=1 clampBlack=0 setSaturation=1 saturationAdjustment=0.2 saturationRange=0,0.5 saturationRangeRolloff=0.5"
     "HSVTool 1 set saturation, rolloff, output hue|net.sf.openfx.HSVToolPlugin|filter|*|notidentity+mean=0.48333,0.61667,0.75,1||-m 1 -i Source=solid:0.25,0.5,0.75,1 -i Mask=none outputAlpha=1 clampBlack=0 setSaturation=1 saturationAdjustment=0.2 saturationRange=0,0.5 saturationRangeRolloff=0.5"
+    # Output Alpha = Source weights by the hue coefficient (1): the saturation is set to 0.2, alpha kept
+    "HSVTool set saturation, rolloff, output source|net.sf.openfx.HSVToolPlugin|filter|*|notidentity+mean=0.6,0.675,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none outputAlpha=0 clampBlack=0 setSaturation=1 saturationAdjustment=0.2 saturationRange=0,0.5 saturationRangeRolloff=0.5"
+    # Set Brightness -0.5 in the brightness rolloff (0.6, 0.9), Output Alpha = Brightness: weight and alpha
+    # 0.5, brightness 0.75 + 0.5 * (-0.5 - 0.75) = 0.125 (a target clamped to 0 would give 0.375), colour
+    # 1/6 times the source
+    "HSVTool set brightness negative, rolloff|net.sf.openfx.HSVToolPlugin|filter|float|notidentity+mean=0.041667,0.083333,0.125,0.5||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none outputAlpha=3 clampBlack=0 setBrightness=1 brightnessAdjustment=-0.5 brightnessRange=0.9,1.1 brightnessRangeRolloff=0.3"
     # The adjusted brightness is clamped to zero (issue #293); version 1 clamps it only with Set Brightness:
     # an offset of -1 gives the brightness -0.25, and the colour -1/3 times the source
     "HSVTool set brightness negative|net.sf.openfx.HSVToolPlugin|filter|float|notidentity+mean=0,0,0,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none outputAlpha=0 clampBlack=0 setBrightness=1 brightnessAdjustment=-0.5"
