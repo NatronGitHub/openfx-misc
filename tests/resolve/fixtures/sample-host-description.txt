@@ -1,0 +1,9 @@
+Version 21 (21.2.0.6):
+
+OFX API version 1.4
+hostName=DaVinciResolveLite
+hostLabel=DaVinci Resolve
+hostVersion=21.2.0 (21.2)
+hostIsBackground=0
+supportedContexts=OfxImageEffectContextFilter,OfxImageEffectContextGenerator
+suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite
