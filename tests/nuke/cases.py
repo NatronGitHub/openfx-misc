@@ -2666,7 +2666,7 @@ DOCUMENTED = 318
 KNOWN = {
     270: [
         # rotations: about 0.01 on the ramp (0.64 on the checker at 30
-        # degrees, none at 90), not explained yet
+        # degrees, none at 90)
         "Transform rotate 30", "Card3D rotate z 30",
         "Card3D skew x 20, rotate z 30",
         # the same, plus the soft edge of the transformed image (black
@@ -2676,8 +2676,9 @@ KNOWN = {
         # 1.2e-3 to 1.6e-3, not explained yet
         "CornerPin2D four pins", "CornerPin2D 2 pin(s) enabled",
         "CornerPin2D 3 pin(s) enabled",
-        # a shear of 1: version 1 matches (0), version 2 (Prefilter
-        # Downscaling) differs by 0.31
+        # shears: version 1 matches (0); version 2 (Prefilter Downscaling
+        # widens the kernel) differs by 0.003 (skew 0.3) and 0.31 (skew 1)
+        "Transform skewX 0.3", "Transform skewY 0.3",
         "Transform skewX 1, checker",
         # minification on a hard-edged checker, version 1 (no prefilter) /
         # version 2: 0.30 / 0.022, 0.23 / 0.014, 0.057 / 0.0020, 0.18 / 0.059
@@ -2686,9 +2687,7 @@ KNOWN = {
         "Transform Lanczos4 scale 0.5, checker (minification)",
         "CornerPin2D shrink, checker"] + [
             # a fractional translation: 0.005 to 0.016 (Lanczos4 0.028,
-            # Lanczos6 0.012, Sinc4 0.16); our kernels with the sample
-            # positions rounded to 1/64 pixel give the reference's values
-            # for Bilinear to Notch (Mitchell to 1.3e-3)
+            # Lanczos6 0.012, Sinc4 0.16), not explained yet
             "Transform filter %s, translate 0.3,0.6" % _f for _f in (
                 "Bilinear", "Cubic", "Keys", "Simon", "Rifman", "Mitchell",
                 "Parzen", "Notch", "Lanczos4", "Lanczos6", "Sinc4")],
@@ -2730,9 +2729,6 @@ KNOWN = {
         "Transform 1 cubic, scale 0.5 (minification, no prefilter)",
         "Reformat 2 scale 0.5 (no prefilter)",
         "Card3D 1 scale 0.5 (no prefilter)",
-        # a small shear (#270): Prefilter Downscaling widens the kernel,
-        # 0.003 (version 1 matches)
-        "Transform skewX 0.3", "Transform skewY 0.3",
         "Log2Lin lin2log", "ColorWheel defaults, whole disc",
         "ColorWheel gamma 1, whole disc",
         "Ramp defaults", "Transform translate 0.5,0.25 cubic, edges",
