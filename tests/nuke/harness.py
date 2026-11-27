@@ -641,10 +641,14 @@ def compare(case, nuke_results, ofx_results):
     """Compares the Nuke and openfx-misc renders of a case.
 
     NaN on both sides counts as equal; NaN on one side only is an infinite
-    difference.
+    difference, and so is an infinite value on one side only, or of
+    different signs. In the channels of "relative" (e.g. "g"), the
+    differences of values larger than 1 in magnitude are divided by the
+    Nuke value.
 
     Returns:
-        (max abs difference, where): `where` describes the worst pixel.
+        (max difference, where): the largest absolute difference (relative
+        in the "relative" channels); `where` describes the worst pixel.
 
     Raises:
         CaseError: a render is missing, or nothing was compared.
@@ -666,8 +670,14 @@ def compare(case, nuke_results, ofx_results):
                 o = ofx_values[i][CHANNEL_INDEX[c]]
                 if math.isnan(n) and math.isnan(o):
                     continue
-                d = (math.inf if math.isnan(n) or math.isnan(o)
-                     else abs(n - o))
+                if math.isnan(n) or math.isnan(o):
+                    d = math.inf
+                elif math.isinf(n) or math.isinf(o):
+                    d = 0. if n == o else math.inf
+                else:
+                    d = abs(n - o)
+                    if c in case.get("relative", ""):
+                        d /= max(1., abs(n))
                 if d > worst or where is None:
                     worst = max(worst, d)
                     where = "%sx=%d y=%d %s: Nuke %.6g, openfx-misc %.6g" % (
@@ -816,7 +826,8 @@ def run_case(nuke, prefix, case, work):
     raises PluginMissing without starting Nuke.
 
     Returns:
-        (max abs difference, where), as compare().
+        (max difference, where), as compare(): absolute, or relative in
+        the case's "relative" channels.
     """
     ofx_results = run_ofx(prefix, case, work)
     if "ofx_times" in case:

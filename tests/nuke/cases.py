@@ -51,6 +51,9 @@ Cases: CASES is a list of dicts with
   project format in Nuke, the others WIDTH x HEIGHT;
 - "channels": the compared channels, e.g. "rgb" or "rgba";
 - "tolerance": the largest accepted absolute difference;
+- "relative": the channels (e.g. "g") whose tolerance is relative for
+  values larger than 1 in magnitude (e.g. near a pole of the conversion,
+  where the float rounding of the inputs is amplified);
 - "known": the GitHub issue of a known difference that the case confirms
   (the test is an expected failure, see ISSUES); None means the outputs
   must match.
@@ -438,6 +441,42 @@ IMAGES["Aa01_box"] = dict(IMAGES["Aa01"], box=(0, 0, 16, 16))
 IMAGES["element"] = dict(IMAGES["ramp"], box=(2, 4, 12, 20))
 
 
+# The inverse of the reference's sRGB and rec709 curves (Colorspace input
+# sRGB or rec709), in Python and as a Nuke expression of v.
+def _from_srgb(v):
+    return v / 12.92 if v < 0.04045 else ((v + 0.055) / 1.055) ** 2.4
+
+
+def _from_rec709(v):
+    return v / 4.5 if v < 0.081 else ((v + 0.099) / 1.099) ** (1 / 0.45)
+
+
+_FROM_SRGB = ("(%(v)s < 0.04045 ? %(v)s / 12.92"
+              " : pow((%(v)s + 0.055) / 1.055, 2.4))")
+_FROM_REC709 = ("(%(v)s < 0.081 ? %(v)s / 4.5"
+                " : pow((%(v)s + 0.099) / 1.099, 1 / 0.45))")
+
+
+def _decoded(name, decode, expression):
+    """The image `name` with its RGB decoded to linear (alpha unchanged)."""
+    image = IMAGES[name]
+
+    def pixel(x, y):
+        r, g, b, a = image["py"](x, y)
+        return decode(r), decode(g), decode(b), a
+    return {"nuke": tuple(expression % {"v": "(%s)" % e}
+                          for e in image["nuke"][:3]) + image["nuke"][3:],
+            "py": pixel}
+
+
+# "hues" and "hues01" as linear RGB, whose sRGB (or rec709) encoding is the
+# image: with Transfer Function sRGB, the conversion of these matches the
+# reference's Colorspace with an sRGB (or rec709) input on the image (#296).
+IMAGES["hues_from_srgb"] = _decoded("hues", _from_srgb, _FROM_SRGB)
+IMAGES["hues01_from_srgb"] = _decoded("hues01", _from_srgb, _FROM_SRGB)
+IMAGES["hues01_from_rec709"] = _decoded("hues01", _from_rec709, _FROM_REC709)
+
+
 
 def case(name, nuke, ofx, **kwargs):
     """A case with the defaults: RGB compared, tolerance 1e-5, no known."""
@@ -818,39 +857,91 @@ CASES += [
          tolerance=1e-4),
     case("Posterize (Quantize) defaults", ("Posterize", {}),
          (ofx_id("Quantize"), {}), input="ramp"),
-    case("Colorspace linear to HSV (RGBToHSV)",
+    # RGBToHSV, RGBToHSL, the 709 Y'CbCr and Y'PbPr conversions and their
+    # inverses (#296). Transfer Function sRGB gives the reference's
+    # Colorspace conventions, from or to linear RGB; with an sRGB (or rec709)
+    # Colorspace input, our input is the image decoded to linear
+    # (*_from_srgb). HSV and HSL with Transfer Function None (the default)
+    # match an sRGB input, on the same image, where the conventions agree.
+    case("Colorspace linear to HSV (RGBToHSV sRGB)",
          ("Colorspace", {"colorspace_out": "HSV"}),
-         (ofx_id("RGBToHSV"), {}), input="hues01", tolerance=1e-4),
-    case("Colorspace linear to HSL (RGBToHSL)",
+         (ofx_id("RGBToHSV"), {"transferFunction": "sRGB"}), input="hues01",
+         tolerance=1e-4),
+    case("Colorspace linear to HSL (RGBToHSL sRGB)",
          ("Colorspace", {"colorspace_out": "HSL"}),
-         (ofx_id("RGBToHSL"), {}), input="hues01", tolerance=1e-4),
-    case("Colorspace linear to YCbCr (RGBToYCbCr709)",
+         (ofx_id("RGBToHSL"), {"transferFunction": "sRGB"}), input="hues01",
+         tolerance=1e-4),
+    case("Colorspace linear to YCbCr (RGBToYCbCr709 sRGB)",
          ("Colorspace", {"colorspace_out": "YCbCr"}),
-         (ofx_id("RGBToYCbCr709"), {}), input="hues01", tolerance=1e-4),
+         (ofx_id("RGBToYCbCr709"), {"transferFunction": "sRGB"}),
+         input="hues01", tolerance=1e-4),
+    case("Colorspace linear to YPbPr (RGBToYPbPr709 sRGB)",
+         ("Colorspace", {"colorspace_out": "YPbPr"}),
+         (ofx_id("RGBToYPbPr709"), {"transferFunction": "sRGB"}),
+         input="hues01", tolerance=1e-4),
     case("Colorspace sRGB to HSV (RGBToHSV)",
          ("Colorspace", {"colorspace_in": "sRGB", "colorspace_out": "HSV"}),
          (ofx_id("RGBToHSV"), {}), input="hues01", tolerance=1e-4),
     case("Colorspace sRGB to HSL (RGBToHSL)",
          ("Colorspace", {"colorspace_in": "sRGB", "colorspace_out": "HSL"}),
          (ofx_id("RGBToHSL"), {}), input="hues01", tolerance=1e-4),
-    case("Colorspace sRGB to YCbCr (RGBToYCbCr709)",
+    case("Colorspace sRGB to YCbCr (RGBToYCbCr709 sRGB)",
          ("Colorspace", {"colorspace_in": "sRGB", "colorspace_out": "YCbCr"}),
-         (ofx_id("RGBToYCbCr709"), {}), input="hues01", tolerance=1e-4),
-    case("Colorspace rec709 to YCbCr (RGBToYCbCr709)",
+         (ofx_id("RGBToYCbCr709"), {"transferFunction": "sRGB"}),
+         nuke_inputs=["hues01"], clips={"Source": "hues01_from_srgb"},
+         tolerance=1e-4),
+    case("Colorspace sRGB to YPbPr (RGBToYPbPr709 sRGB)",
+         ("Colorspace", {"colorspace_in": "sRGB", "colorspace_out": "YPbPr"}),
+         (ofx_id("RGBToYPbPr709"), {"transferFunction": "sRGB"}),
+         nuke_inputs=["hues01"], clips={"Source": "hues01_from_srgb"},
+         tolerance=1e-4),
+    case("Colorspace rec709 to YCbCr (RGBToYCbCr709 sRGB)",
          ("Colorspace", {"colorspace_in": "rec709",
                          "colorspace_out": "YCbCr"}),
-         (ofx_id("RGBToYCbCr709"), {}), input="hues01", tolerance=1e-4),
+         (ofx_id("RGBToYCbCr709"), {"transferFunction": "sRGB"}),
+         nuke_inputs=["hues01"], clips={"Source": "hues01_from_rec709"},
+         tolerance=1e-4),
+    # values outside [0, 1], negative ones included
     case("Colorspace linear to HSV, values outside [0, 1]",
          ("Colorspace", {"colorspace_out": "HSV"}),
-         (ofx_id("RGBToHSV"), {}), input="hues", tolerance=1e-4),
-    # RGBToHSV and RGBToHSL convert the values as given: they match an sRGB
-    # input (the cases with a linear input differ, #296).
+         (ofx_id("RGBToHSV"), {"transferFunction": "sRGB"}), input="hues",
+         tolerance=1e-4),
+    # S (green) goes up to about 150 near L = 1 (the pole of (max - min) /
+    # (2 - max - min)): relative tolerance for S
+    case("Colorspace linear to HSL, values outside [0, 1]",
+         ("Colorspace", {"colorspace_out": "HSL"}),
+         (ofx_id("RGBToHSL"), {"transferFunction": "sRGB"}), input="hues",
+         tolerance=1e-4, relative="g"),
+    case("Colorspace linear to YCbCr, values outside [0, 1]",
+         ("Colorspace", {"colorspace_out": "YCbCr"}),
+         (ofx_id("RGBToYCbCr709"), {"transferFunction": "sRGB"}),
+         input="hues", tolerance=1e-4),
     case("Colorspace sRGB to HSV, values outside [0, 1] (RGBToHSV)",
          ("Colorspace", {"colorspace_in": "sRGB", "colorspace_out": "HSV"}),
          (ofx_id("RGBToHSV"), {}), input="hues", tolerance=1e-4),
-    case("Colorspace sRGB to HSL, values outside [0, 1] (RGBToHSL)",
+    # Transfer Function None takes the saturation of colours outside [0, 1]
+    # from the colour clamped to [0, 1] (#399): sRGB, on the decoded image
+    case("Colorspace sRGB to HSL, values outside [0, 1] (RGBToHSL sRGB)",
          ("Colorspace", {"colorspace_in": "sRGB", "colorspace_out": "HSL"}),
-         (ofx_id("RGBToHSL"), {}), input="hues", tolerance=1e-4),
+         (ofx_id("RGBToHSL"), {"transferFunction": "sRGB"}),
+         nuke_inputs=["hues"], clips={"Source": "hues_from_srgb"},
+         tolerance=1e-4, relative="g"),
+    case("Colorspace HSV to linear (HSVToRGB sRGB)",
+         ("Colorspace", {"colorspace_in": "HSV"}),
+         (ofx_id("HSVToRGB"), {"transferFunction": "sRGB"}), input="hues01",
+         tolerance=1e-4),
+    case("Colorspace HSL to linear (HSLToRGB sRGB)",
+         ("Colorspace", {"colorspace_in": "HSL"}),
+         (ofx_id("HSLToRGB"), {"transferFunction": "sRGB"}), input="hues01",
+         tolerance=1e-4),
+    case("Colorspace YCbCr to linear (YCbCrToRGB709 sRGB)",
+         ("Colorspace", {"colorspace_in": "YCbCr"}),
+         (ofx_id("YCbCrToRGB709"), {"transferFunction": "sRGB"}),
+         input="hues01", tolerance=1e-4),
+    case("Colorspace YPbPr to linear (YPbPrToRGB709 sRGB)",
+         ("Colorspace", {"colorspace_in": "YPbPr"}),
+         (ofx_id("YPbPrToRGB709"), {"transferFunction": "sRGB"}),
+         input="hues01", tolerance=1e-4),
     case("Colorspace HSV to sRGB (HSVToRGB)",
          ("Colorspace", {"colorspace_in": "HSV", "colorspace_out": "sRGB"}),
          (ofx_id("HSVToRGB"), {}), input="hues01", tolerance=1e-4),
@@ -2396,10 +2487,12 @@ CASES += [
     _contact_sheet("1x2 cells, scale 2, center", 128, 70, 1, 2,
                    ["ramp", "checker"], center=True),
     _contact_sheet("1x1 cell, scale 29/32", 29, 29, 1, 1, ["checker"]),
-    # A magnification by 2.4 differs by about 1% of the checker contrast
-    # (the scales 0.5, 29/32, 1 and 2 match).
-    _contact_sheet("1x1 cell, scale 2.4", 77, 77, 1, 1, ["checker"],
-                   known=305),
+    # magnifications other than by 2: the filter phase is rounded to 1/64
+    # of an input pixel (#305)
+    _contact_sheet("1x1 cell, scale 2.4", 77, 77, 1, 1, ["checker"]),
+    _contact_sheet("1x1 cell, scale 1.25", 40, 40, 1, 1, ["checker"]),
+    _contact_sheet("1x2 cells, scale 1.59, center", 102, 60, 1, 2,
+                   ["ramp", "checker"], center=True),
 ]
 
 # ------------------------------------------------------------ ReConverge
@@ -2523,16 +2616,6 @@ KNOWN = {
         # extra pixel (Rectangle), and Quadratic by default
         "Radial 2 area 100,100-600,476 softness 1", "Radial 2 softness 0.3, plinear",
         "Rectangle 2 softness 40"],
-    296: [
-        "Colorspace linear to HSV (RGBToHSV)",
-        "Colorspace linear to HSL (RGBToHSL)",
-        "Colorspace linear to YCbCr (RGBToYCbCr709)",
-        "Colorspace sRGB to YCbCr (RGBToYCbCr709)",
-        "Colorspace rec709 to YCbCr (RGBToYCbCr709)",
-        "Colorspace linear to HSV, values outside [0, 1]",
-        # the saturation of colours outside [0, 1] is from the colour
-        # clamped to [0, 1] (#399): it differs there
-        "Colorspace sRGB to HSL, values outside [0, 1] (RGBToHSL)"],
     # the reference's Undistort is not the exact inverse of its Redistort:
     # its forward map differs by 0.02 to 0.1 pixel away from the corners, and
     # by pixels near them (see the STMap case)

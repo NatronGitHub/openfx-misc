@@ -383,6 +383,27 @@ filterRadius(double scale)
     return (std::max)(1., 1. / scale);
 }
 
+// When magnifying, the filter phase (the position of a sample between two input pixel centres) is
+// rounded to 1/kFilterPhases of an input pixel, which matches the tests/nuke reference (a
+// magnification by 2.4 differed by about 1% of the contrast without it). Minifications use the
+// exact positions.
+constexpr double kFilterPhases = 64.;
+
+// The position u (in input pixel coordinates: input pixel j covers [j, j + 1)) at which a sample
+// is filtered, for scale output pixels per input pixel.
+inline double
+filterPosition(double u,
+               double scale)
+{
+    if ( !(scale > 1.) ) {
+        return u;
+    }
+    const double c = u - 0.5; // from the centre of input pixel 0
+    const double j = std::floor(c);
+
+    return j + std::floor( (c - j) * kFilterPhases + 0.5 ) / kFilterPhases + 0.5;
+}
+
 // The filter taps of n output samples along one axis: sample i reads the input pixels
 // index[offset[i]] to index[offset[i + 1] - 1], with the weights weight[...]. Only the input
 // pixels in [lo, hi) and with a non-zero weight are taps (so that a NaN at a zero weight does not
@@ -395,7 +416,7 @@ struct FilterTaps
     std::vector<float> weight;
 };
 
-// The taps of the output samples whose centres are at u0 + i / scale (i in [0, n)), in input pixel
+// The taps of the output samples whose centres are at u0 + i / scale (i in [0, n); see filterPosition()), in input pixel
 // coordinates (input pixel j covers [j, j + 1)), for scale output pixels per input pixel.
 inline FilterTaps
 filterTaps(double u0,
@@ -409,7 +430,7 @@ filterTaps(double u0,
     taps.offset.push_back(0);
     const double r = filterRadius(scale);
     for (int i = 0; i < n; ++i) {
-        const double u = u0 + i / scale;
+        const double u = filterPosition(u0 + i / scale, scale);
         if (std::fabs(u) < 1e9) { // else too far (or NaN): no tap
             const int j1 = static_cast<int>( std::floor(u - r - 0.5) );
             const int j2 = static_cast<int>( std::ceil(u + r - 0.5) );

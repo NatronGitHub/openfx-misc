@@ -91,7 +91,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //      left and bottom sides (it was half the gap on each side, in cells that divide the output evenly); the
 //      image is at its exact (sub-pixel) place, resampled with the cubic filter (it was box-filtered into whole
 //      pixels); the output pixel aspect ratio is 1 on hosts that support multiple clip PARs (it was the one of
-//      the inputs), and the inputs may have different PARs. The tests/nuke cases of ContactSheet match.
+//      the inputs), and the inputs may have different PARs. When an image is magnified, the filter phase is
+//      rounded to 1/64 of an input pixel (a magnification by 2.4 differed by about 1% of the contrast). The
+//      tests/nuke cases of ContactSheet match.
 // 1.1: (unreleased) the Snake column order, the Center Rows option, and the hints that say how the cells are placed;
 //      a click with Enable Selection sets Selection Frame to first + the frame index, as the overlay reads it
 //      (it was the frame index alone, so the highlighted cell was not the clicked one unless Frame Range starts at 0);

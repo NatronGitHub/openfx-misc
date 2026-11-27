@@ -773,6 +773,39 @@ tests=(
     "RGBToHSV as given|net.sf.openfx.RGBToHSV|filter|float|tol=1e-5+mean=0.2777778,0.75,0.5,1||-i Source=solid:0.25,0.5,0.125,1"
     "RGBToYCbCr709 white|net.sf.openfx.RGBToYCbCr709|filter|float|tol=1e-5+mean=0.921745,0.5009608,0.5019608,1||-i Source=solid:1,1,1,1"
     "RGBToYCbCr601 grey|net.sf.openfx.RGBToYCbCr601|filter|float|tol=1e-5+mean=0.6944167,0.5019608,0.5019608,1||-i Source=solid:0.5,0.5,0.5,1"
+    # the default Transfer Function (None, Rec.709) keeps the output: Y'PbPr 709 from the primaries
+    # (Kr 0.2126390058, Kb 0.07219231534), Rec.709 OETF; the inverses give the colours back
+    "RGBToYPbPr709 blue|net.sf.openfx.RGBToYPbPr709|filter|float|tol=1e-5+mean=0.0721923,0.5,-0.0458445,1||-i Source=solid:0,0,1,1"
+    "YPbPrToRGB709 blue|net.sf.openfx.YPbPrToRGB709|filter|float|tol=1e-5+mean=0,0,1,1||-i Source=solid:0.0721923,0.5,-0.0458445,1"
+    "HSVToRGB as given|net.sf.openfx.HSVToRGB|filter|float|tol=1e-5+mean=0.25,0.5,0.125,1||-i Source=solid:0.2777778,0.75,0.5,1"
+    # Transfer Function sRGB (= 1): the conventions of the tests/nuke reference's Colorspace (#296). Linear
+    # RGB is sRGB-encoded first: (0.25,0.5,0.125) -> R'G'B' (0.5370987,0.7353570,0.3896757)
+    "RGBToHSV sRGB|net.sf.openfx.RGBToHSV|filter|float|tol=1e-5+mean=0.2619509,0.4715861,0.7353570,1||-i Source=solid:0.25,0.5,0.125,1 transferFunction=1"
+    "RGBToHSL sRGB|net.sf.openfx.RGBToHSL|filter|float|tol=1e-5+mean=0.2619509,0.3958406,0.5619649,1||-i Source=solid:0.25,0.5,0.125,1 transferFunction=1"
+    # max + min < 0: R'G'B' (-0.5,-0.25,0.25) is converted negated, (0.5,0.25,-0.25): H 1/9, S 0.75/0.5,
+    # V -0.5; HSVToRGB inverts it
+    "RGBToHSV sRGB negative|net.sf.openfx.RGBToHSV|filter|float|tol=1e-5+mean=0.1111111,1.5,-0.5,1||-i Source=solid:-0.03869969,-0.01934985,0.05087609,1 transferFunction=1"
+    "HSVToRGB sRGB negative|net.sf.openfx.HSVToRGB|filter|float|tol=1e-5+mean=-0.03869969,-0.01934985,0.05087609,1||-i Source=solid:0.1111111,1.5,-0.5,1 transferFunction=1"
+    # the saturation is not clamped: R'G'B' (1.5,1.2,0.8): L 1.15, S 0.7 / (2 - 2.3)
+    "RGBToHSL sRGB above 1|net.sf.openfx.RGBToHSL|filter|float|tol=1e-5+mean=0.0952381,-2.3333333,1.15,1||-i Source=solid:2.537155,1.516837,0.6038273,1 transferFunction=1"
+    "HSLToRGB sRGB above 1|net.sf.openfx.HSLToRGB|filter|float|tol=1e-5+mean=2.537155,1.516837,0.6038273,1||-i Source=solid:0.0952381,-2.3333333,1.15,1 transferFunction=1"
+    # a negated colour whose L is below -0.5: R'G'B' (-2,-1,0.5) is converted as (2,1,-0.5), H 0.1, L -0.75,
+    # and S is chosen by the signed L: 2.5 / (2 + -0.5), not 2.5 / (2 - 1.5); HSLToRGB inverts it
+    "RGBToHSL sRGB negated L < -0.5|net.sf.openfx.RGBToHSL|filter|float|tol=1e-5+mean=0.1,1.6666667,-0.75,1||-i Source=solid:-0.1547988,-0.07739938,0.2140411,1 transferFunction=1"
+    "HSLToRGB sRGB negated L < -0.5|net.sf.openfx.HSLToRGB|filter|float|tol=1e-5+mean=-0.1547988,-0.07739938,0.2140411,1||-i Source=solid:0.1,1.6666667,-0.75,1 transferFunction=1"
+    # an infinite R' (12.92 * -3e38 overflows): S is 1 and H 0, not inf / inf (NaN); V and L are infinite,
+    # so there is no mean, but a NaN pixel fails the render
+    "RGBToHSV sRGB infinite|net.sf.openfx.RGBToHSV|filter|float|comps=RGBA||-i Source=solid:-3e38,0.5,0,1 transferFunction=1"
+    "RGBToHSL sRGB infinite|net.sf.openfx.RGBToHSL|filter|float|comps=RGBA||-i Source=solid:-3e38,0.5,0,1 transferFunction=1"
+    # Y'CbCr and Y'PbPr 709 with Transfer Function sRGB: the exact BT.709 matrix, Cb and Cr centred on 0.5;
+    # white -> Y' 235/255; grey 0.5 -> 16/255 + 219/255 * 0.7353570; the sRGB encoding continues below 0
+    "RGBToYCbCr709 sRGB white|net.sf.openfx.RGBToYCbCr709|filter|float|tol=1e-5+mean=0.9215686,0.5,0.5,1||-i Source=solid:1,1,1,1 transferFunction=1"
+    "RGBToYCbCr709 sRGB grey|net.sf.openfx.RGBToYCbCr709|filter|float|tol=1e-5+mean=0.6942870,0.5,0.5,1||-i Source=solid:0.5,0.5,0.5,1 transferFunction=1"
+    "RGBToYCbCr709 sRGB negative|net.sf.openfx.RGBToYCbCr709|filter|float|tol=1e-5+mean=-0.0048523,0.8853748,-0.8974637,1||-i Source=solid:-0.2,0.3,0.5,1 transferFunction=1"
+    "YCbCrToRGB709 sRGB grey|net.sf.openfx.YCbCrToRGB709|filter|float|tol=1e-5+mean=0.5,0.5,0.5,1||-i Source=solid:0.6942870,0.5,0.5,1 transferFunction=1"
+    "YCbCrToRGB709 sRGB negative|net.sf.openfx.YCbCrToRGB709|filter|float|tol=1e-5+mean=-0.2,0.3,0.5,1||-i Source=solid:-0.0048523,0.8853748,-0.8974637,1 transferFunction=1"
+    "RGBToYPbPr709 sRGB blue|net.sf.openfx.RGBToYPbPr709|filter|float|tol=1e-5+mean=0.0722,0.5,-0.0458471,1||-i Source=solid:0,0,1,1 transferFunction=1"
+    "YPbPrToRGB709 sRGB blue|net.sf.openfx.YPbPrToRGB709|filter|float|tol=1e-5+mean=0,0,1,1||-i Source=solid:0.0722,0.5,-0.0458471,1 transferFunction=1"
     # degenerate inputs that used to give NaN (or inf) pixels, which check() rejects. Grade:
     # gamma 0 maps values above 1 to FLT_MAX (was +inf), premultiplied by alpha 0 (was NaN).
     "Grade gamma 0 alpha 0|net.sf.openfx.GradePlugin|filter|*|mean=0,0,0,0||-i Source=solid:2,0.5,1,0 -i Mask=none gamma=0,0,0,0 premult=1"
@@ -1692,6 +1725,9 @@ tests=(
     "ContactSheet gap image|net.sf.openfx.ContactSheetOFX|filter|float|mean=1,1,1,1||-i Source=solid:1,1,1,1${cs_none1} resolution=64,64 rowsColumns=2,2 gap=8 --frames 0 --window 10,12,14,16"
     # the same at render scale 0.5 (the image is x 4 to 14, y 4 to 12 there), which checks the RoI
     "ContactSheet gap image scale 0.5|net.sf.openfx.ContactSheetOFX|filter|float|mean=1,1,1,1||-i Source=solid:1,1,1,1${cs_none1} resolution=64,64 rowsColumns=2,2 gap=8 --frames 0 --scale 0.5 --window 6,6,12,10"
+    # magnified by 2.4 (the 720x576 checker:1 fits 1728 pixels): the filter phase is rounded to 1/64 of an
+    # input pixel (#305), which gives 0.1911 at (42, 42) (0.1991 without the rounding)
+    "ContactSheet magnified 2.4|net.sf.openfx.ContactSheetOFX|filter|float|tol=0.002+mean=0.1911,0.1911,0.1911,0.1911||-i Source=checker:1${cs_none1} resolution=1728,1383 rowsColumns=1,1 --frames 0 --window 42,42,43,43"
     "ContactSheet 1 gap|net.sf.openfx.ContactSheetOFX|filter|float|mean=1,1,1,1||-m 1 -i Source=solid:1,1,1,1${cs1_none1} resolution=64,64 rowsColumns=2,2 gap=8 --frames 0 --window 4,12,8,16"
     # input 10 (#401): 4x4 cells of 32x32 pixels, top to bottom: input 10 is in the third row from the
     # top (y 32 to 64) and the third column (x 64 to 96). Its clip is "10" in ContactSheet 2, "01" in 1.
