@@ -45,8 +45,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "so they are in the colour encoding of the input of the forward conversion."
 // the Transfer Function parameter (see kParamTransferFunction)
 #define kTransferHSVHSLNote \
-    "This is Transfer Function None, the default. With Transfer Function sRGB, the conversion follows the conventions of the reference host's colorspace conversion from linear RGB: " \
-    "linear RGB is encoded with the sRGB transfer function (IEC 61966-2-1, continued below 0 by its linear segment and above 1 by its power curve), " \
+    "This is Transfer Function None, the default. With Transfer Function sRGB, linear RGB is encoded with the sRGB transfer function (IEC 61966-2-1) without clamping: " \
+    "it is continued below 0 by its linear segment and above 1 by its power curve; " \
     "the colours whose largest and smallest components add up to less than 0 are converted negated, with a negative V or L, " \
     "and the HSL saturation is (max - min) / (max + min) where L <= 0.5, (max - min) / (2 - max - min) elsewhere, not clamped " \
     "(the formula is chosen by the signed L; S is 1, and H 0, where they are not finite or 1/0)."
@@ -54,9 +54,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "This is Transfer Function None, the default. With Transfer Function sRGB, the result is decoded to linear RGB with the inverse of the sRGB transfer function " \
     "(continued below 0 and above 1): the inverse of the forward conversion with Transfer Function sRGB."
 #define kTransfer709Note \
-    "With Transfer Function sRGB (Rec.709 is the default), the conversion follows the conventions of the reference host's colorspace conversion from linear RGB: " \
-    "linear RGB is encoded with the sRGB transfer function (IEC 61966-2-1, continued below 0 by its linear segment and above 1 by its power curve, no clamping), " \
-    "the matrix is Y' = 0.2126 R' + 0.7152 G' + 0.0722 B', Pb = (B' - Y') / 1.8556, Pr = (R' - Y') / 1.5748"
+    "With Transfer Function sRGB (Rec.709 is the default), linear RGB is encoded with the sRGB transfer function (IEC 61966-2-1) without clamping: " \
+    "it is continued below 0 by its linear segment and above 1 by its power curve; " \
+    "the matrix is the exact BT.709 one, Y' = 0.2126 R' + 0.7152 G' + 0.0722 B', Pb = (B' - Y') / 1.8556, Pr = (R' - Y') / 1.5748"
 #define kTransfer709YCbCrNote kTransfer709Note \
     ", and Y'CbCr is Y' = 16/255 + (219/255) Y'(0-1), Cb = 0.5 + (224/255) Pb, Cr = 0.5 + (224/255) Pr (Cb and Cr centred on 0.5, not 128/255)."
 #define kTransfer709ToRGBNote \
@@ -285,10 +285,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamTransferFunctionLabel "Transfer Function"
 #define kParamTransferFunctionHint \
     "The conventions of the conversion. The default keeps the ones in the description; sRGB gives the conventions " \
-    "of the reference host's colorspace conversion from (or to) linear RGB, with the sRGB transfer function (see the description)."
+    "for linear RGB with the sRGB transfer function without clamping: for HSV and HSL, negated colours where max + min < 0 and an unclamped HSL saturation; for the 709 conversions, the exact BT.709 matrix and Cb/Cr centred on 0.5 (see the description)."
 #define kParamTransferFunctionOptionNone "None", "RGB is converted as given (the conventions in the description).", "none"
 #define kParamTransferFunctionOptionRec709 "Rec.709", "Linear RGB and R'G'B' are related by the Rec.709 transfer function (the conventions in the description).", "rec709"
-#define kParamTransferFunctionOptionSRGB "sRGB", "Linear RGB and R'G'B' are related by the sRGB transfer function, with the conventions of the reference host's colorspace conversion (see the description).", "srgb"
+#define kParamTransferFunctionOptionSRGB "sRGB", "Linear RGB and R'G'B' are related by the sRGB transfer function, without clamping, with the conventions in the description for this option.", "srgb"
 
 enum TransferFunctionEnum
 {
