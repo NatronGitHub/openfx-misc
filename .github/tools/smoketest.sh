@@ -447,9 +447,13 @@ fi
 gpu_ok=0
 if [ "$gl_ok" = 1 ]; then
     # (under the render timeout: a stuck OpenGL initialization fails like a stuck render)
+    probe_status=0
     probe=$(cd "$work" && export OFX_PLUGIN_PATH=$work/path/none && run_with_timeout "$SMOKETEST_TIMEOUT" "$HOSTDEMO" \
-                --no-std-paths --no-cache --quiet --gpu=opengl -p smoketest.probe 2>&1) || true
-    if printf '%s\n' "$probe" | grep -q -e '--gpu' || ! printf '%s\n' "$probe" | grep -q 'not found'; then
+                --no-std-paths --no-cache --quiet --gpu=opengl -p smoketest.probe 2>&1) || probe_status=$?
+    if [ "$probe_status" = 142 ]; then
+        echo "note: the --gpu=opengl probe of $HOSTDEMO timed out: the OPENGL plug-ins are not rendered with OpenGL"
+        echo "  | timeout: killed after ${SMOKETEST_TIMEOUT}s"
+    elif printf '%s\n' "$probe" | grep -q -e '--gpu' || ! printf '%s\n' "$probe" | grep -q 'not found'; then
         echo "note: $HOSTDEMO does not render with OpenGL here (--gpu=opengl): the OPENGL plug-ins are not rendered with OpenGL"
         printf '%s\n' "$probe" | grep -e '--gpu' | sed 's/^/  | /' || true
     else

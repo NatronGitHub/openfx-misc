@@ -144,15 +144,15 @@ describeFalloffParam(ImageEffectDescriptor& desc,
     param->setLabel(kParamShapeFalloffLabel);
     param->setHint(kParamShapeFalloffHint);
     // in the order of kFalloffCurves
-    assert(kFalloffCurves[param->getNOptions()] == OfxsCurveEnum::eQuadratic);
+    assert(param->getNOptions() < kFalloffCurveCount && kFalloffCurves[param->getNOptions()] == OfxsCurveEnum::eQuadratic);
     param->appendOption(kParamShapeFalloffOptionQuadratic);
-    assert(kFalloffCurves[param->getNOptions()] == OfxsCurveEnum::eLinear);
+    assert(param->getNOptions() < kFalloffCurveCount && kFalloffCurves[param->getNOptions()] == OfxsCurveEnum::eLinear);
     param->appendOption(kParamShapeFalloffOptionLinear);
-    assert(kFalloffCurves[param->getNOptions()] == OfxsCurveEnum::eSmooth0);
+    assert(param->getNOptions() < kFalloffCurveCount && kFalloffCurves[param->getNOptions()] == OfxsCurveEnum::eSmooth0);
     param->appendOption(kParamShapeFalloffOptionSmooth0);
-    assert(kFalloffCurves[param->getNOptions()] == OfxsCurveEnum::eSmooth1);
+    assert(param->getNOptions() < kFalloffCurveCount && kFalloffCurves[param->getNOptions()] == OfxsCurveEnum::eSmooth1);
     param->appendOption(kParamShapeFalloffOptionSmooth1);
-    assert(kFalloffCurves[param->getNOptions()] == OfxsCurveEnum::eSmooth);
+    assert(param->getNOptions() < kFalloffCurveCount && kFalloffCurves[param->getNOptions()] == OfxsCurveEnum::eSmooth);
     param->appendOption(kParamShapeFalloffOptionSmooth);
     assert(param->getNOptions() == kFalloffCurveCount);
     param->setDefault( falloffOptionOfCurve(defaultCurve) );
