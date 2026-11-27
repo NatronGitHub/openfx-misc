@@ -2066,8 +2066,8 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
                 } else if (_lensBehaviour == LensBehaviour::eV5) {
                     // version 5: transparent black where the model has no inverse (the solver did not converge):
                     // no source position maps to this output pixel, so there is nothing to sample. This only
-                    // happens with extreme distortion (beyond a fold of the model, e.g. a strong K2, or a Scale
-                    // of 0.5 with a Twist, near the corners), which real lenses and projects do not use.
+                    // happens with extreme parameters (beyond a fold of the model, e.g. a strong K2, or a Scale
+                    // of 0.5 with a Twist, near the corners).
                     noInverse = !_distortionModel->distortConverged(x + 0.5, y + 0.5, &sx, &sy);
                 } else {
                     _distortionModel->distort( x + 0.5,
@@ -2140,8 +2140,8 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
             // Without a blur, the footprint that stretches the filter where it is wider than one pixel
             // (where the map minifies): the model's (LensDistortion 5), or the UV derivatives' (IDistort and
             // STMap 3). Impulse stays a point sample.
-            const bool uvFootprint = v3 && !blurred && (filter != eFilterImpulse) &&
-                                     (plugin == eDistortionPluginSTMap || plugin == eDistortionPluginIDistort);
+            const bool uvPlugin = (plugin == eDistortionPluginSTMap || plugin == eDistortionPluginIDistort);
+            const bool uvFootprint = v3 && !blurred && (filter != eFilterImpulse) && uvPlugin;
             const Jacobian &F = modelFootprint ? M : J;
             // the widths of the separable kernel (in source pixels): the blurred footprint (IDistort and
             // STMap 3 with a blur), or the unblurred footprint above
@@ -2154,8 +2154,7 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
                 wy = separableKernelWidth(F.yy, F.yx, 0., maxWidth);
             }
             const bool stretched = (modelFootprint || uvFootprint) && !separableBlur && ( (wx > 1.) || (wy > 1.) ) && _srcImg;
-            if ( (_uvBehaviour == eUVBehaviourV3) && _unpremultUV && (a == 0.) &&
-                 (plugin == eDistortionPluginSTMap || plugin == eDistortionPluginIDistort) ) {
+            if ( (_uvBehaviour == eUVBehaviourV3) && _unpremultUV && (a == 0.) && uvPlugin ) {
                 // premultiplied UV with a zero alpha: no UV (version 2 multiplies by the alpha, which also
                 // gives transparent black)
                 std::fill(tmpPix, tmpPix + 4, 0.f);

@@ -1477,6 +1477,7 @@ tests=(
     "STMap minify|net.sf.openfx.STMap|general|float|range=0.45,0.55||-i Source=checker:1 -i UV=ramp -i Mask=none uvScale=3.3,1 --frames 0 --window 50,250,150,260"
     "STMap minify tile|net.sf.openfx.STMap|general|float|nonconst+tile||-i Source=checker:3 -i UV=ramp -i Mask=none uvScale=3.3,1 filter=Keys --frames 0 --window 60,200,160,300"
     "IDistort minify|net.sf.openfx.IDistort|general|float|range=0.45,0.55||-i Source=checker:1 -i UV=ramp -i Mask=none uvScale=1650,0 --frames 0 --window 50,250,150,260"
+    "IDistort minify tile|net.sf.openfx.IDistort|general|float|nonconst+tile||-i Source=checker:3 -i UV=ramp -i Mask=none uvScale=1650,300 filter=Keys --frames 0 --window 60,200,160,300"
     # IDistort 3.0 takes U in square pixels: U = 4 moves by 4/PAR = 3.75 pixels along x, so with the
     # Bilinear filter (filter=2) pixel 60 samples x = 64.25, 0.75 white; version 2 samples 64.5, white
     "IDistort U square pixels|net.sf.openfx.IDistort|general|float|mean=0.75,0.75,0.75,0.75||-i Source=checker:64 -i UV=solid:4,0,0,1 -i Mask=none filter=2 --frames 0 --window 60,10,61,11"
