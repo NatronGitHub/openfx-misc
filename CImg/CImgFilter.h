@@ -29,6 +29,7 @@
 #define PLUGIN_PACK_GPL2 // include GPL2 plugins by default
 
 #include <cassert>
+#include <cmath> // floor, abs
 #include <memory>
 #include <algorithm> // max
 
@@ -144,6 +145,16 @@ private:
     OFX::ImageEffect* _prev;
 };
 
+
+// The radius in pixels of a (signed) size in pixels at a render scale, rounded half away from zero: 0.5 is a
+// radius of 1 (ErodeCImg/DilateCImg 3, MedianCImg 3). The rounding happens after the scaling, so a small size
+// is relatively stronger at a proxy scale.
+inline int
+cimgRadius(double size,
+           double renderScale)
+{
+    return (int)std::floor(std::abs(size) * renderScale + 0.5);
+}
 
 // set *dst to rect, enlarged by dx pixels on the left and right sides and dy pixels on the bottom and top sides
 // (dst may be &rect)

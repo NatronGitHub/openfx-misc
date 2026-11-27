@@ -2000,6 +2000,11 @@ CASES += [
          ("Dilate", {"size": [-1, 2]}),
          (CIMG + "CImgDilate", {"size": [-1, 2]}), input="hash",
          channels="rgba"),
+    # Version 3 filters premultiplied inputs as they are (no unpremult).
+    case("Dilate size 1.5 on premultiplied input (DilateCImg 1.5)",
+         ("Dilate", {"size": 1.5}),
+         (CIMG + "CImgDilate", {"size": [1.5, 1.5]}), input="premult",
+         channels="rgba"),
     # Version 2 (obsolete): integer sizes, in pixels (1.5 is (1, 2)).
     case("Dilate size 1.5 (DilateCImg 2: 1, 2)", ("Dilate", {"size": 1.5}),
          (CIMG + "CImgDilate", {"size": [1, 2]}), input="impulse",
@@ -2052,14 +2057,17 @@ CASES += [
     case("Median size 0 (MedianCImg 0)", ("Median", {"size": 0}),
          (CIMG + "CImgMedian", {"size": [0, 0]}), input="hash",
          channels="rgb", nuke_par=1),
-    case("Median size 3 on an impulse", ("Median", {}),
-         (CIMG + "CImgMedian", {}), input="impulse", channels="rgb"),
     # With non-square pixels too, the radius is in pixels, in x and y.
     case("Median size 3, PAR 1.07 (MedianCImg 3)", ("Median", {}),
          (CIMG + "CImgMedian", {}), input="hash", channels="rgb"),
-    case("Median size 2.5, PAR 1.07 (MedianCImg 2.5)", ("Median", {"size": 2.5}),
+    case("Median size 2.5, PAR 1.07 (MedianCImg 2.5)",
+         ("Median", {"size": 2.5}),
          (CIMG + "CImgMedian", {"size": [2.5, 2.5]}), input="hash",
          channels="rgb"),
+    case("Median defaults on premultiplied input (MedianCImg defaults)",
+         ("Median", {"channels": "rgba"}),
+         (CIMG + "CImgMedian", {"NatronOfxParamProcessA": 1}),
+         input="premult", channels="rgba"),
     # MedianCImg 2 (obsolete): one integer radius, default 1 (a 3x3 box), and
     # a smaller box at the image borders (compared away from them).
     case("Median size 1 (MedianCImg 2 defaults)", ("Median", {"size": 1}),
@@ -2689,11 +2697,8 @@ KNOWN = {
         "IDistort uv = rgb, blur = blue",
         "IDistort uv = rgb, blur = blue, blur scale 4",
         "STMap uv = rgb, blur = blue (1), blur scale 3"],
-    # ErodeBlur: the reference blurs with a FIR Gaussian of size
-    # max(2|size|, |size| + 1) and remaps the values with two thresholds
-    # that depend on size and blur (not derived yet); ErodeBlurCImg blurs
-    # with a triangle filter. ErodeSmoothCImg is a power-weighted smooth
-    # min/max, FilterErode a min/max over a weighted structuring element.
+    # ErodeBlurCImg and ErodeSmoothCImg are other filters than the reference
+    # nodes (see #315).
     315: [
         "Erode (blur) defaults (ErodeBlur)",
         "Erode (blur) size -3, blur 0.5 (ErodeBlur -3)",

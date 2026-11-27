@@ -80,8 +80,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 2.2: NaN/inf-safe premultiply (SupportExt #73, #79)
 // version 3.0: the default size is 0 (no change), as in the reference; the size is fractional, in canonical
 //              units: each radius is the size (x: divided by the pixel aspect ratio) rounded half away from 0;
-//              no unpremultiplication by default; version 2 (default size 1, integer sizes) is kept for
-//              backward compatibility
+//              pixels outside the source get the value of the nearest pixel; no unpremultiplication by default;
+//              version 2 (default size 1, integer sizes) is kept for backward compatibility
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 #define kPluginVersionMajorOld 2 // version 2, kept for backward compatibility
@@ -110,7 +110,8 @@ constexpr unsigned int kPluginVersionFractionalSize = 3;
 #define kParamSizeLabel "Size"
 #define kParamSizeHint "Size of the rectangular structuring element, in canonical units (x is in pixels times the pixel " \
     "aspect ratio PAR). Each radius r is the size rounded half away from zero (x: divided by the PAR first), and the " \
-    "structuring element is 2*r+1 pixels wide; e.g. 1.5 with a PAR of 1.0667 is a radius of 1 in x, 2 in y."
+    "structuring element is 2*r+1 pixels wide; e.g. 1.5 with a PAR of 1.0667 is a radius of 1 in x, 2 in y. The radius is " \
+    "rounded after scaling to the render scale, so a small size is relatively stronger at a proxy scale."
 #define kParamSizeHintOld "Width/height of the rectangular structuring element is 2*size+1, in pixel units (>=0). " \
     "For a single fractional size s in canonical units (canonical x is pixel x times the pixel aspect ratio PAR), use " \
     "round(s/PAR) for x and round(s) for y: e.g. s = 1.5 with PAR = 1.0667 is (1, 2)."
@@ -242,15 +243,18 @@ public:
         return (std::floor(params.sx * args.renderScale.x) == 0 && std::floor(params.sy * args.renderScale.y) == 0);
     };
 
+    // version 3: pixels outside the source get the value of the nearest pixel (inside the image, CImg's erode()
+    // and dilate() do the same), so that a dilation of negative values or an erosion near the edge of the
+    // expanded RoD does not see black; version 2: black, as it was
+    virtual int getBoundary(const CImgErodeDilateParams& /*params*/) OVERRIDE FINAL { return _fractionalSize ? 1 : 0; }
+
 private:
     // The radius in pixels of the structuring element for a signed size in pixels: version 3 rounds half away
     // from zero (a size of 0.5 is a radius of 1), version 2 rounds down.
     int radius(double size,
                double renderScale) const
     {
-        const double r = std::abs(size) * renderScale;
-
-        return (int)( _fractionalSize ? std::floor(r + 0.5) : std::floor(r) );
+        return _fractionalSize ? cimgRadius(size, renderScale) : (int)std::floor(std::abs(size) * renderScale);
     }
 
     // The padding of the RoI and RoD: the radius (version 2: rounded up, as it was)

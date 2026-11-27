@@ -1232,6 +1232,12 @@ tests=(
     "CImgMedian impulse|net.sf.cimg.CImgMedian|filter|float|mean=0,0,0,1||-i Source=file:impulse.pfm -i Mask=none size=0,1 --frames 0 --window 32,24,33,25"
     "CImgMedian size 0.4|net.sf.cimg.CImgMedian|filter|float|identity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none size=0.4,0.4"
     "CImgMedian tile|net.sf.cimg.CImgMedian|filter|float|nonconst+tile||-i Source=checker:8 -i Mask=none size=3,1 threshold=0.5 --frames 0 --window 100,100,300,250"
+    # at render scale 0.5, the radii are the scaled sizes rounded half up (size 3,1: 2,1; ErodeCImg 2.5,-1.5:
+    # 1,1 after the PAR); tiles must render as the full image
+    "CImgMedian scale 0.5 tile|net.sf.cimg.CImgMedian|filter|float|nonconst+tile||-i Source=checker:8 -i Mask=none size=3,1 --scale 0.5 --frames 0 --window 50,50,150,125"
+    "CImgErode scale 0.5 tile|net.sf.cimg.CImgErode|filter|float|nonconst+tile||-i Source=checker:8 -i Mask=none size=2.5,-1.5 --scale 0.5 --frames 0 --window 50,50,150,125"
+    # (no NaN or infinite input: hostDemo rejects non-finite solids and PFM files; the MedianCImg history
+    # comment documents NaNs)
     "CImgMedian 2 defaults|net.sf.cimg.CImgMedian|filter|float|notidentity+changed:Source||-m 2 -i Source=file:impulse.pfm -i Mask=none"
     "CImgMedian 2 size 1 impulse|net.sf.cimg.CImgMedian|filter|float|mean=0,0,0,1||-m 2 -i Source=file:impulse.pfm -i Mask=none --frames 0 --window 32,24,33,25"
     # EdgeExtend merges the image over its blurred version even when the size is too small to blur:
