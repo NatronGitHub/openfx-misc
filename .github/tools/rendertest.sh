@@ -1051,7 +1051,29 @@ tests=(
     # Prefilter Downscaling (#270): a 1-pixel checker scaled by 0.4 aliases with the default
     # supersampling (0.474 to 0.526); with the kernel widened by 2.5, it is uniform grey (0.4996 to 0.5004)
     "Transform prefilter scale 0.4 checker|net.sf.openfx.TransformPlugin|filter|float|range=0.499,0.501||-i Source=checker:1 scale=0.4,0.4 prefilter=1 --frames 0 --window 300,250,340,290"
-    "Transform no prefilter scale 0.4 checker|net.sf.openfx.TransformPlugin|filter|float|tol=0.005+max=0.5263,0.5263,0.5263,0.5263||-i Source=checker:1 scale=0.4,0.4 --frames 0 --window 300,250,340,290"
+    "Transform no prefilter scale 0.4 checker|net.sf.openfx.TransformPlugin|filter|float|tol=0.005+max=0.5263,0.5263,0.5263,0.5263||-i Source=checker:1 scale=0.4,0.4 prefilter=0 --frames 0 --window 300,250,340,290"
+    # Prefilter Downscaling is on by default in Transform 2, TransformMasked 2, CornerPin 2,
+    # CornerPinMasked 2, Card3D 2 and Reformat 3, and off in their previous major versions and DirBlur (#270)
+    "Transform default prefilter scale 0.4 checker|net.sf.openfx.TransformPlugin|filter|float|range=0.499,0.501+value:prefilter=1||-i Source=checker:1 scale=0.4,0.4 --frames 0 --window 300,250,340,290"
+    "Transform 1 default no prefilter scale 0.4 checker|net.sf.openfx.TransformPlugin|filter|float|tol=0.005+max=0.5263,0.5263,0.5263,0.5263+value:prefilter=0||-m 1 -i Source=checker:1 scale=0.4,0.4 --frames 0 --window 300,250,340,290"
+    "TransformMasked default prefilter|net.sf.openfx.TransformMaskedPlugin|general|float|value:prefilter=1||-i Source=checker:1 -i Mask=none --frames 0 --window 300,250,340,290"
+    "TransformMasked 1 default no prefilter|net.sf.openfx.TransformMaskedPlugin|general|float|value:prefilter=0||-m 1 -i Source=checker:1 -i Mask=none --frames 0 --window 300,250,340,290"
+    "DirBlur default no prefilter|net.sf.openfx.DirBlur|filter|float|value:prefilter=0||-i Source=checker:1 --frames 0 --window 300,250,340,290"
+    "CornerPin default prefilter|net.sf.openfx.CornerPinPlugin|filter|float|value:prefilter=1||-i Source=checker:1 --frames 0 --window 300,250,340,290"
+    "CornerPin 1 default no prefilter|net.sf.openfx.CornerPinPlugin|filter|float|value:prefilter=0||-m 1 -i Source=checker:1 --frames 0 --window 300,250,340,290"
+    "CornerPinMasked default prefilter|net.sf.openfx.CornerPinMaskedPlugin|general|float|value:prefilter=1||-i Source=checker:1 -i Mask=none --frames 0 --window 300,250,340,290"
+    "CornerPinMasked 1 default no prefilter|net.sf.openfx.CornerPinMaskedPlugin|general|float|value:prefilter=0||-m 1 -i Source=checker:1 -i Mask=none --frames 0 --window 300,250,340,290"
+    "Card3D default prefilter scale 0.4 checker|net.sf.openfx.Card3D|filter|float|range=0.499,0.501+value:prefilter=1||-i Source=checker:1 cardUniformScale=0.4 --frames 0 --window 300,250,340,290"
+    "Card3D 1 default no prefilter scale 0.4 checker|net.sf.openfx.Card3D|filter|float|tol=0.005+max=0.5263,0.5263,0.5263,0.5263+value:prefilter=0||-m 1 -i Source=checker:1 cardUniformScale=0.4 --frames 0 --window 300,250,340,290"
+    "Reformat default prefilter scale 0.4 checker|net.sf.openfx.Reformat|filter|float|range=0.499,0.501+value:prefilter=1||-i Source=checker:1 reformatType=Scale reformatScale=0.4,0.4 --frames 0 --window 100,100,140,140"
+    "Reformat 2 default no prefilter scale 0.4 checker|net.sf.openfx.Reformat|filter|float|tol=0.005+max=0.5263,0.5263,0.5263,0.5263+value:prefilter=0||-m 2 -i Source=checker:1 reformatType=Scale reformatScale=0.4,0.4 --frames 0 --window 100,100,140,140"
+    # CornerPin with two pins (#270): version 2 maps them with a similarity of the pixel grid, version 1
+    # with a similarity of canonical coordinates. (0,0) and (768,0) to (0,0) and (0,768) on the PAL input
+    # (PAR 768/720): a rotation by 90 degrees, with a scale of 768/720 in pixels (the output RoD is
+    # x -614.4..0, y 0..768 pixels) or of 1 in canonical coordinates (x -540..0 pixels, y 0..768),
+    # one more pixel on each side for the filter
+    "CornerPin two pins pixel similarity|net.sf.openfx.CornerPinPlugin|filter|float|bounds=-616,0,1,769||-i Source=rod:0,0,768,576 enable3=0 enable4=0 from1=0,0 from2=768,0 to1=0,0 to2=0,768 --frames 0 --window -700,0,10,800"
+    "CornerPin 1 two pins canonical similarity|net.sf.openfx.CornerPinPlugin|filter|float|bounds=-541,0,1,769||-m 1 -i Source=rod:0,0,768,576 enable3=0 enable4=0 from1=0,0 from2=768,0 to1=0,0 to2=0,768 --frames 0 --window -700,0,10,800"
     "Reformat prefilter scale 0.4 checker|net.sf.openfx.Reformat|filter|float|range=0.499,0.501||-i Source=checker:1 reformatType=Scale reformatScale=0.4,0.4 prefilter=1 --frames 0 --window 100,100,140,140"
     "Transform prefilter tile|net.sf.openfx.TransformPlugin|filter|float|nonconst+tile||-i Source=checker:4 scale=0.3,0.4 rotate=20 filter=Lanczos4 prefilter=1 --frames 0 --window 250,200,450,330"
     # tiled renders are the same as the full render with the prefilter (the RoI covers the widened

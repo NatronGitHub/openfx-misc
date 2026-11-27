@@ -61,10 +61,15 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // SupportExt#179, in the current minor versions: with the Box
 //              filter, the thin band just outside the source image is black (Black Outside) or the
 //              edge colour, not about 4x the edge value (garbage).
-#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 // 2.1 and 1.2: the Lanczos4, Lanczos6 and Sinc4 filters (appended options) and
 //      the Prefilter Downscaling checkbox (after the filter parameters, off) (issue #270); the default output is unchanged.
+// version 3.0: Prefilter Downscaling is on by default (issue #270), so that scaling down filters the image
+//      instead of aliasing; version 2 is obsolete, with the same output as before.
+#define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMajorPrefilterOn 3 // the first major version with Prefilter Downscaling on by default (issue #270)
+#define kPluginVersionMajorPrefilterOff 2 // the previous major version (Prefilter Downscaling off by default), obsolete
+#define kPluginVersionMinorPrefilterOff 1
 
 #define kParamUseRoD "useRoD"
 #define kParamUseRoDLabel "Use Source RoD"
@@ -772,7 +777,7 @@ template<unsigned int majorVersion>
 void
 ReformatPluginFactory<majorVersion>::describe(ImageEffectDescriptor &desc)
 {
-    desc.setIsObsolete(majorVersion <= 1);
+    desc.setIsObsolete(majorVersion < kPluginVersionMajor);
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -1083,8 +1088,18 @@ ReformatPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &de
     // filter, clamp, black outside, then Preserve BBox (the order of Foundry's Reformat panel)
     ofxsFilterDescribeParamsInterpolate2D(desc, page, /*blackOutsideDefault*/ false, eFilterSetSinc);
 
-    // after the filter parameters (issue #270): off, the supersampling of the previous versions
+    // after the filter parameters (issue #270): on from version 3, off (the supersampling) before
     ofxsFilterDescribeParamPrefilter(desc, page);
+    // Prefilter Downscaling is on by default from version kPluginVersionMajorPrefilterOn (issue #270).
+    // The prefilterDefault argument of ofxsFilterDescribeParamPrefilter() (SupportExt #240) will replace
+    // this lookup at the next SupportExt bump.
+    if (majorVersion >= kPluginVersionMajorPrefilterOn) {
+        BooleanParamDescriptor* param = dynamic_cast<BooleanParamDescriptor*>( desc.getParamDescriptor(kParamFilterPrefilter) );
+        assert(param);
+        if (param) {
+            param->setDefault(true);
+        }
+    }
 
     // Preserve bounding box
     {
@@ -1110,7 +1125,9 @@ ReformatPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
 
 static ReformatPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
-static ReformatPluginFactory<1> p_old(kPluginIdentifier, 2); // 1.2: see the history at the top
-mRegisterPluginFactoryInstance(p_old)
+static ReformatPluginFactory<kPluginVersionMajorPrefilterOff> pv2(kPluginIdentifier, kPluginVersionMinorPrefilterOff);
+mRegisterPluginFactoryInstance(pv2)
+static ReformatPluginFactory<1> pv1(kPluginIdentifier, 2); // 1.2: see the history at the top
+mRegisterPluginFactoryInstance(pv1)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
