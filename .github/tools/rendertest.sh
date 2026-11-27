@@ -883,6 +883,17 @@ tests=(
     "PIK autolevels magenta|net.sf.openfx.PIK|general|float|mean=0.8438,0,0.2308,0.5385||-i Fg=solid:0.89,0,0.6,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0.1,0.2,0.8 autolevels=1 magenta=1"
     "PIK autolevels green yellow|net.sf.openfx.PIK|general|float|mean=1.1777,0.5108,0.1438,0.8885||-i Fg=solid:1.2,0.6,0.155,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0.2,0.8,0.1 autolevels=1 yellow=1"
     "PIK 1 autolevels|net.sf.openfx.PIK|general|float|mean=0.89,0,0.2,1||-m 1 -i Fg=solid:0.89,0,0.2,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0.1,0.2,0.8 autolevels=1"
+    # Autolevels with weights below 0.5: red and green are also limited to blue (alpha 0.7708 without
+    # Autolevels, 0.7569 when red was only lowered to green)
+    "PIK autolevels weights|net.sf.openfx.PIK|general|float|mean=0.4722,0.3944,0.1778,0.7222||-i Fg=solid:0.5,0.45,0.4,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0.1,0.2,0.8 autolevels=1 redWeight=0.2 blueGreenWeight=0.3 rgbal=0"
+    # Luminance Level 0.5 (with its Enable): the blue excess is weighted by 0.5 in the luminances, so the
+    # alpha of a color brighter than the screen is 0.7636 (0.8768 without the Enable, 0.6154 without
+    # Luminance Match, and in version 1); only the alpha changes
+    "PIK luminance level|net.sf.openfx.PIK|general|float|mean=0.5615,0.6231,0.5923,0.7636||-i Fg=solid:0.6,0.7,0.9,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0.1,0.2,0.8 lmEnable=1 llEnable=1 luma=0.5 rgbal=0"
+    "PIK luminance level off|net.sf.openfx.PIK|general|float|mean=0.5615,0.6231,0.5923,0.8768||-i Fg=solid:0.6,0.7,0.9,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0.1,0.2,0.8 lmEnable=1 llEnable=0 luma=0.5 rgbal=0"
+    "PIK 1 luminance level|net.sf.openfx.PIK|general|float|mean=0.5615,0.6231,0.5923,0.6154||-m 1 -i Fg=solid:0.6,0.7,0.9,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0.1,0.2,0.8 lmEnable=1 llEnable=1 luma=0.5"
+    # Luminance Match with a Screen Range of 0: opaque, without screen subtraction (the output is Fg)
+    "PIK screen range 0|net.sf.openfx.PIK|general|float|mean=0.31,0.348,0.6,1||-i Fg=solid:0.31,0.348,0.6,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0.1,0.2,0.8 lmEnable=1 level=0"
     # PIK: a soft screen replace color with zero Rec.709 luminance (was 0/0 = NaN where alpha
     # is raised to 1 by Clip White, or a huge color with FMA contraction, e.g. on arm64): white
     "PIK replace color lum 0|net.sf.openfx.PIK|general|float|comps=RGBA+mean=0.0045,0.0045,0.0045,1||-i Fg=solid:0,0,0.25,1 -i PFg=none -i C=none -i Bg=none -i InM=none -i OutM=none screenType=2 color=0,0,1 screenClipMax=0.5 screenReplaceColor=0.072175,0,-0.2126729 rgbal=0"
