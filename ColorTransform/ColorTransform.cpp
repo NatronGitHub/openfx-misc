@@ -43,31 +43,50 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kAsGivenToRGBNote \
     "The output RGB values are given as computed: no transfer function (gamma) is applied, " \
     "so they are in the colour encoding of the input of the forward conversion."
+// the Transfer Function parameter (see kParamTransferFunction)
+#define kTransferHSVHSLNote \
+    "This is Transfer Function None, the default. With Transfer Function sRGB, the conversion follows the conventions of the reference host's colorspace conversion from linear RGB: " \
+    "linear RGB is encoded with the sRGB transfer function (IEC 61966-2-1, continued below 0 by its linear segment and above 1 by its power curve), " \
+    "the colours whose largest and smallest components add up to less than 0 are converted negated, with a negative V or L, " \
+    "and the HSL saturation is (max - min) / (max + min) where L <= 0.5, (max - min) / (2 - max - min) elsewhere, not clamped " \
+    "(the formula is chosen by the signed L; S is 1, and H 0, where they are not finite or 1/0)."
+#define kTransferHSVHSLToRGBNote \
+    "This is Transfer Function None, the default. With Transfer Function sRGB, the result is decoded to linear RGB with the inverse of the sRGB transfer function " \
+    "(continued below 0 and above 1): the inverse of the forward conversion with Transfer Function sRGB."
+#define kTransfer709Note \
+    "With Transfer Function sRGB (Rec.709 is the default), the conversion follows the conventions of the reference host's colorspace conversion from linear RGB: " \
+    "linear RGB is encoded with the sRGB transfer function (IEC 61966-2-1, continued below 0 by its linear segment and above 1 by its power curve, no clamping), " \
+    "the matrix is Y' = 0.2126 R' + 0.7152 G' + 0.0722 B', Pb = (B' - Y') / 1.8556, Pr = (R' - Y') / 1.5748"
+#define kTransfer709YCbCrNote kTransfer709Note \
+    ", and Y'CbCr is Y' = 16/255 + (219/255) Y'(0-1), Cb = 0.5 + (224/255) Pb, Cr = 0.5 + (224/255) Pr (Cb and Cr centred on 0.5, not 128/255)."
+#define kTransfer709ToRGBNote \
+    "With Transfer Function sRGB (Rec.709 is the default), the inverse of the forward conversion with Transfer Function sRGB: " \
+    "the matrix of that conversion, then the inverse of the sRGB transfer function (continued below 0 and above 1, no clamping)."
 
 #define kPluginRGBToHSVName "RGBToHSV"
 #define kPluginRGBToHSVDescription "Convert from RGB to the HSV color model (hue, saturation, value, as defined by A. R. Smith in 1978).\n" \
     kHueNote " V = max(R,G,B), in the units of RGB. S = (max(R,G,B) - min(R,G,B)) / max(R,G,B), in [0,1] for non-negative RGB (0 if V is 0).\n" \
-    kAsGivenRGBToNote
+    kAsGivenRGBToNote "\n" kTransferHSVHSLNote
 #define kPluginRGBToHSVIdentifier "net.sf.openfx.RGBToHSV"
 
 #define kPluginHSVToRGBName "HSVToRGB"
 #define kPluginHSVToRGBDescription "Convert from the HSV color model (hue, saturation, value, as defined by A. R. Smith in 1978) to RGB: the inverse of RGBToHSV for RGB in [0,1]. " \
     "H is wrapped into the hue circle.\n" \
     kHueNote " V is in the units of RGB, S in [0,1].\n" \
-    kAsGivenToRGBNote
+    kAsGivenToRGBNote "\n" kTransferHSVHSLToRGBNote
 #define kPluginHSVToRGBIdentifier "net.sf.openfx.HSVToRGB"
 
 #define kPluginRGBToHSLName "RGBToHSL"
 #define kPluginRGBToHSLDescription "Convert from RGB to the HSL color model (hue, saturation, lightness, as defined by Joblove and Greenberg in 1978).\n" \
     kHueNote " L = (max(R,G,B) + min(R,G,B)) / 2, in the units of RGB. S is in [0,1]: it is computed from the largest and smallest components clamped to [0,1].\n" \
-    kAsGivenRGBToNote
+    kAsGivenRGBToNote "\n" kTransferHSVHSLNote
 #define kPluginRGBToHSLIdentifier "net.sf.openfx.RGBToHSL"
 
 #define kPluginHSLToRGBName "HSLToRGB"
 #define kPluginHSLToRGBDescription "Convert from the HSL color model (hue, saturation, lightness, as defined by Joblove and Greenberg in 1978) to RGB: the inverse of RGBToHSL for RGB in [0,1]. " \
     "H is wrapped into the hue circle.\n" \
     kHueNote " L is in the units of RGB, S in [0,1].\n" \
-    kAsGivenToRGBNote
+    kAsGivenToRGBNote "\n" kTransferHSVHSLToRGBNote
 #define kPluginHSLToRGBIdentifier "net.sf.openfx.HSLToRGB"
 
 #define kHSIAbout \
@@ -91,9 +110,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 // The transfer functions of the Y'CbCr, Y'PbPr and Y'UV conversions (SupportExt's ofxsLut.h):
 // the 601 ones use sRGB, not the SMPTE ST 170M OETF (which is the BT.709 one).
-// These conversions follow the standards cited in their descriptions. RGBToHSV, RGBToHSL and
-// their inverses match tests/nuke with an sRGB input; the cases with a linear input and the
-// YCbCr cases differ (known=296).
+// These conversions follow the standards cited in their descriptions. With Transfer Function sRGB,
+// RGBToHSV, RGBToHSL, the 709 Y'CbCr and Y'PbPr conversions and their inverses match the
+// colorspace conversion of the reference host (#296).
 #define kEncodeSRGB "Linear RGB is first encoded to R'G'B' with the sRGB transfer function (IEC 61966-2-1; not the SMPTE ST 170M one, which is the Rec.709 one); negative values become 0."
 #define kDecodeSRGB "R'G'B' is then decoded to linear RGB with the sRGB transfer function (IEC 61966-2-1); negative values become 0."
 #define kEncodeRec709 "Linear RGB is first encoded to R'G'B' with the Rec.709 transfer function (the OETF of ITU-R BT.709-6, with the more precise constants of ITU-R BT.2020-2); negative values become 0."
@@ -116,12 +135,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginRGBToYCbCr709Name "RGBToYCbCr709"
 #define kPluginRGBToYCbCr709Description "Convert from linear RGB to the Y'CbCr color model (ITU-R BT.709).\n" \
-    kEncodeRec709 " " kMatrix709 " " kYCbCrRange
+    kEncodeRec709 " " kMatrix709 " " kYCbCrRange "\n" kTransfer709YCbCrNote
 #define kPluginRGBToYCbCr709Identifier "net.sf.openfx.RGBToYCbCr709"
 
 #define kPluginYCbCrToRGB709Name "YCbCrToRGB709"
 #define kPluginYCbCrToRGB709Description "Convert from the Y'CbCr color model (ITU-R BT.709) to linear RGB: the inverse of RGBToYCbCr709 for RGB in [0,1].\n" \
-    kYCbCrRange " " kMatrix709 " " kDecodeRec709
+    kYCbCrRange " " kMatrix709 " " kDecodeRec709 "\n" kTransfer709ToRGBNote
 #define kPluginYCbCrToRGB709Identifier "net.sf.openfx.YCbCrToRGB709"
 
 #define kPluginRGBToYPbPr601Name "RGBToYPbPr601"
@@ -136,12 +155,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginRGBToYPbPr709Name "RGBToYPbPr709"
 #define kPluginRGBToYPbPr709Description "Convert from linear RGB to the Y'PbPr color model (ITU-R BT.709).\n" \
-    kEncodeRec709 " " kMatrix709 " " kYPbPrRange
+    kEncodeRec709 " " kMatrix709 " " kYPbPrRange "\n" kTransfer709Note "."
 #define kPluginRGBToYPbPr709Identifier "net.sf.openfx.RGBToYPbPr709"
 
 #define kPluginYPbPrToRGB709Name "YPbPrToRGB709"
 #define kPluginYPbPrToRGB709Description "Convert from the Y'PbPr color model (ITU-R BT.709) to linear RGB: the inverse of RGBToYPbPr709 for RGB in [0,1].\n" \
-    kYPbPrRange " " kMatrix709 " " kDecodeRec709
+    kYPbPrRange " " kMatrix709 " " kDecodeRec709 "\n" kTransfer709ToRGBNote
 #define kPluginYPbPrToRGB709Identifier "net.sf.openfx.YPbPrToRGB709"
 
 #define kPluginRGBToYUV601Name "RGBToYUV601"
@@ -224,7 +243,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //     clamped to [0,1] (bug fix #399: (2, 0.5, 0) gave H 0.917, not 0.042, and the grey (2, 2, 2) gave S 1);
 //     all conversions released as 1.0, including version 1 of the signedOutput() conversions
 //     (kept for backward compatibility): NaN/inf-safe premultiply (SupportExt #73, #79); a Mask input and the
-//     Mask and Mix parameters (the defaults keep the output) (#296)
+//     Mask and Mix parameters (the defaults keep the output) (#296);
+//     RGBToHSV, HSVToRGB, RGBToHSL, HSLToRGB, RGBToYCbCr709, YCbCrToRGB709 and YPbPrToRGB709 (and RGBToYPbPr709 2.0):
+//     a Transfer Function parameter (#296), whose default (None for HSV and HSL, Rec.709 for the 709 conversions)
+//     keeps the output; sRGB gives the conventions of the reference host's colorspace conversion (see
+//     kTransferHSVHSLNote and kTransfer709Note)
 // 1.0 RGBToYIQ, YIQToRGB, RGBToYDbDr, YDbDrToRGB: initial version (with the Mask input and Mix, see 1.1)
 // 2.0 RGBToYPbPr601, RGBToYPbPr709, RGBToYUV601, RGBToYUV709, RGB709ToLab, XYZToLab only:
 //     only support float images, because their output may be negative (version 1 clamps negative
@@ -254,6 +277,23 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "Use to get premultiplied output images."
 
 #define kParamPremultChanged "premultChanged"
+
+// The Transfer Function: the default keeps the conventions of the conversion; sRGB gives the conventions of
+// the reference host's colorspace conversion (#296)
+#define kParamTransferFunction "transferFunction"
+#define kParamTransferFunctionLabel "Transfer Function"
+#define kParamTransferFunctionHint \
+    "The conventions of the conversion. The default keeps the ones in the description; sRGB gives the conventions " \
+    "of the reference host's colorspace conversion from (or to) linear RGB, with the sRGB transfer function (see the description)."
+#define kParamTransferFunctionOptionNone "None", "RGB is converted as given (the conventions in the description).", "none"
+#define kParamTransferFunctionOptionRec709 "Rec.709", "Linear RGB is encoded with the Rec.709 transfer function (the conventions in the description).", "rec709"
+#define kParamTransferFunctionOptionSRGB "sRGB", "Linear RGB is encoded with the sRGB transfer function, with the conventions of the reference host's colorspace conversion (see the description).", "srgb"
+
+enum TransferFunctionEnum
+{
+    eTransferFunctionDefault = 0, // None (HSV, HSL) or Rec.709 (the 709 conversions): the conventions of the description
+    eTransferFunctionSRGB, // the conventions of the reference host's colorspace conversion
+};
 
 
 enum ColorTransformEnum
@@ -315,6 +355,26 @@ enum ColorTransformEnum
                           (e) == eColorTransformRGB709ToLab || \
                           (e) == eColorTransformXYZToLab )
 
+// RGBToHSV, HSVToRGB, RGBToHSL and HSLToRGB
+constexpr bool
+isHSVHSL(ColorTransformEnum e)
+{
+    return (e == eColorTransformRGBToHSV) || (e == eColorTransformHSVToRGB) ||
+           (e == eColorTransformRGBToHSL) || (e == eColorTransformHSLToRGB);
+}
+
+// The conversions with the Transfer Function parameter (of the given major version): the HSV and HSL ones,
+// and the 709 Y'CbCr and Y'PbPr ones (RGBToYPbPr709 2 only: version 1 is obsolete)
+constexpr bool
+hasTransferFunction(ColorTransformEnum e,
+                    unsigned int majorVersion)
+{
+    return isHSVHSL(e) ||
+           (e == eColorTransformRGBToYCbCr709) || (e == eColorTransformYCbCrToRGB709) ||
+           (e == eColorTransformYPbPrToRGB709) ||
+           ( (e == eColorTransformRGBToYPbPr709) && (majorVersion >= kPluginSignedOutputVersionMajor) );
+}
+
 // conversions with signed components (I, Q, Db, Dr) on input or output, which were
 // added after the signedOutput() conversions became float-only: they only have a
 // version 1, and it only supports float images
@@ -363,6 +423,212 @@ ydbdr_to_rgb(float y, float db, float dr, float *r, float *g, float *b)
     *b = y + 0.6646790600f * db - 0.0000792025f * dr;
 }
 
+// TODO: encodeSRGB()/decodeSRGB() (unclamped sRGB), hueOf() and the exact BT.709 Y'PbPr matrix
+// (rgbToYPbPr709Exact()) belong in SupportExt's ofxsLut, as unclamped or exact variants of the
+// Color:: functions.
+
+// The sRGB transfer function (IEC 61966-2-1), continued below 0 by its linear segment and above 1 by
+// its power curve (no clamping, unlike Color::to_func_srgb), as in the tests/nuke reference.
+static inline float
+encodeSRGB(float v)
+{
+    return (v < 0.0031308f) ? v * 12.92f : 1.055f * std::pow(v, 1.f / 2.4f) - 0.055f;
+}
+
+static inline float
+decodeSRGB(float v)
+{
+    return (v < 0.04045f) ? v * (1.f / 12.92f) : std::pow( (v + 0.055f) * (1.f / 1.055f), 2.4f );
+}
+
+// The hue of (r, g, b), in [0, OFXS_HUE_CIRCLE), whose largest component is maxv, for delta =
+// maxv - min(r, g, b) > 0 (as in Color::rgb_to_hsv); 0 where it is not finite (e.g. inf / inf with
+// two infinite components).
+static inline float
+hueOf(float r,
+      float g,
+      float b,
+      float maxv,
+      float delta)
+{
+    float h;
+    if (r == maxv) {
+        h = (g - b) / delta;          // between yellow & magenta
+    } else if (g == maxv) {
+        h = 2 + (b - r) / delta;      // between cyan & yellow
+    } else {
+        h = 4 + (r - g) / delta;      // between magenta & cyan
+    }
+    h *= OFXS_HUE_CIRCLE / 6;
+    if ( !std::isfinite(h) ) {
+        return 0.f;
+    }
+
+    return (h < 0) ? h + OFXS_HUE_CIRCLE : h;
+}
+
+// With Transfer Function sRGB, RGBToHSV and RGBToHSL convert the colours whose largest and smallest
+// components add up to less than 0 negated (as the tests/nuke reference)
+static inline bool
+isConvertedNegated(float r,
+                   float g,
+                   float b)
+{
+    return ( (std::max)((std::max)(r, g), b) + (std::min)((std::min)(r, g), b) ) < 0.f;
+}
+
+// The saturation delta / den of RGBToHSV and RGBToHSL with Transfer Function sRGB, for delta > 0: 1
+// where it is 1/0 or not finite (an infinite component), instead of inf or NaN.
+static inline float
+saturationOf(float delta,
+             float den)
+{
+    return ( std::isfinite(delta) && std::isfinite(den) && (den != 0.f) ) ? (delta / den) : 1.f;
+}
+
+// RGBToHSV with Transfer Function sRGB (on the encoded R'G'B'): the formulas of Color::rgb_to_hsv,
+// except for the colours whose largest and smallest components add up to less than 0: those are
+// converted negated, and V is negated, as in the tests/nuke reference. HSVToRGB (Color::hsv_to_rgb,
+// linear in V) inverts both. S is 1, and H 0, where they are not finite (an infinite component).
+static inline void
+rgbToHSVSigned(float r,
+               float g,
+               float b,
+               float *h,
+               float *s,
+               float *v)
+{
+    const bool negated = isConvertedNegated(r, g, b);
+    if (negated) {
+        r = -r;
+        g = -g;
+        b = -b;
+    }
+    const float maxv = (std::max)((std::max)(r, g), b);
+    const float minv = (std::min)((std::min)(r, g), b);
+    const float delta = maxv - minv;
+    *v = negated ? -maxv : maxv;
+    if ( !(delta > 0.f) ) { // a grey (or NaN); maxv > 0 below, since maxv + minv >= 0
+        *h = 0.f;
+        *s = 0.f;
+
+        return;
+    }
+    *s = saturationOf(delta, maxv);
+    *h = hueOf(r, g, b, maxv, delta);
+}
+
+// RGBToHSL with Transfer Function sRGB (on the encoded R'G'B'), as in the tests/nuke reference: the
+// colours whose largest and smallest components add up to less than 0 are converted negated, and L is
+// negated; S = (max - min) / (max + min) where L <= 0.5, (max - min) / (2 - max - min) elsewhere, not
+// clamped (1 where that is 1/0: L is then 0 or 1, and HSLToRGB gives the same colour for any S; and 1
+// where it is not finite, with an infinite component).
+// The formula is chosen by the signed L: for a negated colour (L < 0), it is always the first one,
+// (max - min) / (max + min) of the negated colour, even where its L (-L) is above 0.5; Color::hsl_to_rgb
+// chooses its formula by the same signed L, and inverts it.
+static inline void
+rgbToHSLSigned(float r,
+               float g,
+               float b,
+               float *h,
+               float *s,
+               float *l)
+{
+    const bool negated = isConvertedNegated(r, g, b);
+    if (negated) {
+        r = -r;
+        g = -g;
+        b = -b;
+    }
+    const float maxv = (std::max)((std::max)(r, g), b);
+    const float minv = (std::min)((std::min)(r, g), b);
+    const float delta = maxv - minv;
+    *l = negated ? -(maxv + minv) / 2 : (maxv + minv) / 2;
+    if ( !(delta > 0.f) ) { // a grey (or NaN)
+        *h = 0.f;
+        *s = 0.f;
+
+        return;
+    }
+    const float sden = (*l <= 0.5f) ? (maxv + minv) : ( 2.f - (maxv + minv) ); // by the signed L, see above
+    *s = saturationOf(delta, sden);
+    *h = hueOf(r, g, b, maxv, delta);
+}
+
+// R'G'B' to Y'PbPr with the BT.709 matrix (Kr = 0.2126, Kb = 0.0722), and its inverse (Transfer
+// Function sRGB; the default uses Color::rgb_to_ypbpr709, from the primaries)
+static inline void
+rgbToYPbPr709Exact(float r,
+                   float g,
+                   float b,
+                   float *y,
+                   float *pb,
+                   float *pr)
+{
+    *y = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+    *pb = (b - *y) * (1.f / 1.8556f);
+    *pr = (r - *y) * (1.f / 1.5748f);
+}
+
+static inline void
+yPbPrToRGB709Exact(float y,
+                   float pb,
+                   float pr,
+                   float *r,
+                   float *g,
+                   float *b)
+{
+    *r = y + 1.5748f * pr;
+    *b = y + 1.8556f * pb;
+    *g = (y - 0.2126f * *r - 0.0722f * *b) * (1.f / 0.7152f);
+}
+
+// R'G'B' to Y'CbCr in the video range with Cb and Cr centred on 0.5 (the exact BT.709 matrix), and its
+// inverse (Transfer Function sRGB; the default uses Color::rgb_to_ycbcr709: rounded coefficients, Cb and
+// Cr centred on 128/255)
+static inline void
+rgbToYCbCrCentred(float r,
+                  float g,
+                  float b,
+                  float *y,
+                  float *cb,
+                  float *cr)
+{
+    float y1, pb, pr;
+    rgbToYPbPr709Exact(r, g, b, &y1, &pb, &pr);
+    *y = 16.f / 255.f + (219.f / 255.f) * y1;
+    *cb = 0.5f + (224.f / 255.f) * pb;
+    *cr = 0.5f + (224.f / 255.f) * pr;
+}
+
+static inline void
+yCbCrCentredToRGB(float y,
+                  float cb,
+                  float cr,
+                  float *r,
+                  float *g,
+                  float *b)
+{
+    yPbPrToRGB709Exact( (y - 16.f / 255.f) * (255.f / 219.f), (cb - 0.5f) * (255.f / 224.f), (cr - 0.5f) * (255.f / 224.f), r, g, b );
+}
+
+// encode the RGB of pix (its first 3 components) to R'G'B', or decode R'G'B' to RGB, with encodeSRGB()
+static inline void
+encodeSRGB3(float (&pix)[4])
+{
+    for (int c = 0; c < 3; ++c) {
+        pix[c] = encodeSRGB(pix[c]);
+    }
+}
+
+static inline void
+decodeSRGB3(float (&pix)[4])
+{
+    for (int c = 0; c < 3; ++c) {
+        pix[c] = decodeSRGB(pix[c]);
+    }
+}
+
 class ColorTransformProcessorBase
     : public ImageProcessor
 {
@@ -374,6 +640,7 @@ protected:
     bool _premult;
     int _premultChannel;
     double _mix;
+    TransferFunctionEnum _transferFunction; // eTransferFunctionDefault for the conversions without the parameter
 
 public:
 
@@ -386,6 +653,7 @@ public:
         , _premult(false)
         , _premultChannel(3)
         , _mix(1.)
+        , _transferFunction(eTransferFunctionDefault)
     {
     }
 
@@ -407,6 +675,8 @@ public:
         _premultChannel = premultChannel;
         _mix = mix;
     }
+
+    void setTransferFunction(TransferFunctionEnum transferFunction) { _transferFunction = transferFunction; }
 
 private:
 };
@@ -431,6 +701,8 @@ public:
         float tmpPix[4] = {0.f, 0.f, 0.f, 0.f};
         const bool dounpremult = _premult && fromRGB(transform);
         const bool dopremult = _premult && toRGB(transform);
+        // Transfer Function sRGB: the conventions of the reference host's colorspace conversion
+        const bool colorspaceSRGB = (_transferFunction == eTransferFunctionSRGB);
 
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if ( _effect.abort() ) {
@@ -453,24 +725,41 @@ public:
                     // "Color gamut transform pairs", Alvy Ray Smith, Proceeding SIGGRAPH '78
                     // https://doi.org/10.1145/800248.807361
                     // http://www.icst.pku.edu.cn/F/course/ImageProcessing/2018/resource/Color78.pdf
-                    Color::rgb_to_hsv(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    // With Transfer Function sRGB, linear RGB is encoded first, as the tests/nuke reference (#296).
+                    if (colorspaceSRGB) {
+                        encodeSRGB3(unpPix);
+                        rgbToHSVSigned(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    } else {
+                        Color::rgb_to_hsv(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    }
                     break;
 
                 case eColorTransformHSVToRGB:
                     Color::hsv_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2], true);
-                    // values as given, see the comment above
+                    // values as given, see the comment above (decoded with Transfer Function sRGB)
+                    if (colorspaceSRGB) {
+                        decodeSRGB3(tmpPix);
+                    }
                     break;
 
                 case eColorTransformRGBToHSL:
                     // values as given, see the comment above
                     // fixedOutOfRange: the hue comes from the unclamped channels, the saturation
                     // from the colour clamped to [0,1] (#399)
-                    Color::rgb_to_hsl(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2], /*fixedOutOfRange*/ true);
+                    if (colorspaceSRGB) {
+                        encodeSRGB3(unpPix);
+                        rgbToHSLSigned(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    } else {
+                        Color::rgb_to_hsl(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2], /*fixedOutOfRange*/ true);
+                    }
                     break;
 
                 case eColorTransformHSLToRGB:
                     Color::hsl_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2], true);
-                    // values as given, see the comment above
+                    // values as given, see the comment above (decoded with Transfer Function sRGB)
+                    if (colorspaceSRGB) {
+                        decodeSRGB3(tmpPix);
+                    }
                     break;
 
                 case eColorTransformRGBToHSI:
@@ -499,6 +788,11 @@ public:
                     break;
 
                 case eColorTransformRGBToYCbCr709:
+                    if (colorspaceSRGB) {
+                        encodeSRGB3(unpPix);
+                        rgbToYCbCrCentred(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        break;
+                    }
                     unpPix[0] = Color::to_func_Rec709(unpPix[0]);
                     unpPix[1] = Color::to_func_Rec709(unpPix[1]);
                     unpPix[2] = Color::to_func_Rec709(unpPix[2]);
@@ -506,6 +800,11 @@ public:
                     break;
 
                 case eColorTransformYCbCrToRGB709:
+                    if (colorspaceSRGB) {
+                        yCbCrCentredToRGB(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        decodeSRGB3(tmpPix);
+                        break;
+                    }
                     Color::ycbcr_to_rgb709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     tmpPix[0] = Color::from_func_Rec709(tmpPix[0]);
                     tmpPix[1] = Color::from_func_Rec709(tmpPix[1]);
@@ -527,6 +826,11 @@ public:
                     break;
 
                 case eColorTransformRGBToYPbPr709:
+                    if (colorspaceSRGB) {
+                        encodeSRGB3(unpPix);
+                        rgbToYPbPr709Exact(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        break;
+                    }
                     unpPix[0] = Color::to_func_Rec709(unpPix[0]);
                     unpPix[1] = Color::to_func_Rec709(unpPix[1]);
                     unpPix[2] = Color::to_func_Rec709(unpPix[2]);
@@ -534,6 +838,11 @@ public:
                     break;
 
                 case eColorTransformYPbPrToRGB709:
+                    if (colorspaceSRGB) {
+                        yPbPrToRGB709Exact(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        decodeSRGB3(tmpPix);
+                        break;
+                    }
                     Color::ypbpr_to_rgb709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     tmpPix[0] = Color::from_func_Rec709(tmpPix[0]);
                     tmpPix[1] = Color::from_func_Rec709(tmpPix[1]);
@@ -672,7 +981,8 @@ class ColorTransformPlugin
 {
 public:
     /** @brief ctor */
-    ColorTransformPlugin(OfxImageEffectHandle handle)
+    ColorTransformPlugin(OfxImageEffectHandle handle,
+                         unsigned int majorVersion)
         : ImageEffect(handle)
         , _dstClip(NULL)
         , _srcClip(NULL)
@@ -683,6 +993,7 @@ public:
         , _mix(NULL)
         , _maskApply(NULL)
         , _maskInvert(NULL)
+        , _transferFunction(NULL)
     {
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -705,6 +1016,10 @@ public:
         _maskApply = ( ofxsMaskIsAlwaysConnected( OFX::getImageEffectHostDescription() ) && paramExists(kParamMaskApply) ) ? fetchBooleanParam(kParamMaskApply) : 0;
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
+        if ( hasTransferFunction(transform, majorVersion) ) {
+            _transferFunction = fetchChoiceParam(kParamTransferFunction);
+            assert(_transferFunction);
+        }
     }
 
 private:
@@ -734,6 +1049,7 @@ private:
     DoubleParam* _mix;
     BooleanParam* _maskApply;
     BooleanParam* _maskInvert;
+    ChoiceParam* _transferFunction; // NULL for the conversions without it (see hasTransferFunction())
 };
 
 
@@ -798,6 +1114,9 @@ ColorTransformPlugin<transform>::setupAndProcess(ColorTransformProcessorBase &pr
     }
 
     processor.setValues( premult, premultChannel, _mix->getValueAtTime(args.time) );
+    if (_transferFunction) {
+        processor.setTransferFunction( static_cast<TransferFunctionEnum>( _transferFunction->getValueAtTime(args.time) ) );
+    }
     processor.process();
 } // >::setupAndProcess
 
@@ -1179,6 +1498,25 @@ ColorTransformPluginFactory<transform, majorVersion>::describeInContext(ImageEff
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
+    if ( hasTransferFunction(transform, majorVersion) ) {
+        // before Unpremult, as the input colorspace of the reference host's colorspace conversion
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamTransferFunction);
+        param->setLabel(kParamTransferFunctionLabel);
+        param->setHint(kParamTransferFunctionHint);
+        assert(param->getNOptions() == eTransferFunctionDefault);
+        if ( isHSVHSL(transform) ) {
+            param->appendOption(kParamTransferFunctionOptionNone);
+        } else {
+            param->appendOption(kParamTransferFunctionOptionRec709);
+        }
+        assert(param->getNOptions() == eTransferFunctionSRGB);
+        param->appendOption(kParamTransferFunctionOptionSRGB);
+        param->setDefault(eTransferFunctionDefault);
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
     if ( fromRGB(transform) || toRGB(transform) ) {
         {
             BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremult);
@@ -1232,7 +1570,7 @@ ImageEffect*
 ColorTransformPluginFactory<transform, majorVersion>::createInstance(OfxImageEffectHandle handle,
                                                        ContextEnum /*context*/)
 {
-    return new ColorTransformPlugin<transform>(handle);
+    return new ColorTransformPlugin<transform>(handle, majorVersion);
 }
 
 // The signedOutput() conversions also register their version 1 (p*v1, obsolete, supports
