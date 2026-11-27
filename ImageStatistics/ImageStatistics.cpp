@@ -2627,7 +2627,9 @@ ImageStatisticsPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         {
             Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamMaxLumaPix);
             param->setDoubleType(eDoubleTypeXYAbsolute);
-            param->setUseHostNativeOverlayHandle(true);
+            if ( param->getHostHasNativeOverlayHandle() ) { // OFX 1.5.1: only on hosts with native handles
+                param->setUseHostNativeOverlayHandle(true);
+            }
             param->setLabel(kParamMaxLumaPixLabel);
             param->setHint(kParamMaxLumaPixHint);
             param->setDimensionLabels("x", "y");
@@ -2658,7 +2660,9 @@ ImageStatisticsPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         {
             Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamMinLumaPix);
             param->setDoubleType(eDoubleTypeXYAbsolute);
-            param->setUseHostNativeOverlayHandle(true);
+            if ( param->getHostHasNativeOverlayHandle() ) { // OFX 1.5.1: only on hosts with native handles
+                param->setUseHostNativeOverlayHandle(true);
+            }
             param->setLabel(kParamMinLumaPixLabel);
             param->setHint(kParamMinLumaPixHint);
             param->setDimensionLabels("x", "y");

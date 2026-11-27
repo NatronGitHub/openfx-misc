@@ -62,10 +62,7 @@ MatteMonitor/MatteMonitor.cpp
 Merge/Merge.cpp
 Mirror/Mirror.cpp
 Misc/KeyerUtils.h
-Misc/MultiviewFetch.h
-Misc/SampleUtils.h
 Misc/SoftEdge.h
-Misc/TransformDefaults.h
 Misc/randomGenerator.cpp
 Misc/randomGenerator.H
 MixViews/MixViews.cpp
@@ -143,6 +140,8 @@ SupportExt/ofxsMacros.h
 SupportExt/ofxsMaskMix.h
 SupportExt/ofxsMatrix2D.h
 SupportExt/ofxsMerging.h
+SupportExt/ofxsMultiView.h
+SupportExt/ofxsNonFinite.h
 SupportExt/ofxsOGLFontData.cpp
 SupportExt/ofxsOGLFontUtils.h
 SupportExt/ofxsOGLTextRenderer.cpp

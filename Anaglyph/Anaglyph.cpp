@@ -31,7 +31,7 @@
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
 #include "ofxsThreadSuite.h"
-#include "MultiviewFetch.h"
+#include "ofxsMultiView.h"
 
 using namespace OFX;
 

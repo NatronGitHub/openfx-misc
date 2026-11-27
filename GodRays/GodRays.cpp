@@ -28,7 +28,6 @@
 
 #include "ofxsTransform3x3.h"
 #include "ofxsTransformInteract.h"
-#include "TransformDefaults.h"
 #include "ofxsCoords.h"
 #include "ofxsThreadSuite.h"
 
@@ -586,8 +585,8 @@ public:
              ( _scaleUniform->getNumKeys() == 0) ) {
             _scaleUniform->setIsSecretAndDisabled(true);
         }
-        // last, since setValue() may call changedParam()
-        transformDenormaliseDefaultsKeepCenterChanged(*this, *_centerChanged);
+        // last, since setValue() may call changedParam(), which would set Center Changed: keep its value
+        ofxsTransformDenormaliseDefaults(*this, /*oldParams=*/true, _centerChanged);
     }
 
 private:

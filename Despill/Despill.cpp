@@ -33,16 +33,13 @@
 #include "ofxsCopier.h"
 #include "ofxsMacros.h"
 #include "ofxsCoords.h"
-#include "ofxsNonFinite.h" // clampToFloatRange, finiteSample
-#include "SampleUtils.h"
+#include "ofxsNonFinite.h" // clampToFloatRange, finiteSample, sampleToFloat
 #ifdef OFX_EXTENSIONS_NATRON
 #include "ofxNatron.h"
 #endif
 using namespace OFX;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
-
-using SampleUtils::sampleToFloat;
 
 #define kPluginName "Despill"
 #define kPluginGrouping "Keyer"
