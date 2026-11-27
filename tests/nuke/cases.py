@@ -2263,7 +2263,7 @@ CASES += [
     case("EdgeDetect prewitt", ("EdgeDetect", {"edgedetector": "prewitt"}),
          ("eu.cimg.EdgeDetect", {"filter": "Prewitt"}), input="checker",
          channels="rgba", tolerance=1e-4),
-    case("EdgeDetect sobel on hues", ("EdgeDetect", {}),
+    case("EdgeDetect defaults on hues", ("EdgeDetect", {}),
          ("eu.cimg.EdgeDetect", {}), input="hues", channels="rgba",
          tolerance=1e-4),
     # on the hues, 1.87 inside and 0.93 on the borders: the borders go
@@ -2271,6 +2271,17 @@ CASES += [
          ("EdgeDetect", {"edgedetector": "sobel", "threshold": 1.5}),
          ("eu.cimg.EdgeDetect", {"filter": "Sobel", "threshold": 1.5}),
          input="hues", channels="rgba", tolerance=1e-4),
+    # Sum on a single channel (red), into alpha
+    case("EdgeDetect sobel, red only",
+         ("EdgeDetect", {"edgedetector": "sobel", "channels": "rgba.red"}),
+         ("eu.cimg.EdgeDetect", {"NatronOfxParamProcessR": 1,
+                                 "NatronOfxParamProcessG": 0,
+                                 "NatronOfxParamProcessB": 0,
+                                 "NatronOfxParamProcessA": 0,
+                                 "filter": "Sobel"}),
+         input="hues", channels="rgba", tolerance=1e-4),
+    # TODO: a "simple" case, known=<the follow-up issue for a Laplacian
+    # detector> once it is filed
     case("EdgeDetect sobel, grey checker, alpha",
          ("EdgeDetect", {"edgedetector": "sobel", "channels": "rgba.alpha"}),
          ("eu.cimg.EdgeDetect", dict(EDGE_ALPHA_ONLY, filter="Sobel")),

@@ -412,8 +412,8 @@ public:
                             const Params& /*params*/) { return false; };
 
     // true if the image passed to render() has an alpha channel (its alphaChannel argument is not -1):
-    // Alpha and RGBA images with Process A, when the components can be remapped. Used by render() and
-    // by the isIdentity() of the plug-ins.
+    // Alpha and RGBA images with Process A (render() passes processA || renderWritesAlpha()), when the
+    // components can be remapped. Used by render() and by the isIdentity() of the plug-ins.
     bool renderHasAlphaChannel(int nComponents,
                                bool processA) const
     {
@@ -422,8 +422,10 @@ public:
 
     // true if render() writes the alpha channel even when A is not processed (e.g. an edge matte
     // computed from R, G and B): the image passed to render() then also has the alpha channel of
-    // Alpha and RGBA images (last, as always), and the colours are not (un)premultiplied, since
-    // render() does not change them. Only used when the components can be remapped.
+    // Alpha and RGBA images (last, as always). The Premult parameter is then ignored: the colours
+    // are not unpremultiplied before render() nor premultiplied after it, since render() must not
+    // change them (premultiplying them by the new alpha would). Only for plug-ins whose components
+    // can be remapped.
     virtual bool renderWritesAlpha(const Params& /*params*/) const { return false; }
 
     // 0: Black/Dirichlet, 1: Nearest/Neumann, 2: Repeat/Periodic
@@ -661,6 +663,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     int srcBoundary = getBoundary(params);
     assert(0 <= srcBoundary && srcBoundary <= 2);
     // render() gets the alpha channel if it is processed, or if render() writes it
+    assert( _supportsComponentRemapping || !renderWritesAlpha(params) );
     const bool writesAlpha = _supportsComponentRemapping && renderWritesAlpha(params);
     const bool renderAlpha = processA || writesAlpha;
     if (writesAlpha) {

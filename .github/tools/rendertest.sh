@@ -1790,6 +1790,11 @@ tests=(
     "EdgeDetectCImg Prewitt threshold|eu.cimg.EdgeDetect|filter|float|tol=1e-4+mean=0.707107,0.707107,0.707107,1||-i Source=file:impulse.pfm -i Mask=none filter=8 multiChannel=0 output=0 threshold=1.2 --frames 0 --window 33,24,34,26"
     "EdgeDetectCImg 4 Sobel impulse|eu.cimg.EdgeDetect|filter|float|tol=1e-4+mean=0.25,0.25,0.25,1||-m 4 -i Source=file:impulse.pfm -i Mask=none filter=1 multiChannel=0 --frames 0 --window 33,24,34,25"
     "EdgeDetectCImg 4 Prewitt impulse|eu.cimg.EdgeDetect|filter|float|tol=1e-4+mean=0.166667,0.166667,0.166667,1||-m 4 -i Source=file:impulse.pfm -i Mask=none filter=8 multiChannel=0 --frames 0 --window 33,24,34,25"
+    # version 4 defaults (Gaussian, Tensor, the edges in the processed channels): with blur size 0,
+    # centred differences, 1/2 in each of R, G and B next to the pixel, so sqrt(3 * (1/2)^2)
+    "EdgeDetectCImg 4 defaults impulse|eu.cimg.EdgeDetect|filter|float|tol=1e-4+mean=0.866025,0.866025,0.866025,1||-m 4 -i Source=file:impulse.pfm -i Mask=none --frames 0 --window 33,24,34,25"
+    # Sum on a single channel (R only, the edges in R): |gx| + |gy| = 2 on the diagonal (Separate: sqrt(2))
+    "EdgeDetectCImg Sum one channel|eu.cimg.EdgeDetect|filter|float|tol=1e-4+mean=2,0,0,1||-i Source=file:impulse.pfm -i Mask=none output=0 NatronOfxParamProcessG=0 NatronOfxParamProcessB=0 --frames 0 --window 33,25,34,26"
     # Version 5 defaults (Sobel, Sum, Alpha output, R, G and B processed): one matte in alpha, the
     # sum over R, G and B of |gx| + |gy|, 3 * 2 = 6 next to the pixel and on the diagonal; R, G and
     # B are kept. Separate with the Alpha output: the sum of the per-channel magnitudes, 3 * 2 next
@@ -1801,9 +1806,25 @@ tests=(
     "EdgeDetectCImg alpha Separate diagonal|eu.cimg.EdgeDetect|general|float|tol=1e-4+mean=0,0,0,4.242641||-i Source=file:impulse.pfm -i Mask=none multiChannel=0 --frames 0 --window 33,25,34,26"
     "EdgeDetectCImg alpha threshold|eu.cimg.EdgeDetect|general|float|tol=1e-4+mean=0,0,0,0||-i Source=file:impulse.pfm -i Mask=none threshold=6.5 --frames 0 --window 33,24,34,25"
     "EdgeDetectCImg alpha RGB solid|eu.cimg.EdgeDetect|general|float|tol=1e-4+comps=RGBA+mean=0.25,0.5,0.75,0||-i Source=solid:0.25,0.5,0.75,1#rgb -i Mask=none"
-    # an Alpha input: the edges of alpha with Process A (0 on a solid), else unchanged
-    "EdgeDetectCImg alpha Alpha input|eu.cimg.EdgeDetect|general|float|tol=1e-4+comps=Alpha+mean=0||-i Source=solid:0.4,0.4,0.4,0.4#alpha -i Mask=none NatronOfxParamProcessA=1"
-    "EdgeDetectCImg alpha Alpha input, A off|eu.cimg.EdgeDetect|general|float|tol=1e-4+comps=Alpha+mean=0.4||-i Source=solid:0.4,0.4,0.4,0.4#alpha -i Mask=none"
+    # in the filter context, an RGB input cannot get an alpha channel: an identity
+    "EdgeDetectCImg alpha filter RGB|eu.cimg.EdgeDetect|filter|float|identity+tol=1e-4+comps=RGB+mean=0.25,0.5,0.75||-i Source=solid:0.25,0.5,0.75,1#rgb -i Mask=none"
+    # an Alpha input: the edges of alpha with Process A (0 on a solid), else an identity
+    "EdgeDetectCImg alpha Alpha input|eu.cimg.EdgeDetect|general|float|notidentity+tol=1e-4+comps=Alpha+mean=0||-i Source=solid:0.4,0.4,0.4,0.4#alpha -i Mask=none NatronOfxParamProcessA=1"
+    "EdgeDetectCImg alpha Alpha input, A off|eu.cimg.EdgeDetect|general|float|identity+tol=1e-4+comps=Alpha+mean=0.4||-i Source=solid:0.4,0.4,0.4,0.4#alpha -i Mask=none"
+    # the other multi-channel operations with the Alpha output, next to the pixel: Max 2, RMS 2,
+    # Tensor sqrt(3 * 2^2)
+    "EdgeDetectCImg alpha Max|eu.cimg.EdgeDetect|general|float|tol=1e-4+mean=0,0,0,2||-i Source=file:impulse.pfm -i Mask=none multiChannel=2 --frames 0 --window 33,24,34,25"
+    "EdgeDetectCImg alpha RMS|eu.cimg.EdgeDetect|general|float|tol=1e-4+mean=0,0,0,2||-i Source=file:impulse.pfm -i Mask=none multiChannel=1 --frames 0 --window 33,24,34,25"
+    "EdgeDetectCImg alpha Tensor|eu.cimg.EdgeDetect|general|float|tol=1e-4+mean=0,0,0,3.464102||-i Source=file:impulse.pfm -i Mask=none multiChannel=3 --frames 0 --window 33,24,34,25"
+    # Mix 0.5 with the Alpha output: half the matte (6) and half the source alpha (1)
+    "EdgeDetectCImg alpha mix|eu.cimg.EdgeDetect|general|float|tol=1e-4+mean=0,0,0,3.5||-i Source=file:impulse.pfm -i Mask=none mix=0.5 --frames 0 --window 33,24,34,25"
+    # a premultiplied RGBA input with Unpremult on: the colours are kept, not premultiplied by the
+    # new alpha (0 on a solid)
+    "EdgeDetectCImg alpha premultiplied|eu.cimg.EdgeDetect|general|float|tol=1e-4+mean=0.2,0.4,0.6,0||-i Source=solid:0.2,0.4,0.6,0.5 -i Mask=none premult=1"
+    # a 64x48 input at (100,50) of the PAL format: with the Alpha output, the RoD is the input's
+    # (the colours outside it are not extended); version 4 (the edges in R, G, B) expands it by 4
+    "EdgeDetectCImg alpha sub-format RoD|eu.cimg.EdgeDetect|general|float|bounds=100,50,164,98||-i Source=file:impulse.pfm@100,50 -i Mask=none --frames 0"
+    "EdgeDetectCImg 4 sub-format RoD|eu.cimg.EdgeDetect|general|float|bounds=96,46,168,102||-m 4 -i Source=file:impulse.pfm@100,50 -i Mask=none --frames 0"
     # FFT convolution of a 720x576 image (not a power of two: with FFTW or pocketfft, the FFT is
     # not padded to 1024x1024) by a 7x5 kernel: the exact linear convolution, without a CImg
     # "non 2^N dimension" error, whatever the FFT library (CImgFFTConvolve.h)
