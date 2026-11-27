@@ -1857,10 +1857,26 @@ CASES += [
          ("LensDistortion2", dict(LENS_TWIST, output="Undistort")),
          (ofx_id("LensDistortion"), dict(OFX_LENS_TWIST)),
          input="ramp", region=INNER, channels="rgba", tolerance=2e-3),
+    # Where the model minifies (Scale above 1, or a negative K1, with
+    # Redistort), ours stretches the filter's kernel over the footprint of
+    # the output pixel in the source (with the one-pixel kernel, these three
+    # cases differ by 0.013 to 0.017). Tolerance 3e-3 where ours differs by
+    # 1.97e-3 and 1.99e-3: the kernel's shape where it is stretched.
     case("LensDistortion twist 20, scale 1.2,0.9, redistort",
          ("LensDistortion2", dict(LENS_TWIST, output="Redistort")),
          (ofx_id("LensDistortion"), dict(OFX_LENS_TWIST, direction="Distort")),
+         input="ramp", region=INNER, channels="rgba", tolerance=3e-3),
+    case("LensDistortion scale 1.5,1.5, redistort",
+         ("LensDistortion2", {"output": "Redistort", "lens": "Anamorphic",
+                              "anamorphicScale": [1.5, 1.5]}),
+         (ofx_id("LensDistortion"), {"anamorphicScale": [1.5, 1.5],
+                                     "direction": "Distort"}),
          input="ramp", region=INNER, channels="rgba", tolerance=2e-3),
+    case("LensDistortion k1 -0.1, redistort",
+         ("LensDistortion2", {"output": "Redistort",
+                              "distortionDenominator0": -.1}),
+         (ofx_id("LensDistortion"), {"k1": -.1, "direction": "Distort"}),
+         input="ramp", region=INNER, channels="rgba", tolerance=3e-3),
 ]
 for _steps in (1, 2, 3, 5):
     CASES.append(case(
@@ -2616,18 +2632,15 @@ KNOWN = {
         # extra pixel (Rectangle), and Quadratic by default
         "Radial 2 area 100,100-600,476 softness 1", "Radial 2 softness 0.3, plinear",
         "Rectangle 2 softness 40"],
-    # the reference's Undistort is not the exact inverse of its Redistort:
-    # its forward map differs by 0.02 to 0.1 pixel away from the corners, and
-    # by pixels near them (see the STMap case)
+    # Our Undistort is the exact inverse of our Redistort; the reference's
+    # is not (its tooltip: "not an exact process"). Where the model has no
+    # inverse, ours is transparent black (#421).
     302: [
         "LensDistortion k1 0.1 (default: undistort)",
         "LensDistortion k1 -0.1, undistort",
         "LensDistortion STMap undistort, k1 0.1, k2 0.05, center 0.1,0.2",
-        # the map matches (see the STMap case), but where it minifies (Scale
-        # 1.2), the reference's Cubic resampling differs by up to 0.1 pixel
-        "LensDistortion twist 20, scale 1.2,0.9, redistort",
-        # Undistort with Twist and Scale: as above, and where the model has no
-        # inverse ours is transparent black, the reference's is finite
+        # Undistort with Twist and Scale: as above, with no inverse near the
+        # corners
         "LensDistortion twist 45, scale 2,0.5, undistort",
         "LensDistortion twist 20, scale 1.2,0.9, undistort"],
     352: [

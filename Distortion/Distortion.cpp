@@ -203,11 +203,16 @@ constexpr int kPluginVersionUVSquarePixels = 3;
 //              keeps Distort). The Nuke model matches the tests/nuke reference (its K1 and K2 are the
 //              reference's first and second radial denominator coefficients); new Twist and Scale
 //              parameters of the Nuke model (anamorphic lens), with defaults that keep the output.
+//              Undistort is transparent black where the model has no inverse. Where the model (or an
+//              upstream transform) minifies, the source footprint of the output pixel comes from the
+//              model, and the filter's kernel is stretched over it (the separable kernel of IDistort and
+//              STMap 3, with no blur; Box: the mean over the footprint; Impulse: still a point sample).
 #define kPluginVersionLensDistortionMajor 5 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionLensDistortionMinor 0 // Increment this when you have fixed a bug or made it faster.
 #define kPluginVersionLensDistortionMinorV4 1 // the minor version of the obsolete versions 2, 3 and 4
-// the first LensDistortion version whose Direction defaults to Undistort
-constexpr int kPluginVersionLensDistortionUndistortDefault = 5;
+// LensDistortion 5: Direction defaults to Undistort, Undistort is transparent black where the model has no
+// inverse, and the filter is stretched where the model minifies (LensBehaviour::eV5)
+constexpr int kPluginVersionLensDistortion5 = 5;
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -390,6 +395,16 @@ enum DistortionModelEnum
 enum DirectionEnum {
     eDirectionDistort,
     eDirectionUndistort,
+};
+
+// How LensDistortion renders (the other plug-ins ignore it)
+enum class LensBehaviour {
+    // versions 2 to 4: Undistort gives the solver's last iterate where the model has no inverse, and the
+    // filter always samples one source pixel (its ordinary interpolation)
+    eV4,
+    // version 5: Undistort is transparent black where the model has no inverse, and where the model (or an
+    // upstream transform) minifies, the filter covers the source footprint of the output pixel
+    eV5,
 };
 
 #define kParamDistortionOutputMode "outputMode"
@@ -877,7 +892,7 @@ protected:
     WrapEnum _vWrap;
     OfxPointD _renderScale;
     const DistortionModel* _distortionModel;
-    bool _blackIfNoInverse; // LensDistortion 5: transparent black where Undistort has no solution
+    LensBehaviour _lensBehaviour;
     DirectionEnum _direction;
     OutputModeEnum _outputMode;
     bool _blackOutside;
@@ -910,7 +925,7 @@ public:
         , _uWrap(eWrapClamp)
         , _vWrap(eWrapClamp)
         , _distortionModel(NULL)
-        , _blackIfNoInverse(false)
+        , _lensBehaviour(LensBehaviour::eV4)
         , _direction(eDirectionDistort)
         , _outputMode(eOutputModeImage)
         , _blackOutside(false)
@@ -930,8 +945,7 @@ public:
 
     void doMasking(bool v) {_doMasking = v; }
 
-    // LensDistortion version 5: transparent black where Undistort has no solution
-    void setBlackIfNoInverse(bool blackIfNoInverse) { _blackIfNoInverse = blackIfNoInverse; }
+    void setLensBehaviour(LensBehaviour lensBehaviour) { _lensBehaviour = lensBehaviour; }
 
     void setValues(bool processR,
                    bool processG,
@@ -1394,6 +1408,63 @@ composeJacobians(const Jacobian &a,
     return j;
 }
 
+// a footprint of one source pixel along each axis (no derivatives)
+constexpr Jacobian kIdentityJacobian = {1., 0., 0., 1.};
+
+// The footprint in the source of the output pixel (x, y) of LensDistortion: the Jacobian of the
+// output-to-source map, by forward differences over one pixel.
+// Precondition: (sx, sy) is the source position of the pixel's center, i.e. the image of (x + 0.5, y + 0.5)
+// by that map (undistort for Distort, distort for Undistort), in pixels at the render scale.
+// The two sides of the model are not equally cheap: one is given in closed form, the other is solved
+// (distortIsNumerical(), undistortIsNumerical()). So the footprint is defined differently depending on
+// which side the output-to-source map is:
+// - closed form: its forward differences over one output pixel, at (x + 1.5, y + 0.5) and (x + 0.5, y + 1.5);
+// - solved: the inverse of the forward differences of the closed-form side (source-to-output) over one
+//   source pixel, at (sx + 1, sy) and (sx, sy + 1), from (x + 0.5, y + 0.5), so that no more inverse is
+//   solved per pixel. Where that matrix is singular, the footprint is one pixel.
+// If both sides are solved, both differences are solved; a solve that does not converge, or a result that
+// is not finite, gives a footprint of one pixel.
+static Jacobian
+lensFootprint(const DistortionModel &model,
+              DirectionEnum direction,
+              int x,
+              int y,
+              double sx,
+              double sy)
+{
+    auto finite = [](double v) { return !OFX::IsNaN(v) && !OFX::IsInfinite(v); };
+    auto finiteOrIdentity = [&](const Jacobian &j) {
+        return ( finite(j.xx) && finite(j.xy) && finite(j.yx) && finite(j.yy) ) ? j : kIdentityJacobian;
+    };
+    const bool distort = (direction == eDirectionDistort); // the output-to-source map is undistort
+    // the output-to-source map and its inverse, with whether the solve (if any) converged
+    auto toSource = [&](double px, double py, double *qx, double *qy) {
+        return distort ? model.undistortConverged(px, py, qx, qy) : model.distortConverged(px, py, qx, qy);
+    };
+    auto toOutput = [&](double qx, double qy, double *px, double *py) {
+        return distort ? model.distortConverged(qx, qy, px, py) : model.undistortConverged(qx, qy, px, py);
+    };
+    const bool toSourceIsNumerical = distort ? model.undistortIsNumerical() : model.distortIsNumerical();
+    const bool toOutputIsNumerical = distort ? model.distortIsNumerical() : model.undistortIsNumerical();
+    if (!toSourceIsNumerical || toOutputIsNumerical) {
+        double x1, y1, x2, y2;
+        if ( !toSource(x + 1.5, y + 0.5, &x1, &y1) || !toSource(x + 0.5, y + 1.5, &x2, &y2) ) {
+            return kIdentityJacobian;
+        }
+
+        return finiteOrIdentity( {x1 - sx, x2 - sx, y1 - sy, y2 - sy} );
+    }
+    double x1, y1, x2, y2;
+    (void)toOutput(sx + 1., sy, &x1, &y1); // closed form: always converged
+    (void)toOutput(sx, sy + 1., &x2, &y2);
+    // the output position over the source one
+    const Jacobian d = {x1 - (x + 0.5), x2 - (x + 0.5), y1 - (y + 0.5), y2 - (y + 0.5)};
+    const double det = d.xx * d.yy - d.xy * d.yx;
+
+    // a zero (or not finite) determinant gives a non-finite inverse: one pixel
+    return finiteOrIdentity( {d.yy / det, -d.xy / det, -d.yx / det, d.xx / det} );
+}
+
 // Add blur (in source pixels) to the size of the source area sampled for an output pixel: blurX is added to
 // the length of the footprint's side along x, blurY to the one along y (version 2: the same blur, in
 // pixels along x; version 3 with the Box filter: the blur in square pixels). A side of zero length becomes
@@ -1806,6 +1877,8 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
     int srcy2 = int(std::floor(_format.y2));
     //}
     const double maxBlur = _maxBlur;
+    // the widest separable kernel, in pixels: a wild UV gradient or model must not cost hours either
+    const double maxWidth = 2 * maxBlur + 1;
     float tmpPix[4] = {0.f, 0.f, 0.f, 0.f};
     SeparableWeights blurWeightsX, blurWeightsY; // reused by the separable blur
     for (int y = procWindow.y1; y < procWindow.y2; y++) {
@@ -1818,6 +1891,9 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
         for (int x = procWindow.x1; x < procWindow.x2; x++) {
             double sx, sy, sxx, sxy, syx, syy; // the source pixel coordinates and their derivatives
             bool noInverse = false; // LensDistortion 5, Undistort: no source position
+            // LensDistortion 5: the footprint from the model (stretches the filter where it minifies)
+            bool modelFootprint = false;
+            Jacobian M = kIdentityJacobian;
             double a = 1.;
             double blur = 0.; // added to the size of the sampled source area, in source pixels
 
@@ -1957,7 +2033,7 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
                     _distortionModel->undistort( x + 0.5,
                                                  y + 0.5,
                                                  &sx, &sy);
-                } else if (_blackIfNoInverse) {
+                } else if (_lensBehaviour == LensBehaviour::eV5) {
                     // version 5: transparent black where the model has no inverse (the solver did not converge)
                     noInverse = !_distortionModel->distortConverged(x + 0.5, y + 0.5, &sx, &sy);
                 } else {
@@ -1965,7 +2041,15 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
                                                y + 0.5,
                                                &sx, &sy);
                 }
-                sxx = 1;     // TODO: Jacobian
+                // version 5: the footprint from the model (Impulse is a point sample by definition)
+                modelFootprint = (_lensBehaviour == LensBehaviour::eV5) && !noInverse &&
+                                 (_outputMode != eOutputModeSTMap) && (filter != eFilterImpulse);
+                if (modelFootprint) {
+                    M = lensFootprint(*_distortionModel, _direction, x, y, sx, sy);
+                }
+                // J stays one source pixel: the filter's ordinary interpolation (version 5 samples with M
+                // instead where the model minifies)
+                sxx = 1;
                 sxy = 0;
                 syx = 0;
                 syy = 1;
@@ -1976,8 +2060,8 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
             // in the pixels of the image that this effect sees (the transformed source). Version 2 adds the
             // blur to it; version 3 blurs with the separable kernel (not with Box, which integrates the
             // footprint, there the blur is also added to it).
-            Jacobian J = {1., 0., 0., 1.};
-            Jacobian JH = {1., 0., 0., 1.}; // the Jacobian of the inverse upstream transform
+            Jacobian J = kIdentityJacobian;
+            Jacobian JH = kIdentityJacobian; // the Jacobian of the inverse upstream transform
             // the blur along x and y, in pixels at the render scale, in [0, maxBlur] (a negative Blur Scale
             // or blur value is no blur; NaN too)
             const double bx = ( (blur > 0.) && (_blurScaleX > 0.) ) ? (std::min)(blur * _blurScaleX, maxBlur) : 0.;
@@ -2013,10 +2097,25 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
                         JH.yx = (H(1,0) * transformedz - transformedy * H(2,0)) / z2;
                         JH.yy = (H(1,1) * transformedz - transformedy * H(2,1)) / z2;
                         J = composeJacobians(JH, J);
+                        // LensDistortion 5: the footprint in the original source, so that a minifying
+                        // upstream transform also stretches the filter
+                        M = composeJacobians(JH, M);
                     }
                 }
             }
 
+            // the widths of the separable kernel (in source pixels): the blurred footprint (IDistort and
+            // STMap 3 with a blur), or the model's footprint (LensDistortion 5), which stretches the filter
+            // only where it is wider than one pixel (where the model minifies)
+            double wx = 1., wy = 1.;
+            if (separableBlur) {
+                wx = separableKernelWidth(J.xx, J.xy, std::abs(JH.xx) * bx + std::abs(JH.xy) * by, maxWidth);
+                wy = separableKernelWidth(J.yy, J.yx, std::abs(JH.yx) * bx + std::abs(JH.yy) * by, maxWidth);
+            } else if (modelFootprint) {
+                wx = separableKernelWidth(M.xx, M.xy, 0., maxWidth);
+                wy = separableKernelWidth(M.yy, M.yx, 0., maxWidth);
+            }
+            const bool stretched = modelFootprint && !separableBlur && ( (wx > 1.) || (wy > 1.) ) && _srcImg;
             if ( (_uvBehaviour == eUVBehaviourV3) && _unpremultUV && (a == 0.) &&
                  (plugin == eDistortionPluginSTMap || plugin == eDistortionPluginIDistort) ) {
                 // premultiplied UV with a zero alpha: no UV (version 2 multiplies by the alpha, which also
@@ -2036,12 +2135,12 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
             } else {
                 if (filter == eFilterImpulse) {
                     ofxsFilterInterpolate2D<PIX, nComponents, filter, clamp>(sx, sy, _srcImg, _blackOutside, tmpPix);
-                } else if (boxBlur) {
-                    boxBlurSample<PIX, nComponents>(_sat, _blackOutside, sx, sy, J, tmpPix);
-                } else if (separableBlur) {
-                    const double maxWidth = 2 * maxBlur + 1; // a wild UV gradient must not cost hours either
-                    const double wx = separableKernelWidth(J.xx, J.xy, std::abs(JH.xx) * bx + std::abs(JH.xy) * by, maxWidth);
-                    const double wy = separableKernelWidth(J.yy, J.yx, std::abs(JH.yx) * bx + std::abs(JH.yy) * by, maxWidth);
+                } else if ( boxBlur || (stretched && (filter == eFilterBox)) ) {
+                    boxBlurSample<PIX, nComponents>(_sat, _blackOutside, sx, sy, boxBlur ? J : M, tmpPix);
+                } else if (separableBlur || stretched) {
+                    // with a clamping filter, the separable kernel clamps to the range of all its taps (the
+                    // ordinary interpolation: of its neighbours), so the output may change slightly where
+                    // the footprint becomes wider than one pixel
                     separableBlurSample<PIX, nComponents, clamp>(_srcImg, _sat, _blackOutside, filter, sx, sy,
                                                                  wx, wy, blurWeightsX, blurWeightsY, tmpPix);
                 } else {
@@ -3440,20 +3539,20 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
         } else {
             blurScaleX = blurScaleY = blurScale * args.renderScale.x;
         }
-        // the largest blur: the size of the source RoD, in pixels at the render scale (at least 1, and
-        // finite for an infinite RoD)
-        if ( _srcClip && _srcClip->isConnected() ) {
-            const OfxRectD srcRod = _srcClip->getRegionOfDefinition(time);
-            const double w = (srcRod.x2 - srcRod.x1) * args.renderScale.x / par;
-            const double h = (srcRod.y2 - srcRod.y1) * args.renderScale.y;
-            maxBlur = (std::min)( (std::max)( 1., (std::max)(w, h) ), kMaxBlurPixels );
-        }
         _uvOffset->getValueAtTime(time, uOffset, vOffset);
         _uvScale->getValueAtTime(time, uScale, vScale);
         if (_plugin == eDistortionPluginSTMap) {
             uWrap = (WrapEnum)_uWrap->getValueAtTime(time);
             vWrap = (WrapEnum)_vWrap->getValueAtTime(time);
         }
+    }
+    // the largest blur (IDistort, STMap; LensDistortion 5: the widest kernel is 2 * maxBlur + 1 pixels): the
+    // size of the source RoD, in pixels at the render scale (at least 1, and finite for an infinite RoD)
+    if ( _srcClip && _srcClip->isConnected() ) {
+        const OfxRectD srcRod = _srcClip->getRegionOfDefinition(time);
+        const double w = (srcRod.x2 - srcRod.x1) * args.renderScale.x / par;
+        const double h = (srcRod.y2 - srcRod.y1) * args.renderScale.y;
+        maxBlur = (std::min)( (std::max)( 1., (std::max)(w, h) ), kMaxBlurPixels );
     }
     bool blackOutside = _blackOutside->getValueAtTime(time);
     double mix = _mix->getValueAtTime(time);
@@ -3521,7 +3620,8 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
 
     DirectionEnum direction = _direction ? (DirectionEnum)_direction->getValue() : eDirectionDistort;
     auto_ptr<DistortionModel> distortionModel( getDistortionModel(format, args.renderScale, time) );
-    processor.setBlackIfNoInverse( (_plugin == eDistortionPluginLensDistortion) && (_majorVersion >= kPluginVersionLensDistortionUndistortDefault) );
+    processor.setLensBehaviour( ( (_plugin == eDistortionPluginLensDistortion) && (_majorVersion >= kPluginVersionLensDistortion5) ) ?
+                                LensBehaviour::eV5 : LensBehaviour::eV4 );
     processor.setValues(processR, processG, processB, processA,
                         transformIsIdentity, srcTransformInverse,
                         format,
@@ -3944,6 +4044,46 @@ DistortionPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
         renderWin.x2 = renderWinPixel.x2;
         renderWin.y2 = renderWinPixel.y2;
 
+        // version 5 with the Image output: the filter's kernel is stretched over the source footprint where
+        // the model minifies, so the margin grows with the widest footprint at the points below (in source
+        // pixels, at most 2 * maxBlur + 1 as in the render)
+        const OutputModeEnum outputMode = _outputMode ? (OutputModeEnum)_outputMode->getValue() : eOutputModeImage;
+        const FilterEnum filter = _filter ? (FilterEnum)_filter->getValueAtTime(time) : eFilterCubic;
+        const bool stretchable = (_majorVersion >= kPluginVersionLensDistortion5) && (outputMode == eOutputModeImage) &&
+                                 (filter != eFilterImpulse);
+        double maxWidth = 1.;
+        if (stretchable) {
+            const OfxRectD srcRod = _srcClip->getRegionOfDefinition(time);
+            const double w = (srcRod.x2 - srcRod.x1) * args.renderScale.x / par;
+            const double h = (srcRod.y2 - srcRod.y1) * args.renderScale.y;
+            maxWidth = 2 * (std::min)( (std::max)( 1., (std::max)(w, h) ), kMaxBlurPixels ) + 1;
+        }
+        double widest = 1.; // the widest kernel (in source pixels) at the points below
+        // undistort/distort take pixel coordinates, do not divide by renderScale
+        auto toSource = [&](double x, double y, double *xi, double *yi) {
+            if (direction == eDirectionDistort) {
+                distortionModel->undistort(x, y, xi, yi); // inverse of getRoD
+            } else {
+                distortionModel->distort(x, y, xi, yi); // inverse of getRoD
+            }
+        };
+        auto addPoint = [&](double x, double y) {
+            double xi, yi;
+            toSource(x, y, &xi, &yi);
+            roiPixel.x1 = (std::min)(roiPixel.x1, xi);
+            roiPixel.x2 = (std::max)(roiPixel.x2, xi);
+            roiPixel.y1 = (std::min)(roiPixel.y1, yi);
+            roiPixel.y2 = (std::max)(roiPixel.y2, yi);
+            if (stretchable) {
+                // the footprint by forward differences over one pixel, as in the render (a NaN width
+                // is ignored by max)
+                double x1, y1, x2, y2;
+                toSource(x + 1., y, &x1, &y1);
+                toSource(x, y + 1., &x2, &y2);
+                widest = (std::max)( widest, separableKernelWidth(x1 - xi, x2 - xi, 0., maxWidth) );
+                widest = (std::max)( widest, separableKernelWidth(y2 - yi, y1 - yi, 0., maxWidth) );
+            }
+        };
         const int step = 10;
         const double w= (renderWin.x2 - renderWin.x1);
         const double h= (renderWin.y2 - renderWin.y1);
@@ -3951,47 +4091,24 @@ DistortionPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
         const double ystep= h / step;
         for (int i = 0; i <= step; ++i) {
             for (int j = 0; j < 2; ++j) {
-                double x = renderWin.x1 + xstep * i;
-                double y = renderWin.y1 + h * j;
-                double xi, yi;
-                // undistort/distort take pixel coordinates, do not divide by renderScale
-                if (direction == eDirectionDistort) {
-                    distortionModel->undistort(x, y, &xi, &yi); // inverse of getRoD
-                } else {
-                    distortionModel->distort(x, y, &xi, &yi); // inverse of getRoD
-                }
-                roiPixel.x1 = (std::min)(roiPixel.x1, xi);
-                roiPixel.x2 = (std::max)(roiPixel.x2, xi);
-                roiPixel.y1 = (std::min)(roiPixel.y1, yi);
-                roiPixel.y2 = (std::max)(roiPixel.y2, yi);
+                addPoint(renderWin.x1 + xstep * i, renderWin.y1 + h * j);
             }
         }
         for (int i = 0; i < 2; ++i) {
             for (int j = 1; j < step; ++j) {
-                double x = renderWin.x1 + w * i;
-                double y = renderWin.y1 + ystep * j;
-                double xi, yi;
-                // undistort/distort take pixel coordinates, do not divide by renderScale
-                if (direction == eDirectionDistort) {
-                    distortionModel->undistort(x, y, &xi, &yi); // inverse of getRoD
-                } else {
-                    distortionModel->distort(x, y, &xi, &yi); // inverse of getRoD
-                }
-                roiPixel.x1 = (std::min)(roiPixel.x1, xi);
-                roiPixel.x2 = (std::max)(roiPixel.x2, xi);
-                roiPixel.y1 = (std::min)(roiPixel.y1, yi);
-                roiPixel.y2 = (std::max)(roiPixel.y2, yi);
+                addPoint(renderWin.x1 + w * i, renderWin.y1 + ystep * j);
             }
         }
         // at least one point was added. The box may be zero-wide or zero-high (not empty): a
         // degenerate model, e.g. a squeeze of 0, maps the render window to a line (issue #336);
         // the margin below makes it non-empty
         assert(roiPixel.x1 <= roiPixel.x2 && roiPixel.y1 <= roiPixel.y2);
-        // Slight extra margin, just in case.
-        roiPixel.x1 -= 2;
-        roiPixel.x2 += 2;
-        roiPixel.y1 -= 2;
-        roiPixel.y2 += 2;
+        // Slight extra margin, just in case (and the stretched kernel's radius, version 5).
+        const double margin = stretchable ? (std::max)( 2., filterKernelRadius(filter) * widest + 1. ) : 2.;
+        roiPixel.x1 -= margin;
+        roiPixel.x2 += margin;
+        roiPixel.y1 -= margin;
+        roiPixel.y2 += margin;
 
         OfxRectD roi;
         lensDistortionPixelToCanonicalClamped(roiPixel, args.renderScale, par, &roi);
@@ -5069,7 +5186,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
                 page->addChild(*param);
             }
         }
-        if (majorVersion >= kPluginVersionLensDistortionUndistortDefault) {
+        if (majorVersion >= kPluginVersionLensDistortion5) {
             // version 5: Twist and Scale, after Squeeze as in the tests/nuke reference
             {
                 DoubleParamDescriptor *param = desc.defineDoubleParam(kParamTwist);
@@ -5700,7 +5817,7 @@ DistortionPluginFactory<plugin, majorVersion>::describeInContext(ImageEffectDesc
             param->appendOption(kParamDistortionDirectionOptionUndistort);
             // version 5: Undistort, as in the tests/nuke reference; before: Distort, the most straightforward
             // (non-iterative) transform for most models
-            param->setDefault( (int)( (majorVersion >= kPluginVersionLensDistortionUndistortDefault) ? eDirectionUndistort : eDirectionDistort ) );
+            param->setDefault( (int)( (majorVersion >= kPluginVersionLensDistortion5) ? eDirectionUndistort : eDirectionDistort ) );
             if (page) {
                 page->addChild(*param);
             }

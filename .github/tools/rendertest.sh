@@ -1389,6 +1389,23 @@ tests=(
     # is inverted in closed form (Newton alone did not converge with Twist 45 and Scale 2,0.5)
     "LensDistortion undistort twist 45 scale 2,0.5|net.sf.openfx.LensDistortion|general|float|mean=-0.0598,1.1396,1,1||-i Source=checker:16 k1=0.05 center=0.5,0 anamorphicTwist=45 anamorphicScale=2,0.5 outputMode=STMap --frames 0 --window 100,250,200,330"
     "LensDistortion undistort twist 20 scale 1.2,0.9|net.sf.openfx.LensDistortion|general|float|mean=0.2538,0.57,1,1||-i Source=checker:16 k1=0.05 center=0.5,0 anamorphicTwist=20 anamorphicScale=1.2,0.9 outputMode=STMap --frames 0 --window 100,250,200,330"
+    # LensDistortion 5 (#302): where the model minifies (Scale 3, or 1/3 with Undistort: three source pixels
+    # per output pixel), the filter's kernel is stretched over the footprint of the output pixel, so a
+    # one-pixel checker averages to 0.5. The filter's ordinary interpolation (version 4, here with a K1 of
+    # -0.3) gives values from 0 to 1. No case has an upstream (concatenated) transform: hostDemo does not
+    # concatenate; a minifying one also stretches the kernel (the footprint is in the original source).
+    "LensDistortion minify distort|net.sf.openfx.LensDistortion|general|float|range=0.45,0.55+mean=0.5,0.5,0.5,0.5||-i Source=checker:1 anamorphicScale=3,3 direction=0 --frames 0 --window 300,250,400,330"
+    "LensDistortion minify undistort|net.sf.openfx.LensDistortion|general|float|range=0.45,0.55+mean=0.5,0.5,0.5,0.5||-i Source=checker:1 anamorphicScale=0.333333,0.333333 --frames 0 --window 300,250,400,330"
+    "LensDistortion 4 minify distort|net.sf.openfx.LensDistortion|general|float|max=1,1,1,1||-m 4 -i Source=checker:1 k1=-0.3 direction=0 --frames 0 --window 300,250,400,330"
+    # the same at render scale 0.5 (checker:2 is one pixel at that scale), and with Box (the mean over the
+    # 3x3-pixel footprint: 4/9 or 5/9). Impulse stays a point sample.
+    "LensDistortion minify scale 0.5|net.sf.openfx.LensDistortion|general|float|range=0.45,0.55+mean=0.5,0.5,0.5,0.5||-i Source=checker:2 anamorphicScale=3,3 direction=0 --scale 0.5 --frames 0 --window 150,125,200,165"
+    "LensDistortion minify box|net.sf.openfx.LensDistortion|general|float|range=0.44,0.56+mean=0.5,0.5,0.5,0.5||-i Source=checker:1 anamorphicScale=3,3 direction=0 filter=Box --frames 0 --window 300,250,400,330"
+    # tiled renders are the same as the full render where the kernel is stretched (the RoI covers it), with
+    # Cubic and Keys (radius 2), Distort and Undistort
+    "LensDistortion minify tile|net.sf.openfx.LensDistortion|general|float|nonconst+tile||-i Source=checker:3 k1=0.1 anamorphicScale=3,2.5 direction=0 --frames 0 --window 300,250,400,330"
+    "LensDistortion minify keys tile|net.sf.openfx.LensDistortion|general|float|nonconst+tile||-i Source=checker:3 k1=-0.2 anamorphicTwist=30 anamorphicScale=2.5,3 direction=0 filter=Keys --frames 0 --window 250,200,420,330"
+    "LensDistortion minify undistort tile|net.sf.openfx.LensDistortion|general|float|nonconst+tile||-i Source=checker:3 k1=0.05 anamorphicScale=0.35,0.4 filter=Keys --frames 0 --window 280,220,420,330"
     # LensDistortion STMap output (u, v, 1, 1): PFBarrel squeeze 0, 3DE Classic filmback width 0 and
     # 3DE Standard cylindric bending b=-2 (sqrt(1+b)) gave a NaN RoD (nothing rendered). Models: 1
     # PFBarrel, 2 3DE Classic, 5 3DE4 Radial Standard Degree 4.
