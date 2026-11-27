@@ -155,7 +155,7 @@ Caveats/Bugs:
 - kOfxParamTypeInteger2D kOfxParamTypeInteger3D are not supported (crash when opening the parameters
   page), at least in Generators. This no longer crashes in Resolve 21.2: ColorWheel's Int2D Frame
   Range and its hidden Int2D format Size work. Source: maintainer test, 2026-11-27,
-  openfx-misc 3dfdaf7 with SupportExt e0498f4 (closes NatronGitHub/openfx-supportext#219).
+  openfx-misc 3dfdaf7 with SupportExt e0498f4 (see NatronGitHub/openfx-supportext#219).
 - kOfxImageEffectInstancePropSequentialRender property is missing on the host and the Image Effect
   descriptor (but exists on the image effect instance). See the "missing in Resolve" comments in
   openfx Support's ofxsImageEffect.cpp and TimeBuffer.cpp. Since NatronGitHub/openfx#351,

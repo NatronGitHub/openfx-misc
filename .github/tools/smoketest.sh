@@ -220,6 +220,10 @@ case "$(uname -s)" in
 esac
 
 SMOKETEST_TIMEOUT=${SMOKETEST_TIMEOUT:-120}
+case "${SMOKETEST_GPU:-}" in
+    ''|require) ;;
+    *) echo "smoketest: SMOKETEST_GPU=$SMOKETEST_GPU: the only value is require"; exit 1 ;;
+esac
 
 # watchdog LOG BUNDLE HOSTDEMO-ARGS...: run hostDemo with only BUNDLE in OFX_PLUGIN_PATH
 # and its output in LOG, killed after SMOKETEST_TIMEOUT seconds (run_with_timeout), and set
@@ -442,8 +446,9 @@ fi
 # is not found. Without it, the OPENGL plug-ins are not rendered with OpenGL.
 gpu_ok=0
 if [ "$gl_ok" = 1 ]; then
-    probe=$(cd "$work" && OFX_PLUGIN_PATH=$work/path/none "$HOSTDEMO" --no-std-paths --no-cache --quiet \
-                --gpu=opengl -p smoketest.probe 2>&1) || true
+    # (under the render timeout: a stuck OpenGL initialization fails like a stuck render)
+    probe=$(cd "$work" && export OFX_PLUGIN_PATH=$work/path/none && run_with_timeout "$SMOKETEST_TIMEOUT" "$HOSTDEMO" \
+                --no-std-paths --no-cache --quiet --gpu=opengl -p smoketest.probe 2>&1) || true
     if printf '%s\n' "$probe" | grep -q -e '--gpu' || ! printf '%s\n' "$probe" | grep -q 'not found'; then
         echo "note: $HOSTDEMO does not render with OpenGL here (--gpu=opengl): the OPENGL plug-ins are not rendered with OpenGL"
         printf '%s\n' "$probe" | grep -e '--gpu' | sed 's/^/  | /' || true

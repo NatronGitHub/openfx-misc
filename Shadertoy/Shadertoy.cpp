@@ -2665,9 +2665,7 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamMousePositionLabel);
         param->setHint(kParamMousePositionHint);
         param->setDoubleType(eDoubleTypeXYAbsolute);
-        if ( param->getHostHasNativeOverlayHandle() ) { // OFX 1.5.1: only on hosts with native handles
-            param->setUseHostNativeOverlayHandle(true);
-        }
+        param->setUseHostNativeOverlayHandle(true);
         param->setAnimates(true);
         if (page) {
             page->addChild(*param);
@@ -2679,9 +2677,7 @@ ShadertoyPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setHint(kParamMouseClickHint);
         param->setDoubleType(eDoubleTypeXYAbsolute);
         param->setDefault(1.,1.);
-        if ( param->getHostHasNativeOverlayHandle() ) { // OFX 1.5.1: only on hosts with native handles
-            param->setUseHostNativeOverlayHandle(true);
-        }
+        param->setUseHostNativeOverlayHandle(true);
         param->setAnimates(true);
         if (page) {
             page->addChild(*param);

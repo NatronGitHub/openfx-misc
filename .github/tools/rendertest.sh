@@ -473,6 +473,10 @@ print([k for k in r["renders"] if k["time"] == 0 and not k.get("view")][0]["outp
 # (default 300) is killed (run_with_timeout), so that a hang fails instead of
 # blocking the test.
 RENDERTEST_TIMEOUT=${RENDERTEST_TIMEOUT:-300}
+case "${RENDERTEST_GPU:-}" in
+    ''|require) ;;
+    *) echo "rendertest: RENDERTEST_GPU=$RENDERTEST_GPU: the only value is require"; exit 1 ;;
+esac
 hostdemo() {
     local log=$1 status=0
     shift
