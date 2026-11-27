@@ -650,7 +650,11 @@ enum EdgeDetectMultiChannelEnum
 
 #define kParamEdgeDetectThreshold "threshold"
 #define kParamEdgeDetectThresholdLabel "Threshold"
+#define kParamEdgeDetectThresholdHintV4 "Edge magnitudes below this value are set to 0 (after the erosion and the non-maxima suppression). With 0, no edge is removed. " \
+    kParamEdgeDetectThresholdHintScale
 #define kParamEdgeDetectThresholdHint "Edge values below this value are set to 0 (after the erosion and the non-maxima suppression). With 0, no edge is removed. " \
+    kParamEdgeDetectThresholdHintScale
+#define kParamEdgeDetectThresholdHintScale \
     "The threshold applies to the gradient computed at the render scale, which is not rescaled: at a proxy scale, the gradients are different, so different edges may be kept."
 
 #define kParamEdgeDetectOutput "output"
@@ -3310,7 +3314,7 @@ CImgBlurPlugin::describeInContext(ImageEffectDescriptor& desc,
     if (blurPlugin == eBlurPluginEdgeDetect) {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEdgeDetectThreshold);
         param->setLabel(kParamEdgeDetectThresholdLabel);
-        param->setHint(kParamEdgeDetectThresholdHint);
+        param->setHint( (majorVersion >= kPluginVersionMajorEdgeDetect) ? kParamEdgeDetectThresholdHint : kParamEdgeDetectThresholdHintV4 );
         param->setRange(0., DBL_MAX);
         // version 5: the Sobel and Prewitt edges are not normalized (e.g. Sobel with Sum gives 12 next
         // to a unit step in R, G and B)
