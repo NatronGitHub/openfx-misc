@@ -16,7 +16,7 @@
 # more values fall back to mp_vector_norm2(), as before).
 #
 # Running it again on a patched file does nothing, and so does running it on a CImg.h with the old
-# layout. The script fails in any other case: mp_vector_hypot() or the layout of mp_vector_norm2()
+# layout, or whose mp_vector_hypot() has the patch's body (an upstream fix). The script fails in any other case: mp_vector_hypot() or the layout of mp_vector_norm2()
 # not found as expected, including an upstream change of mp_vector_hypot() (then check what
 # upstream changed, and update or remove this patch), or CRLF line endings. Only POSIX sh, awk and wc are used, for Linux, macOS and MSYS2.
 set -e
@@ -29,6 +29,8 @@ old2="case 5 : return cimg::abs(_mp_arg(4));"
 norm2="static double mp_vector_norm2(_cimg_math_parser& mp) {"
 newlayout="const unsigned int nb_args = (unsigned int)mp.opcode[2];"
 oldlayout="const unsigned int siz = (unsigned int)mp.opcode[2];"
+# the patch's body (trimmed lines, '|'-separated), which upstream may adopt as is
+body="const unsigned int nb_args = (unsigned int)mp.opcode[2];|double val[2] = { 0, 0 };|unsigned int n = 0;|for (unsigned int i = 0; i<2*nb_args; i+=2) {|const unsigned int siz = (unsigned int)mp.opcode[4 + i];|const double *const ptr = &_mp_arg(3 + i) + (siz?1:0);|for (unsigned int k = 0; k<std::max(1U,siz); ++k) {|if (n==2) return mp_vector_norm2(mp);|val[n++] = ptr[k];|}|}|return n==1?cimg::abs(*val):cimg::hypot(val[0],val[1]);"
 
 fail() {
   echo "Error: $f: $1" >&2
@@ -38,17 +40,19 @@ fail() {
 }
 
 # counts <file>: "<mp_vector_hypot definitions> <markers> <old switches> <lines in its body>
-# <mp_vector_norm2 with the new layout> <mp_vector_norm2 with the old layout>"
+# <mp_vector_norm2 with the new layout> <mp_vector_norm2 with the old layout> <bodies that are the
+# patch's, without its marker>"
 counts() {
   awk -v head="$head" -v marker="$marker" -v old1="$old1" -v old2="$old2" -v norm2="$norm2" \
-      -v newlayout="$newlayout" -v oldlayout="$oldlayout" '
+      -v newlayout="$newlayout" -v oldlayout="$oldlayout" -v body="$body" '
     { t = $0; gsub(/^[ \t]+|[ \t]+$/, "", t) }
-    t == head { h++; inhyp = 1; next }
-    inhyp && t == "}" && $0 ~ /^      }$/ { inhyp = 0; next }
-    inhyp { lines++; if (t == marker) m++; if (t == old1) s1++; if (t == old2) s2++ }
+    t == head { h++; inhyp = 1; text = ""; next }
+    inhyp && t == "}" && $0 ~ /^      }$/ { inhyp = 0; if (text == body) b++; next }
+    inhyp { lines++; if (t == marker) m++; if (t == old1) s1++; if (t == old2) s2++
+            if (t != marker) text = (text == "" ? t : text "|" t) }
     t == norm2 { innorm = 1; next }
     innorm { if (t == newlayout) nl++; if (t == oldlayout) ol++; innorm = 0 }
-    END { print h + 0, m + 0, (s1 && s2) ? 1 : 0, lines + 0, nl + 0, ol + 0 }' "$1"
+    END { print h + 0, m + 0, (s1 && s2) ? 1 : 0, lines + 0, nl + 0, ol + 0, b + 0 }' "$1"
 }
 
 case "$f" in
@@ -66,6 +70,10 @@ set -- `counts "$f"`
 [ $(($5 + $6)) = 1 ] || fail "expected mp_vector_norm2() to start with '$newlayout' or '$oldlayout'"
 if [ "$2" = 1 ]; then
   echo "$f: already patched (hypot(), #244)"
+  exit 0
+fi
+if [ "$2" = 0 ] && [ "$5" = 1 ] && [ "$7" = 1 ]; then
+  echo "$f: mp_vector_hypot() already reads the new layout (the patch's code): not patched (fixed upstream, #244)"
   exit 0
 fi
 if [ "$6" = 1 ] && [ "$3" = 1 ]; then
