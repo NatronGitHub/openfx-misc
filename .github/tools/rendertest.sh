@@ -1776,17 +1776,34 @@ tests=(
     "CImgSmooth ramp|net.sf.cimg.CImgSmooth|filter|float|mean=0.5,0.5,0.5,0.5+nonconst||-i Source=ramp -i Mask=none"
     "CImgSharpenShock flat|net.sf.cimg.CImgSharpenShock|filter|float|mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none"
     "CImgSharpenShock ramp|net.sf.cimg.CImgSharpenShock|filter|float|nonconst||-i Source=ramp -i Mask=none"
-    # EdgeDetectCImg on a white pixel at (32,24), Separate channels: Sobel (1-2-1 kernels / 8) gives 2/8
-    # next to it and sqrt(2)/8 on the diagonal; Prewitt (1-1-1 kernels / 6, issue #314, appended
-    # as filter 8) gives 1/6 and sqrt(2)/6. Threshold (issue #314, 0 by default) sets the edges
-    # below it to 0.
-    "EdgeDetectCImg Sobel impulse|eu.cimg.EdgeDetect|filter|float|tol=1e-4+mean=0.25,0.25,0.25,1||-i Source=file:impulse.pfm -i Mask=none filter=1 multiChannel=0 --frames 0 --window 33,24,34,25"
-    "EdgeDetectCImg Prewitt impulse|eu.cimg.EdgeDetect|filter|float|tol=1e-4+mean=0.166667,0.166667,0.166667,1||-i Source=file:impulse.pfm -i Mask=none filter=8 multiChannel=0 --frames 0 --window 33,24,34,25"
-    "EdgeDetectCImg Prewitt impulse diagonal|eu.cimg.EdgeDetect|filter|float|tol=1e-4+mean=0.235702,0.235702,0.235702,1||-i Source=file:impulse.pfm -i Mask=none filter=8 multiChannel=0 --frames 0 --window 33,25,34,26"
-    "EdgeDetectCImg Sobel threshold|eu.cimg.EdgeDetect|filter|float|tol=1e-4+mean=0,0,0,1||-i Source=file:impulse.pfm -i Mask=none filter=1 multiChannel=0 threshold=0.3 --frames 0 --window 33,24,34,25"
-    # threshold 0.2 on the two pixels (33,24) and (33,25): 1/6 is removed, sqrt(2)/6 is kept, so the
-    # mean is sqrt(2)/12 (without the threshold, (1/6 + sqrt(2)/6) / 2 = 0.2012)
-    "EdgeDetectCImg Prewitt threshold|eu.cimg.EdgeDetect|filter|float|tol=1e-4+mean=0.117851,0.117851,0.117851,1||-i Source=file:impulse.pfm -i Mask=none filter=8 multiChannel=0 threshold=0.2 --frames 0 --window 33,24,34,26"
+    # EdgeDetectCImg on a white pixel at (32,24), Separate channels into the processed channels
+    # (output=0): Sobel (1-2-1 kernels, not normalized from version 5, issue #314) gives 2 next to
+    # it and sqrt(2) on the diagonal; Prewitt (1-1-1 kernels, appended as filter 8) gives 1 and
+    # sqrt(2). Threshold sets the edges below it to 0. Version 4 normalizes the kernels: Sobel / 8
+    # gives 2/8, Prewitt / 6 gives 1/6.
+    "EdgeDetectCImg Sobel impulse|eu.cimg.EdgeDetect|filter|float|tol=1e-4+mean=2,2,2,1||-i Source=file:impulse.pfm -i Mask=none filter=1 multiChannel=0 output=0 --frames 0 --window 33,24,34,25"
+    "EdgeDetectCImg Prewitt impulse|eu.cimg.EdgeDetect|filter|float|tol=1e-4+mean=1,1,1,1||-i Source=file:impulse.pfm -i Mask=none filter=8 multiChannel=0 output=0 --frames 0 --window 33,24,34,25"
+    "EdgeDetectCImg Prewitt impulse diagonal|eu.cimg.EdgeDetect|filter|float|tol=1e-4+mean=1.414214,1.414214,1.414214,1||-i Source=file:impulse.pfm -i Mask=none filter=8 multiChannel=0 output=0 --frames 0 --window 33,25,34,26"
+    "EdgeDetectCImg Sobel threshold|eu.cimg.EdgeDetect|filter|float|tol=1e-4+mean=0,0,0,1||-i Source=file:impulse.pfm -i Mask=none filter=1 multiChannel=0 output=0 threshold=2.5 --frames 0 --window 33,24,34,25"
+    # threshold 1.2 on the two pixels (33,24) and (33,25): 1 is removed, sqrt(2) is kept, so the
+    # mean is sqrt(2)/2 (without the threshold, (1 + sqrt(2)) / 2 = 1.2071)
+    "EdgeDetectCImg Prewitt threshold|eu.cimg.EdgeDetect|filter|float|tol=1e-4+mean=0.707107,0.707107,0.707107,1||-i Source=file:impulse.pfm -i Mask=none filter=8 multiChannel=0 output=0 threshold=1.2 --frames 0 --window 33,24,34,26"
+    "EdgeDetectCImg 4 Sobel impulse|eu.cimg.EdgeDetect|filter|float|tol=1e-4+mean=0.25,0.25,0.25,1||-m 4 -i Source=file:impulse.pfm -i Mask=none filter=1 multiChannel=0 --frames 0 --window 33,24,34,25"
+    "EdgeDetectCImg 4 Prewitt impulse|eu.cimg.EdgeDetect|filter|float|tol=1e-4+mean=0.166667,0.166667,0.166667,1||-m 4 -i Source=file:impulse.pfm -i Mask=none filter=8 multiChannel=0 --frames 0 --window 33,24,34,25"
+    # Version 5 defaults (Sobel, Sum, Alpha output, R, G and B processed): one matte in alpha, the
+    # sum over R, G and B of |gx| + |gy|, 3 * 2 = 6 next to the pixel and on the diagonal; R, G and
+    # B are kept. Separate with the Alpha output: the sum of the per-channel magnitudes, 3 * 2 next
+    # to the pixel and 3 * sqrt(2) on the diagonal. An RGB input gets an alpha channel (general
+    # context), and the output is unpremultiplied.
+    "EdgeDetectCImg alpha impulse|eu.cimg.EdgeDetect|general|float|tol=1e-4+comps=RGBA+premult=UnPreMultiplied+mean=0,0,0,6||-i Source=file:impulse.pfm -i Mask=none --frames 0 --window 33,24,34,25"
+    "EdgeDetectCImg alpha impulse diagonal|eu.cimg.EdgeDetect|general|float|tol=1e-4+mean=0,0,0,6||-i Source=file:impulse.pfm -i Mask=none --frames 0 --window 33,25,34,26"
+    "EdgeDetectCImg alpha impulse centre|eu.cimg.EdgeDetect|general|float|tol=1e-4+mean=1,1,1,0||-i Source=file:impulse.pfm -i Mask=none --frames 0 --window 32,24,33,25"
+    "EdgeDetectCImg alpha Separate diagonal|eu.cimg.EdgeDetect|general|float|tol=1e-4+mean=0,0,0,4.242641||-i Source=file:impulse.pfm -i Mask=none multiChannel=0 --frames 0 --window 33,25,34,26"
+    "EdgeDetectCImg alpha threshold|eu.cimg.EdgeDetect|general|float|tol=1e-4+mean=0,0,0,0||-i Source=file:impulse.pfm -i Mask=none threshold=6.5 --frames 0 --window 33,24,34,25"
+    "EdgeDetectCImg alpha RGB solid|eu.cimg.EdgeDetect|general|float|tol=1e-4+comps=RGBA+mean=0.25,0.5,0.75,0||-i Source=solid:0.25,0.5,0.75,1#rgb -i Mask=none"
+    # an Alpha input: the edges of alpha with Process A (0 on a solid), else unchanged
+    "EdgeDetectCImg alpha Alpha input|eu.cimg.EdgeDetect|general|float|tol=1e-4+comps=Alpha+mean=0||-i Source=solid:0.4,0.4,0.4,0.4#alpha -i Mask=none NatronOfxParamProcessA=1"
+    "EdgeDetectCImg alpha Alpha input, A off|eu.cimg.EdgeDetect|general|float|tol=1e-4+comps=Alpha+mean=0.4||-i Source=solid:0.4,0.4,0.4,0.4#alpha -i Mask=none"
     # FFT convolution of a 720x576 image (not a power of two: with FFTW or pocketfft, the FFT is
     # not padded to 1024x1024) by a 7x5 kernel: the exact linear convolution, without a CImg
     # "non 2^N dimension" error, whatever the FFT library (CImgFFTConvolve.h)

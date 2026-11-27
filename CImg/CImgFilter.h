@@ -420,6 +420,12 @@ public:
         return _supportsComponentRemapping && processA && ( (nComponents == 1) || (nComponents == 4) );
     }
 
+    // true if render() writes the alpha channel even when A is not processed (e.g. an edge matte
+    // computed from R, G and B): the image passed to render() then also has the alpha channel of
+    // Alpha and RGBA images (last, as always), and the colours are not (un)premultiplied, since
+    // render() does not change them. Only used when the components can be remapped.
+    virtual bool renderWritesAlpha(const Params& /*params*/) const { return false; }
+
     // 0: Black/Dirichlet, 1: Nearest/Neumann, 2: Repeat/Periodic
     virtual int getBoundary(const Params& /*params*/) { return 0; }
 
@@ -654,6 +660,13 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     getValuesAtTime(time, params);
     int srcBoundary = getBoundary(params);
     assert(0 <= srcBoundary && srcBoundary <= 2);
+    // render() gets the alpha channel if it is processed, or if render() writes it
+    const bool writesAlpha = _supportsComponentRemapping && renderWritesAlpha(params);
+    const bool renderAlpha = processA || writesAlpha;
+    if (writesAlpha) {
+        // render() does not change the colours: no need to (un)premult
+        premult = false;
+    }
 
     // copy areas of renderWindow that are not within processWindow to dst
 
@@ -789,7 +802,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
     } else {
         switch (tmpPixelComponents) {
         case OFX::ePixelComponentAlpha:
-            cimgSpectrum = (int)processA;
+            cimgSpectrum = (int)renderAlpha;
             break;
         case OFX::ePixelComponentXY:
             // XY images have no B channel
@@ -799,7 +812,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
             cimgSpectrum = (int)processR + (int)processG + (int) processB;
             break;
         case OFX::ePixelComponentRGBA:
-            cimgSpectrum = (int)processR + (int)processG + (int) processB + (int)processA;
+            cimgSpectrum = (int)processR + (int)processG + (int) processB + (int)renderAlpha;
             break;
         default:
             cimgSpectrum = 0;
@@ -817,7 +830,7 @@ CImgFilterPluginHelper<Params, sourceIsOptional>::render(const OFX::RenderArgume
         }
         assert(tmpPixelComponentCount == cimgSpectrum);
     } else {
-        const bool hasAlphaChannel = renderHasAlphaChannel(tmpPixelComponentCount, processA);
+        const bool hasAlphaChannel = renderHasAlphaChannel(tmpPixelComponentCount, renderAlpha);
         if (tmpPixelComponentCount == 1) {
             if (hasAlphaChannel) {
                 assert(cimgSpectrum == 1);
