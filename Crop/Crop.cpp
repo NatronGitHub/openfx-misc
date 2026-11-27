@@ -359,7 +359,7 @@ private:
                           double* par) const;
 
     // the Format, in canonical coordinates
-    void getFormatCanonical(OfxRectD* rod) const;
+    OfxRectD getFormatCanonical() const;
 
     void updateParamsVisibility();
 
@@ -389,19 +389,31 @@ private:
     BooleanParam* _blackOutside;
 };
 
-void
-CropPlugin::getFormatCanonical(OfxRectD* rod) const
+OfxRectD
+CropPlugin::getFormatCanonical() const
 {
     int w, h;
     _formatSize->getValue(w, h);
     double formatPar = _formatPar->getValue();
-    if (formatPar <= 0.) {
-        // the range of the hidden format PAR is [0,DBL_MAX]: use the default PAR, as the generators do
+    if ( !(formatPar > 0.) ) {
+        // the range of the hidden format PAR is [0,DBL_MAX] (and NaN would give undefined behaviour in
+        // the conversions to int): use the default PAR, as the generators do
         formatPar = 1.;
     }
     const OfxRectI pixelFormat = {0, 0, w, h};
     const OfxPointD rsOne = {1., 1.};
-    Coords::toCanonical(pixelFormat, rsOne, formatPar, rod);
+    OfxRectD rod;
+    Coords::toCanonical(pixelFormat, rsOne, formatPar, &rod);
+
+    return rod;
+}
+
+// a PAR from the host, or 1 if it is not positive (also NaN, which would give undefined behaviour in the
+// conversions to int)
+double
+validPar(double par)
+{
+    return (par > 0.) ? par : 1.; // also for NaN
 }
 
 void
@@ -437,14 +449,14 @@ CropPlugin::getCropRectangle(OfxTime time,
     OfxRectD rod;
     // Crop does not support multiple clip PARs, and does not set the output PAR (it copies the source
     // pixels): the pixels are those of the output
-    const double par = _dstClip->getPixelAspectRatio();
+    const double par = validPar( _dstClip->getPixelAspectRatio() );
 
     // below: see GeneratorPlugin::getRegionOfDefinition
     GeneratorExtentEnum extent = (GeneratorExtentEnum)_extent->getValue();
 
     switch (extent) {
     case eGeneratorExtentFormat:
-        getFormatCanonical(&rod);
+        rod = getFormatCanonical();
         break;
     case eGeneratorExtentSize: {
         _size->getValueAtTime(time, rod.x2, rod.y2);
@@ -754,7 +766,7 @@ CropPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
         OfxRectD rod = {0., 0., 0., 0.};
         if (extent == eGeneratorExtentFormat) {
             //specific output format
-            getFormatCanonical(&rod);
+            rod = getFormatCanonical();
         } else if (extent == eGeneratorExtentProject) {
             OfxPointD siz = getProjectSize();
             OfxPointD off = getProjectOffset();
@@ -764,7 +776,7 @@ CropPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
             rod.y2 = off.y + siz.y;
         }
         if ( !Coords::rectIsEmpty(rod) ) {
-            const double par = ( _srcClip && _srcClip->isConnected() ) ? _srcClip->getPixelAspectRatio() : getProjectPixelAspectRatio();
+            const double par = validPar( ( _srcClip && _srcClip->isConnected() ) ? _srcClip->getPixelAspectRatio() : getProjectPixelAspectRatio() );
             const OfxPointD rsOne = {1., 1.};
             OfxRectI pixelFormat;
             Coords::toPixelNearest(rod, rsOne, par, &pixelFormat);

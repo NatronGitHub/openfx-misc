@@ -70,6 +70,7 @@ class SpriteSheetProcessorBase
 protected:
     const Image *_srcImg;
     OfxRectI _cropRectPixel;
+    OfxRectI _spritePixel; // the RoD in pixels at the render scale: the sprite, at (0,0)
 
 public:
     SpriteSheetProcessorBase(ImageEffect &instance)
@@ -77,6 +78,7 @@ public:
         , _srcImg(NULL)
     {
         _cropRectPixel.x1 = _cropRectPixel.y1 = _cropRectPixel.x2 = _cropRectPixel.y2 = 0;
+        _spritePixel.x1 = _spritePixel.y1 = _spritePixel.x2 = _spritePixel.y2 = 0;
     }
 
     /** @brief set the src image */
@@ -85,9 +87,11 @@ public:
         _srcImg = v;
     }
 
-    void setValues(const OfxRectI& cropRectPixel)
+    void setValues(const OfxRectI& cropRectPixel,
+                   const OfxRectI& spritePixel)
     {
         _cropRectPixel = cropRectPixel;
+        _spritePixel = spritePixel;
     }
 };
 
@@ -112,24 +116,29 @@ private:
             }
 
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
-            // the sprite is at (0,0) in the output: the host may render outside it (outside the RoD, e.g.
-            // a host without multi-resolution renders the project), where the output is black, not the
-            // neighbouring sprites
-            const bool yInside = (0 <= y) && (y < _cropRectPixel.y2 - _cropRectPixel.y1);
+            // the host may render outside the RoD (e.g. a host without multi-resolution renders the
+            // project): the output is black there, not the neighbouring sprites. [xInside1, xInside2) is the
+            // part of the row inside the RoD (empty if y is outside it).
+            int xInside1 = procWindow.x1;
+            int xInside2 = procWindow.x1;
+            if ( (_spritePixel.y1 <= y) && (y < _spritePixel.y2) ) {
+                xInside1 = (std::min)( (std::max)(procWindow.x1, _spritePixel.x1), procWindow.x2 );
+                xInside2 = (std::max)( (std::min)(procWindow.x2, _spritePixel.x2), xInside1 );
+            }
 
-            for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
-                const bool inside = yInside && (0 <= x) && (x < _cropRectPixel.x2 - _cropRectPixel.x1);
-                const PIX *srcPix = (_srcImg && inside) ? (const PIX*)_srcImg->getPixelAddress(x + _cropRectPixel.x1, y + _cropRectPixel.y1) : 0;
+            for (int x = procWindow.x1; x < xInside1; ++x, dstPix += nComponents) {
+                std::fill(dstPix, dstPix + nComponents, PIX());
+            }
+            for (int x = xInside1; x < xInside2; ++x, dstPix += nComponents) {
+                const PIX *srcPix = _srcImg ? (const PIX*)_srcImg->getPixelAddress(x + _cropRectPixel.x1, y + _cropRectPixel.y1) : 0;
                 if (srcPix) {
-                    // inside of the rectangle
-                    for (int k = 0; k < nComponents; ++k) {
-                        dstPix[k] = srcPix[k];
-                    }
+                    std::copy(srcPix, srcPix + nComponents, dstPix);
                 } else {
-                    for (int k = 0; k < nComponents; ++k) {
-                        dstPix[k] = 0;
-                    }
+                    std::fill(dstPix, dstPix + nComponents, PIX());
                 }
+            }
+            for (int x = xInside2; x < procWindow.x2; ++x, dstPix += nComponents) {
+                std::fill(dstPix, dstPix + nComponents, PIX());
             }
         }
     } // multiThreadProcessImages
@@ -178,6 +187,9 @@ private:
     // override the roi call
     virtual void getRegionsOfInterest(const RegionsOfInterestArguments &args, RegionOfInterestSetter &rois) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+
+    // the RoD: the sprite, at (0,0)
+    void getSpriteRoD(double time, OfxRectD* rod) const;
 
     /* Override the render */
     virtual void render(const RenderArguments &args) OVERRIDE FINAL;
@@ -313,7 +325,13 @@ SpriteSheetPlugin::setupAndProcess(SpriteSheetProcessorBase &processor,
     OfxRectI cropRectPixel;
     getCropRectangle(time, args.renderScale, srcRoDPixel, spriteSize, spriteRange, frameOffset, &cropRectPixel);
 
-    processor.setValues(cropRectPixel);
+    // the RoD, in pixels at the render scale (as the host computes the output bounds)
+    OfxRectD rod;
+    getSpriteRoD(time, &rod);
+    OfxRectI spritePixel;
+    Coords::toPixelEnclosing(rod, args.renderScale, _dstClip->getPixelAspectRatio(), &spritePixel);
+
+    processor.setValues(cropRectPixel, spritePixel);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -365,14 +383,21 @@ SpriteSheetPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args
 {
     const double time = args.time;
 
+    getSpriteRoD(time, &rod);
+
+    return true;
+}
+
+void
+SpriteSheetPlugin::getSpriteRoD(double time,
+                                OfxRectD* rod) const
+{
     double par = _srcClip->getPixelAspectRatio();
     const OfxPointD rs1 = {1., 1.};
     OfxRectI sprite = {0, 0, 0, 0};
     _spriteSize->getValueAtTime(time, sprite.x2, sprite.y2);
 
-    Coords::toCanonical(sprite, rs1, par, &rod);
-
-    return true;
+    Coords::toCanonical(sprite, rs1, par, rod);
 }
 
 // the internal render function
