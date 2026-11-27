@@ -51,8 +51,8 @@ CIMG_SHA256=adf13c3e991f6812c2db484ff07aa614421830117924590d3def10e8ac6a485b
 # - cimg-fusion-guards.sh: the fusions of '+', '-', '*' and '/' with the code of an operand
 #   rewrote the code of a variable assigned in that operand, e.g. 'z=1+(y=x*2);y' gave NaN
 #   instead of 2*x (GreycLab/CImg#502, NatronGitHub/openfx-gmic#232)
-# - cimg-vector-assign.sh: the vector assignments 'V = expr' and '(V) = expr' rewrote an opcode
-#   that also read V or another variable, e.g. 'A=[1,2,3,4];B=[0,1,1,0];(A)=mul(A,B,2);A' gave
+# - cimg-vector-assign.sh: the vector assignments 'V = expr' and '(V) = expr' let the opcode that
+#   computed the value write into V while it still read V, or take the slot of another variable, e.g. 'A=[1,2,3,4];B=[0,1,1,0];(A)=mul(A,B,2);A' gave
 #   2,2,4,4 instead of 2,1,4,3 (GreycLab/CImg#505, NatronGitHub/openfx-gmic#245)
 # - cimg-same-reuse.sh: same(A,B) wrote its result into a live temporary when A or B has as many
 #   values as that temporary's slot number, e.g. 'a=1;sin(a)+same(vector36(a),vector36(a))' gave

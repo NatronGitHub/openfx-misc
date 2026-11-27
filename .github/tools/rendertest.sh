@@ -1568,7 +1568,9 @@ tests=(
     "CImgExpression (V)= in place|net.sf.cimg.CImgExpression|filter|float|mean=0.75,0.75,0.75,0.75||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=A=[3,1,2];B=sort(A);(A)=B;size(B)/4"
     # cimg-same-reuse.sh (openfx-gmic#246): same() of two N-value vectors wrote its result into slot
     # N, which may be a live temporary: sin(1) + 1 (2 without the patch). The issue's vector36 is
-    # slot 36 in a bare CImg parser; CImgExpression first defines X and Y, so here it is vector38
+    # slot 36 in a bare CImg parser; CImgExpression first defines T and K (X and Y only when used),
+    # so a is slot 37 and sin(a) slot 38: vector38. T and K must stay small integers (render time 0,
+    # scale 1), or they take constant slots and the case no longer reaches the bug
     "CImgExpression same() result slot|net.sf.cimg.CImgExpression|filter|float|mean=1.841471,1.841471,1.841471,1.841471+tol=0.0001||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none expression=a=1;sin(a)+same(vector38(a),vector38(a))"
     # symmetric_eigen() on the rank-deficient structure tensors of flat images and ramps
     # (GreycLab/gmic#221: NaN eigenvectors when the compiler contracts to FMAs): no NaN
