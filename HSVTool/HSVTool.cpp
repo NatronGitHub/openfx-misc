@@ -1480,11 +1480,7 @@ HSVToolPlugin::isIdentity(const IsIdentityArguments &args,
         return true;
     }
 
-    // not ofxsMaskRoDExcludesRenderWindow(), which skips the test on hosts without multi-resolution
-    // (hostDemo too): it would stop being an identity there
-    OfxRectI maskRoD;
-    if ( ofxsMaskGetRoDPixel(_maskClip, _maskApply, _maskInvert, time, args.renderScale, &maskRoD) &&
-         !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
+    if ( ofxsMaskRoDExcludesRenderWindow(args, _maskClip, _maskApply, _maskInvert) ) {
         // the mask is 0 in the render window
         identityClip = _srcClip;
 

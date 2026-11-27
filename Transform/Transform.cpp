@@ -57,7 +57,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDirBlurIdentifier "net.sf.openfx.DirBlur"
 // History (Transform, TransformMasked, DirBlur):
 // version 1.0: initial version
-// version 1.1: the inverse of a transform matrix with huge entries (e.g. a concatenated source transform) no longer overflows to NaN or 0 (SupportExt #81)
+// version 1.1: a transform matrix whose inverse overflows (huge entries, e.g. a concatenated source transform) is reported as not invertible (SupportExt #229)
 // SupportExt#179, in the current minor versions: with the Box
 //              filter, the thin band just outside the source image is black (Black Outside) or the
 //              edge colour, not about 4x the edge value (garbage).

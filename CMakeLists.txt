@@ -290,6 +290,10 @@ if(BUILD_MISC)
     if(NOT _components) # ContactSheet uses no SupportExt source
       set(_components)
     endif()
+    get_target_property(_openmp ${_t} OFXMISC_OPENMP)
+    if(_openmp) # DenoiseSharpen: OFX::ofxsPinOpenMPRuntime()
+      list(APPEND _components OPENMP)
+    endif()
     supportext_add_sources(${_t} COMPONENTS ${_components})
   endforeach()
 endif(BUILD_MISC)
@@ -546,6 +550,10 @@ ofx_plugin_bundle_group(CImg
   ${OFXMISC_CIMG_PLUGINS})
 foreach(_t IN LISTS _cimg_targets)
   get_target_property(_components ${_t} OFXMISC_SUPPORTEXT_COMPONENTS)
+  get_target_property(_openmp ${_t} OFXMISC_OPENMP)
+  if(_openmp) # every CImg plug-in: OFX::ofxsPinOpenMPRuntime() (CImgFilter.h)
+    list(APPEND _components OPENMP)
+  endif()
   supportext_add_sources(${_t} COMPONENTS ${_components}) # LUT: ChromaBlur, HistEQ
   if(NOT MSVC AND TARGET OpenMP::OpenMP_CXX) # MSVC: no OpenMP (the table's OPENMP is not passed)
     target_compile_definitions(${_t} PRIVATE cimg_use_openmp) # CImg/Makefile: OPENMP=1

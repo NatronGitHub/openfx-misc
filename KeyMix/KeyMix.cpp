@@ -35,6 +35,7 @@
 #include "ofxsProcessing.H"
 #include "ofxsCoords.h"
 #include "ofxsMaskMix.h"
+#include "ofxsRGBAProcessing.h" // ofxsMaskRoDExcludesRenderWindow
 #include "ofxsMacros.h"
 #include "ofxsThreadSuite.h"
 
@@ -576,13 +577,9 @@ KeyMixPlugin::isIdentity(const IsIdentityArguments &args,
     // Outside the mask RoD, the mask is 0 and render() gives B. Everywhere else, it gives
     // A * m * mix + B * (1 - m * mix), with A black and transparent outside the A RoD (render sets
     // tmpPix to 0 there): even out of A, B is attenuated where the mask is non-zero, so the A RoD
-    // cannot make the effect an identity. With Invert Mask, ofxsMaskGetRoDPixel returns false (m = 1
+    // cannot make the effect an identity. With Invert Mask, the mask RoD excludes nothing (m = 1
     // outside the mask RoD).
-    // not ofxsMaskRoDExcludesRenderWindow(), which skips the test on hosts without multi-resolution
-    // (hostDemo too): it would stop being an identity there
-    OfxRectI maskRoD;
-    if ( ofxsMaskGetRoDPixel(_maskClip, _maskApply, _maskInvert, time, args.renderScale, &maskRoD) &&
-         !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
+    if ( ofxsMaskRoDExcludesRenderWindow(args, _maskClip, _maskApply, _maskInvert) ) {
         identityClip = _srcClipB;
 
         return true;

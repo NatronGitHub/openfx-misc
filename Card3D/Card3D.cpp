@@ -85,9 +85,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 // 1.1: importing a chan or Boujou file no longer sets NaN or infinite rotation and focal length keys (NaN audit);
-//      the inverse of a transform matrix with huge entries (e.g. a concatenated source transform) no longer overflows to NaN or 0 (SupportExt #81)
+//      a transform matrix whose inverse overflows (huge entries, e.g. a concatenated source transform) is reported as not invertible (SupportExt #229)
 // 1.1: the Lanczos4, Lanczos6 and Sinc4 filters (appended options) and the
 //      Prefilter Downscaling checkbox (after Black Outside, off) (issue #270); the default output is unchanged.
+// 1.1: declares multiple clip PARs, so that hosts accept the output PAR of the Output Format
+//      (getClipPreferences set it with the Source connected, which the spec only allows then).
 
 #define kParamSrcClipChanged "srcClipChanged"
 
@@ -2082,6 +2084,10 @@ Card3DPluginFactory::describe(ImageEffectDescriptor &desc)
     desc.setPluginDescription(kPluginDescription);
 
     Transform3x3Describe(desc, false);
+    // getClipPreferences sets the output PAR (that of the Output Format) while the Source is
+    // connected, which the spec only allows with multiple clip PARs; the render maps the source and
+    // output PARs separately (getInverseTransformCanonical, Transform3x3)
+    desc.setSupportsMultipleClipPARs(true);
 }
 
 

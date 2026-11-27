@@ -41,7 +41,9 @@
 # - NO_ID_CHECK: an ID (prefix + dir) that no plug-in identifier of the sources starts with;
 # - LINK_GL: its own code calls OpenGL (an overlay), without a SupportExt component that links it;
 # - FFT: uses CImg/CImgFFTConvolve.h (its bundle gets the FFT licence, e.g. Licence_pocketfft.txt);
-# - the CImg ones (DIR CImg/...) also get CImg/CImgFilter.cpp and OpenMP.
+# - OPENMP: compiled with OpenMP (not with MSVC), plus the SupportExt component OPENMP
+#   (ofxsOpenMP.cpp, OFX::ofxsPinOpenMPRuntime(); property OFXMISC_OPENMP);
+# - the CImg ones (DIR CImg/...) also get CImg/CImgFilter.cpp and OPENMP.
 # Group: the first plug-ins go to Misc.ofx.bundle, the CImg ones (DIR CImg/...) to CImg.ofx.bundle.
 ########################################################################
 # ofxmisc_plugin(): appends "PLUGIN <name> ..." to OFXMISC_<group>_PLUGINS (the arguments of
@@ -92,6 +94,12 @@ function(ofxmisc_plugin NAME)
         list(APPEND _args DESTINATION PyPlugs)
       endif()
     endforeach()
+  endif()
+  if(_p_OPENMP)
+    # SupportExt's OPENMP component (ofxsOpenMP.cpp: OFX::ofxsPinOpenMPRuntime(), called at render
+    # entry, a no-op without OpenMP), added by CMakeLists.txt; not in OFXMISC_SUPPORTEXT_COMPONENTS,
+    # since OPENMP is a keyword of ofx_plugin_bundle_group, which would end the PROPERTIES values
+    list(APPEND _args PROPERTIES OFXMISC_OPENMP ON)
   endif()
   if(_p_OPENMP AND NOT MSVC) # MSVC has OpenMP 2.0 only
     list(APPEND _args OPENMP)

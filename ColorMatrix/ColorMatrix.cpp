@@ -192,16 +192,11 @@ invertColorMatrix(const Matrix4x4& mat)
     if ( !( std::abs(det) > kRelativeDeterminantMin * rowNormProduct ) ) {
         return std::nullopt;
     }
+    // inverse() also fails if an entry of the inverse overflows: the determinant test only bounds
+    // them by 1 / (kRelativeDeterminantMin * the norm of a row), which overflows for a tiny row
     Matrix4x4 inv;
     if ( !mat.inverse(&inv) ) {
         return std::nullopt;
-    }
-    // not redundant with the determinant test: an inverse entry is only bounded by
-    // 1 / (kRelativeDeterminantMin * the norm of a row), which overflows for a tiny row
-    for (double v : inv.m) {
-        if ( !std::isfinite(v) ) {
-            return std::nullopt;
-        }
     }
 
     return toRows(inv);

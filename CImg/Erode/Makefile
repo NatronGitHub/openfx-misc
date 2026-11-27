@@ -1,4 +1,5 @@
 PLUGINOBJECTS = ofxsThreadSuite.o \
+ofxsOpenMP.o \
 CImgDilate.o \
 CImgErode.o \
 CImgFilter.o \

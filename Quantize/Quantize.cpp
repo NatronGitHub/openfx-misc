@@ -829,20 +829,11 @@ QuantizePlugin::isIdentity(const IsIdentityArguments &args,
     //    return true;
     //}
 
-    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
-    if (doMasking) {
-        bool maskInvert;
-        _maskInvert->getValueAtTime(time, maskInvert);
-        if (!maskInvert) {
-            OfxRectI maskRoD;
-            Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
-            // effect is identity if the renderWindow doesn't intersect the mask RoD
-            if ( !Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
-                identityClip = _srcClip;
+    // effect is identity if the renderWindow doesn't intersect the mask RoD
+    if ( ofxsMaskRoDExcludesRenderWindow(args, _maskClip, _maskApply, _maskInvert) ) {
+        identityClip = _srcClip;
 
-                return true;
-            }
-        }
+        return true;
     }
 
     //std::cout << "isIdentity! false\n";
