@@ -154,8 +154,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginYPbPrToRGB601Identifier "net.sf.openfx.YPbPrToRGB601"
 
 #define kPluginRGBToYPbPr709Name "RGBToYPbPr709"
-#define kPluginRGBToYPbPr709Description "Convert from linear RGB to the Y'PbPr color model (ITU-R BT.709).\n" \
-    kEncodeRec709 " " kMatrix709 " " kYPbPrRange "\n" kTransfer709Note "."
+#define kPluginRGBToYPbPr709DescriptionV1 "Convert from linear RGB to the Y'PbPr color model (ITU-R BT.709).\n" \
+    kEncodeRec709 " " kMatrix709 " " kYPbPrRange
+#define kPluginRGBToYPbPr709Description kPluginRGBToYPbPr709DescriptionV1 "\n" kTransfer709Note "."
 #define kPluginRGBToYPbPr709Identifier "net.sf.openfx.RGBToYPbPr709"
 
 #define kPluginYPbPrToRGB709Name "YPbPrToRGB709"
@@ -286,8 +287,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     "The conventions of the conversion. The default keeps the ones in the description; sRGB gives the conventions " \
     "of the reference host's colorspace conversion from (or to) linear RGB, with the sRGB transfer function (see the description)."
 #define kParamTransferFunctionOptionNone "None", "RGB is converted as given (the conventions in the description).", "none"
-#define kParamTransferFunctionOptionRec709 "Rec.709", "Linear RGB is encoded with the Rec.709 transfer function (the conventions in the description).", "rec709"
-#define kParamTransferFunctionOptionSRGB "sRGB", "Linear RGB is encoded with the sRGB transfer function, with the conventions of the reference host's colorspace conversion (see the description).", "srgb"
+#define kParamTransferFunctionOptionRec709 "Rec.709", "Linear RGB and R'G'B' are related by the Rec.709 transfer function (the conventions in the description).", "rec709"
+#define kParamTransferFunctionOptionSRGB "sRGB", "Linear RGB and R'G'B' are related by the sRGB transfer function, with the conventions of the reference host's colorspace conversion (see the description).", "srgb"
 
 enum TransferFunctionEnum
 {
@@ -791,24 +792,24 @@ public:
                     if (colorspaceSRGB) {
                         encodeSRGB3(unpPix);
                         rgbToYCbCrCentred(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
-                        break;
+                    } else {
+                        unpPix[0] = Color::to_func_Rec709(unpPix[0]);
+                        unpPix[1] = Color::to_func_Rec709(unpPix[1]);
+                        unpPix[2] = Color::to_func_Rec709(unpPix[2]);
+                        Color::rgb_to_ycbcr709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     }
-                    unpPix[0] = Color::to_func_Rec709(unpPix[0]);
-                    unpPix[1] = Color::to_func_Rec709(unpPix[1]);
-                    unpPix[2] = Color::to_func_Rec709(unpPix[2]);
-                    Color::rgb_to_ycbcr709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     break;
 
                 case eColorTransformYCbCrToRGB709:
                     if (colorspaceSRGB) {
                         yCbCrCentredToRGB(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                         decodeSRGB3(tmpPix);
-                        break;
+                    } else {
+                        Color::ycbcr_to_rgb709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        tmpPix[0] = Color::from_func_Rec709(tmpPix[0]);
+                        tmpPix[1] = Color::from_func_Rec709(tmpPix[1]);
+                        tmpPix[2] = Color::from_func_Rec709(tmpPix[2]);
                     }
-                    Color::ycbcr_to_rgb709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
-                    tmpPix[0] = Color::from_func_Rec709(tmpPix[0]);
-                    tmpPix[1] = Color::from_func_Rec709(tmpPix[1]);
-                    tmpPix[2] = Color::from_func_Rec709(tmpPix[2]);
                     break;
 
                 case eColorTransformRGBToYPbPr601:
@@ -829,24 +830,24 @@ public:
                     if (colorspaceSRGB) {
                         encodeSRGB3(unpPix);
                         rgbToYPbPr709Exact(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
-                        break;
+                    } else {
+                        unpPix[0] = Color::to_func_Rec709(unpPix[0]);
+                        unpPix[1] = Color::to_func_Rec709(unpPix[1]);
+                        unpPix[2] = Color::to_func_Rec709(unpPix[2]);
+                        Color::rgb_to_ypbpr709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     }
-                    unpPix[0] = Color::to_func_Rec709(unpPix[0]);
-                    unpPix[1] = Color::to_func_Rec709(unpPix[1]);
-                    unpPix[2] = Color::to_func_Rec709(unpPix[2]);
-                    Color::rgb_to_ypbpr709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                     break;
 
                 case eColorTransformYPbPrToRGB709:
                     if (colorspaceSRGB) {
                         yPbPrToRGB709Exact(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                         decodeSRGB3(tmpPix);
-                        break;
+                    } else {
+                        Color::ypbpr_to_rgb709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        tmpPix[0] = Color::from_func_Rec709(tmpPix[0]);
+                        tmpPix[1] = Color::from_func_Rec709(tmpPix[1]);
+                        tmpPix[2] = Color::from_func_Rec709(tmpPix[2]);
                     }
-                    Color::ypbpr_to_rgb709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
-                    tmpPix[0] = Color::from_func_Rec709(tmpPix[0]);
-                    tmpPix[1] = Color::from_func_Rec709(tmpPix[1]);
-                    tmpPix[2] = Color::from_func_Rec709(tmpPix[2]);
                     break;
 
                 case eColorTransformRGBToYUV601:
@@ -1345,7 +1346,8 @@ ColorTransformPluginFactory<transform, majorVersion>::describe(ImageEffectDescri
 
     case eColorTransformRGBToYPbPr709:
         desc.setLabel(kPluginRGBToYPbPr709Name);
-        desc.setPluginDescription(kPluginRGBToYPbPr709Description);
+        // version 1 (obsolete) has no Transfer Function
+        desc.setPluginDescription( hasTransferFunction(transform, majorVersion) ? kPluginRGBToYPbPr709Description : kPluginRGBToYPbPr709DescriptionV1 );
         break;
 
     case eColorTransformYPbPrToRGB709:
