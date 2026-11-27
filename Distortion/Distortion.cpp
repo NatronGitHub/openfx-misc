@@ -168,6 +168,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              width along x is the length of (|dx/dX| + blur, dx/dY), at least 1 pixel (it was
 //              max(1, |dx/dX| + |dx/dY|) + blur), likewise along y; the kernel scale (1/width) is rounded to
 //              a multiple of 1/64, for widths up to 64/3 pixels.
+//              (#302, in version 3.0, not released yet) without a blur, where the UV map minifies (its
+//              footprint is wider than one pixel), the filter's kernel is stretched over the footprint (the
+//              separable kernel above with no blur; Box: the area mean), instead of supersampling, which
+//              aliased more on fine detail. Elsewhere, and with Impulse, the filter's ordinary interpolation.
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 #define kPluginVersionMinorV2 1 // the minor version of the obsolete version 2 (IDistort and STMap)
@@ -2060,7 +2064,10 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
                                                  y + 0.5,
                                                  &sx, &sy);
                 } else if (_lensBehaviour == LensBehaviour::eV5) {
-                    // version 5: transparent black where the model has no inverse (the solver did not converge)
+                    // version 5: transparent black where the model has no inverse (the solver did not converge):
+                    // no source position maps to this output pixel, so there is nothing to sample. This only
+                    // happens with extreme distortion (beyond a fold of the model, e.g. a strong K2, or a Scale
+                    // of 0.5 with a Twist, near the corners), which real lenses and projects do not use.
                     noInverse = !_distortionModel->distortConverged(x + 0.5, y + 0.5, &sx, &sy);
                 } else {
                     _distortionModel->distort( x + 0.5,
@@ -2130,18 +2137,23 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
                 }
             }
 
+            // Without a blur, the footprint that stretches the filter where it is wider than one pixel
+            // (where the map minifies): the model's (LensDistortion 5), or the UV derivatives' (IDistort and
+            // STMap 3). Impulse stays a point sample.
+            const bool uvFootprint = v3 && !blurred && (filter != eFilterImpulse) &&
+                                     (plugin == eDistortionPluginSTMap || plugin == eDistortionPluginIDistort);
+            const Jacobian &F = modelFootprint ? M : J;
             // the widths of the separable kernel (in source pixels): the blurred footprint (IDistort and
-            // STMap 3 with a blur), or the model's footprint (LensDistortion 5), which stretches the filter
-            // only where it is wider than one pixel (where the model minifies)
+            // STMap 3 with a blur), or the unblurred footprint above
             double wx = 1., wy = 1.;
             if (separableBlur) {
                 wx = separableKernelWidth(J.xx, J.xy, std::abs(JH.xx) * bx + std::abs(JH.xy) * by, maxWidth);
                 wy = separableKernelWidth(J.yy, J.yx, std::abs(JH.yx) * bx + std::abs(JH.yy) * by, maxWidth);
-            } else if (modelFootprint) {
-                wx = separableKernelWidth(M.xx, M.xy, 0., maxWidth);
-                wy = separableKernelWidth(M.yy, M.yx, 0., maxWidth);
+            } else if (modelFootprint || uvFootprint) {
+                wx = separableKernelWidth(F.xx, F.xy, 0., maxWidth);
+                wy = separableKernelWidth(F.yy, F.yx, 0., maxWidth);
             }
-            const bool stretched = modelFootprint && !separableBlur && ( (wx > 1.) || (wy > 1.) ) && _srcImg;
+            const bool stretched = (modelFootprint || uvFootprint) && !separableBlur && ( (wx > 1.) || (wy > 1.) ) && _srcImg;
             if ( (_uvBehaviour == eUVBehaviourV3) && _unpremultUV && (a == 0.) &&
                  (plugin == eDistortionPluginSTMap || plugin == eDistortionPluginIDistort) ) {
                 // premultiplied UV with a zero alpha: no UV (version 2 multiplies by the alpha, which also
@@ -2162,7 +2174,7 @@ DistortionProcessor<PIX, nComponents, maxValue, plugin, filter, clamp>::multiThr
                 if (filter == eFilterImpulse) {
                     ofxsFilterInterpolate2D<PIX, nComponents, filter, clamp>(sx, sy, _srcImg, _blackOutside, tmpPix);
                 } else if ( boxBlur || (stretched && (filter == eFilterBox)) ) {
-                    boxBlurSample<PIX, nComponents>(_sat, _blackOutside, sx, sy, boxBlur ? J : M, tmpPix);
+                    boxBlurSample<PIX, nComponents>(_sat, _blackOutside, sx, sy, boxBlur ? J : F, tmpPix);
                 } else if (separableBlur || stretched) {
                     // with a clamping filter, the separable kernel clamps to the range of all its taps (the
                     // ordinary interpolation: of its neighbours), so the output may change slightly where
