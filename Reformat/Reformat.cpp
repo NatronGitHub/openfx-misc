@@ -67,7 +67,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //      instead of aliasing; version 2 is obsolete, with the same output as before.
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
-#define kPluginVersionMajorPrefilterOff 2 // the last version with Prefilter Downscaling off by default
+#define kPluginVersionMajorPrefilterOn 3 // the first major version with Prefilter Downscaling on by default (issue #270)
+#define kPluginVersionMajorPrefilterOff 2 // the previous major version (Prefilter Downscaling off by default), obsolete
 #define kPluginVersionMinorPrefilterOff 1
 
 #define kParamUseRoD "useRoD"
@@ -1089,7 +1090,10 @@ ReformatPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &de
 
     // after the filter parameters (issue #270): on from version 3, off (the supersampling) before
     ofxsFilterDescribeParamPrefilter(desc, page);
-    if (majorVersion > kPluginVersionMajorPrefilterOff) {
+    // Prefilter Downscaling is on by default from version kPluginVersionMajorPrefilterOn (issue #270).
+    // The prefilterDefault argument of ofxsFilterDescribeParamPrefilter() (SupportExt #240) will replace
+    // this lookup at the next SupportExt bump.
+    if (majorVersion >= kPluginVersionMajorPrefilterOn) {
         BooleanParamDescriptor* param = dynamic_cast<BooleanParamDescriptor*>( desc.getParamDescriptor(kParamFilterPrefilter) );
         assert(param);
         if (param) {
@@ -1121,9 +1125,9 @@ ReformatPluginFactory<majorVersion>::createInstance(OfxImageEffectHandle handle,
 
 static ReformatPluginFactory<kPluginVersionMajor> p(kPluginIdentifier, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
-static ReformatPluginFactory<kPluginVersionMajorPrefilterOff> p_v2(kPluginIdentifier, kPluginVersionMinorPrefilterOff);
-mRegisterPluginFactoryInstance(p_v2)
-static ReformatPluginFactory<1> p_old(kPluginIdentifier, 2); // 1.2: see the history at the top
-mRegisterPluginFactoryInstance(p_old)
+static ReformatPluginFactory<kPluginVersionMajorPrefilterOff> pv2(kPluginIdentifier, kPluginVersionMinorPrefilterOff);
+mRegisterPluginFactoryInstance(pv2)
+static ReformatPluginFactory<1> pv1(kPluginIdentifier, 2); // 1.2: see the history at the top
+mRegisterPluginFactoryInstance(pv1)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

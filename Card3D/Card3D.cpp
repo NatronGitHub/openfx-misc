@@ -92,7 +92,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //      of aliasing; version 1 is obsolete, with the same output as before.
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
-#define kPluginVersionMajorPrefilterOff 1 // the obsolete version, Prefilter Downscaling off by default
+#define kPluginVersionMajorPrefilterOn 2 // the first major version with Prefilter Downscaling on by default (issue #270)
+#define kPluginVersionMajorPrefilterOff 1 // the previous major version (Prefilter Downscaling off by default), obsolete
 #define kPluginVersionMinorPrefilterOff 1
 
 #define kParamSrcClipChanged "srcClipChanged"
@@ -1749,6 +1750,9 @@ Card3DPlugin::getOutputFormat(double /*time*/,
             rod.x2 += rod.x1;
             rod.y2 += rod.y1;
             *par = _srcClip ? _srcClip->getPixelAspectRatio() : 1.;
+            if ( !(*par > 0.) ) {
+                *par = 1.; // also NaN
+            }
             Coords::toPixelNearest(rod, renderScale, *par, format);
 
             return true;
@@ -2333,8 +2337,10 @@ Card3DPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc
     }
 
     Transform3x3DescribeInContextEnd(desc, context, page, false, Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur, eTransform3x3FilteringSincPrefilter); // opt-in (issue #270)
-    if (majorVersion > kPluginVersionMajorPrefilterOff) {
-        // Prefilter Downscaling is on by default (issue #270)
+    // Prefilter Downscaling is on by default from version kPluginVersionMajorPrefilterOn (issue #270).
+    // The /*prefilterDefault=*/true argument of Transform3x3DescribeInContextEnd() (SupportExt #240) will
+    // replace this lookup at the next SupportExt bump.
+    if (majorVersion >= kPluginVersionMajorPrefilterOn) {
         BooleanParamDescriptor* param = dynamic_cast<BooleanParamDescriptor*>( desc.getParamDescriptor(kParamFilterPrefilter) );
         assert(param);
         if (param) {

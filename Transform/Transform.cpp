@@ -84,7 +84,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //      DirBlur stays at version 1 (Prefilter Downscaling off by default).
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
-#define kPluginVersionMajorPrefilterOff 1 // the obsolete version, Prefilter Downscaling off by default
+#define kPluginVersionMajorPrefilterOn 2 // the first major version with Prefilter Downscaling on by default (issue #270)
+#define kPluginVersionMajorPrefilterOff 1 // the previous major version (Prefilter Downscaling off by default), obsolete
 #define kPluginVersionMinorPrefilterOff 1
 #define kPluginDirBlurVersionMajor 1
 #define kPluginDirBlurVersionMinor 1
@@ -450,21 +451,6 @@ TransformPlugin::changedClip(const InstanceChangedArgs &args,
     }
 }
 
-// Prefilter Downscaling (kParamFilterPrefilter, defined by Transform3x3DescribeInContextEnd) is on by
-// default from version 2 of Transform and TransformMasked (issue #270).
-static
-void
-TransformPluginDescribePrefilterDefault(ImageEffectDescriptor &desc,
-                                        unsigned int majorVersion)
-{
-    BooleanParamDescriptor* param = dynamic_cast<BooleanParamDescriptor*>( desc.getParamDescriptor(kParamFilterPrefilter) );
-
-    assert(param);
-    if (param) {
-        param->setDefault(majorVersion > kPluginVersionMajorPrefilterOff);
-    }
-}
-
 mDeclarePluginFactoryVersioned(TransformPluginFactory, {ofxsThreadSuiteCheck();}, {});
 static
 void
@@ -503,7 +489,16 @@ TransformPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &d
     TransformPluginDescribeInContext(desc, context, page);
 
     Transform3x3DescribeInContextEnd(desc, context, page, false, Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur, eTransform3x3FilteringSincPrefilter); // opt-in (issue #270)
-    TransformPluginDescribePrefilterDefault(desc, majorVersion);
+    // Prefilter Downscaling is on by default from version kPluginVersionMajorPrefilterOn (issue #270).
+    // The /*prefilterDefault=*/true argument of Transform3x3DescribeInContextEnd() (SupportExt #240) will
+    // replace this lookup at the next SupportExt bump.
+    if (majorVersion >= kPluginVersionMajorPrefilterOn) {
+        BooleanParamDescriptor* param = dynamic_cast<BooleanParamDescriptor*>( desc.getParamDescriptor(kParamFilterPrefilter) );
+        assert(param);
+        if (param) {
+            param->setDefault(true);
+        }
+    }
 
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
@@ -552,7 +547,16 @@ TransformMaskedPluginFactory<majorVersion>::describeInContext(ImageEffectDescrip
     TransformPluginDescribeInContext(desc, context, page);
 
     Transform3x3DescribeInContextEnd(desc, context, page, true, Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur, eTransform3x3FilteringSincPrefilter); // opt-in (issue #270)
-    TransformPluginDescribePrefilterDefault(desc, majorVersion);
+    // Prefilter Downscaling is on by default from version kPluginVersionMajorPrefilterOn (issue #270).
+    // The /*prefilterDefault=*/true argument of Transform3x3DescribeInContextEnd() (SupportExt #240) will
+    // replace this lookup at the next SupportExt bump.
+    if (majorVersion >= kPluginVersionMajorPrefilterOn) {
+        BooleanParamDescriptor* param = dynamic_cast<BooleanParamDescriptor*>( desc.getParamDescriptor(kParamFilterPrefilter) );
+        assert(param);
+        if (param) {
+            param->setDefault(true);
+        }
+    }
 
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);

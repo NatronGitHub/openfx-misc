@@ -133,6 +133,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //                of definition (SupportExt#207).
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMajorPrefilterOn 2 // the first major version with Prefilter Downscaling on by default (issue #270)
+#define kPluginVersionMajorPixelSimilarity 2 // the first major version where two pins give a similarity of the pixel grid (issue #270)
 // 2.1: overlay point selection, host selection rectangle param (Natron);
 //      a transform matrix whose inverse overflows (huge entries, e.g. a concatenated source transform) is reported as not invertible (SupportExt #229)
 // 1.1 and 2.1: new "Set to input format" button (appended), which copies the
@@ -444,10 +446,13 @@ CornerPinPlugin::getInverseTransformCanonical(OfxTime time,
         success = homo3x3.setAffineFromThreePoints(p[0][0], p[0][1], p[0][2], p[1][0], p[1][1], p[1][2]);
         break;
     case 2:
-        if (_majorVersion >= 2) {
+        if (_majorVersion >= kPluginVersionMajorPixelSimilarity) {
             // a similarity of the pixel grid (issue #270): the same rotation and uniform scale in pixels
             // whatever the pixel aspect ratio (version 1: a similarity in canonical coordinates)
-            const double par = _srcClip ? _srcClip->getPixelAspectRatio() : 1.;
+            double par = _srcClip ? _srcClip->getPixelAspectRatio() : 1.;
+            if ( !(par > 0.) ) {
+                par = 1.; // also NaN
+            }
             Point3D q[2][2];
             for (int i = 0; i < 2; ++i) {
                 for (int j = 0; j < 2; ++j) {
@@ -1825,8 +1830,10 @@ CornerPinPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &d
     CornerPinPluginDescribeInContext(desc, context, page);
 
     Transform3x3DescribeInContextEnd(desc, context, page, false, Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur, eTransform3x3FilteringSincPrefilter); // opt-in (issue #270)
-    if (majorVersion >= 2) {
-        // Prefilter Downscaling is on by default (issue #270)
+    // Prefilter Downscaling is on by default from version kPluginVersionMajorPrefilterOn (issue #270).
+    // The /*prefilterDefault=*/true argument of Transform3x3DescribeInContextEnd() (SupportExt #240) will
+    // replace this lookup at the next SupportExt bump.
+    if (majorVersion >= kPluginVersionMajorPrefilterOn) {
         BooleanParamDescriptor* param = dynamic_cast<BooleanParamDescriptor*>( desc.getParamDescriptor(kParamFilterPrefilter) );
         assert(param);
         if (param) {
@@ -1884,8 +1891,10 @@ CornerPinMaskedPluginFactory<majorVersion>::describeInContext(ImageEffectDescrip
     CornerPinPluginDescribeInContext(desc, context, page);
 
     Transform3x3DescribeInContextEnd(desc, context, page, true, Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur, eTransform3x3FilteringSincPrefilter); // opt-in (issue #270)
-    if (majorVersion >= 2) {
-        // Prefilter Downscaling is on by default (issue #270)
+    // Prefilter Downscaling is on by default from version kPluginVersionMajorPrefilterOn (issue #270).
+    // The /*prefilterDefault=*/true argument of Transform3x3DescribeInContextEnd() (SupportExt #240) will
+    // replace this lookup at the next SupportExt bump.
+    if (majorVersion >= kPluginVersionMajorPrefilterOn) {
         BooleanParamDescriptor* param = dynamic_cast<BooleanParamDescriptor*>( desc.getParamDescriptor(kParamFilterPrefilter) );
         assert(param);
         if (param) {

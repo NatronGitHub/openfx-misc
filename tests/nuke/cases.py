@@ -1573,8 +1573,9 @@ for _filter in ("Lanczos4", "Lanczos6", "Sinc4"):
         (TRANSFORM, {"translate": [cx(.3), .6], "filter": _filter}),
         input="checker", region=INNER, channels="rgba", tolerance=1e-3))
 # Minification: Prefilter Downscaling (on by default from version 2, #270)
-# widens the kernel by the scale-down factor, as the reference does; version
-# 1 (off by default) samples the kernel at its unscaled size.
+# widens the kernel by the scale-down factor (with it, a scale by 0.5 with
+# Cubic or Mitchell matches); version 1 (off by default) samples the kernel
+# at its unscaled size.
 _MINIFY = dict(input="checker", region=(9, 9, 23, 23), channels="rgba",
                tolerance=1e-3)
 for _name, _nuke, _ofx in (
@@ -1593,7 +1594,7 @@ CASES.append(case(
     ("Transform", {"scale": .5, "center": CENTRE["nuke"]}),
     (TRANSFORM, {"scale": [.5, .5], "center": CENTRE["ofx"]}), major=1,
     **_MINIFY))
-# Shear: the reference does not widen the kernel.
+# Shear: Prefilter Downscaling widens the kernel (see KNOWN).
 CASES.append(case(
     "Transform skewX 1, checker",
     ("Transform", {"skewX": 1, "center": CENTRE["nuke"]}),
@@ -2664,34 +2665,30 @@ CASES += [
 DOCUMENTED = 318
 KNOWN = {
     270: [
-        # rotations: the reference's filtering is softer (0.01 on the ramp)
+        # rotations: about 0.01 on the ramp (0.64 on the checker at 30
+        # degrees, none at 90), not explained yet
         "Transform rotate 30", "Card3D rotate z 30",
         "Card3D skew x 20, rotate z 30",
         # the same, plus the soft edge of the transformed image (black
-        # outside); the mapping itself matches inside the image
+        # outside); inside the image they differ by 0.016 at most
         "Transform translate, scale, skew, rotate (order)",
         "Card3D rotate y 20, z 30",
-        # 1.2e-3 to 1.6e-3, not explained yet (the rounding of the sample
-        # positions to 1/64 pixel, as below, would give about that much)
+        # 1.2e-3 to 1.6e-3, not explained yet
         "CornerPin2D four pins", "CornerPin2D 2 pin(s) enabled",
         "CornerPin2D 3 pin(s) enabled",
-        # shear: Prefilter Downscaling widens the kernel, the reference does
-        # not (needs a shear-invariant width in SupportExt)
-        "Transform skewX 0.3", "Transform skewY 0.3",
+        # a shear of 1: version 1 matches (0), version 2 (Prefilter
+        # Downscaling) differs by 0.31
         "Transform skewX 1, checker",
-        # minification on a hard-edged checker: 0.002 to 0.06, not explained
-        # yet (with scale 0.5 and Cubic or Mitchell, they match)
+        # minification on a hard-edged checker, version 1 (no prefilter) /
+        # version 2: 0.30 / 0.022, 0.23 / 0.014, 0.057 / 0.0020, 0.18 / 0.059
         "Transform scale 0.4,0.7, checker (minification)",
         "Transform scale 1.5,0.8, checker (minification)",
         "Transform Lanczos4 scale 0.5, checker (minification)",
-        "CornerPin2D shrink, checker",
-        # the previous major versions (no prefilter by default) alias
-        "Transform 1 cubic, scale 0.5 (minification, no prefilter)",
-        "Reformat 2 scale 0.5 (no prefilter)",
-        "Card3D 1 scale 0.5 (no prefilter)"] + [
-            # the reference rounds sample positions to 1/64 pixel (exact
-            # with that rounding, except Mitchell: 1.3e-3), and its Lanczos
-            # and Sinc kernels differ
+        "CornerPin2D shrink, checker"] + [
+            # a fractional translation: 0.005 to 0.016 (Lanczos4 0.028,
+            # Lanczos6 0.012, Sinc4 0.16); our kernels with the sample
+            # positions rounded to 1/64 pixel give the reference's values
+            # for Bilinear to Notch (Mitchell to 1.3e-3)
             "Transform filter %s, translate 0.3,0.6" % _f for _f in (
                 "Bilinear", "Cubic", "Keys", "Simon", "Rifman", "Mitchell",
                 "Parzen", "Notch", "Lanczos4", "Lanczos6", "Sinc4")],
@@ -2728,6 +2725,14 @@ KNOWN = {
         "Erode (blur) size 3, blur 0.5",
         "FilterErode size 1 box (ErodeSmoothCImg)"],
     DOCUMENTED: [
+        # the previous major versions of the Transform family (Prefilter
+        # Downscaling off by default, #270) alias when they scale down
+        "Transform 1 cubic, scale 0.5 (minification, no prefilter)",
+        "Reformat 2 scale 0.5 (no prefilter)",
+        "Card3D 1 scale 0.5 (no prefilter)",
+        # a small shear (#270): Prefilter Downscaling widens the kernel,
+        # 0.003 (version 1 matches)
+        "Transform skewX 0.3", "Transform skewY 0.3",
         "Log2Lin lin2log", "ColorWheel defaults, whole disc",
         "ColorWheel gamma 1, whole disc",
         "Ramp defaults", "Transform translate 0.5,0.25 cubic, edges",

@@ -1063,10 +1063,10 @@ tests=(
     "CornerPin 1 default no prefilter|net.sf.openfx.CornerPinPlugin|filter|float|value:prefilter=0||-m 1 -i Source=checker:1 --frames 0 --window 300,250,340,290"
     "CornerPinMasked default prefilter|net.sf.openfx.CornerPinMaskedPlugin|general|float|value:prefilter=1||-i Source=checker:1 -i Mask=none --frames 0 --window 300,250,340,290"
     "CornerPinMasked 1 default no prefilter|net.sf.openfx.CornerPinMaskedPlugin|general|float|value:prefilter=0||-m 1 -i Source=checker:1 -i Mask=none --frames 0 --window 300,250,340,290"
-    "Card3D default prefilter|net.sf.openfx.Card3D|filter|float|value:prefilter=1||-i Source=checker:1 --frames 0 --window 300,250,340,290"
-    "Card3D 1 default no prefilter|net.sf.openfx.Card3D|filter|float|value:prefilter=0||-m 1 -i Source=checker:1 --frames 0 --window 300,250,340,290"
+    "Card3D default prefilter scale 0.4 checker|net.sf.openfx.Card3D|filter|float|range=0.499,0.501+value:prefilter=1||-i Source=checker:1 cardUniformScale=0.4 --frames 0 --window 300,250,340,290"
+    "Card3D 1 default no prefilter scale 0.4 checker|net.sf.openfx.Card3D|filter|float|tol=0.005+max=0.5263,0.5263,0.5263,0.5263+value:prefilter=0||-m 1 -i Source=checker:1 cardUniformScale=0.4 --frames 0 --window 300,250,340,290"
     "Reformat default prefilter scale 0.4 checker|net.sf.openfx.Reformat|filter|float|range=0.499,0.501+value:prefilter=1||-i Source=checker:1 reformatType=Scale reformatScale=0.4,0.4 --frames 0 --window 100,100,140,140"
-    "Reformat 2 default no prefilter|net.sf.openfx.Reformat|filter|float|value:prefilter=0||-m 2 -i Source=checker:1 reformatType=Scale reformatScale=0.4,0.4 --frames 0 --window 100,100,140,140"
+    "Reformat 2 default no prefilter scale 0.4 checker|net.sf.openfx.Reformat|filter|float|tol=0.005+max=0.5263,0.5263,0.5263,0.5263+value:prefilter=0||-m 2 -i Source=checker:1 reformatType=Scale reformatScale=0.4,0.4 --frames 0 --window 100,100,140,140"
     # CornerPin with two pins (#270): version 2 maps them with a similarity of the pixel grid, version 1
     # with a similarity of canonical coordinates. (0,0) and (768,0) to (0,0) and (0,768) on the PAL input
     # (PAR 768/720): a rotation by 90 degrees, with a scale of 768/720 in pixels (the output RoD is
