@@ -56,7 +56,7 @@ using KeyerUtils::finiteSampleToFloat;
     "The key is the background key (transparency): the output alpha is 1 minus the key, 0 (transparent) between B and C, and 1 (opaque) below A and above D. " \
     "Setting the key color sets A, B, C, D around it, so that it is transparent. Invert inverts the matte.\n"
 #define kPluginDescriptionPolarity \
-    "At or below A, the key is 0. Special case: if B <= 0, the key is 1 for every foreground key above A and <= 0.\n" \
+    "At or below A, the key is 0 (except in the Screen mode). Special case: if B <= 0, the key is 1 for every foreground key above A and <= 0.\n" \
     "In every mode except Screen, the output alpha is the key: it is 1 (opaque) between B and C, and 0 (transparent) at or below A and above D: any pixel with a foreground key between B and C becomes opaque. " \
     "In the Screen mode, the output alpha is 1 minus the key: the pixels of the key color are transparent. Invert inverts the matte.\n" \
     "With the default A, B, C, D (0, 1, 1, 1), the alpha is the foreground key, clamped to [0, 1]: in the Red Screen, Green Screen and Blue Screen modes, the screen color is transparent.\n" \
@@ -586,7 +586,12 @@ private:
                         d = std::sqrt( (std::max)( 0., norm2 - ( (keyColorNorm2 == 0) ? 0. : (scalarProd * scalarProd / keyColorNorm2) ) ) );
                         break;
                     }
-                    default: {
+                    case eKeyerModeSaturation:
+                    case eKeyerModeMin:
+                    case eKeyerModeMax:
+                    case eKeyerModeRedScreen:
+                    case eKeyerModeGreenScreen:
+                    case eKeyerModeBlueScreen: {
                         assert( isRgbKeyMode(_keyerMode) );
                         Kfg = rgbKeyValue(_keyerMode, fgr, fgg, fgb);
                         break;
@@ -1016,7 +1021,12 @@ KeyerPlugin::setThresholdsFromKeyColor(double r,
     case eKeyerModeLuminance:
         l = luminance(r, g, b, luminanceMath);
         break;
-    default:
+    case eKeyerModeSaturation:
+    case eKeyerModeMin:
+    case eKeyerModeMax:
+    case eKeyerModeRedScreen:
+    case eKeyerModeGreenScreen:
+    case eKeyerModeBlueScreen:
         assert( isRgbKeyMode(keyerMode) );
         l = rgbKeyValue(keyerMode, r, g, b);
         break;
