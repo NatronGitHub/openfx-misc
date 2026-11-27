@@ -43,23 +43,27 @@ using KeyerUtils::finiteSampleToFloat;
 #define kPluginGrouping "Keyer"
 #define kPluginDescriptionHead \
     "A collection of simple keyers. These work by computing a foreground key from the RGB values of the input image (see the keyerMode parameter).\n" \
-    "This foreground key is a scalar from 0 to 1. From the foreground key, a key (from 0 to 1) is computed, which gives the output alpha (see below).\n" \
+    "This foreground key is a scalar, from 0 to 1 for inputs in [0, 1] (from 0 to 2 in the Red Screen, Green Screen and Blue Screen modes), and may be outside that range for other inputs. From the foreground key, a key (from 0 to 1) is computed, which gives the output alpha (see below).\n" \
     "The function that maps the foreground key to the key is piecewise linear:\n" \
     "- it is 0 below A = (center+toleranceLower+softnessLower)\n" \
     "- it is linear between A = (center+toleranceLower+softnessLower) and B = (center+toleranceLower)\n" \
     "- it is 1 between B = (center+toleranceLower) and C = (center+toleranceUpper)\n" \
     "- it is linear between C = (center+toleranceUpper) and D = (center+toleranceUpper+softnessUpper)\n" \
     "- it is 0 above D = (center+toleranceUpper+softnessUpper)\n" \
-    "Two special cases: if B <= 0, the key is 1 for every foreground key <= 0, even below A in version 1 (in version 2, it is 0 at or below A); if C >= 1, it is 1 for every foreground key above C, even above D.\n"
+    "Special case: if C >= 1, the key is 1 for every foreground key above C, even above D.\n"
 #define kPluginDescriptionPolarityV1 \
+    "Special case: if B <= 0, the key is 1 for every foreground key <= 0, even below A.\n" \
     "The key is the background key (transparency): the output alpha is 1 minus the key, 0 (transparent) between B and C, and 1 (opaque) below A and above D. " \
     "Setting the key color sets A, B, C, D around it, so that it is transparent. Invert inverts the matte.\n"
 #define kPluginDescriptionPolarity \
+    "At or below A, the key is 0. Special case: if B <= 0, the key is 1 for every foreground key above A and <= 0.\n" \
     "In every mode except Screen, the output alpha is the key: it is 1 (opaque) between B and C, and 0 (transparent) at or below A and above D: any pixel with a foreground key between B and C becomes opaque. " \
     "In the Screen mode, the output alpha is 1 minus the key: the pixels of the key color are transparent. Invert inverts the matte.\n" \
     "With the default A, B, C, D (0, 1, 1, 1), the alpha is the foreground key, clamped to [0, 1]: in the Red Screen, Green Screen and Blue Screen modes, the screen color is transparent.\n" \
     "Combine sets how this matte is combined with the alpha of the Source (Replace, Intersect, Union).\n" \
-    "Setting the key color sets A, B, C, D so that it is transparent: in the Screen mode, the key is 1 around it; in the other modes, with l the foreground key of the key color clamped to [0, 1], the alpha goes from 1 at 0 to 0 at l and above (A = -1, B = C = 0, D = l), or, if l is 0, takes the defaults 0, 1, 1, 1.\n"
+    "Setting the key color sets A, B, C, D so that it is transparent, with l the foreground key of the key color clamped to [0, 1]: in the Screen mode, the key is 1 around it; "  \
+    "in the Red Screen, Green Screen and Blue Screen modes, the alpha goes from 0 at l and below to 1 at 1 and above (A = l, B = C = D = 1); "  \
+    "in the other modes, the alpha goes from 1 at 0 to 0 at l and above (A = -1, B = C = 0, D = l). If l is 0, the defaults 0, 1, 1, 1 are used.\n"
 #define kPluginDescriptionTail \
     "\n" \
     "Keyer can pull mattes that correspond to the RGB channels, the luminance and the red, green and blue colors. " \
@@ -87,13 +91,14 @@ using KeyerUtils::finiteSampleToFloat;
 // 1.1 non-finite input samples give a finite output and a matte in [0,1] (issue #195); in the filter
 //     context, the Output components are those of Source (issue #190); an RGB Source is opaque for
 //     "Add to Inside Mask" and "Normal" source alpha; key colours beyond about 1.8e19 are keyed correctly
-//     (issue #213); new Invert parameter, off by default (issue #280).
+//     (issue #213); new Invert parameter, off by default (issue #280); new Combine parameter, Replace by
+//     default (the output is unchanged), shared with version 2 (issue #280).
 // 2.0 the output alpha is the key, opaque between B and C, as in the usual A, B, C, D convention,
 //     except in the Screen mode (the key color stays transparent); the default A, B, C, D are 0, 1, 1, 1,
 //     so that the default alpha is the luminance, clamped to [0, 1]; new Saturation, Min and Max modes
 //     (issue #280). Version 1 is kept, obsolete. New Red Screen, Green Screen and Blue Screen modes; at or
 //     below A, the key is 0, even if B <= 0; new Combine parameter (Replace, Intersect, Union) with the
-//     Source alpha, also in version 1, where Replace keeps its output (issue #280).
+//     Source alpha (0 for an RGB Source), also in version 1 (issue #280).
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 #define kPluginVersionMinorV1 1 // the minor version of the obsolete version 1
@@ -148,6 +153,21 @@ enum KeyerModeEnum
     eKeyerModeBlueScreen,
 };
 
+// the Red Screen, Green Screen and Blue Screen modes
+constexpr bool
+isScreenColorMode(KeyerModeEnum keyerMode)
+{
+    return keyerMode == eKeyerModeRedScreen || keyerMode == eKeyerModeGreenScreen || keyerMode == eKeyerModeBlueScreen;
+}
+
+// the modes whose foreground key is rgbKeyValue()
+constexpr bool
+isRgbKeyMode(KeyerModeEnum keyerMode)
+{
+    return keyerMode == eKeyerModeSaturation || keyerMode == eKeyerModeMin || keyerMode == eKeyerModeMax ||
+           isScreenColorMode(keyerMode);
+}
+
 // the foreground key of the Saturation, Min, Max, Red Screen, Green Screen and Blue Screen modes
 double
 rgbKeyValue(KeyerModeEnum keyerMode,
@@ -187,6 +207,9 @@ rgbKeyValue(KeyerModeEnum keyerMode,
 #define kParamSoftnessLowerLabel "Softness (lower)"
 #define kParamSoftnessLowerHint "Width of the lower softness range [A, B] = [center+toleranceLower+softnessLower, center+toleranceLower] (softnessLower is negative). The key goes from 0 to 1 when the foreground key is over this range."
 
+// the minimum of softnessLower (A = B - 1): the key color sets it so that the key is 1 down to B - 1
+static constexpr double kSoftnessLowerMin = -1.;
+
 #define kParamToleranceLower "toleranceLower"
 #define kParamToleranceLowerLabel "Tolerance (lower)"
 #define kParamToleranceLowerHint "Width of the lower tolerance range [B, center] = [center+toleranceLower, center] (toleranceLower is negative). The key is 1 when the foreground key is over this range."
@@ -216,10 +239,10 @@ rgbKeyValue(KeyerModeEnum keyerMode,
 #define kParamOutputModeLabel "Output Mode"
 #define kParamOutputModeHint \
     "What image to output."
-#define kParamOutputModeOptionIntermediate "Intermediate", "Color is the source color. Alpha is the foreground key. Use for multi-pass keying.", "intermediate"
-#define kParamOutputModeOptionPremultiplied "Premultiplied", "Color is the Source color after key color suppression, multiplied by alpha. Alpha is the foreground key.", "premultiplied"
-#define kParamOutputModeOptionUnpremultiplied "Unpremultiplied", "Color is the Source color after key color suppression. Alpha is the foreground key.", "unpremultiplied"
-#define kParamOutputModeOptionComposite "Composite", "Color is the composite of Source and Bg. Alpha is the foreground key.", "composite"
+#define kParamOutputModeOptionIntermediate "Intermediate", "Color is the source color. Alpha is the matte (after Invert, Combine and the masks), not the foreground key. Use for multi-pass keying.", "intermediate"
+#define kParamOutputModeOptionPremultiplied "Premultiplied", "Color is the Source color after key color suppression, multiplied by alpha. Alpha is the matte (after Invert, Combine and the masks).", "premultiplied"
+#define kParamOutputModeOptionUnpremultiplied "Unpremultiplied", "Color is the Source color after key color suppression. Alpha is the matte (after Invert, Combine and the masks).", "unpremultiplied"
+#define kParamOutputModeOptionComposite "Composite", "Color is the composite of Source and Bg. Alpha is the matte (after Invert, Combine and the masks).", "composite"
 
 #define kParamSourceAlpha "sourceAlphaHandling"
 #define kParamSourceAlphaLabel "Source Alpha"
@@ -238,7 +261,8 @@ rgbKeyValue(KeyerModeEnum keyerMode,
 #define kParamCombine "combine"
 #define kParamCombineLabel "Combine"
 #define kParamCombineHint \
-    "How the matte computed by the keyer (after Invert) is combined with the alpha of the Source (an RGB Source is opaque). The Inside Mask and Outside Mask are applied after it. Ignored in None keyer mode."
+    "How the matte computed by the keyer (after Invert) is combined with the alpha of the Source, whatever Source Alpha is (an RGB Source has no alpha: it counts as 0 here, so Intersect gives 0 and Union the matte). " \
+    "The Inside Mask and Outside Mask are applied after it. In the Composite output mode, the Source alpha is not used again when Combine is not Replace (Source Alpha Normal then composites as Ignore). Ignored in None keyer mode."
 #define kParamCombineOptionReplace "Replace", "The output alpha is the matte.", "replace"
 #define kParamCombineOptionIntersect "Intersect", "The output alpha is the matte multiplied by the Source alpha.", "intersect"
 #define kParamCombineOptionUnion "Union", "The output alpha is a + b - a b, where a is the matte and b the Source alpha.", "union"
@@ -562,12 +586,8 @@ private:
                         d = std::sqrt( (std::max)( 0., norm2 - ( (keyColorNorm2 == 0) ? 0. : (scalarProd * scalarProd / keyColorNorm2) ) ) );
                         break;
                     }
-                    case eKeyerModeSaturation:
-                    case eKeyerModeMin:
-                    case eKeyerModeMax:
-                    case eKeyerModeRedScreen:
-                    case eKeyerModeGreenScreen:
-                    case eKeyerModeBlueScreen: {
+                    default: {
+                        assert( isRgbKeyMode(_keyerMode) );
                         Kfg = rgbKeyValue(_keyerMode, fgr, fgg, fgb);
                         break;
                     }
@@ -591,10 +611,10 @@ private:
                         // invert the key, not the masks, which are applied below
                         Kbg = 1. - Kbg;
                     }
-                    // combine the matte 1 - Kbg with the Source alpha (an RGB Source is opaque), before the masks
+                    // combine the matte 1 - Kbg with the Source alpha, before the masks: an RGB Source has
+                    // no alpha, which counts as 0 here (unlike Add to Inside Mask and Normal, where it is opaque)
                     if ( (_combine != eCombineReplace) && (_keyerMode != eKeyerModeNone) ) {
-                        // (the Source alpha, or 1 for an RGB Source, in [0,1])
-                        const double srcAlpha = clampToUnit( KeyerUtils::insideMaskFromSource<PIX, maxValue>(srcPix, srcHasAlpha) );
+                        const double srcAlpha = srcHasAlpha ? clampToUnit( finiteSampleToFloat<PIX, maxValue>(srcPix[3]) ) : 0.;
                         const double matte = 1. - Kbg;
                         const double combined = (_combine == eCombineIntersect) ? (matte * srcAlpha) : (matte + srcAlpha - matte * srcAlpha);
                         Kbg = 1. - combined;
@@ -651,8 +671,10 @@ private:
                 double fga = 1. - Kbg;
                 //double fga = Kbg;
                 assert(fga >= 0. && fga <= 1.);
+                // (with Combine, the matte already holds the Source alpha: it is not used again)
                 double compAlpha = (_outputMode == eOutputModeComposite &&
                                     _sourceAlpha == eSourceAlphaNormal &&
+                                    _combine == eCombineReplace &&
                                     srcHasAlpha && srcPix) ? finiteSampleToFloat<PIX, maxValue>(srcPix[3]) : 1.;
                 switch (_outputMode) {
                 case eOutputModeIntermediate:
@@ -714,7 +736,7 @@ public:
         , _outputMode(NULL)
         , _sourceAlpha(NULL)
         , _invert(NULL)
-        , _combine(NULL)
+        , _combine(nullptr)
     {
 
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -906,7 +928,7 @@ KeyerPlugin::setupAndProcess(KeyerProcessorBase &processor,
     processor.setValues(keyColorF, keyerMode, luminanceMath, softnessLower, toleranceLower, center, toleranceUpper, softnessUpper, despill, despillAngle, outputMode, sourceAlpha);
     processor.setInvert( _invert->getValueAtTime(time) );
     processor.setOpaqueInRange(_majorVersion >= kVersionOpaqueInRange);
-    processor.setCombine( (CombineEnum)_combine->getValueAtTime(time) );
+    processor.setCombine( static_cast<CombineEnum>( _combine->getValueAtTime(time) ) );
     processor.setDstImg( dst.get() );
     processor.setSrcImgs( src.get(), bg.get(), inMask.get(), outMask.get() );
     processor.setRenderWindow(args.renderWindow, args.renderScale);
@@ -994,12 +1016,8 @@ KeyerPlugin::setThresholdsFromKeyColor(double r,
     case eKeyerModeLuminance:
         l = luminance(r, g, b, luminanceMath);
         break;
-    case eKeyerModeSaturation:
-    case eKeyerModeMin:
-    case eKeyerModeMax:
-    case eKeyerModeRedScreen:
-    case eKeyerModeGreenScreen:
-    case eKeyerModeBlueScreen:
+    default:
+        assert( isRgbKeyMode(keyerMode) );
         l = rgbKeyValue(keyerMode, r, g, b);
         break;
     case eKeyerModeColor:
@@ -1021,14 +1039,18 @@ KeyerPlugin::setThresholdsFromKeyColor(double r,
     if ( (_majorVersion < kVersionOpaqueInRange) || (keyerMode == eKeyerModeScreen) ) {
         // alpha is 1 minus the key: the key is 1 at the key color (transparent), 0 at 0 and 1
         setABCD(-l, l, 1. - l);
+    } else if ( isScreenColorMode(keyerMode) ) {
+        // the screen key is 0 for the screen color and 1 for a grey: transparent at the key color (A = l)
+        // and below, opaque at 1 and above (B = C = D = 1); l = 0 gives the defaults 0, 1, 1, 1
+        setABCD(l - 1., 1., 0.);
     } else if (l > 0.) {
         // alpha is the key: opaque at 0 (B = C = 0; A = -1, since the key is 0 at or below A), going down
         // to transparent at the key color (D = l) and above it; this also holds for l = 1, e.g. a pure
         // primary in Color mode
-        setABCD(-1., 0., l);
+        setABCD(kSoftnessLowerMin, 0., l);
     } else {
         // a zero key (e.g. black in Luminance mode): the defaults 0, 1, 1, 1, transparent at 0
-        setABCD(-1., 1., 0.);
+        setABCD(kSoftnessLowerMin, 1., 0.);
     }
 }
 
@@ -1281,8 +1303,8 @@ KeyerPluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &desc,
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamSoftnessLower);
         param->setLabel(kParamSoftnessLowerLabel);
         param->setHint(kParamSoftnessLowerHint);
-        param->setRange(-1., 0.);
-        param->setDisplayRange(-1., 0.);
+        param->setRange(kSoftnessLowerMin, 0.);
+        param->setDisplayRange(kSoftnessLowerMin, 0.);
         param->setDigits(5);
         // A = 0 in version 2 (A, B, C, D = 0, 1, 1, 1, issue #280), 0.5 in version 1
         param->setDefault(majorVersion < kVersionOpaqueInRange ? -0.5 : -1.);

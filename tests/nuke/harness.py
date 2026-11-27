@@ -238,6 +238,10 @@ def nuke_script(case, result_path):
             lines.append("images[%r] = nuke.nodes.Expression(inputs=[c], "
                          "expr0=%r, expr1=%r, expr2=%r, expr3=%r)"
                          % ((name,) + image["nuke"]))
+            if image.get("rgb"):
+                # an RGB image: no alpha channel
+                lines.append("images[%r] = nuke.nodes.Remove(inputs=[images[%r]],"
+                             " channels='alpha')" % (name, name))
             if image.get("box"):
                 lines += [
                     "images[%r] = nuke.nodes.Crop(inputs=[images[%r]],"
@@ -514,6 +518,8 @@ def ofx_input_spec(name, case_dir):
         spec += "@%d,%d" % (x1, y1)
     if image.get("premult"):
         spec += "#premult"
+    if image.get("rgb"):
+        spec += "#rgb"
     return spec
 
 

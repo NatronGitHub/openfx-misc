@@ -11,6 +11,7 @@ Images: IMAGES maps a name to a dict with
   images that change with the frame or the view);
 - "views": (left "color", right "color") instead of "nuke", for images
   that differ per view (two Constants and a JoinViews in Nuke);
+- "rgb": the image has no alpha (hostDemo #rgb, a Remove of alpha in Nuke);
 - "premult": the OFX clip is premultiplied (#premult); "box": (x1, y1, x2,
   y2), the image is only defined there (a smaller PFM file at x1, y1 in
   OFX, whose RoD and format are the box; a Crop without black outside in
@@ -411,6 +412,7 @@ IMAGES = {
     "neg": _const(-.5, -.25, .5, 1.),
     "red": _const(.9, .1, .1, 1.),
     "orange": _const(.8, .4, .2, 1.),
+    "grey05": _const(.5, .5, .5, 1.),
     "keymix_A": _const(.2, .2, .2, .3),
     "keymix_B": _const(.7, .7, .7, .9),
     "half_mask": _const(0., 0., 0., .5),
@@ -439,6 +441,8 @@ IMAGES["rect_beyond"] = {
 IMAGES["Aa01_box"] = dict(IMAGES["Aa01"], box=(0, 0, 16, 16))
 # An element on the left of the image (Mirror).
 IMAGES["element"] = dict(IMAGES["ramp"], box=(2, 4, 12, 20))
+# The ramp without alpha (an RGB Source, general context in OFX).
+IMAGES["ramp_rgb"] = dict(IMAGES["ramp"], rgb=True)
 
 
 # The inverse of the reference's sRGB and rec709 curves (Colorspace input
@@ -1269,6 +1273,19 @@ CASES += [
                                   "toleranceLower": -.15, "center": .15,
                                   "toleranceUpper": .15, "softnessUpper": .9}),
          input="grey_ramp", channels="a", tolerance=1e-5),
+    # Exactly at A: 0, also when B <= 0 (A = B = C = 0) and when A = B > 0.
+    case("Keyer max keyer at A, black, range 0, 0, 0, 0.5",
+         ("Keyer", {"operation": "max keyer", "range": [0., 0., 0., .5]}),
+         (ofx_id("KeyerPlugin"), {"mode": "Max", "softnessLower": 0.,
+                                  "toleranceLower": 0., "center": 0.,
+                                  "toleranceUpper": 0., "softnessUpper": .5}),
+         input="black", channels="a", tolerance=1e-6),
+    case("Keyer max keyer at A, grey 0.5, range 0.5, 0.5, 0.7, 0.9",
+         ("Keyer", {"operation": "max keyer", "range": [.5, .5, .7, .9]}),
+         (ofx_id("KeyerPlugin"), {"mode": "Max", "softnessLower": 0.,
+                                  "toleranceLower": -.1, "center": .6,
+                                  "toleranceUpper": .1, "softnessUpper": .2}),
+         input="grey05", channels="a", tolerance=1e-6),
     # Combine with the input alpha (0 at the bottom, 1 at the top).
     case("Keyer combine intersect",
          ("Keyer", {"operation": "luminance key", "combine": "intersect"}),
@@ -1280,6 +1297,17 @@ CASES += [
          (ofx_id("KeyerPlugin"), {"combine": "Union", "invert": 1,
                                   **KEYER_ABCD_ASYM}),
          input="premult", channels="a", tolerance=KEYER_LUMINANCE_TOLERANCE),
+    # An RGB Source has no alpha: 0 for Combine (Intersect 0, Union the matte).
+    case("Keyer combine intersect, RGB source",
+         ("Keyer", {"operation": "luminance key", "combine": "intersect"}),
+         (ofx_id("KeyerPlugin"), {"combine": "Intersect"}), input="ramp_rgb",
+         context="general", channels="a",
+         tolerance=KEYER_LUMINANCE_TOLERANCE),
+    case("Keyer combine union, RGB source",
+         ("Keyer", {"operation": "luminance key", "combine": "union"}),
+         (ofx_id("KeyerPlugin"), {"combine": "Union"}), input="ramp_rgb",
+         context="general", channels="a",
+         tolerance=KEYER_LUMINANCE_TOLERANCE),
 ]
 
 # ------------------------------------------------------------------- PIK
