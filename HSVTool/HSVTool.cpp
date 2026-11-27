@@ -74,7 +74,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              with Output Alpha = Source), instead of min(all); the other ranges, rolloffs included, only
 //              select the pixels that are adjusted. The adjusted brightness is clamped to zero, as the
 //              saturation is (issue #293; in version 1.1, only with Set Brightness). Both versions: the
-//              Saturation and Brightness Ranges may be negative, and the Saturation Range above 1 (issue #293). Version 1.1 is kept, obsolete.
+//              Saturation and Brightness Ranges may be negative, and the Saturation Range above 1; Src Color
+//              and the rectangle analysis may set these ranges outside [0, 1] (issue #293).
+//              Version 1.1 is kept, obsolete.
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 #define kPluginVersionMinorV1 1 // the minor version of the obsolete version 1
@@ -622,7 +624,7 @@ public:
                         float *bout)
     {
         float h, s, v;
-        RangeCoeffs k;
+        RangeCoeffs k{};
 
         Color::rgb_to_hsv(r, g, b, &h, &s, &v);
 
@@ -676,8 +678,8 @@ public:
         // of 0, so coeffAll is 0 and the pixel is left unchanged (NaN)
         const float coeffAll = k.all();
         // the weight of the adjustments: the Output Alpha coefficient (version 2; the hue coefficient for
-        // Source), which is at least coeffAll, or coeffAll (version 1). Only the pixels within all three ranges (coeffAll > 0) are
-        // adjusted.
+        // Source), which is at least coeffAll, or coeffAll (version 1). Only the pixels within all three
+        // ranges (coeffAll > 0) are adjusted.
         const float coeff = _values.weightByOutputAlpha ? outputAlphaCoeff(_outputAlpha, k) : coeffAll;
         // without adjustments, copy the pixel: the HSV round trip is not exact (isIdentity relies on this)
         if ( (coeffAll <= 0.) || !_adjustsColor ) {

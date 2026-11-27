@@ -963,9 +963,9 @@ CASES += [
                                         saturationRange=[-1., 1.],
                                         hueRotation=30.)),
          input="negative", tolerance=1e-5),
-    # TODO(#293 follow-up): the hue range 0-40 with rolloff 30 (no wrap
-    # below 0 degrees) and an inverted hue range (350-20) differ: add them
-    # with known=<issue> once the hue keyer issue is filed.
+    # TODO: hue-keyer issue (not filed yet) - add the hue range 0-40 with
+    # rolloff 30 (no wrap below 0 degrees) and the inverted hue range 350-20,
+    # which differ, with known=<issue>.
     case("Invert defaults", ("Invert", {}), (ofx_id("Invert"), {}),
          input="Aa", channels="rgba"),
     case("Invert clamp", ("Invert", {"clamp": True}), (ofx_id("Invert"), {}),

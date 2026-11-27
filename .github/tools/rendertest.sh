@@ -1404,6 +1404,9 @@ tests=(
     "HSVTool brightness negative|net.sf.openfx.HSVToolPlugin|filter|float|notidentity+mean=0,0,0,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none outputAlpha=0 clampBlack=0 brightnessAdjustment=-1"
     "HSVTool 1 set brightness negative|net.sf.openfx.HSVToolPlugin|filter|float|notidentity+mean=0,0,0,1||-m 1 -i Source=solid:0.25,0.5,0.75,1 -i Mask=none outputAlpha=0 clampBlack=0 setBrightness=1 brightnessAdjustment=-0.5"
     "HSVTool 1 brightness negative|net.sf.openfx.HSVToolPlugin|filter|float|notidentity+mean=-0.08333,-0.16667,-0.25,1||-m 1 -i Source=solid:0.25,0.5,0.75,1 -i Mask=none outputAlpha=0 clampBlack=0 brightnessAdjustment=-1"
+    # Version 1 on the negative colour (-0.1, -0.2, -0.3) (saturation -2, brightness -0.1) within the
+    # extended ranges: hue rotation 30 clamps the saturation to 0, and the brightness stays -0.1 (grey)
+    "HSVTool 1 negative colour, hue rotation|net.sf.openfx.HSVToolPlugin|filter|float|notidentity+mean=-0.1,-0.1,-0.1,1||-m 1 -i Source=solid:-0.1,-0.2,-0.3,1 -i Mask=none outputAlpha=0 clampBlack=0 saturationRange=-3,1 brightnessRange=-1,1 hueRotation=30"
     # DenoiseSharpen, RGB color model, R unchecked: B is denoised (issue #323)
     "DenoiseSharpen B, not R|net.sf.openfx.DenoiseSharpen|filter|float|notidentity+changed:Source||--frames 0 -i Source=file:convsrc.pfm -i Mask=none analysisLock=1 colorModel=3 NatronOfxParamProcessR=0 crbbNoiseLevelHigh=0.02"
     # ImageStatistics: the analysis buttons (pressed with -s, instanceChanged with
