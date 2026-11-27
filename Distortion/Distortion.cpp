@@ -221,7 +221,6 @@ constexpr int kPluginVersionLensDistortion5 = 5;
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
-#define kSupportsMultipleClipPARs false
 #define kSupportsMultipleClipDepths false
 #define kRenderThreadSafety eRenderFullySafe
 
@@ -232,6 +231,17 @@ enum DistortionPluginEnum
     eDistortionPluginIDistort,
     eDistortionPluginLensDistortion,
 };
+
+// kOfxImageEffectPropSupportsMultipleClipPARs. STMap sets the output PAR to that of UV (whose pixel grid
+// is the output's) and reads Source in its own pixels (U and V are normalized), so Source may have
+// another PAR. IDistort reads Source and UV at the output pixels, and LensDistortion maps the output
+// pixels to Source pixels: both need a single PAR.
+static constexpr bool
+supportsMultipleClipPARs(DistortionPluginEnum plugin)
+{
+    return plugin == eDistortionPluginSTMap;
+}
+
 
 #ifdef OFX_EXTENSIONS_NATRON
 #define kParamProcessR kNatronOfxParamProcessR
@@ -2755,15 +2765,21 @@ DistortionPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
             formatI.y1 = std::floor(format.y1 + 0.5);
             formatI.x2 = std::floor(format.x2 + 0.5);
             formatI.y2 = std::floor(format.y2 + 0.5);
+            // in pixels of the output PAR, which the host chooses (getLensDistortionFormat())
             clipPreferences.setOutputFormat(formatI);
-            clipPreferences.setPixelAspectRatio(*_dstClip, par);
         }
     } else if ( _plugin == eDistortionPluginSTMap && _uvClip && _uvClip->isConnected() ) {
         double par;
         OfxRectI uvFormat;
         getInputClipFormatI(_uvClip, 0., &par, &uvFormat);
         clipPreferences.setOutputFormat(uvFormat);
-        clipPreferences.setPixelAspectRatio(*_dstClip, par);
+        // the output has the pixels of UV. Only if the host supports multiple clip PARs: "If a host
+        // indicates that it can support multiple pixel aspect ratios, then it will allow the plugin to
+        // explicitly set the output clip's aspect ratio" (ofxImageEffect.h); otherwise all the clips
+        // have the same PAR
+        if (getImageEffectHostDescription()->supportsMultipleClipPARs) {
+            clipPreferences.setPixelAspectRatio(*_dstClip, par);
+        }
     }
 }
 
@@ -3211,18 +3227,25 @@ DistortionPlugin::getLensDistortionFormat(double time,
 
     GeneratorExtentEnum extent = (GeneratorExtentEnum)_extent->getValue();
 
+    // LensDistortion does not support multiple clip PARs, so it can't set the output PAR: the host gives
+    // the output the PAR of Source ("the host will transparently map all of an effect's input and output
+    // clips to a single pixel aspect ratio", ofxClipPreferences.rst), or the project's without Source. A
+    // format or the project keeps its size in canonical coordinates, in pixels of that PAR.
+    const double outputPar = ( _srcClip && _srcClip->isConnected() ) ? _srcClip->getPixelAspectRatio() : getProjectPixelAspectRatio();
+
     switch (extent) {
         case eGeneratorExtentFormat: {
             int w, h;
             _formatSize->getValue(w, h);
-            *par = _formatPar->getValue();
-            if (*par <= 0.) {
+            double formatPar = _formatPar->getValue();
+            if (formatPar <= 0.) {
                 // the range of the hidden format PAR is [0,DBL_MAX]: 0 would be a division by zero
                 // (toPixelEnclosing, canonical coordinates): use the default PAR, as the generators do
-                *par = 1.;
+                formatPar = 1.;
             }
+            *par = (outputPar > 0.) ? outputPar : formatPar;
             format->x1 = format->y1 = 0;
-            format->x2 = w * renderScale.x;
+            format->x2 = w * formatPar / *par * renderScale.x;
             format->y2 = h * renderScale.y;
 
             return true;
@@ -3252,7 +3275,7 @@ DistortionPlugin::getLensDistortionFormat(double time,
             rod.x2 = off.x + siz.x;
             rod.y1 = off.y;
             rod.y2 = off.y + siz.y;
-            *par = getProjectPixelAspectRatio();
+            *par = (outputPar > 0.) ? outputPar : 1.;
             // Coords::toPixelNearest(rod, renderScale, *par, format);
             format->x1 = rod.x1 * renderScale.x / *par;
             format->y1 = rod.y1 * renderScale.y;
@@ -3558,8 +3581,10 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
     const UVBehaviourEnum uvBehaviour = (_majorVersion >= kPluginVersionUVSquarePixels) ? eUVBehaviourV3 : eUVBehaviourV2;
     double blurScaleX = 0., blurScaleY = 0.;
     double maxBlur = 1.;
-    const double dstPar = _dstClip->getPixelAspectRatio();
-    const double par = (dstPar > 0.) ? dstPar : 1.;
+    // the blur and the IDistort displacement are in Source pixels (STMap: Source may have another PAR
+    // than UV and the output)
+    const double srcPar = (_srcClip && _srcClip->isConnected()) ? _srcClip->getPixelAspectRatio() : _dstClip->getPixelAspectRatio();
+    const double par = (srcPar > 0.) ? srcPar : 1.;
     double uScale = 1., vScale = 1.;
     double uOffset = 0., vOffset = 0.;
     WrapEnum uWrap = eWrapClamp;
@@ -3797,7 +3822,7 @@ DistortionPlugin::render(const RenderArguments &args)
     BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-    assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( supportsMultipleClipPARs(_plugin) || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     assert(OFX_COMPONENTS_OK(dstComponents));
     if (dstComponents == ePixelComponentRGBA) {
@@ -4873,7 +4898,7 @@ DistortionPluginFactory<plugin, majorVersion>::describe(ImageEffectDescriptor &d
     desc.setSupportsTiles(kSupportsTiles);
     desc.setTemporalClipAccess(false);
     desc.setRenderTwiceAlways(false);
-    desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
+    desc.setSupportsMultipleClipPARs( supportsMultipleClipPARs(plugin) );
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
     desc.setSupportsRenderQuality(true);

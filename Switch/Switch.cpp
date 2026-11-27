@@ -350,7 +350,11 @@ SwitchPlugin::getClipPreferences(ClipPreferencesSetter & clipPreferences)
             _srcClip[input]->getFormat(format);
             par = _srcClip[input]->getPixelAspectRatio();
             clipPreferences.setOutputFormat(format);
-            clipPreferences.setPixelAspectRatio(*_dstClip, par);
+            // only on hosts with multiple clip PARs ("it will allow the plugin to explicitly set the
+            // output clip's aspect ratio", ofxImageEffect.h)
+            if (getImageEffectHostDescription()->supportsMultipleClipPARs) {
+                clipPreferences.setPixelAspectRatio(*_dstClip, par);
+            }
         }
     }
 }

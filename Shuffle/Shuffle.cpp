@@ -1528,23 +1528,22 @@ ShufflePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     }
     clipPreferences.setOutputPremultiplication(premult);
 
-    // the default input has priority over the other input for the format
+    // the default input has priority over the other input for the format. Shuffle does not support
+    // multiple clip PARs, so it does not set the output PAR: "If the plugin sets this to 0, then the host
+    // will transparently map all of an effect's input and output clips to a single pixel aspect ratio"
+    // (ofxClipPreferences.rst)
     {
         OfxRectI format;
-        double par;
         bool setFormat = false;
         if ( _srcClipDefault && _srcClipDefault->isConnected() ) {
             _srcClipDefault->getFormat(format);
-            par = _srcClipDefault->getPixelAspectRatio();
             setFormat = true;
         } else if ( _srcClipOther && _srcClipOther->isConnected() ) {
             _srcClipOther->getFormat(format);
-            par = _srcClipOther->getPixelAspectRatio();
             setFormat = true;
         }
         if (setFormat && _dstClip) {
             clipPreferences.setOutputFormat(format);
-            clipPreferences.setPixelAspectRatio(*_dstClip, par);
         }
     }
 

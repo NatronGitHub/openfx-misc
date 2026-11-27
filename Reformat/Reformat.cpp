@@ -752,8 +752,12 @@ ReformatPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     case eReformatTypeToFormat:
     case eReformatTypeToBox:
     case eReformatTypeToProjectFormat: {
-        //specific output PAR
-        clipPreferences.setPixelAspectRatio(*_dstClip, par);
+        //specific output PAR, only on hosts with multiple clip PARs ("it will allow the plugin to
+        // explicitly set the output clip's aspect ratio", ofxImageEffect.h); the RoD and the transform are
+        // in canonical coordinates either way
+        if (getImageEffectHostDescription()->supportsMultipleClipPARs) {
+            clipPreferences.setPixelAspectRatio(*_dstClip, par);
+        }
         break;
     }
 

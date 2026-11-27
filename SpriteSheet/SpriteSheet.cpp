@@ -39,7 +39,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginDescription "Read individual frames from a sprite sheet. A sprite sheet is a series of images (usually animation frames) combined into a larger image (or images). For example, an animation consisting of eight 100x100 images could be combined into a single 400x200 sprite sheet (4 frames across by 2 high). The sprite with index 0 is at the top-left of the source image, and sprites are ordered left-to-right and top-to-bottom. The output is an animated sprite that repeats the sprites given in the sprite range. The ContactSheet effect can be used to make a spritesheet from a series of images or a video."
 #define kPluginIdentifier "net.sf.openfx.SpriteSheet"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
-#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+#define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
+// Version 1.1: black outside the sprite (the RoD), instead of the neighbouring sprites
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -111,9 +112,14 @@ private:
             }
 
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+            // the sprite is at (0,0) in the output: the host may render outside it (outside the RoD, e.g.
+            // a host without multi-resolution renders the project), where the output is black, not the
+            // neighbouring sprites
+            const bool yInside = (0 <= y) && (y < _cropRectPixel.y2 - _cropRectPixel.y1);
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
-                const PIX *srcPix = _srcImg ? (const PIX*)_srcImg->getPixelAddress(x + _cropRectPixel.x1, y + _cropRectPixel.y1) : 0;
+                const bool inside = yInside && (0 <= x) && (x < _cropRectPixel.x2 - _cropRectPixel.x1);
+                const PIX *srcPix = (_srcImg && inside) ? (const PIX*)_srcImg->getPixelAddress(x + _cropRectPixel.x1, y + _cropRectPixel.y1) : 0;
                 if (srcPix) {
                     // inside of the rectangle
                     for (int k = 0; k < nComponents; ++k) {

@@ -294,7 +294,11 @@ TestOpenGLPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     // (The OFX spec doesn't state a default value for this)
     clipPreferences.setClipComponents( *_dstClip, _srcClip->getPixelComponents() );
 
-    clipPreferences.setPixelAspectRatio( *_dstClip, getProjectPixelAspectRatio() );
+    // only on hosts with multiple clip PARs ("it will allow the plugin to explicitly set the output clip's
+    // aspect ratio", ofxImageEffect.h)
+    if (getImageEffectHostDescription()->supportsMultipleClipPARs) {
+        clipPreferences.setPixelAspectRatio( *_dstClip, getProjectPixelAspectRatio() );
+    }
 }
 
 void

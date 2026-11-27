@@ -656,7 +656,9 @@ namespace Shadertoy {
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
-#define kSupportsMultipleClipPARs false
+// the inputs are textures in their own pixels (iChannelResolution, iChannelOffset), and the output
+// may have the PAR of the Format
+#define kSupportsMultipleClipPARs true
 #define kSupportsMultipleClipDepths false
 
 
@@ -1468,7 +1470,12 @@ ShadertoyPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
         pixelFormat.x2 = w;
         pixelFormat.y2 = h;
         clipPreferences.setOutputFormat(pixelFormat);
-        clipPreferences.setPixelAspectRatio(*_dstClip, par);
+        // "If a host indicates that it can support multiple pixel aspect ratios, then it will allow the
+        // plugin to explicitly set the output clip's aspect ratio" (ofxImageEffect.h). Otherwise the output
+        // keeps the host's PAR, and the RoD, the Format in canonical coordinates, is in pixels of that PAR
+        if (getImageEffectHostDescription()->supportsMultipleClipPARs) {
+            clipPreferences.setPixelAspectRatio(*_dstClip, par);
+        }
     }
 }
 
