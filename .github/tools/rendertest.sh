@@ -1218,6 +1218,42 @@ tests=(
     "CImgDilate size 1,2|net.sf.cimg.CImgDilate|filter|float|mean=1,1,1,1||-i Source=file:impulse.pfm -i Mask=none size=1,2 --frames 0 --window 31,22,32,23"
     "CImgErode defaults|net.sf.cimg.CImgErode|filter|float|identity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none"
     "CImgErode 2 defaults|net.sf.cimg.CImgErode|filter|float|notidentity+changed:Source||-m 2 -i Source=checker:8 -i Mask=none"
+    # ErodeCImg and DilateCImg 3: fractional sizes in canonical units, each radius rounded half away from 0 (x
+    # divided by the PAR, 768/720): DilateCImg 0.5 is a radius of 0 in x (0.47) and 1 in y, so the impulse at
+    # (32, 24) spreads to (32, 23) but not to (31, 24); a size of 0.4 is an identity (version 2: 0 and 1 are).
+    "CImgDilate size 0.5 y|net.sf.cimg.CImgDilate|filter|float|mean=1,1,1,1||-i Source=file:impulse.pfm -i Mask=none size=0.5,0.5 --frames 0 --window 32,23,33,24"
+    "CImgDilate size 0.5 x|net.sf.cimg.CImgDilate|filter|float|mean=0,0,0,1||-i Source=file:impulse.pfm -i Mask=none size=0.5,0.5 --frames 0 --window 31,24,32,25"
+    "CImgDilate size -1.5 erodes|net.sf.cimg.CImgDilate|filter|float|mean=0,0,0,1||-i Source=file:impulse.pfm -i Mask=none size=-1.5,-1.5 --frames 0 --window 32,24,33,25"
+    "CImgErode size 0.4|net.sf.cimg.CImgErode|filter|float|identity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none size=0.4,0.4"
+    "CImgErode tile|net.sf.cimg.CImgErode|filter|float|nonconst+tile||-i Source=checker:8 -i Mask=none size=2.5,-1.5 --frames 0 --window 100,100,300,250"
+    # MedianCImg 3: the size is a radius per axis, default 3 (a 7x7 box), rounded half up (0.4 is an identity);
+    # version 2: one integer radius, default 1.
+    "CImgMedian defaults|net.sf.cimg.CImgMedian|filter|float|notidentity+changed:Source||-i Source=file:impulse.pfm -i Mask=none"
+    "CImgMedian impulse|net.sf.cimg.CImgMedian|filter|float|mean=0,0,0,1||-i Source=file:impulse.pfm -i Mask=none size=0,1 --frames 0 --window 32,24,33,25"
+    "CImgMedian size 0.4|net.sf.cimg.CImgMedian|filter|float|identity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none size=0.4,0.4"
+    "CImgMedian tile|net.sf.cimg.CImgMedian|filter|float|nonconst+tile||-i Source=checker:8 -i Mask=none size=3,1 threshold=0.5 --frames 0 --window 100,100,300,250"
+    # at render scale 0.5, the radii are the scaled sizes rounded half up (size 3,1: 2,1; ErodeCImg 2.5,-1.5:
+    # 1,1 after the PAR); tiles must render as the full image
+    "CImgMedian scale 0.5 tile|net.sf.cimg.CImgMedian|filter|float|nonconst+tile||-i Source=checker:8 -i Mask=none size=3,1 --scale 0.5 --frames 0 --window 50,50,150,125"
+    "CImgErode scale 0.5 tile|net.sf.cimg.CImgErode|filter|float|nonconst+tile||-i Source=checker:8 -i Mask=none size=2.5,-1.5 --scale 0.5 --frames 0 --window 50,50,150,125"
+    # FilterErodeCImg: the alpha channel only by default; size 0 (box) is an identity; DilateCImg-like spread of
+    # the impulse at (32, 24) with size -1 (box): the x weight of the next pixel is 2/PAR/2 + 0.5 - 1 = 0.9375
+    "CImgFilterErode defaults|net.sf.cimg.CImgFilterErode|filter|float|notidentity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none"
+    "CImgFilterErode size 0|net.sf.cimg.CImgFilterErode|filter|float|identity+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 -i Mask=none size=0,0"
+    "CImgFilterErode dilate impulse x|net.sf.cimg.CImgFilterErode|filter|float|tol=1e-4+mean=0.9375,0.9375,0.9375,1||-i Source=file:impulse.pfm -i Mask=none size=-1,-1 NatronOfxParamProcessR=1 NatronOfxParamProcessG=1 NatronOfxParamProcessB=1 --frames 0 --window 31,24,32,25"
+    "CImgFilterErode tile|net.sf.cimg.CImgFilterErode|filter|float|nonconst+tile||-i Source=checker:8 -i Mask=none size=2.5,-1.5 filter=3 NatronOfxParamProcessR=1 --frames 0 --window 100,100,300,250"
+    "CImgFilterErode scale 0.5 tile|net.sf.cimg.CImgFilterErode|filter|float|nonconst+tile||-i Source=checker:8 -i Mask=none size=3,1 filter=2 NatronOfxParamProcessR=1 --scale 0.5 --frames 0 --window 50,50,150,125"
+    # FilterErodeCImg on values near the largest float (+-3.4e38; hostDemo rejects infinite inputs): the
+    # weighted terms 1 - w*(1-v) and w*v stay finite and the centre weight 1 gives v itself, so the output is
+    # the input (a NaN output pixel would fail hostDemo)
+    "CImgFilterErode erode huge|net.sf.cimg.CImgFilterErode|filter|float|tol=1e33+mean=-3.4e38,0.5,0.5,1||-i Source=solid:-3.4e38,0.5,0.5,1 -i Mask=none size=0.5,0.5 NatronOfxParamProcessR=1"
+    "CImgFilterErode dilate huge|net.sf.cimg.CImgFilterErode|filter|float|tol=1e33+mean=3.4e38,0.5,0.5,1||-i Source=solid:3.4e38,0.5,0.5,1 -i Mask=none size=-0.5,-0.5 NatronOfxParamProcessR=1"
+    # ErodeSmoothCImg (obsolete, hidden from the menus) still loads and renders
+    "CImgErodeSmooth obsolete|net.sf.cimg.CImgErodeSmooth|filter|float|notidentity+changed:Source||-i Source=checker:8 -i Mask=none size=5,5"
+    # (no NaN or infinite input: hostDemo rejects non-finite solids and PFM files; the MedianCImg history
+    # comment documents NaNs)
+    "CImgMedian 2 defaults|net.sf.cimg.CImgMedian|filter|float|notidentity+changed:Source||-m 2 -i Source=file:impulse.pfm -i Mask=none"
+    "CImgMedian 2 size 1 impulse|net.sf.cimg.CImgMedian|filter|float|mean=0,0,0,1||-m 2 -i Source=file:impulse.pfm -i Mask=none --frames 0 --window 32,24,33,25"
     # EdgeExtend merges the image over its blurred version even when the size is too small to blur:
     # A over A is not A where alpha < 1 (5 slices: alpha 1 - 0.5^32, RGB 0.5 * alpha), not an identity (issue #337)
     "EdgeExtend small|eu.cimg.EdgeExtend|filter|float|notidentity+mean=0.5,1,1.5,1||-i Source=solid:0.25,0.5,0.75,0.5 -i Mask=none edgeExtendSize=0.1"

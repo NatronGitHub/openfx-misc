@@ -336,6 +336,7 @@ ofxmisc_plugin(CImgEqualize DIR CImg/Equalize ID net.sf.cimg.CImgEqualize COMPON
 ofxmisc_plugin(CImgErode DIR CImg/Erode ID net.sf.cimg.CImgErode COMPONENTS THREADS)
 ofxmisc_plugin(CImgErodeSmooth DIR CImg/ErodeSmooth ID net.sf.cimg.CImgErodeSmooth COMPONENTS THREADS)
 ofxmisc_plugin(CImgExpression DIR CImg/Expression ID net.sf.cimg.CImgExpression COMPONENTS THREADS FFT)
+ofxmisc_plugin(CImgFilterErode DIR CImg/FilterErode ID net.sf.cimg.CImgFilterErode COMPONENTS THREADS)
 ofxmisc_plugin(CImgGuided DIR CImg/Guided ID net.sf.cimg.CImgGuided COMPONENTS THREADS)
 ofxmisc_plugin(CImgHistEQ DIR CImg/HistEQ ID net.sf.cimg.CImgHistEQ COMPONENTS THREADS LUT)
 ofxmisc_plugin(CImgInpaint DIR CImg/Inpaint ID eu.cimg.Inpaint COMPONENTS THREADS)

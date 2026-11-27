@@ -1940,6 +1940,8 @@ for _steps in (1, 2, 3, 5):
 
 # ---------------------------------------------------------------- Filter
 CIMG = "net.sf.cimg."
+# the plug-in compared with the reference's weighted-structuring-element erode
+FILTER_ERODE = CIMG + "CImgFilterErode"
 CASES += [
     case("Blur defaults (size 0)", ("Blur", {}), (CIMG + "CImgBlur", {}),
          input="ramp", channels="rgba"),
@@ -2040,16 +2042,45 @@ CASES += [
     case("Dilate size -1 (ErodeCImg 1)", ("Dilate", {"size": -1}),
          (CIMG + "CImgErode", {"size": [1, 1]}), input="checker",
          channels="rgba"),
-    # A fractional size s is round(s / PAR) in x and round(s) in y.
-    case("Dilate size 1.5 (DilateCImg 1, 2)", ("Dilate", {"size": 1.5}),
+    # Version 3: fractional sizes in canonical units, as in the reference:
+    # each radius is the size (x: divided by the PAR) rounded half away from
+    # 0, e.g. 1.5 is a radius of 1 in x (1.5 / PAR = 1.41) and 2 in y, and
+    # 0.5 is 0 in x and 1 in y.
+    case("Dilate size 1.5 (DilateCImg 1.5)", ("Dilate", {"size": 1.5}),
+         (CIMG + "CImgDilate", {"size": [1.5, 1.5]}), input="impulse",
+         channels="rgba"),
+    case("Dilate size 2.5 (DilateCImg 2.5)", ("Dilate", {"size": 2.5}),
+         (CIMG + "CImgDilate", {"size": [2.5, 2.5]}), input="impulse",
+         channels="rgba"),
+    case("Dilate size 0.5 (DilateCImg 0.5)", ("Dilate", {"size": .5}),
+         (CIMG + "CImgDilate", {"size": [.5, .5]}), input="impulse",
+         channels="rgba"),
+    case("Dilate size -0.5 (ErodeCImg 0.5)", ("Dilate", {"size": -.5}),
+         (CIMG + "CImgErode", {"size": [.5, .5]}), input="hash",
+         channels="rgba"),
+    case("Dilate size -1.5 (ErodeCImg 1.5)", ("Dilate", {"size": -1.5}),
+         (CIMG + "CImgErode", {"size": [1.5, 1.5]}), input="hash",
+         channels="rgba"),
+    case("Dilate size 2, 0.75 (DilateCImg 2, 0.75)",
+         ("Dilate", {"size": [2, .75]}),
+         (CIMG + "CImgDilate", {"size": [2, .75]}), input="hash",
+         channels="rgba"),
+    case("Dilate size -1, 2 (DilateCImg -1, 2)",
+         ("Dilate", {"size": [-1, 2]}),
+         (CIMG + "CImgDilate", {"size": [-1, 2]}), input="hash",
+         channels="rgba"),
+    # Version 3 filters premultiplied inputs as they are (no unpremult).
+    case("Dilate size 1.5 on premultiplied input (DilateCImg 1.5)",
+         ("Dilate", {"size": 1.5}),
+         (CIMG + "CImgDilate", {"size": [1.5, 1.5]}), input="premult",
+         channels="rgba"),
+    # Version 2 (obsolete): integer sizes, in pixels (1.5 is (1, 2)).
+    case("Dilate size 1.5 (DilateCImg 2: 1, 2)", ("Dilate", {"size": 1.5}),
          (CIMG + "CImgDilate", {"size": [1, 2]}), input="impulse",
-         channels="rgba"),
-    case("Dilate size 2.5 (DilateCImg 2, 3)", ("Dilate", {"size": 2.5}),
-         (CIMG + "CImgDilate", {"size": [2, 3]}), input="impulse",
-         channels="rgba"),
-    case("Dilate size -1.5 (ErodeCImg 1, 2)", ("Dilate", {"size": -1.5}),
-         (CIMG + "CImgErode", {"size": [1, 2]}), input="checker",
-         channels="rgba"),
+         channels="rgba", major=2),
+    case("Dilate size -1 (ErodeCImg 2: 1)", ("Dilate", {"size": -1}),
+         (CIMG + "CImgErode", {"size": [1, 1]}), input="hash",
+         channels="rgba", major=2),
     case("Dilate defaults (DilateCImg defaults)", ("Dilate", {}),
          (CIMG + "CImgDilate", {}), input="impulse", channels="rgba"),
     # The reference's "Erode (fast)" menu entry creates a Dilate with its
@@ -2067,22 +2098,45 @@ CASES += [
                                                      "blur": .5}),
          ("eu.cimg.ErodeBlur", {"size": 3, "blur": .5}), input="mask",
          channels="rgba", tolerance=1e-3),
-    case("FilterErode size 1 box (ErodeSmoothCImg)",
-         ("FilterErode", {"size": 1}),
-         (CIMG + "CImgErodeSmooth", {"size": [1, 1], "filter": "Box",
-                                     "NatronOfxParamProcessR": 0,
-                                     "NatronOfxParamProcessG": 0,
-                                     "NatronOfxParamProcessB": 0,
-                                     "NatronOfxParamProcessA": 1}),
-         input="mask", channels="rgba", tolerance=1e-3),
-    case("Median size 3 (MedianCImg 1)", ("Median", {}),
-         (CIMG + "CImgMedian", {}), input="checker", channels="rgb"),
-    case("Median size 3 on an impulse", ("Median", {}),
-         (CIMG + "CImgMedian", {}), input="impulse", channels="rgb"),
-    case("Median size 5 (MedianCImg 2)", ("Median", {"size": 5}),
-         (CIMG + "CImgMedian", {"size": 2}), input="checker",
-         region=(3, 3, 29, 29), channels="rgb",
-         known=315),
+    # MedianCImg 3: the size is a radius per axis, rounded half up, default
+    # 3 (a 7x7 box), with the edge pixels repeated, as in the reference.
+    case("Median defaults (MedianCImg defaults)", ("Median", {}),
+         (CIMG + "CImgMedian", {}), input="hash", channels="rgba",
+         nuke_par=1),
+    case("Median size 1 (MedianCImg 1)", ("Median", {"size": 1}),
+         (CIMG + "CImgMedian", {"size": [1, 1]}), input="hash",
+         channels="rgb", nuke_par=1),
+    case("Median size 5 (MedianCImg 5)", ("Median", {"size": 5}),
+         (CIMG + "CImgMedian", {"size": [5, 5]}), input="hash",
+         channels="rgb", nuke_par=1),
+    case("Median size 2.5 (MedianCImg 2.5)", ("Median", {"size": 2.5}),
+         (CIMG + "CImgMedian", {"size": [2.5, 2.5]}), input="hash",
+         channels="rgb", nuke_par=1),
+    case("Median size 3, 1 (MedianCImg 3, 1)", ("Median", {"size": [3, 1]}),
+         (CIMG + "CImgMedian", {"size": [3, 1]}), input="hash",
+         channels="rgb", nuke_par=1),
+    case("Median size 0 (MedianCImg 0)", ("Median", {"size": 0}),
+         (CIMG + "CImgMedian", {"size": [0, 0]}), input="hash",
+         channels="rgb", nuke_par=1),
+    # With non-square pixels too, the radius is in pixels, in x and y.
+    case("Median size 3, PAR 1.07 (MedianCImg 3)", ("Median", {}),
+         (CIMG + "CImgMedian", {}), input="hash", channels="rgb"),
+    case("Median size 2.5, PAR 1.07 (MedianCImg 2.5)",
+         ("Median", {"size": 2.5}),
+         (CIMG + "CImgMedian", {"size": [2.5, 2.5]}), input="hash",
+         channels="rgb"),
+    case("Median defaults on premultiplied input (MedianCImg defaults)",
+         ("Median", {"channels": "rgba"}),
+         (CIMG + "CImgMedian", {"NatronOfxParamProcessA": 1}),
+         input="premult", channels="rgba"),
+    # MedianCImg 2 (obsolete): one integer radius, default 1 (a 3x3 box), and
+    # a smaller box at the image borders (compared away from them).
+    case("Median size 1 (MedianCImg 2 defaults)", ("Median", {"size": 1}),
+         (CIMG + "CImgMedian", {}), input="hash", channels="rgb",
+         nuke_par=1, region=(1, 1, 31, 31), major=2),
+    case("Median size 3 (MedianCImg 2: 3)", ("Median", {}),
+         (CIMG + "CImgMedian", {"size": 3}), input="hash", channels="rgb",
+         nuke_par=1, region=(3, 3, 29, 29), major=2),
     case("Convolve2 3x3 kernel, edges", ("Convolve2", {}),
          (CIMG + "CImgConvolve", {}), nuke_inputs=["ramp", "kernel"],
          clips={"Source": "ramp", "Filter": "kernel"}, channels="rgba",
@@ -2647,11 +2701,68 @@ for _name, _x, _y, _knobs, _params, _disparity in _RECONVERGE:
                              dict(_ofx_point, **_params), _disparity))
 
 
+# ------------------------------------------------------- FilterErodeCImg
+# A minimum (erode, positive size) or maximum (dilate) over a weighted
+# structuring element of width 2|size|+1 per axis; the alpha channel only by
+# default (the "defaults" cases), all four channels in the others.
+_FE_RGBA = {"NatronOfxParamProcessR": 1, "NatronOfxParamProcessG": 1,
+            "NatronOfxParamProcessB": 1}
+
+
+def _filter_erode(name, size, image, nuke_filter=None):
+    """A FilterErodeCImg case on all channels (size: one value or (x, y))."""
+    knobs = {"channels": "rgba", "size": list(size)
+             if isinstance(size, tuple) else size}
+    params = dict(_FE_RGBA, size=list(size) if isinstance(size, tuple)
+                  else [size, size])
+    if nuke_filter:
+        knobs["filter"] = nuke_filter
+        params["filter"] = nuke_filter.capitalize()
+    return case(name, ("FilterErode", knobs), (FILTER_ERODE, params),
+                input=image, channels="rgba")
+
+
+CASES += [
+    case("FilterErode defaults (FilterErodeCImg defaults)",
+         ("FilterErode", {}), (FILTER_ERODE, {}), input="mask",
+         channels="rgba"),
+    case("FilterErode defaults on a checker (FilterErodeCImg defaults)",
+         ("FilterErode", {}), (FILTER_ERODE, {}), input="checker",
+         channels="rgba"),
+] + [
+    _filter_erode("FilterErode %s size %s (FilterErodeCImg)" % (_f, _s), _s,
+                  "hash", _f)
+    for _f in ("box", "triangle", "quadratic", "gaussian")
+    for _s in (1, -1.5, .5)
+] + [
+    _filter_erode("FilterErode box size -2.5 on the impulse", -2.5,
+                  "impulse"),
+    _filter_erode("FilterErode gaussian size 3 on the mask", 3, "mask",
+                  "gaussian"),
+    # values outside [0, 1]
+    _filter_erode("FilterErode quadratic size 1 on the checker", 1,
+                  "checker", "quadratic"),
+    _filter_erode("FilterErode triangle size -1 on the checker", -1,
+                  "checker", "triangle"),
+    _filter_erode("FilterErode size 1, 2 (FilterErodeCImg 1, 2)", (1, 2),
+                  "hash"),
+    # different signs: the y pass first
+    _filter_erode("FilterErode dilate x 1, erode y 2", (-1, 2), "hash"),
+    _filter_erode("FilterErode gaussian size 2, -0.5", (2, -.5), "hash",
+                  "gaussian"),
+    # a size of 0 erodes with a width of 1 (Quadratic, Gaussian: not nothing)
+    _filter_erode("FilterErode gaussian size 0", 0, "hash", "gaussian"),
+    _filter_erode("FilterErode quadratic size 0, 1", (0, 1), "hash",
+                  "quadratic"),
+    _filter_erode("FilterErode size 1 on premultiplied input", 1,
+                  "premult"),
+]
+
 # ---------------------------------------------- More common-use cases
 CASES += [
-    case("FilterErode size 0 (ErodeSmoothCImg size 0)",
+    case("FilterErode size 0 (FilterErodeCImg size 0)",
          ("FilterErode", {"size": 0}),
-         (CIMG + "CImgErodeSmooth", {}), input="mask", channels="rgba"),
+         (FILTER_ERODE, {"size": [0, 0]}), input="mask", channels="rgba"),
     case("Radial softness 0",
          ("Radial", {"area": [100, 100, 600, 476], "softness": 0}),
          (ofx_id("Radial"), {"bottomLeft": [cx(100), 100],
@@ -2690,11 +2801,12 @@ KNOWN = {
         "IDistort uv = rgb, blur = blue",
         "IDistort uv = rgb, blur = blue, blur scale 4",
         "STMap uv = rgb, blur = blue (1), blur scale 3"],
-    315: [
+    # ErodeBlurCImg blurs with a triangle filter and remaps with other
+    # thresholds than the reference.
+    433: [
         "Erode (blur) defaults (ErodeBlur)",
         "Erode (blur) size -3, blur 0.5 (ErodeBlur -3)",
-        "Erode (blur) size 3, blur 0.5",
-        "FilterErode size 1 box (ErodeSmoothCImg)"],
+        "Erode (blur) size 3, blur 0.5"],
     DOCUMENTED: [
         "Log2Lin lin2log", "ColorWheel defaults, whole disc",
         "ColorWheel gamma 1, whole disc",
@@ -2761,11 +2873,11 @@ ISSUES = {
     310: 'FrameBlend: blends 6 frames by default',
     311: 'Anaglyph, MixViews, SideBySide, JoinViews: limited to the...',
     314: 'EdgeDetectCImg: no Prewitt, no threshold, no single alpha...',
-    315: 'ErodeCImg/DilateCImg, ErodeBlurCImg, ErodeSmoothCImg, Med...',
     316: 'ConvolveCImg: per-channel kernels by default',
     317: 'Compatibility tests that cannot be automated yet',
     318: 'Document the behaviours that come from OFX: black outside...',
     319: 'AppendClip: first output frame, fade curve, cross-dissolve',
     320: 'TimeDissolve: the dissolve starts before the In frame',
     352: 'IDistort, STMap: Unpremult UV, and the blur near edges and...',
+    433: 'ErodeBlurCImg: output differs from the reference blur-base...',
 }

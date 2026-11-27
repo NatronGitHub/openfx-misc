@@ -117,7 +117,7 @@ export SMOKETEST_TOOLS
 # (the counts of a release build; debug builds have more). A missing bundle, or one with
 # fewer plug-ins, fails the test (raise or lower the minimum when plug-ins are added or
 # removed). Other bundles (DebugProxy) are not required. SMOKETEST_BUNDLES replaces it.
-BUNDLES=(Misc:193 CImg:40 Shadertoy:1 Test:6)
+BUNDLES=(Misc:193 CImg:41 Shadertoy:1 Test:6)
 # shellcheck disable=SC2206
 [ -z "$SMOKETEST_BUNDLES" ] || BUNDLES=($SMOKETEST_BUNDLES)
 if [ "${SMOKETEST_NO_TEST:-0}" = 1 ]; then

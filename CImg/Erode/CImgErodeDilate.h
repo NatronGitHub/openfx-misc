@@ -78,12 +78,16 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 // version 2.0: use kNatronOfxParamProcess* parameters
 // version 2.1: add expand rod parameter
 // version 2.2: NaN/inf-safe premultiply (SupportExt #73, #79)
-// version 3.0: the default size is 0 (no change), as in the reference; version 2 (default size 1) is kept for
-//              backward compatibility
+// version 3.0: the default size is 0 (no change), as in the reference; the size is fractional, in canonical
+//              units: each radius is the size (x: divided by the pixel aspect ratio) rounded half away from 0;
+//              pixels outside the source get the value of the nearest pixel; no unpremultiplication by default;
+//              version 2 (default size 1, integer sizes) is kept for backward compatibility
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 #define kPluginVersionMajorOld 2 // version 2, kept for backward compatibility
 #define kPluginVersionMinorOld 2
+// the first version with fractional sizes, rounded to the nearest radius (kParamSize is a Double2DParam)
+constexpr unsigned int kPluginVersionFractionalSize = 3;
 
 #define kSupportsComponentRemapping 1
 #define kSupportsTiles 1
@@ -104,7 +108,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamSize "size"
 #define kParamSizeLabel "Size"
-#define kParamSizeHint "Width/height of the rectangular structuring element is 2*size+1, in pixel units (>=0). " \
+#define kParamSizeHint "Size of the rectangular structuring element, in canonical units (x is in pixels times the pixel " \
+    "aspect ratio PAR). Each radius r is the size rounded half away from zero (x: divided by the PAR first), and the " \
+    "structuring element is 2*r+1 pixels wide; e.g. 1.5 with a PAR of 1.0667 is a radius of 1 in x, 2 in y. The radius is " \
+    "rounded after scaling to the render scale, so a small size is relatively stronger at a proxy scale."
+#define kParamSizeHintOld "Width/height of the rectangular structuring element is 2*size+1, in pixel units (>=0). " \
     "For a single fractional size s in canonical units (canonical x is pixel x times the pixel aspect ratio PAR), use " \
     "round(s/PAR) for x and round(s) for y: e.g. s = 1.5 with PAR = 1.0667 is (1, 2)."
 #define kParamSizeDefault 0
@@ -112,15 +120,15 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamExpandRoD "expandRoD"
 #define kParamExpandRoDLabel "Expand RoD"
-#define kErodeParamExpandRoDHint "Expand the source region of definition by 2*size pixels if size is negative"
-#define kDilateParamExpandRoDHint "Expand the source region of definition by 2*size pixels if size is positive"
+#define kErodeParamExpandRoDHint "Expand the source region of definition by the radius of the structuring element where size is negative"
+#define kDilateParamExpandRoDHint "Expand the source region of definition by the radius of the structuring element where size is positive"
 
 
 // parameter values at a given time
 struct CImgErodeDilateParams
 {
-    int sx;
-    int sy;
+    double sx; // signed size in pixels at render scale 1 (version 3: divided by the PAR)
+    double sy;
     bool expandRod;
 };
 
@@ -131,18 +139,39 @@ class CImgErodeDilatePlugin
 {
 public:
 
-    CImgErodeDilatePlugin(OfxImageEffectHandle handle)
-        : CImgFilterPluginHelper<CImgErodeDilateParams, false>(handle, /*usesMask=*/false, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true)
+    CImgErodeDilatePlugin(OfxImageEffectHandle handle,
+                          unsigned int majorVersion)
+        : CImgFilterPluginHelper<CImgErodeDilateParams, false>(handle, /*usesMask=*/false, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale,
+                                                               /*defaultUnpremult=*/ majorVersion < kPluginVersionFractionalSize)
+        , _fractionalSize(majorVersion >= kPluginVersionFractionalSize)
+        , _size(NULL)
+        , _sizeOld(NULL)
+        , _expandRod(NULL)
     {
-        _size  = fetchInt2DParam(kParamSize);
+        if (_fractionalSize) {
+            _size = fetchDouble2DParam(kParamSize);
+        } else {
+            _sizeOld = fetchInt2DParam(kParamSize);
+        }
         _expandRod = fetchBooleanParam(kParamExpandRoD);
-        assert(_size && _expandRod);
+        assert( (_size || _sizeOld) && _expandRod );
     }
 
     virtual void getValuesAtTime(double time,
                                  CImgErodeDilateParams& params) OVERRIDE FINAL
     {
-        _size->getValueAtTime(time, params.sx, params.sy);
+        if (_fractionalSize) {
+            _size->getValueAtTime(time, params.sx, params.sy);
+            const double par = (_srcClip && _srcClip->isConnected()) ? _srcClip->getPixelAspectRatio() : 0.;
+            if (par > 0.) {
+                params.sx /= par;
+            }
+        } else {
+            int sx, sy;
+            _sizeOld->getValueAtTime(time, sx, sy);
+            params.sx = sx;
+            params.sy = sy;
+        }
         _expandRod->getValueAtTime(time, params.expandRod);
     }
 
@@ -153,10 +182,7 @@ public:
                         const CImgErodeDilateParams& params,
                         OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix_x = (int)std::ceil(std::abs(params.sx) * renderScale.x);
-        int delta_pix_y = (int)std::ceil(std::abs(params.sy) * renderScale.y);
-
-        cimgPadRect(rect, delta_pix_x, delta_pix_y, roi);
+        cimgPadRect(rect, padRadius(params.sx, renderScale.x), padRadius(params.sy, renderScale.y), roi);
     }
 
     bool getRegionOfDefinition(const OfxRectI& srcRoD,
@@ -169,8 +195,8 @@ public:
             // for a negative size in Erode, for a positive size in Dilate
             const bool dilateX = dilate ? (params.sx > 0) : (params.sx < 0);
             const bool dilateY = dilate ? (params.sy > 0) : (params.sy < 0);
-            int delta_pix_x = dilateX ? (int)std::ceil(std::abs(params.sx) * renderScale.x) : 0;
-            int delta_pix_y = dilateY ? (int)std::ceil(std::abs(params.sy) * renderScale.y) : 0;
+            int delta_pix_x = dilateX ? padRadius(params.sx, renderScale.x) : 0;
+            int delta_pix_y = dilateY ? padRadius(params.sy, renderScale.y) : 0;
             cimgPadRect(srcRoD, delta_pix_x, delta_pix_y, dstRoD);
 
             return true;
@@ -190,26 +216,54 @@ public:
         // PROCESSING.
         // This is the only place where the actual processing takes place
         // positive sizes first (erode in Erode, dilate in Dilate), then negative sizes (the opposite operation)
+        // (a radius of 0 on one axis gives a structuring element of width 1 there)
+        const int rx = radius(params.sx, args.renderScale.x);
+        const int ry = radius(params.sy, args.renderScale.y);
         if ( (params.sx > 0) || (params.sy > 0) ) {
             morpho(cimg, !dilate,
-                   (unsigned int)std::floor((std::max)(0, params.sx) * args.renderScale.x) * 2 + 1,
-                   (unsigned int)std::floor((std::max)(0, params.sy) * args.renderScale.y) * 2 + 1 );
+                   (params.sx > 0 ? (unsigned int)rx : 0U) * 2 + 1,
+                   (params.sy > 0 ? (unsigned int)ry : 0U) * 2 + 1 );
         }
         if ( abort() ) { return; }
         if ( (params.sx < 0) || (params.sy < 0) ) {
             morpho(cimg, dilate,
-                   (unsigned int)std::floor((std::max)(0, -params.sx) * args.renderScale.x) * 2 + 1,
-                   (unsigned int)std::floor((std::max)(0, -params.sy) * args.renderScale.y) * 2 + 1 );
+                   (params.sx < 0 ? (unsigned int)rx : 0U) * 2 + 1,
+                   (params.sy < 0 ? (unsigned int)ry : 0U) * 2 + 1 );
         }
     }
 
     virtual bool isIdentity(const OFX::IsIdentityArguments &args,
                             const CImgErodeDilateParams& params) OVERRIDE FINAL
     {
+        if (_fractionalSize) {
+            return radius(params.sx, args.renderScale.x) == 0 && radius(params.sy, args.renderScale.y) == 0;
+        }
+
+        // version 2 (kept as it was): the signed sizes are rounded down
         return (std::floor(params.sx * args.renderScale.x) == 0 && std::floor(params.sy * args.renderScale.y) == 0);
     };
 
+    // version 3: pixels outside the source get the value of the nearest pixel (inside the image, CImg's erode()
+    // and dilate() do the same), so that a dilation of negative values or an erosion near the edge of the
+    // expanded RoD does not see black; version 2: black, as it was
+    virtual int getBoundary(const CImgErodeDilateParams& /*params*/) OVERRIDE FINAL { return _fractionalSize ? 1 : 0; }
+
 private:
+    // The radius in pixels of the structuring element for a signed size in pixels: version 3 rounds half away
+    // from zero (a size of 0.5 is a radius of 1), version 2 rounds down.
+    int radius(double size,
+               double renderScale) const
+    {
+        return _fractionalSize ? cimgRadius(size, renderScale) : (int)std::floor(std::abs(size) * renderScale);
+    }
+
+    // The padding of the RoI and RoD: the radius (version 2: rounded up, as it was)
+    int padRadius(double size,
+                  double renderScale) const
+    {
+        return _fractionalSize ? radius(size, renderScale) : (int)std::ceil(std::abs(size) * renderScale);
+    }
+
     static void morpho(cimg_library::CImg<cimgpix_t>& cimg,
                        bool erode,
                        unsigned int sx,
@@ -222,8 +276,10 @@ private:
         }
     }
 
+    const bool _fractionalSize; // version 3 and later
     // params
-    OFX::Int2DParam *_size;
+    OFX::Double2DParam *_size; // version 3 and later
+    OFX::Int2DParam *_sizeOld; // version 2
     OFX::BooleanParam* _expandRod;
 };
 
@@ -251,9 +307,7 @@ template <bool dilate, unsigned int majorVersion>
 void
 CImgErodeDilatePluginFactory<dilate, majorVersion>::describe(OFX::ImageEffectDescriptor& desc)
 {
-    if (majorVersion < kPluginVersionMajor) {
-        desc.setIsObsolete(true);
-    }
+    desc.setIsObsolete(majorVersion < kPluginVersionMajor);
     // basic labels
     desc.setLabel(dilate ? kDilatePluginName : kErodePluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -303,14 +357,26 @@ CImgErodeDilatePluginFactory<dilate, majorVersion>::describeInContext(OFX::Image
                                                                                            /*processAlpha*/ true,      // Enable alpha by default, so it works OK on masks
                                                                                            /*processIsSecret=*/ false);
 
-    {
-        OFX::Int2DParamDescriptor *param = desc.defineInt2DParam(kParamSize);
+    if (majorVersion >= kPluginVersionFractionalSize) {
+        OFX::Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamSize);
         param->setLabel(kParamSizeLabel);
         param->setHint(kParamSizeHint);
+        param->setDoubleType(OFX::eDoubleTypeXY);
         param->setRange(-1000, -1000, 1000, 1000);
         param->setDisplayRange(-100, -100, 100, 100);
-        const int sizeDefault = (majorVersion < kPluginVersionMajor) ? kParamSizeDefaultOld : kParamSizeDefault;
-        param->setDefault(sizeDefault, sizeDefault);
+        param->setDefault(kParamSizeDefault, kParamSizeDefault);
+        param->setDigits(1);
+        param->setIncrement(0.5);
+        if (page) {
+            page->addChild(*param);
+        }
+    } else {
+        OFX::Int2DParamDescriptor *param = desc.defineInt2DParam(kParamSize);
+        param->setLabel(kParamSizeLabel);
+        param->setHint(kParamSizeHintOld);
+        param->setRange(-1000, -1000, 1000, 1000);
+        param->setDisplayRange(-100, -100, 100, 100);
+        param->setDefault(kParamSizeDefaultOld, kParamSizeDefaultOld);
         if (page) {
             page->addChild(*param);
         }
@@ -333,7 +399,7 @@ OFX::ImageEffect*
 CImgErodeDilatePluginFactory<dilate, majorVersion>::createInstance(OfxImageEffectHandle handle,
                                                      OFX::ContextEnum /*context*/)
 {
-    return new CImgErodeDilatePlugin<dilate>(handle);
+    return new CImgErodeDilatePlugin<dilate>(handle, majorVersion);
 }
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT

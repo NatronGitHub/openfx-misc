@@ -12,6 +12,7 @@ CImgEqualize.o \
 CImgErode.o \
 CImgErodeSmooth.o \
 CImgExpression.o \
+CImgFilterErode.o \
 CImgGuided.o \
 CImgHistEQ.o \
 CImgInpaint-gpl.o \
@@ -70,6 +71,8 @@ ErodeSmooth/net.sf.cimg.CImgErodeSmooth.png \
 ErodeSmooth/net.sf.cimg.CImgErodeSmooth.svg \
 Expression/net.sf.cimg.CImgExpression.png \
 Expression/net.sf.cimg.CImgExpression.svg \
+FilterErode/net.sf.cimg.CImgFilterErode.png \
+FilterErode/net.sf.cimg.CImgFilterErode.svg \
 Guided/net.sf.cimg.CImgGuided.png \
 Guided/net.sf.cimg.CImgGuided.svg \
 HistEQ/net.sf.cimg.CImgHistEQ.png \
@@ -108,6 +111,7 @@ Equalize \
 Erode \
 ErodeSmooth \
 Expression \
+FilterErode \
 Guided \
 HistEQ \
 Inpaint \
@@ -137,6 +141,7 @@ CXXFLAGS += \
 -IErode \
 -IErodeSmooth \
 -IExpression \
+-IFilterErode \
 -IGuided \
 -IHistEQ \
 -IInpaint \
@@ -255,6 +260,8 @@ $(OBJECTPATH)/CImgErode.o: CImgErode.cpp CImgErodeDilate.h CImgFilter.h CImg.h
 $(OBJECTPATH)/CImgErodeSmooth.o: CImgErodeSmooth.cpp CImgFilter.h CImg.h
 
 $(OBJECTPATH)/CImgExpression.o: CImgExpression.cpp CImgFFTConvolve.h CImgFilter.h CImg.h
+
+$(OBJECTPATH)/CImgFilterErode.o: CImgFilterErode.cpp CImgFilterErode.h CImgFilter.h CImg.h
 
 $(OBJECTPATH)/CImgFilter.o: CImgOperator.cpp CImgOperator.h CImgFilter.h CImg.h
 
