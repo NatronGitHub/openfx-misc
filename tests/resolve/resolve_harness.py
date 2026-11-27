@@ -80,6 +80,8 @@ def load_script_module(executable):
         return sys.modules[name]
     try:
         spec = importlib.util.spec_from_file_location(name, SCRIPT_MODULE)
+        if spec is None or spec.loader is None:
+            raise ImportError("no import spec for %s" % SCRIPT_MODULE)
         module = importlib.util.module_from_spec(spec)
         sys.modules[name] = module
         spec.loader.exec_module(module)
@@ -262,12 +264,14 @@ class Session:
                 break
             time.sleep(2)
         if self.resolve is None:
+            pid = self._proc.pid
             self.stop()
             raise ResolveUnavailable(
-                "no scripting connection to Resolve after %d s: external "
-                "scripting must be allowed (Preferences > System > General > "
-                "External scripting using: Local), which the free version "
-                "may not offer" % CONNECT_TIMEOUT)
+                "no scripting connection to Resolve after %d s: allow "
+                "external scripting once in Resolve (Preferences > System > "
+                "General > External scripting using: Local), if the free "
+                "version offers it. Resolve (pid %d) can't be asked to quit "
+                "without it: quit it by hand" % (CONNECT_TIMEOUT, pid))
         try:
             self._new_project()
         except Exception:
@@ -277,8 +281,11 @@ class Session:
     def stop(self):
         """Deletes the scratch project, quits Resolve and waits for it.
 
-        Resolve is asked to quit by script, then with SIGTERM; it is never
-        killed.
+        Resolve is only asked to quit by script. It is never sent a signal:
+        Resolve 21.2 crashes at exit on SIGTERM (a shutdown race in its
+        Fairlight page, which locks a destroyed mutex). Without a scripting
+        connection, or if it does not quit in QUIT_TIMEOUT seconds, it is
+        left running and reported.
         """
         if self.resolve is not None:
             manager = self.resolve.GetProjectManager()
@@ -286,18 +293,17 @@ class Session:
                 manager.CloseProject(self._project)
                 manager.DeleteProject(self._project_name)
                 self._project = None
-            self.resolve.Quit()
+            quitting = self.resolve.Quit()
             self.resolve = None
-        if self._proc is not None:
-            try:
-                self._proc.wait(timeout=QUIT_TIMEOUT)
-            except subprocess.TimeoutExpired:
-                self._proc.terminate()
+            if self._proc is not None and quitting:
                 try:
                     self._proc.wait(timeout=QUIT_TIMEOUT)
                 except subprocess.TimeoutExpired:
-                    print("Resolve (pid %d) did not quit; stop it by hand"
-                          % self._proc.pid, file=sys.stderr)
+                    pass
+        if self._proc is not None:
+            if self._proc.poll() is None:
+                print("Resolve (pid %d) is still running: quit it by hand"
+                      % self._proc.pid, file=sys.stderr)
             self._proc = None
         self._close_log()
 
@@ -308,6 +314,8 @@ class Session:
 
     def _new_project(self):
         """Creates the scratch project, without colour management."""
+        if self.resolve is None:
+            raise RenderError("not connected to Resolve")
         manager = self.resolve.GetProjectManager()
         project = manager.CreateProject(self._project_name)
         if project is None:
@@ -325,9 +333,24 @@ class Session:
 
     def ofx_effects(self):
         """The ids of the OFX effects Resolve lists for timeline items."""
+        if self.resolve is None:
+            return []
         return sorted(e.get("id", "") for e in
                       (self.resolve.GetEffectsList("video") or [])
                       if e.get("category") == "ofx")
+
+    def _write_inputs(self, tool):
+        """Writes the tool's ID and inputs to caseN-inputs.txt, for --keep."""
+        lines = ["RegID %s" % tool.GetAttrs().get("TOOLS_RegID")]
+        for inp in (tool.GetInputList() or {}).values():
+            attrs = inp.GetAttrs() or {}
+            lines.append("%s\t%s\t%s\t%s..%s" % (
+                attrs.get("INPS_ID"), attrs.get("INPS_Name"),
+                attrs.get("INPS_DataType"), attrs.get("INPN_MinAllowed"),
+                attrs.get("INPN_MaxAllowed")))
+        path = os.path.join(self.work, "case%d-inputs.txt" % self._cases)
+        with open(path, "w") as out:
+            out.write("\n".join(lines) + "\n")
 
     def render_generator(self, plugin, inputs):
         """Renders frame 0 of an OFX generator in a Fusion comp.
@@ -349,6 +372,8 @@ class Session:
         """
         self._cases += 1
         project = self._project
+        if project is None:
+            raise RenderError("no scratch project")
         timeline = project.GetMediaPool().CreateEmptyTimeline(
             "case%d" % self._cases)
         if timeline is None or not project.SetCurrentTimeline(timeline):
@@ -363,6 +388,7 @@ class Session:
             raise PluginMissing(
                 "no Fusion tool ofx.%s; Resolve's OFX effects: %s"
                 % (plugin, ", ".join(self.ofx_effects()) or "none"))
+        self._write_inputs(tool)
         for key, value in inputs.items():
             tool.SetInput(key, value)
         comp.MediaOut1.Input = tool
