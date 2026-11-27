@@ -114,7 +114,42 @@ def test_resolve_log(results_dir):
     """Resolve's log of the run has no termination signal or crash."""
     log = resolve_harness.copy_logs(results_dir)
     if log is None:
-        pytest.skip("Resolve's log is older than the results: quit Resolve "
-                    "first")
+        pytest.skip("Resolve's log is older than the results: it is from "
+                    "another session")
     crashes = resolve_harness.log_findings(log, resolve_harness.CRASH_PATTERNS)
     assert not crashes, "\n".join(crashes)
+
+
+FIXTURES = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                        "fixtures")
+
+
+def test_host_descriptions_sample():
+    """The extraction of a sample dump (no Resolve needed)."""
+    with open(os.path.join(FIXTURES, "sample-stdout.txt")) as f:
+        descriptions = resolve_harness.host_descriptions(f.read())
+    assert len(descriptions) == 1  # the repeated dump is merged
+    with open(os.path.join(FIXTURES, "sample-host-description.txt")) as f:
+        expected = f.read()
+    assert resolve_harness.host_description_entry(
+        "21.2.0.6", descriptions) == expected
+
+
+@pytest.mark.resolve
+def test_host_description(results, results_dir):
+    """Writes Resolve's OFX host description to host-description.txt."""
+    log = os.path.join(results_dir, openfx_misc_tests.STDOUT_LOG)
+    if not os.path.isfile(log):
+        pytest.skip("no %s in the results: start Resolve with the command "
+                    "that install-script.sh prints" % openfx_misc_tests.STDOUT_LOG)
+    with open(log, errors="replace") as f:
+        descriptions = resolve_harness.host_descriptions(f.read())
+    if not descriptions:
+        pytest.skip("no host description in %s: build the prefix with "
+                    "-DCMAKE_CXX_FLAGS=-DDEBUG_HOSTDESCRIPTION (README.md)"
+                    % openfx_misc_tests.STDOUT_LOG)
+    entry = resolve_harness.host_description_entry(
+        results.get("resolve_version"), descriptions)
+    with open(os.path.join(results_dir, "host-description.txt"), "w") as f:
+        f.write(entry)
+    assert all(d.startswith("OFX API version ") for d in descriptions), entry

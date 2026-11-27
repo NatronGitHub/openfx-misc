@@ -10,12 +10,19 @@ Scripting"). The script:
 - writes results.json (tool IDs, input IDs, what was set, the exported
   files, Resolve's plug-in cache entries) and the frames to
   <results root>/<timestamp>/;
-- deletes the scratch project and reopens the project that was open.
+- deletes the scratch project and reopens the project that was open;
+- copies Resolve's stdout log (resolve-stdout.log, see README.md) into the
+  results, for the OFX host description;
+- runs the pytest checks (tests/resolve/test_resolve.py) on the results,
+  with the checkout and pytest that install-script.sh recorded, and shows
+  PASS or FAIL in Workspace > Console (and in a dialog, if Resolve's
+  UIManager works).
 
-It never quits Resolve. The results root is $OPENFX_MISC_RESOLVE_RESULTS,
-or else ~/openfx-misc-resolve-results; a config.json there with
-{"output_root": "/some/dir"} overrides it. tests/resolve/test_resolve.py
-checks the results (see README.md).
+It never quits Resolve. The configuration directory is
+$OPENFX_MISC_RESOLVE_RESULTS, or else ~/openfx-misc-resolve-results. It holds
+install.json (written by install-script.sh: {"checkout": ..., "pytest": ...}),
+resolve-stdout.log, and optionally config.json with {"output_root": DIR}
+to put the results elsewhere than in the configuration directory.
 
 This file is also imported by test_resolve.py, for CASES; nothing runs then.
 """
@@ -24,7 +31,9 @@ import datetime
 import json
 import os
 import platform
+import shutil
 import struct
+import subprocess
 import sys
 import traceback
 import xml.etree.ElementTree as ElementTree
@@ -77,14 +86,31 @@ CASES = [
 ]
 
 
+STDOUT_LOG = "resolve-stdout.log"
+# Seconds the pytest checks may take.
+PYTEST_TIMEOUT = 300
+# Variables of Resolve's Python that must not reach another Python.
+PYTHON_VARIABLES = ("PYTHONHOME", "PYTHONPATH", "PYTHONEXECUTABLE",
+                    "PYTHONSTARTUP", "PYTHONUSERBASE")
+
+
+def config_dir():
+    """The configuration directory (see the module docstring)."""
+    return os.environ.get("OPENFX_MISC_RESOLVE_RESULTS") or DEFAULT_ROOT
+
+
+def _read_json(path):
+    if not os.path.isfile(path):
+        return {}
+    with open(path) as f:
+        return json.load(f)
+
+
 def results_root():
     """The directory that holds one results directory per run."""
-    root = os.environ.get("OPENFX_MISC_RESOLVE_RESULTS") or DEFAULT_ROOT
-    config = os.path.join(root, "config.json")
-    if os.path.isfile(config):
-        with open(config) as f:
-            root = os.path.expanduser(json.load(f).get("output_root", root))
-    return root
+    root = config_dir()
+    config = _read_json(os.path.join(root, "config.json"))
+    return os.path.expanduser(config.get("output_root", root))
 
 
 def plugin_bundles(plugin, cache=PLUGIN_CACHE):
@@ -227,10 +253,75 @@ def run_case(project, case, out_dir, log):
     return result
 
 
-def main(resolve):
+def run_checks(out_dir, install):
+    """Runs the pytest checks on out_dir.
+
+    Args:
+        out_dir: the results directory.
+        install: the contents of install.json.
+
+    Returns:
+        (verdict, summary): verdict is "PASS", "FAIL" or "NOT RUN"; summary
+        is pytest's last line, or why it didn't run. pytest's output goes to
+        out_dir/pytest.txt.
+    """
+    checkout = os.environ.get("OPENFX_MISC_CHECKOUT") or install.get("checkout")
+    pytest = os.environ.get("OPENFX_MISC_PYTEST") or install.get("pytest")
+    if not checkout or not pytest:
+        return "NOT RUN", ("no checkout or pytest: run install-script.sh, "
+                           "then pytest tests/resolve by hand")
+    if not os.access(pytest, os.X_OK):
+        return "NOT RUN", "%s is not executable" % pytest
+    env = {k: v for k, v in os.environ.items() if k not in PYTHON_VARIABLES}
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    try:
+        proc = subprocess.run(
+            [pytest, "tests/resolve", "-rs", "--results", out_dir],
+            cwd=checkout, env=env, stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            timeout=PYTEST_TIMEOUT, check=False)
+    except (OSError, subprocess.TimeoutExpired) as ex:
+        return "NOT RUN", "pytest failed to run: %s" % ex
+    output = proc.stdout.decode("utf-8", "replace")
+    with open(os.path.join(out_dir, "pytest.txt"), "w") as f:
+        f.write(output)
+    lines = [line for line in output.splitlines() if line.strip()]
+    summary = lines[-1].strip("= ") if lines else "no output"
+    return ("PASS" if proc.returncode == 0 else "FAIL"), summary
+
+
+def show_summary(fusion, bmd, text):
+    """Shows text in a small dialog; returns False if UIManager failed."""
+    try:
+        ui = fusion.UIManager
+        dispatcher = bmd.UIDispatcher(ui)
+        win = dispatcher.AddWindow(
+            {"ID": "OpenfxMiscTests", "WindowTitle": "openfx-misc tests",
+             "Geometry": [200, 200, 520, 160]},
+            ui.VGroup([ui.Label({"Text": text, "WordWrap": True}),
+                       ui.Button({"ID": "OK", "Text": "OK"})]))
+
+        def close(_event):
+            dispatcher.ExitLoop()
+
+        win.On.OpenfxMiscTests.Close = close
+        win.On.OK.Clicked = close
+        win.Show()
+        dispatcher.RunLoop()
+        win.Hide()
+        return True
+    except Exception:  # no UIManager (e.g. not in this version): Console
+        return False
+
+
+def main(resolve, fusion=None, bmd=None):
     """Runs every case and writes results.json; never quits Resolve."""
     stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     out_dir = os.path.join(results_root(), stamp)
+    suffix = 1
+    while os.path.exists(out_dir):  # two runs in the same second
+        suffix += 1
+        out_dir = os.path.join(results_root(), "%s-%d" % (stamp, suffix))
     os.makedirs(out_dir)
     lines = []
 
@@ -241,7 +332,7 @@ def main(resolve):
     manager = resolve.GetProjectManager()
     current = manager.GetCurrentProject()
     previous_name = current.GetName() if current else None
-    name = "openfx-misc-tests-" + stamp
+    name = "openfx-misc-tests-" + os.path.basename(out_dir)
     results = {
         "started": stamp,
         "resolve_version": resolve.GetVersionString(),
@@ -283,10 +374,25 @@ def main(resolve):
     with open(os.path.join(out_dir, "log.txt"), "w") as f:
         f.write("\n".join(lines) + "\n")
     log("results in %s" % out_dir)
+    stdout_log = os.path.join(config_dir(), STDOUT_LOG)
+    if os.path.isfile(stdout_log):
+        shutil.copy(stdout_log, os.path.join(out_dir, STDOUT_LOG))
+    else:
+        log("no %s: Resolve was not started with the README's command"
+            % stdout_log)
+    install = _read_json(os.path.join(config_dir(), "install.json"))
+    verdict, summary = run_checks(out_dir, install)
+    text = "openfx-misc tests: %s (%s)\nResults: %s" % (verdict, summary,
+                                                        out_dir)
+    print("=" * 60)
+    print(text)
+    print("=" * 60)
+    if fusion is not None and bmd is not None:
+        show_summary(fusion, bmd, text)
     return out_dir
 
 
 # Resolve defines `resolve` for scripts run from its menus; pytest only
 # imports this file for CASES.
 if "resolve" in globals():
-    main(globals()["resolve"])
+    main(globals()["resolve"], globals().get("fusion"), globals().get("bmd"))

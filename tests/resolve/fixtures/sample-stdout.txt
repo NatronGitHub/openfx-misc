@@ -1,0 +1,22 @@
+# Sample for test_resolve.py (shortened, made-up values), not a real Resolve dump.
+log4cxx: No appender could be found for logger (BtCommon).
+21.2.0.0006 macOS/Clang arm64
+OFX host description follows
+OFX API version 1.4
+hostName=DaVinciResolveLite
+hostLabel=DaVinci Resolve
+hostVersion=21.2.0 (21.2)
+hostIsBackground=0
+supportedContexts=OfxImageEffectContextFilter,OfxImageEffectContextGenerator
+suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,
+OFX DebugProxy: host description finished
+QWidget::setMinimumSize: (m_DrawerWidget/UiDrawerWidget) The largest allowed size is (16777215,16777215)
+OFX host description follows
+OFX API version 1.4
+hostName=DaVinciResolveLite
+hostLabel=DaVinci Resolve
+hostVersion=21.2.0 (21.2)
+hostIsBackground=0
+supportedContexts=OfxImageEffectContextFilter,OfxImageEffectContextGenerator
+suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,
+OFX DebugProxy: host description finished

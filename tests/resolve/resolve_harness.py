@@ -72,6 +72,46 @@ def log_findings(path, patterns=LOG_PATTERNS):
         return []
 
 
+HOST_DESCRIPTION_START = "OFX host description follows"
+HOST_DESCRIPTION_END = "OFX DebugProxy: host description finished"
+
+
+def host_descriptions(text):
+    """The OFX host descriptions in a log, in README-hosts.txt's format.
+
+    Rectangle built with -DDEBUG_HOSTDESCRIPTION prints one in describe(),
+    between HOST_DESCRIPTION_START and HOST_DESCRIPTION_END: "OFX API
+    version X.Y" then key=value lines. The trailing comma of the suites line
+    is dropped.
+
+    Returns:
+        The distinct descriptions, in order, each a string of lines.
+    """
+    found = []
+    block = None
+    for line in text.splitlines():
+        line = line.rstrip()
+        if line.endswith(HOST_DESCRIPTION_START):
+            block = []
+        elif block is not None and line.endswith(HOST_DESCRIPTION_END):
+            desc = "\n".join(block) + "\n"
+            if block and desc not in found:
+                found.append(desc)
+            block = None
+        elif block is not None:
+            if line.startswith("suites="):
+                line = line.rstrip(",")
+            block.append(line)
+    return found
+
+
+def host_description_entry(resolve_version, descriptions):
+    """A README-hosts.txt entry: "Version N (X.Y.Z):", then the description(s)."""
+    major = resolve_version.split(".")[0] if resolve_version else "?"
+    head = "Version %s (%s):\n\n" % (major, resolve_version)
+    return head + "\n".join(descriptions)
+
+
 class Image:
     """An 8- or 16-bit image, as decoded from a PNG file."""
 
