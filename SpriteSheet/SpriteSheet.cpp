@@ -188,8 +188,8 @@ private:
     virtual void getRegionsOfInterest(const RegionsOfInterestArguments &args, RegionOfInterestSetter &rois) OVERRIDE FINAL;
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
-    // the RoD: the sprite, at (0,0)
-    void getSpriteRoD(double time, OfxRectD* rod) const;
+    // the RoD: the sprite, at (0,0), in canonical coordinates with the output PAR
+    OfxRectD getSpriteRoD(double time) const;
 
     /* Override the render */
     virtual void render(const RenderArguments &args) OVERRIDE FINAL;
@@ -326,8 +326,7 @@ SpriteSheetPlugin::setupAndProcess(SpriteSheetProcessorBase &processor,
     getCropRectangle(time, args.renderScale, srcRoDPixel, spriteSize, spriteRange, frameOffset, &cropRectPixel);
 
     // the RoD, in pixels at the render scale (as the host computes the output bounds)
-    OfxRectD rod;
-    getSpriteRoD(time, &rod);
+    const OfxRectD rod = getSpriteRoD(time);
     OfxRectI spritePixel;
     Coords::toPixelEnclosing(rod, args.renderScale, _dstClip->getPixelAspectRatio(), &spritePixel);
 
@@ -383,21 +382,23 @@ SpriteSheetPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args
 {
     const double time = args.time;
 
-    getSpriteRoD(time, &rod);
+    rod = getSpriteRoD(time);
 
     return true;
 }
 
-void
-SpriteSheetPlugin::getSpriteRoD(double time,
-                                OfxRectD* rod) const
+OfxRectD
+SpriteSheetPlugin::getSpriteRoD(double time) const
 {
-    double par = _srcClip->getPixelAspectRatio();
+    // SpriteSheet does not support multiple clip PARs: the output has the PAR of Source
+    const double par = _dstClip->getPixelAspectRatio();
     const OfxPointD rs1 = {1., 1.};
     OfxRectI sprite = {0, 0, 0, 0};
     _spriteSize->getValueAtTime(time, sprite.x2, sprite.y2);
+    OfxRectD rod;
+    Coords::toCanonical(sprite, rs1, par, &rod);
 
-    Coords::toCanonical(sprite, rs1, par, rod);
+    return rod;
 }
 
 // the internal render function
