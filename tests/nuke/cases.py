@@ -422,6 +422,10 @@ IMAGES = {
     "depth2": _const(2., 2., 2., 1.),
     "screen": _const(.1, .2, .8, 1.),
     "screen_green": _const(.2, .8, .1, 1.),
+    # PIK: a screen colour with negative components, and two foregrounds.
+    "screen_negative": _const(-.5, -.5, .3, 1.),
+    "fg_bright": _const(.6, .7, .9, 1.),
+    "fg_dark": _const(.31, .348, .6, 1.),
     # The Roto shape of ROTO_RECT, as an OFX Roto input: white inside
     # [8, 24) x [8, 24), transparent black outside.
     "rect": {
@@ -1281,8 +1285,40 @@ CASES += [
          ("IBKGizmoV3", {"st": "C-blue", "lm_enable": True, "luma": .5,
                          "ll_enable": True}),
          (ofx_id("PIK"), {**PIK_BLUE, "lmEnable": 1, "luma": .5,
-                          "llEnable": 1}),
-         known=281, **PIK_INPUTS),
+                          "llEnable": 1}), **PIK_INPUTS),
+    # The gizmo's default luminance level, 0, with its Enable.
+    case("PIK C-blue, luminance level 0 (IBKGizmoV3)",
+         ("IBKGizmoV3", {"st": "C-blue", "lm_enable": True, "luma": 0.,
+                         "ll_enable": True}),
+         (ofx_id("PIK"), {**PIK_BLUE, "lmEnable": 1, "luma": 0.,
+                          "llEnable": 1}), **PIK_INPUTS),
+    case("PIK C-green, luminance level 0.3 (IBKGizmoV3)",
+         ("IBKGizmoV3", {"st": "C-green", "lm_enable": True, "luma": .3,
+                         "ll_enable": True}),
+         (ofx_id("PIK"), {**PIK_GREEN, "lmEnable": 1, "luma": .3,
+                          "llEnable": 1}), **PIK_GREEN_INPUTS),
+    # Screen range 2: the screen excess of the screen colour times the
+    # screen range is above 1, where it is clamped.
+    case("PIK C-blue, luminance level 1, screen range 2 (IBKGizmoV3)",
+         ("IBKGizmoV3", {"st": "C-blue", "lm_enable": True, "level": 2.,
+                         "luma": 1., "ll_enable": True}),
+         (ofx_id("PIK"), {**PIK_BLUE, "lmEnable": 1, "level": 2.,
+                          "luma": 1., "llEnable": 1}), **PIK_INPUTS),
+    # Negative screen colour components count as 0 in the key, not in the
+    # screen subtraction (RGB above 1, alpha raised to 1 by RGBA Legal).
+    case("PIK C-blue, negative screen colour, bright Fg (IBKGizmoV3)",
+         ("IBKGizmoV3", {"st": "C-blue"}), (ofx_id("PIK"), PIK_BLUE),
+         **{**PIK_INPUTS, "nuke_inputs": ["fg_bright", "screen_negative"],
+            "clips": {"Source": "fg_bright", "C": "screen_negative"}}),
+    case("PIK C-blue, negative screen colour, dark Fg (IBKGizmoV3)",
+         ("IBKGizmoV3", {"st": "C-blue"}), (ofx_id("PIK"), PIK_BLUE),
+         **{**PIK_INPUTS, "nuke_inputs": ["fg_dark", "screen_negative"],
+            "clips": {"Source": "fg_dark", "C": "screen_negative"}}),
+    # A screen range of 0: opaque, without screen subtraction.
+    case("PIK C-blue, luminance match, screen range 0 (IBKGizmoV3)",
+         ("IBKGizmoV3", {"st": "C-blue", "lm_enable": True, "level": 0.}),
+         (ofx_id("PIK"), {**PIK_BLUE, "lmEnable": 1, "level": 0.}),
+         **PIK_INPUTS),
     case("PIK C-blue, autolevels (IBKGizmoV3)",
          ("IBKGizmoV3", {"st": "C-blue", "autolevels": True}),
          (ofx_id("PIK"), {**PIK_BLUE, "autolevels": 1}), **PIK_INPUTS),
@@ -1300,6 +1336,19 @@ CASES += [
                          "yellow": True, "cyan": True}),
          (ofx_id("PIK"), {**PIK_GREEN, "autolevels": 1, "yellow": 1,
                           "cyan": 1}), **PIK_GREEN_INPUTS),
+    # Weights below 0.5: the two other channels are limited to the screen
+    # channel where it is not the largest.
+    case("PIK C-blue, autolevels, weights 0.2 and 0.3 (IBKGizmoV3)",
+         ("IBKGizmoV3", {"st": "C-blue", "autolevels": True,
+                         "red_weight": .2, "blue_green_weight": .3}),
+         (ofx_id("PIK"), {**PIK_BLUE, "autolevels": 1, "redWeight": .2,
+                          "blueGreenWeight": .3}), **PIK_INPUTS),
+    case("PIK C-green, autolevels, yellow, weights 0.2 and 0.3 (IBKGizmoV3)",
+         ("IBKGizmoV3", {"st": "C-green", "autolevels": True, "yellow": True,
+                         "red_weight": .2, "blue_green_weight": .3}),
+         (ofx_id("PIK"), {**PIK_GREEN, "autolevels": 1, "yellow": 1,
+                          "redWeight": .2, "blueGreenWeight": .3}),
+         **PIK_GREEN_INPUTS),
     case("PIK C-blue, luminance match and autolevels (IBKGizmoV3)",
          ("IBKGizmoV3", {"st": "C-blue", "lm_enable": True, "level": .7,
                          "autolevels": True}),
@@ -2845,7 +2894,6 @@ ISSUES = {
     278: 'KeyMix: no bounding box choice',
     279: 'Shuffle: one output layer; the ShuffleCopy-style default...',
     280: 'Keyer: the matte is inverted with respect to its A, B, C,...',
-    281: 'PIK: luminance match and autolevels are not implemented;...',
     282: 'CopyRectangle: softness ramp shape; whole-image default area',
     283: 'Roto: nothing is drawn by default (Process A off); no pre...',
     284: 'Constant: finite region of definition',
