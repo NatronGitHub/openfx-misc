@@ -2,8 +2,8 @@ name: Continuous Integration tests
 
 # Every change gets up to three CMake builds (Linux, Windows, then macOS) of the
 # release configuration (with the Test bundle), each installed and followed by a
-# plugin load test of the install tree. The Linux build is also followed by a
-# headless render test (.github/tools/rendertest.sh, with openfx's hostDemo,
+# plugin load test of the install tree. The Linux build is also followed by an
+# unload test (.github/tools/unloadtest.sh), a headless render test (.github/tools/rendertest.sh, with openfx's hostDemo,
 # built with -DOFX_BUILD_HOSTDEMO=ON) and a smoke test that renders every plug-in
 # (.github/tools/smoketest.sh), then again in an OFX 1.4 host (smoketest.sh
 # --ofx14) and in an OFX 1.1 host (--ofx11); nightly.yml runs the first two on macOS too. Windows renders
@@ -206,6 +206,10 @@ jobs:
           cmake --install build --prefix "$PWD/install"
       - name: Load test
         run: .github/tools/loadtest.sh install
+      - name: Unload test
+        # every binary is really unloaded by dlclose() and loads again (openfx's
+        # plugin-unload-test): no STB_GNU_UNIQUE symbol pins it
+        run: .github/tools/unloadtest.sh install
       - name: Check bundles (linuxCheckBundle.sh)
         # openfx's bundle checker: no bundled system libraries, $ORIGIN-only RUNPATH, no
         # GLIBC_PRIVATE. Ubuntu 24.04 is newer than the release baseline (EL9), so the

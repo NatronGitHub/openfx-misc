@@ -19,6 +19,18 @@ os_arch() {
     esac
 }
 
+# ofx_binaries ARCH [DIR...]: prints the plug-in binaries (*.ofx.bundle/Contents/ARCH/*.ofx) under
+# the DIRs (default: the source tree), one per line, sorted. Skips the openfx submodule (not our
+# plug-ins) and DebugProxy (debug builds only), which wraps the plug-in named by
+# $OFX_DEBUGPROXY_BINARY; DebugProxy is also matched by bundle name, for install trees
+# (cmake --install).
+ofx_binaries() {
+    local arch=$1
+    shift
+    find "${@:-.}" \( -path ./openfx -o -path ./DebugProxy -o -name DebugProxy.ofx.bundle \) -prune -o \
+         -path "*.ofx.bundle/Contents/$arch/*.ofx" -print | sort
+}
+
 # run_with_timeout SECONDS COMMAND [ARG...]: exec COMMAND, killed by SIGALRM (exit status 142)
 # after SECONDS (perl's alarm survives exec). It replaces the calling shell: call it in a
 # subshell, ( run_with_timeout ... ). Linux and macOS (needs perl).

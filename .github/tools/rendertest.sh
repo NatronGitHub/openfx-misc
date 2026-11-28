@@ -1157,6 +1157,10 @@ tests=(
     "Card3D prefilter tile|net.sf.openfx.Card3D|filter|float|nonconst+tile||-i Source=checker:3 cardUniformScale=0.4 cardRotate=0,25,10 prefilter=1 --frames 0 --window 300,220,420,330"
     "Transform prefilter rotate scale tile|net.sf.openfx.TransformPlugin|filter|float|nonconst+tile||-i Source=checker:3 scale=0.25,0.6 rotate=45 filter=Cubic prefilter=1 --frames 0 --window 280,220,420,330"
     "CornerPin prefilter perspective tile|net.sf.openfx.CornerPinPlugin|filter|float|nonconst+tile||-i Source=checker:3 to1=300,200 to2=420,180 to3=460,330 to4=330,300 filter=Lanczos4 prefilter=1 --frames 0 --window 320,210,440,300"
+    # a transform that can't be computed renders black (SupportExt #261): CornerPin with collinear
+    # "to" points (before: every pixel sampled the source at the origin, at its black edge, which gave
+    # mean=0.0625,0.125,0.188,0.25 here)
+    "CornerPin collinear to points|net.sf.openfx.CornerPinPlugin|filter|float|mean=0,0,0,0||-i Source=solid:0.25,0.5,0.75,1 to1=100,100 to2=200,100 to3=300,100 to4=400,100 --frames 0"
     "DirBlur prefilter tile|net.sf.openfx.DirBlur|filter|float|nonconst+tile||-i Source=checker:3 scale=0.3,0.3 rotate=20 prefilter=1 --frames 0 --window 280,220,420,330"
     "Transform prefilter motion blur tile|net.sf.openfx.TransformPlugin|filter|float|nonconst+tile||-i Source=checker:3 -s scale@0=0.3,0.3 -s scale@1=0.2,0.2 -s rotate@0=0 -s rotate@1=10 motionBlur=1 prefilter=1 --frames 0 --window 280,220,420,330"
     "Transform Lanczos6 edge tile|net.sf.openfx.TransformPlugin|filter|float|nonconst+tile||-i Source=checker:5 translate=3,2.5 rotate=10 filter=Lanczos6 --frames 0 --window 0,0,120,90"
@@ -1985,6 +1989,10 @@ tests=(
     # pattern whose blue follows iTime; TestOpenGL draws its red rectangle over the scaled Source.
     "Shadertoy OpenGL|net.sf.openfx.Shadertoy|general|*|mean=0.511,0.505,0.5,1+framesdiffer||--gpu=opengl -i iChannel0=ramp"
     "TestOpenGL OpenGL|net.sf.openfx.TestOpenGL|filter|*|mean=0.489,0.443,0.443,0.537+changed:Source||--gpu=opengl -i Source=ramp"
+    # the same with an RGB input, which hostDemo --gpu=opengl gives as an RGB texture (openfx #387): the
+    # same RGB, and an opaque alpha
+    "Shadertoy OpenGL RGB input|net.sf.openfx.Shadertoy|general|*|mean=0.511,0.505,0.5,1||--gpu=opengl -i iChannel0=ramp#rgb"
+    "TestOpenGL OpenGL RGB input|net.sf.openfx.TestOpenGL|filter|*|mean=0.489,0.443,0.443,1||--gpu=opengl -i Source=ramp#rgb"
 )
 
 n=0 failed=() xfailed=() skipped=()
