@@ -11,6 +11,7 @@ Images: IMAGES maps a name to a dict with
   images that change with the frame or the view);
 - "views": (left "color", right "color") instead of "nuke", for images
   that differ per view (two Constants and a JoinViews in Nuke);
+- "rgb": the image has no alpha (hostDemo #rgb, a Remove of alpha in Nuke);
 - "premult": the OFX clip is premultiplied (#premult); "box": (x1, y1, x2,
   y2), the image is only defined there (a smaller PFM file at x1, y1 in
   OFX, whose RoD and format are the box; a Crop without black outside in
@@ -411,6 +412,7 @@ IMAGES = {
     "neg": _const(-.5, -.25, .5, 1.),
     "red": _const(.9, .1, .1, 1.),
     "orange": _const(.8, .4, .2, 1.),
+    "grey05": _const(.5, .5, .5, 1.),
     "keymix_A": _const(.2, .2, .2, .3),
     "keymix_B": _const(.7, .7, .7, .9),
     "half_mask": _const(0., 0., 0., .5),
@@ -443,6 +445,8 @@ IMAGES["rect_beyond"] = {
 IMAGES["Aa01_box"] = dict(IMAGES["Aa01"], box=(0, 0, 16, 16))
 # An element on the left of the image (Mirror).
 IMAGES["element"] = dict(IMAGES["ramp"], box=(2, 4, 12, 20))
+# The ramp without alpha (an RGB Source, general context in OFX).
+IMAGES["ramp_rgb"] = dict(IMAGES["ramp"], rgb=True)
 
 
 # The inverse of the reference's sRGB and rec709 curves (Colorspace input
@@ -1194,6 +1198,9 @@ CASES += [
 # openfx-misc's Keyer description.
 KEYER_ABCD = {"softnessLower": -.2, "toleranceLower": -.1, "center": .5,
               "toleranceUpper": .1, "softnessUpper": .2}
+# A, B, C, D = 0.1, 0.3, 0.5, 0.9 (not symmetric about 0.5, unlike KEYER_ABCD).
+KEYER_ABCD_ASYM = {"softnessLower": -.2, "toleranceLower": -.1, "center": .4,
+                   "toleranceUpper": .1, "softnessUpper": .4}
 # The default A, B, C, D = 0, 1, 1, 1 (setting the key color changes them).
 KEYER_DEFAULT_ABCD = {"softnessLower": -1., "toleranceLower": 0.,
                       "center": 1., "toleranceUpper": 0., "softnessUpper": 0.}
@@ -1244,10 +1251,67 @@ CASES += [
          (ofx_id("KeyerPlugin"), {"mode": "Color", "keyColor": [1., 0., 0.],
                                   **KEYER_DEFAULT_ABCD}),
          input="ramp", channels="a", tolerance=1e-5),
-    case("Keyer greenscreen (Screen, key color green)",
-         ("Keyer", {"operation": "greenscreen"}),
-         (ofx_id("KeyerPlugin"), {"mode": "Screen", "keyColor": [0., 1., 0.]}),
-         input="hues01", channels="a", tolerance=1e-3, known=280),
+    # The screen keys are 1 - (c - max(the other two)): the screen colour is
+    # transparent with the default range.
+    case("Keyer greenscreen", ("Keyer", {"operation": "greenscreen"}),
+         (ofx_id("KeyerPlugin"), {"mode": "Green Screen"}), input="hues01",
+         channels="a", tolerance=1e-5),
+    case("Keyer bluescreen, range 0.1, 0.3, 0.5, 0.9",
+         ("Keyer", {"operation": "bluescreen", "range": [.1, .3, .5, .9]}),
+         (ofx_id("KeyerPlugin"), {"mode": "Blue Screen", **KEYER_ABCD_ASYM}),
+         input="hues01", channels="a", tolerance=1e-5),
+    case("Keyer redscreen", ("Keyer", {"operation": "redscreen"}),
+         (ofx_id("KeyerPlugin"), {"mode": "Red Screen"}), input="ramp",
+         channels="a", tolerance=1e-5),
+    # At or below A, the key is 0, even if B <= 0 (above A, it is 1 for the
+    # values <= 0): greys from -0.5 to 1.5.
+    case("Keyer max keyer, range 0, 0, 0, 0.5",
+         ("Keyer", {"operation": "max keyer", "range": [0., 0., 0., .5]}),
+         (ofx_id("KeyerPlugin"), {"mode": "Max", "softnessLower": 0.,
+                                  "toleranceLower": 0., "center": 0.,
+                                  "toleranceUpper": 0., "softnessUpper": .5}),
+         input="grey_ramp", channels="a", tolerance=1e-5),
+    case("Keyer max keyer, range -0.3, 0, 0.3, 1.2",
+         ("Keyer", {"operation": "max keyer", "range": [-.3, 0., .3, 1.2]}),
+         (ofx_id("KeyerPlugin"), {"mode": "Max", "softnessLower": -.3,
+                                  "toleranceLower": -.15, "center": .15,
+                                  "toleranceUpper": .15, "softnessUpper": .9}),
+         input="grey_ramp", channels="a", tolerance=1e-5),
+    # Exactly at A: 0, also when B <= 0 (A = B = C = 0) and when A = B > 0.
+    case("Keyer max keyer at A, black, range 0, 0, 0, 0.5",
+         ("Keyer", {"operation": "max keyer", "range": [0., 0., 0., .5]}),
+         (ofx_id("KeyerPlugin"), {"mode": "Max", "softnessLower": 0.,
+                                  "toleranceLower": 0., "center": 0.,
+                                  "toleranceUpper": 0., "softnessUpper": .5}),
+         input="black", channels="a", tolerance=1e-6),
+    case("Keyer max keyer at A, grey 0.5, range 0.5, 0.5, 0.7, 0.9",
+         ("Keyer", {"operation": "max keyer", "range": [.5, .5, .7, .9]}),
+         (ofx_id("KeyerPlugin"), {"mode": "Max", "softnessLower": 0.,
+                                  "toleranceLower": -.1, "center": .6,
+                                  "toleranceUpper": .1, "softnessUpper": .2}),
+         input="grey05", channels="a", tolerance=1e-6),
+    # Combine with the input alpha (0 at the bottom, 1 at the top).
+    case("Keyer combine intersect",
+         ("Keyer", {"operation": "luminance key", "combine": "intersect"}),
+         (ofx_id("KeyerPlugin"), {"combine": "Intersect"}), input="premult",
+         channels="a", tolerance=KEYER_LUMINANCE_TOLERANCE),
+    case("Keyer combine union, inverted",
+         ("Keyer", {"operation": "luminance key", "combine": "union",
+                    "invert": True, "range": [.1, .3, .5, .9]}),
+         (ofx_id("KeyerPlugin"), {"combine": "Union", "invert": 1,
+                                  **KEYER_ABCD_ASYM}),
+         input="premult", channels="a", tolerance=KEYER_LUMINANCE_TOLERANCE),
+    # An RGB Source has no alpha: 0 for Combine (Intersect 0, Union the matte).
+    case("Keyer combine intersect, RGB source",
+         ("Keyer", {"operation": "luminance key", "combine": "intersect"}),
+         (ofx_id("KeyerPlugin"), {"combine": "Intersect"}), input="ramp_rgb",
+         context="general", channels="a",
+         tolerance=KEYER_LUMINANCE_TOLERANCE),
+    case("Keyer combine union, RGB source",
+         ("Keyer", {"operation": "luminance key", "combine": "union"}),
+         (ofx_id("KeyerPlugin"), {"combine": "Union"}), input="ramp_rgb",
+         context="general", channels="a",
+         tolerance=KEYER_LUMINANCE_TOLERANCE),
 ]
 
 # ------------------------------------------------------------------- PIK
