@@ -102,8 +102,8 @@ as `Natron-2.5.0`) and for builds that a maintainer starts by hand:
    alone.
 
    Artifacts are deleted by GitHub after 90 days. If there is none, you can
-   [compile the plugins](#installation) yourself (`make nomulti`, or CMake's
-   `-DOFX_PLUGIN_BUNDLES=SEPARATE`, builds one bundle per plugin, if you only need a few
+   [compile the plugins](#installation) yourself (CMake's
+   `-DOFX_PLUGIN_BUNDLES=SEPARATE` builds one bundle per plugin, if you only need a few
    of them).
 3. Unzip the archive. It contains directories named `*.ofx.bundle` (for example
    `Misc.ofx.bundle`, `CImg.ofx.bundle`, `Shadertoy.ofx.bundle`).
@@ -406,13 +406,12 @@ Installation
 To install prebuilt binaries, see [Binaries](#binaries) above. This section
 explains how to compile the plugins from source.
 
-The plugins can be compiled with CMake or with the provided Makefiles, on Linux,
-macOS, and Windows (MSYS2/MinGW-w64; CMake also supports Visual Studio). Both build
-the same bundles; Natron is moving all its builds to CMake (see
-[Natron#1181](https://github.com/NatronGitHub/Natron/issues/1181)). For an IDE, let
-CMake generate the project (see [Xcode and Visual Studio](#xcode-and-visual-studio)).
+The plugins are compiled with CMake, on Linux, macOS, and Windows (MSYS2/MinGW-w64 or
+Visual Studio). For an IDE, let CMake generate the project (see
+[Xcode and Visual Studio](#xcode-and-visual-studio)). To contribute, see
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
-Whichever method you use, the compiled `*.ofx.bundle` directories must end up in
+The compiled `*.ofx.bundle` directories must end up in
 the standard OpenFX plugins directory (listed in step 4 of [Binaries](#binaries)).
 
 ### Getting the sources from github
@@ -427,93 +426,15 @@ In order to get a specific tag, corresponding to a source release, do `git tag -
 to get the list of tags, and then `git checkout tags/<tag_name>`
 to checkout a given tag.
 
-### Unix/Linux/FreeBSD/OS X, using Makefiles
-
-On Unix-like systems, the plugins can be compiled by typing in a
-terminal:
-- `make [options]` to compile as a single combined plugin (see below
-  for valid options).
-- `make nomulti [options]` to compile as separate plugins (useful if
-only a few plugins are needed, for example). `make` can also be
-executed in any plugin's directory.
-- `make [options] CXXFLAGS_ADD=-fopenmp LDFLAGS_ADD=-fopenmp` to compile
-  with OpenMP support (available for CImg-based plugins and DenoiseSharpen).
-
-The most common options are `CONFIG=release` to compile a release
-version, `CONFIG=debug` to compile a debug version. Or
-`CONFIG=relwithdebinfo` to compile an optimized version with debugging
-symbols.
-
-Another common option is `BITS=32`for compiling a 32-bits version,
-`BITS=64` for a 64-bits version, and `BITS=Universal` for a universal
-binary (OS X only).
-
-The Makefiles do not choose a C++ standard: they use the compiler's
-default (`gnu++17` for GCC >= 11 and Clang >= 16, but `gnu++14` for
-Apple clang), whereas the CMake builds (including its Xcode and Visual Studio projects) use
-C++17 by default. The code must compile as C++17 and C++20. To choose
-the standard, add it to the compiler command or to the flags, for
-example `make CXX="g++ -std=c++20"` (as Natron's build scripts do) or
-`make CXXFLAGS_ADD=-std=c++20`. On macOS, pass `-std=c++17` (or
-`-std=c++20`) so that make builds match the supported standards.
-`CXXFLAGS_ADD` given on the command line replaces any other value
-(e.g. `-fopenmp`), so the two must be combined:
-`make CXXFLAGS_ADD="-fopenmp -std=c++20" LDFLAGS_ADD=-fopenmp`.
-
-See the file `Makefile.master` in the toplevel directory for other useful
-flags/variables.
-
-The CImg plugins also take `FFT=pocketfft|pow2|fftw3`, the library of the Fourier
-transforms of ConvolveCImg, ZDefocusCImg and the `fft()` of ExpressionCImg (see
-`CImg/license.mk`):
-- `pocketfft` (default): header-only, downloaded at a pinned commit, any image size.
-  It has no dependency and no global state shared with other plugins, and it was faster
-  than FFTW in our benchmarks. On Windows it is single-threaded (`POCKETFFT_NO_MULTITHREADING`,
-  as openfx-gmic#94): unloading the plugin deadlocked when its thread pool joined its
-  threads under the loader lock.
-- `pow2`: CImg's own FFT, with no library. The images are padded to a power of two,
-  which is slower and uses more memory.
-- `fftw3`: FFTW, opt-in and GPL only. It needs FFTW >= 3.3.5, found with
-  `pkg-config fftw3`, plus `fftw3_threads` (MacPorts' `fftw-3`, MSYS2's
-  `${MINGW_PACKAGE_PREFIX}-fftw`, Ubuntu's `libfftw3-dev`). FFTW is a shared library
-  with a single global planner that other plugins in the same host (e.g. openfx-gmic)
-  also use, so the plugins make its planner thread-safe at load.
-
-`LICENSE=GPL` (default) or `LICENSE=COMMERCIAL` (Natron's `NATRON_LICENSE`, as in
-openfx-gmic) only matters for FFTW: COMMERCIAL builds refuse `FFT=fftw3`.
-
-`CImg/CImg.h` (and `CImg/Inpaint/inpaint.h`) are downloaded by `make -C CImg sources`
-(run by the top-level `make`) at the version given in `CImg/CImgVersion.mk`. `CImg.h`
-is checked against `CIMG_SHA256` there (the build fails on a mismatch), then patched the
-same way as in [openfx-gmic](https://github.com/NatronGitHub/openfx-gmic), which uses the same CImg
-version: `CImg/patches/cimg-*.sh` are copies of openfx-gmic's `patches/cimg-*.sh` (the
-source of truth), at the openfx-gmic commit `CIMG_PATCHES_FROM` of
-`CImg/CImgVersion.mk`, applied in the same order, so that both get the same `CImg.h`
-(the same for every `FFT`: CImg 4.0.8 has pocketfft support itself, `cimg_use_pocketfft`,
-and includes `pocketfft_hdronly.h` from the `CImg` directory). They need a POSIX `sh`,
-`awk`, `head`, `tr` and `wc`. A weekly CI job (`.github/tools/check-cimg-patches.sh`) reports when
-openfx-gmic's scripts or G'MIC version change.
-
-The compiled plugins are placed in subdirectories named after the
-configuration, for example `Linux-64-release` for a 64-bits Linux
-compilation. In each of these directories, a `*.bundle` directory is
-created, which has to be moved to the proper place
-(`/usr/OFX/Plugins`on Linux, or `/Library/OFX/Plugins`on OS X), using
-a command like the following, with the *same* options used for
-compiling:
-
-	sudo make install [options]
-
 ### Using CMake
 
-CMake builds the same bundles as the Makefiles (`make nomulti`: `OFX_PLUGIN_BUNDLES=SEPARATE`
-below): `Misc`, `CImg` and `Shadertoy`, plus `Test` and
-`DebugProxy` in Debug builds. It needs CMake 3.21 or later (openfx's `cmake/OpenFX.cmake`). Only out-of-tree
+CMake builds the bundles `Misc`, `CImg` and `Shadertoy`, plus `Test` and `DebugProxy` in
+Debug builds. It needs CMake 3.21 or later (openfx's `cmake/OpenFX.cmake`). Only out-of-tree
 builds are allowed. `CImg/CImg.h` and `CImg/Inpaint/inpaint.h` are downloaded (and
-`CImg.h` patched as openfx-gmic's, see above) at configure time if missing (at the
+`CImg.h` patched, see [CImg.h](#cimgh) below) at configure time if missing (at the
 version given in `CImg/CImgVersion.mk`, again when it, the patches or `FFT` change).
 The bundles are assembled in `<build>/Plugins`, and `cmake --install` copies them into `<prefix>/OFX/Plugins` (openfx's `PLUGIN_INSTALLDIR`, relative to
-`CMAKE_INSTALL_PREFIX`). For the OpenFX plugins directory (as `make install`), use the
+`CMAKE_INSTALL_PREFIX`). For the OpenFX plugins directory, use the
 prefix `/usr` on Linux and `/Library` on macOS:
 
 	cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
@@ -526,26 +447,25 @@ earlier CMake build, which installed the bundles at the root of `CMAKE_INSTALL_P
 (`/usr/local` by default); `-DPLUGIN_INSTALLDIR=<dir>` sets another directory, relative
 to the prefix (or absolute). The main options are:
 
-- `-DCMAKE_BUILD_TYPE=Release` (default; CMake's `-O3 -DNDEBUG`, where `make` uses
-  `-O2`: add `-DOFX_OPTFLAG=-O2` (openfx's option: the plugins and openfx::Support), or
-  `-DCMAKE_CXX_FLAGS_RELEASE="-O2 -DNDEBUG"` (all targets), for that), `Debug` or
-  `RelWithDebInfo` (`make CONFIG=...`).
+- `-DCMAKE_BUILD_TYPE=Release` (default; CMake's `-O3 -DNDEBUG`; for `-O2`, add
+  `-DOFX_OPTFLAG=-O2` (openfx's option: the plugins and openfx::Support), or
+  `-DCMAKE_CXX_FLAGS_RELEASE="-O2 -DNDEBUG"` (all targets)), `Debug` or
+  `RelWithDebInfo`.
 - `-DOFX_CXX_STANDARD=17` (default) or `20`.
 - `-DOFX_USE_OPENMP=ON` (default): OpenMP in the CImg plugins and DenoiseSharpen, if
-  found (`make OPENMP=1`). With Apple clang, install libomp with MacPorts
+  found. With Apple clang, install libomp with MacPorts
   (`sudo port install libomp`), or give the prefix of another libomp with
   `-DOFX_LIBOMP_ROOT=<prefix>`. With MSYS2, install libgomp
   (`pacman -S ${MINGW_PACKAGE_PREFIX}-libgomp`); the bundles then need `libgomp-1.dll`
   even with `-static`, so the CI builds Windows without OpenMP. MSVC
   builds do not use OpenMP.
 - `-DOFX_DEPLOY_BUNDLES=ON`: at install, copy the non-system libraries into the bundles
-  (on macOS, `osxDeploy.sh`, which needs GNU sed (`sudo port install gsed`), as
-  `make CONFIG=release` does). The bundles then also need these libraries' minimum
+  (on macOS, `osxDeploy.sh`, which needs GNU sed (`sudo port install gsed`)). The bundles then also need these libraries' minimum
   macOS version (e.g. MacPorts' libomp is built for the build machine's macOS).
-- `-DBUILD_CIMG_PLUGINS=OFF` (`make HAVE_CIMG=0`), `-DBUILD_SHADERTOY=OFF`,
+- `-DBUILD_CIMG_PLUGINS=OFF`, `-DBUILD_SHADERTOY=OFF`,
   `-DBUILD_MISC=OFF` (with `-DBUILD_CIMG_PLUGINS=OFF`: only `Shadertoy.ofx.bundle`).
 - `-DOFX_PLUGIN_BUNDLES=SEPARATE` (openfx's option; default `COMBINED`): instead of
-  `Misc`, `CImg` and `Shadertoy`, one bundle per plugin directory (as `make nomulti`),
+  `Misc`, `CImg` and `Shadertoy`, one bundle per plugin directory,
   named after its OFX identifier (e.g. `net.sf.openfx.Invert.ofx.bundle`,
   `net.sf.cimg.CImgBlur.ofx.bundle`), with that directory's icons only. Each is an
   install component named after the directory, with a `CImg` prefix for the CImg plugins
@@ -555,12 +475,12 @@ to the prefix (or absolute). The main options are:
   these Misc plugins as their own bundle (`net.sf.openfx.DenoiseSharpen.ofx.bundle`,
   `net.sf.openfx.NoOpPlugin.ofx.bundle`), for the binary releases. They have the same plugins as `Misc.ofx.bundle`: install one or
   the other.
-- `-DFFT=pocketfft|pow2|fftw3` (`make FFT=...`): the FFT of the CImg plugins, see above
+- `-DFFT=pocketfft|pow2|fftw3`: the FFT of the CImg plugins, see [CImg.h](#cimgh) below
   (default `pocketfft`; `fftw3` is opt-in), and `-DOFX_LICENSE=GPL` (default) or
-  `COMMERCIAL` (`make LICENSE=...`, as openfx-gmic's option), which refuses `fftw3`.
+  `COMMERCIAL` (Natron's `NATRON_LICENSE`, as openfx-gmic's option), which refuses `fftw3`.
   With MSVC, the CImg.h patches need a POSIX `sh` in the `PATH` (e.g. Git for
   Windows'), or `-DCIMG_PATCH_SH=<path>`.
-- `-DBUILD_TESTING=ON` (`make TESTS=1`) and `-DBUILD_DEBUGPROXY=ON`: the Test and
+- `-DBUILD_TESTING=ON` and `-DBUILD_DEBUGPROXY=ON`: the Test and
   DebugProxy bundles. Their default is ON in Debug builds, at the first configure of a
   build directory: set them explicitly when changing `CMAKE_BUILD_TYPE` there.
 - MSVC: `-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded` links the C and C++ runtime
@@ -571,7 +491,7 @@ to the prefix (or absolute). The main options are:
   same `<dir>` (see `cmake/OFXMiscArm64X.cmake`, and `msvc-build.sh arm64x`).
 - MinGW: `-DCMAKE_MODULE_LINKER_FLAGS=-static` links the MinGW runtime (libstdc++,
   libgcc, winpthread) statically, as the CI does, for hosts that do not ship it.
-- `-DUSE_OSMESA=ON` (`make -C Shadertoy OSMESA=1`): Shadertoy CPU rendering with a
+- `-DUSE_OSMESA=ON`: Shadertoy CPU rendering with a
   mangled OSMesa in `OSMESA_PATH` (default `/opt/osmesa`) and LLVM in `LLVM_PATH`
   (default `/opt/llvm`). With `-DOSMESA_PKGCONFIG_STATIC=ON` (as the binary releases),
   the static `libMangledOSMesa32.a` is linked with the flags of `pkg-config --static`
@@ -590,6 +510,35 @@ to the prefix (or absolute). The main options are:
 - `-DOFXMISC_SUPPORTEXT_DIR=<dir>`: build with the openfx-supportext sources in `<dir>`
   instead of the `SupportExt` submodule (`smoketest.sh --supportext <dir> <prefix>`
   builds and tests that).
+
+### CImg.h
+
+The CImg plugins take `-DFFT=pocketfft|pow2|fftw3`, the library of the Fourier
+transforms of ConvolveCImg, ZDefocusCImg and the `fft()` of ExpressionCImg:
+- `pocketfft` (default): header-only, downloaded at a pinned commit, any image size.
+  It has no dependency and no global state shared with other plugins, and it was faster
+  than FFTW in our benchmarks. On Windows it is single-threaded (`POCKETFFT_NO_MULTITHREADING`,
+  as openfx-gmic#94): unloading the plugin deadlocked when its thread pool joined its
+  threads under the loader lock.
+- `pow2`: CImg's own FFT, with no library. The images are padded to a power of two,
+  which is slower and uses more memory.
+- `fftw3`: FFTW, opt-in and GPL only. It needs FFTW >= 3.3.5, found with
+  `pkg-config fftw3`, plus `fftw3_threads` (MacPorts' `fftw-3`, MSYS2's
+  `${MINGW_PACKAGE_PREFIX}-fftw`, Ubuntu's `libfftw3-dev`). FFTW is a shared library
+  with a single global planner that other plugins in the same host (e.g. openfx-gmic)
+  also use, so the plugins make its planner thread-safe at load.
+
+`CImg/CImg.h` (and `CImg/Inpaint/inpaint.h`) are downloaded by the CMake configure
+at the version given in `CImg/CImgVersion.mk`. `CImg.h`
+is checked against `CIMG_SHA256` there (the configure fails on a mismatch), then patched the
+same way as in [openfx-gmic](https://github.com/NatronGitHub/openfx-gmic), which uses the same CImg
+version: `CImg/patches/cimg-*.sh` are copies of openfx-gmic's `patches/cimg-*.sh` (the
+source of truth), at the openfx-gmic commit `CIMG_PATCHES_FROM` of
+`CImg/CImgVersion.mk`, applied in the same order, so that both get the same `CImg.h`
+(the same for every `FFT`: CImg 4.0.8 has pocketfft support itself, `cimg_use_pocketfft`,
+and includes `pocketfft_hdronly.h` from the `CImg` directory). They need a POSIX `sh`,
+`awk`, `head`, `tr` and `wc`. A weekly CI job (`.github/tools/check-cimg-patches.sh`) reports when
+openfx-gmic's scripts or G'MIC version change.
 
 ### Xcode and Visual Studio
 
@@ -611,7 +560,7 @@ Installing into `/Library` needs `sudo`, and into `C:/Program Files` an elevated
 
 The IDE projects never build the debug-only bundles, even in their Debug configuration:
 TimeBuffer and TestRender are only built with a single-configuration Debug
-build (`-DCMAKE_BUILD_TYPE=Debug` with Ninja or Makefiles). Test and DebugProxy need
+build (`-DCMAKE_BUILD_TYPE=Debug` with the Ninja or Unix Makefiles generator). Test and DebugProxy need
 `-DBUILD_TESTING=ON -DBUILD_DEBUGPROXY=ON`.
 
 Credits
