@@ -34,7 +34,7 @@
 #include "ofxNatron.h"
 #endif
 #include "ofxsThreadSuite.h"
-#include "SoftEdge.h"
+#include "ofxsCurves.h"
 
 using namespace OFX;
 
@@ -179,7 +179,7 @@ public:
             d = (1. - _curvature) * dline + _curvature * d;
         }
         // antialiasing over one pixel, plus the soft edge inside the shape
-        return SoftEdge::smoothstep( (d + 0.5) / (_softness + 1.) );
+        return ofxsCurve( OfxsCurveEnum::eSmooth, (d + 0.5) / (_softness + 1.) );
     }
 };
 

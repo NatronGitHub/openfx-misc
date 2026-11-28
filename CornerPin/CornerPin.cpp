@@ -341,9 +341,6 @@ private:
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
 
 private:
-    // the format of the source clip, in canonical coordinates (the project extent if the host gives no format)
-    OfxRectD getSrcFormatCanonical() const;
-
     // "Set to input rod" and "Set to input format": set the "from" points to the corners of rect
     void setFromPointsToRect(const InstanceChangedArgs &args, const std::string &paramName, const OfxRectD &rect);
 
@@ -534,31 +531,6 @@ copyPoint(Double2DParam* from,
     }
 }
 
-OfxRectD
-CornerPinPlugin::getSrcFormatCanonical() const
-{
-    OfxRectD rect = {0., 0., 0., 0.};
-#ifdef OFX_EXTENSIONS_NATRON
-    OfxRectI format = {0, 0, 0, 0};
-    _srcClip->getFormat(format); // in pixels at render scale 1 (kOfxImageClipPropFormat)
-    if ( !Coords::rectIsEmpty(format) ) {
-        const OfxPointD rsOne = {1., 1.};
-        Coords::toCanonical(format, rsOne, _srcClip->getPixelAspectRatio(), &rect);
-
-        return rect;
-    }
-#endif
-    // no format from the host: the project format, from 0,0 to kOfxImageEffectPropProjectExtent ("the
-    // extent is always rooted at 0,0")
-    const OfxPointD extent = getProjectExtent();
-    rect.x1 = 0.;
-    rect.y1 = 0.;
-    rect.x2 = extent.x;
-    rect.y2 = extent.y;
-
-    return rect;
-}
-
 void
 CornerPinPlugin::setFromPointsToRect(const InstanceChangedArgs &args,
                                      const std::string &paramName,
@@ -601,7 +573,7 @@ CornerPinPlugin::changedParam(const InstanceChangedArgs &args,
         }
     } else if (paramName == kParamCopyInputFormat) {
         if ( _srcClip && _srcClip->isConnected() ) {
-            setFromPointsToRect( args, paramName, getSrcFormatCanonical() );
+            setFromPointsToRect( args, paramName, Coords::clipFormatCanonical(_srcClip, *this) );
         }
     } else if (paramName == kParamCopyFrom) {
         EditBlock eb(*this, paramName);

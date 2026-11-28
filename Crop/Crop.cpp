@@ -32,7 +32,7 @@
 #include "ofxsGenerator.h"
 #include "ofxsFormatResolution.h"
 #include "ofxsThreadSuite.h"
-#include "SoftEdge.h"
+#include "ofxsCurves.h"
 
 using namespace OFX;
 
@@ -103,7 +103,7 @@ softnessFactor(SoftnessFalloffEnum falloff,
                double pixelSize)
 {
     if (falloff == eSoftnessFalloffSmoothstep) {
-        return SoftEdge::smoothstep( (d + 0.5 * pixelSize) / (softness + pixelSize) );
+        return ofxsCurve( OfxsCurveEnum::eSmooth, (d + 0.5 * pixelSize) / (softness + pixelSize) );
     }
     // version 1, clamped to [0,1] (the pixels whose centre is outside the rectangle are black)
     if (d <= 0.) {
@@ -113,7 +113,7 @@ softnessFactor(SoftnessFalloffEnum falloff,
         return 1.;
     }
 
-    return SoftEdge::rampSmooth(d / softness);
+    return ofxsCurveInUnit(OfxsCurveEnum::eQuadratic, d / softness);
 }
 
 class CropProcessorBase

@@ -48,13 +48,11 @@
 #include "ofxsCoords.h"
 #include "ofxsLut.h"
 #include "ofxsMacros.h"
-#include "SampleUtils.h"
+#include "ofxsNonFinite.h" // sampleToFloat
 
 using namespace OFX;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
-
-using SampleUtils::sampleToFloat;
 
 // whether the host supports periodic parametric params (set in describeInContext)
 static bool gParametricPeriodic = false;

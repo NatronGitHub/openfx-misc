@@ -191,14 +191,17 @@ jobs:
         # a host may pass the plug-ins' strings to a printf-style function (issue #66)
         run: python3 .github/tools/check-percent-strings.py
       - name: Install Ubuntu system packages
-        # libexpat1-dev: openfx's HostSupport (hostDemo) uses the system expat
+        # libexpat1-dev: openfx's HostSupport (hostDemo) uses the system expat; libegl1, libegl-mesa0,
+        # libgl1-mesa-dri: EGL and Mesa llvmpipe, for hostDemo --gpu=opengl (Shadertoy, TestOpenGL)
         run: |
           sudo apt-get update
-          sudo apt-get install -y libglu1-mesa-dev libgl-dev libexpat1-dev cmake ninja-build
+          sudo apt-get install -y libglu1-mesa-dev libgl-dev libexpat1-dev cmake ninja-build \
+              libegl1 libegl-mesa0 libgl1-mesa-dri
       - name: Build (release)
-        # OFX_BUILD_HOSTDEMO: openfx's hostDemo, in install/bin, for the render tests
+        # OFX_BUILD_HOSTDEMO: openfx's hostDemo, in install/bin, for the render tests;
+        # OFX_HOSTSUPPORT_OPENGL: its OpenGL renders (--gpu=opengl, an EGL context on llvmpipe)
         run: |
-          cmake -S . -B build -G Ninja $CMAKE_OPTIONS -DOFX_BUILD_HOSTDEMO=ON
+          cmake -S . -B build -G Ninja $CMAKE_OPTIONS -DOFX_BUILD_HOSTDEMO=ON -DOFX_HOSTSUPPORT_OPENGL=ON
           cmake --build build
           cmake --install build --prefix "$PWD/install"
       - name: Load test
@@ -220,20 +223,27 @@ jobs:
         run: openfx/Support/include/linuxCheckBundle.sh install/OFX/Plugins
       - name: Render test (hostDemo)
         # Renders the generators and some filters at the three depths, and checks
-        # the outputs.
+        # the outputs; Shadertoy and TestOpenGL also with OpenGL (RENDERTEST_GPU=require:
+        # hostDemo --gpu=opengl must work here).
         timeout-minutes: 10
+        env:
+          RENDERTEST_GPU: require
         run: .github/tools/rendertest.sh install
       - name: Smoke test (hostDemo, all plug-ins)
         # Renders every plug-in with its default parameters, in its most general
         # context (--quick: general, else filter; nightly.yml renders both), at each
-        # supported depth.
+        # supported depth; the OpenGL plug-ins (Shadertoy, TestOpenGL) also with OpenGL.
         timeout-minutes: 10
+        env:
+          SMOKETEST_GPU: require
         run: .github/tools/smoketest.sh --quick install
       - name: Smoke test (hostDemo --ofx14, all plug-ins)
         # The same in an OFX 1.4 host (hostDemo --ofx14: only the OFX 1.4 host
         # properties and suites, no OfxSetHost, no StrChoice or Bytes params, one
         # view): every plug-in must also work without OFX 1.5 and the extensions.
         timeout-minutes: 10
+        env:
+          SMOKETEST_GPU: require
         run: .github/tools/smoketest.sh --quick --ofx14 install
       - name: Smoke test (hostDemo --ofx11, all plug-ins)
         # The same in an OFX 1.1 host modelled on VEGAS Pro (hostDemo --ofx11: the OFX 1.1

@@ -26,14 +26,13 @@
 
 #include <algorithm>
 
-#include "ofxsNonFinite.h" // clampToUnit
-#include "SampleUtils.h"
+#include "ofxsNonFinite.h" // clampToUnit, sampleToFloat, finiteSampleToFloat
 
 namespace OFX {
 namespace KeyerUtils {
 
-using SampleUtils::sampleToFloat;
-using SampleUtils::finiteSampleToFloat;
+using OFX::sampleToFloat;
+using OFX::finiteSampleToFloat;
 
 /// The inside and outside masks of a keyer at a pixel, in [0,1].
 struct Masks

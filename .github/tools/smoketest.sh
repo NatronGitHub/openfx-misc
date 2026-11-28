@@ -48,6 +48,8 @@
 # with -DBUILD_CIMG_PLUGINS=OFF -DBUILD_SHADERTOY=OFF -DBUILD_TESTING=OFF),
 # SMOKETEST_NO_TEST=1 (a build without the Test bundle, -DBUILD_TESTING=OFF: BUNDLES without Test,
 # and stale entries are only a warning, as with SMOKETEST_BUNDLES),
+# SMOKETEST_GPU=require (fail if hostDemo can't render with OpenGL, see OPENGL below, except with
+# --ofx11; by default the OpenGL renders are only skipped then),
 # SMOKETEST_XPASS_OK=1 (accept the known bugs that were fixed: an XFAIL entry that passes
 # (XPASS) is reported but does not fail, and stale entries are only a warning; an XFAIL
 # render whose failure does not show the expected message still fails; for SupportExt's CI, so that a SupportExt pull request that fixes a bug of the XFAIL list
@@ -96,7 +98,10 @@
 # --opengl-describe (a host that says it supports OpenGL render), and not rendered
 # when they need OpenGL (kOfxImageEffectPropOpenGLRenderSupported "needed": hostDemo
 # cannot render with OpenGL); a build where they also render on the CPU (OSMesa)
-# renders them as the other plug-ins. Known bugs are expected failures (XFAIL, in
+# renders them as the other plug-ins. If hostDemo renders with OpenGL (hostDemo --gpu=opengl, built
+# with OFX_HOSTSUPPORT_OPENGL, with an OpenGL context; not with --ofx11), the OPENGL plug-ins are
+# also rendered with --gpu=opengl, and these renders (named *-gpu) fail if hostDemo did not render
+# them with OpenGL or retried them on the CPU. Known bugs are expected failures (XFAIL, in
 # the XFAIL list, each with its GitHub issue), with the message that their
 # failure must show: an XFAIL render that passes (XPASS) fails the test, so that
 # the list is updated (except with SMOKETEST_XPASS_OK=1).
@@ -138,8 +143,9 @@ SKIP=(
     "net.sf.openfx.TimeBufferWrite|debug:writes the buffer of a TimeBufferRead instance of the same name, in the same host process (render fails: No TimeBuffer exists with name \"\")"
 )
 # The OpenGL-only plug-ins: "identifier regex|why" (the whole identifier). They are described
-# with hostDemo --opengl-describe (only they: it changes the host description), and their
-# renders are skipped when a context says they need OpenGL ("needed"). An entry that matches
+# with hostDemo --opengl-describe (only they: it changes the host description), and their CPU
+# renders are skipped when a context says they need OpenGL ("needed"). If hostDemo renders with
+# OpenGL (--gpu=opengl), each of their renders is also done with OpenGL. An entry that matches
 # no plug-in is stale, as in SKIP.
 OPENGL=(
     "net.sf.openfx.Shadertoy|OpenGL only unless built with OSMesa (CPU rendering)"
@@ -190,6 +196,10 @@ PARAMS=(
     "net.sf.openfx.Transform(Masked)?Plugin|motionBlur=1 -s translate@0=10,5 -s translate@2=50,25 differs:2"
     "net.sf.openfx.Position|translate=10,5"
     "net.sf.openfx.CornerPin(Masked)?Plugin|to1=40,30 to2=680,10 to3=700,560 to4=20,540"
+    # RGB output, on a host that supports it (hostDemo --components: the default is RGBA and Alpha)
+    "net.sf.openfx.ConstantPlugin|--components rgba,rgb,alpha outputComponents=RGB"
+    "net.sf.openfx.CheckerBoardPlugin|--components rgba,rgb,alpha outputComponents=RGB"
+    "net.sf.openfx.ShufflePlugin:4|--components rgba,rgb,alpha outputComponents=RGB"
 )
 # Known bugs, each tracked by a GitHub issue: "identifier regex[:major][@context][/depth]|
 # expected message (Python re, searched in the failure summary and the hostDemo log)|
@@ -210,6 +220,10 @@ case "$(uname -s)" in
 esac
 
 SMOKETEST_TIMEOUT=${SMOKETEST_TIMEOUT:-120}
+case "${SMOKETEST_GPU:-}" in
+    ''|require) ;;
+    *) echo "smoketest: SMOKETEST_GPU=$SMOKETEST_GPU: the only value is require"; exit 1 ;;
+esac
 
 # watchdog LOG BUNDLE HOSTDEMO-ARGS...: run hostDemo with only BUNDLE in OFX_PLUGIN_PATH
 # and its output in LOG, killed after SMOKETEST_TIMEOUT seconds (run_with_timeout), and set
@@ -426,6 +440,32 @@ elif ( cd "$work" && OFX_PLUGIN_PATH=$work/path/none "$HOSTDEMO" --no-std-paths 
     gl_ok=0
     echo "note: $HOSTDEMO has no --opengl-describe (or no OpenGL render suite): the OPENGL plug-ins are skipped"
 fi
+# Does hostDemo render with OpenGL (--gpu=opengl: openfx#367, built with OFX_HOSTSUPPORT_OPENGL)
+# here, with an OpenGL context? An older hostDemo rejects the option, one built without it says so,
+# one without a context warns: all name the option. A capable one only says that the dummy plug-in
+# is not found. Without it, the OPENGL plug-ins are not rendered with OpenGL.
+gpu_ok=0
+if [ "$gl_ok" = 1 ]; then
+    # (under the render timeout: a stuck OpenGL initialization fails like a stuck render)
+    probe_status=0
+    probe=$(cd "$work" && export OFX_PLUGIN_PATH=$work/path/none && run_with_timeout "$SMOKETEST_TIMEOUT" "$HOSTDEMO" \
+                --no-std-paths --no-cache --quiet --gpu=opengl -p smoketest.probe 2>&1) || probe_status=$?
+    if [ "$probe_status" = 142 ]; then
+        echo "note: the --gpu=opengl probe of $HOSTDEMO timed out: the OPENGL plug-ins are not rendered with OpenGL"
+        echo "  | timeout: killed after ${SMOKETEST_TIMEOUT}s"
+    elif printf '%s\n' "$probe" | grep -q -e '--gpu' || ! printf '%s\n' "$probe" | grep -q 'not found'; then
+        echo "note: $HOSTDEMO does not render with OpenGL here (--gpu=opengl): the OPENGL plug-ins are not rendered with OpenGL"
+        printf '%s\n' "$probe" | grep -e '--gpu' | sed 's/^/  | /' || true
+    else
+        gpu_ok=1
+        echo "hostDemo renders with OpenGL (--gpu=opengl): the OPENGL plug-ins are also rendered with OpenGL"
+    fi
+fi
+# (--ofx11 refuses --gpu=opengl: nothing to require there)
+if [ "$gpu_ok" = 0 ] && [ "${SMOKETEST_GPU:-}" = require ] && [ "$profile" != ofx11 ]; then
+    echo "smoketest: SMOKETEST_GPU=require, but hostDemo does not render with OpenGL here (profile $profile)"
+    exit 1
+fi
 # The plug-ins of OPENGL: opengl-map.txt ("identifier|reason", for the render list) and
 # opengl-ids.txt (the identifiers to describe with --opengl-describe, for the describe workers)
 python3 -I - "$work" "$gl_ok" << 'EOF'
@@ -458,10 +498,10 @@ tr '\n' '\0' < "$work/plugins.txt" | xargs -r -0 -n 1 -P "$jobs" "$0" --describe
 # The render jobs, one per line: "name|bundle|id|major|context|depth|Clip=spec;...|
 # PARAMS entry number|hostDemo argument;...|differs:N entry number" (the last three are
 # empty for a default render)
-python3 -I - "$work" "$quick" "${SMOKETEST_DEBUG:-0}" "$profile" "$gl_ok" > "$work/jobs.txt" 2> "$work/describe-results.txt" << 'EOF' ||
+python3 -I - "$work" "$quick" "${SMOKETEST_DEBUG:-0}" "$profile" "$gl_ok" "$gpu_ok" > "$work/jobs.txt" 2> "$work/describe-results.txt" << 'EOF' ||
 import json, os, re, sys
 work, quick, debug, profile = sys.argv[1], sys.argv[2] == "1", sys.argv[3] == "1", sys.argv[4]
-gl_ok = sys.argv[5] == "1"
+gl_ok, gpu_ok = sys.argv[5] == "1", sys.argv[6] == "1"
 sys.dont_write_bytecode = True  # no __pycache__ in the source tree
 sys.path.insert(0, os.environ["SMOKETEST_TOOLS"])
 import smoketest_lists
@@ -599,14 +639,21 @@ for line in open(os.path.join(work, "plugins.txt")):
         info[ctx] = (ins, ds)
         if skipped:
             continue
-        if gl_reason is not None and c["flags"].get("openGLRenderSupported") == "needed":
-            # hostDemo cannot render with OpenGL (--opengl-describe is refused without --describe)
+        gl_needed = gl_reason is not None and c["flags"].get("openGLRenderSupported") == "needed"
+        if gl_needed and not gpu_ok:
+            # this hostDemo cannot render with OpenGL (--opengl-describe is refused without --describe)
             gl_only = True
             continue
         for depth in ds:
-            print("%s-v%s-%s-%s|%s|%s|%s|%s|%s|%s|||" % (pid, major, ctx, depth, bundle, pid, major, ctx,
-                                                       depth, ins))
-            n += 1
+            if not gl_needed:
+                print("%s-v%s-%s-%s|%s|%s|%s|%s|%s|%s|||" % (pid, major, ctx, depth, bundle, pid, major, ctx,
+                                                           depth, ins))
+                n += 1
+            if gl_reason is not None and gpu_ok:
+                # the same render with OpenGL (hostDemo --gpu=opengl)
+                print("%s-v%s-%s-%s-gpu|%s|%s|%s|%s|%s|%s||--gpu=opengl|" % (pid, major, ctx, depth, bundle, pid,
+                                                                         major, ctx, depth, ins))
+                n += 1
     # PARAMS: one more render per entry, in the given context (default: general if the
     # plug-in has it, else filter) and at the given depth (default: float, or the highest
     # supported one)
@@ -849,6 +896,11 @@ for line in open(os.path.join(work, "jobs.txt")):
                 continue
             if not (k.get("render") or {}).get("ok"):
                 errors.append("%s: render failed: %s" % (at, json.dumps(k.get("render"))))
+            if "--gpu=opengl" in pwords.split(";") and (not (k.get("render") or {}).get("openGL")
+                                                       or (k.get("render") or {}).get("cpuRetry")):
+                # a *-gpu render (OPENGL): rendered with OpenGL, without a CPU retry
+                errors.append("%s: not rendered with OpenGL (hostDemo --gpu=opengl): render %s"
+                              % (at, json.dumps(k.get("render"))))
             if o.get("nan"):
                 errors.append("%s: %d unwritten (NaN) pixels" % (at, o["nan"]))
             if not o.get("files"):

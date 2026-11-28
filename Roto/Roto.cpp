@@ -441,9 +441,6 @@ private:
     /** @brief true if the Output alpha is the shape alpha and the RGB are premultiplied by it */
     bool outputIsPremultipliedByShape() const;
 
-    /** @brief the format of the Source (the project without a Source), in canonical coordinates */
-    OfxRectD sourceFormat() const;
-
     /** @brief the region the output is clipped to (Clip To), in canonical coordinates, if it is clipped */
     std::optional<OfxRectD> clipRegion(double time) const;
 
@@ -651,35 +648,6 @@ RotoPlugin::render(const RenderArguments &args)
     }
 }
 
-// TODO: the same as CornerPin's getSrcFormatCanonical(): move to SupportExt
-OfxRectD
-RotoPlugin::sourceFormat() const
-{
-    OfxRectD format;
-#ifdef OFX_EXTENSIONS_NATRON
-    if ( _srcClip && _srcClip->isConnected() ) {
-        // kOfxImageClipPropFormat is in pixel coordinates, at render scale 1
-        OfxRectI formatPixel;
-        _srcClip->getFormat(formatPixel);
-        if ( !Coords::rectIsEmpty(formatPixel) ) {
-            const OfxPointD rs1 = {1., 1.};
-            Coords::toCanonical(formatPixel, rs1, _srcClip->getPixelAspectRatio(), &format);
-
-            return format;
-        }
-    }
-#endif
-    // no format (a host without the format extension, or no Source): the project, from (0, 0) as the
-    // project extent (kOfxImageEffectPropProjectExtent is the top right corner of the project)
-    const OfxPointD extent = getProjectExtent();
-    format.x1 = 0.;
-    format.y1 = 0.;
-    format.x2 = extent.x;
-    format.y2 = extent.y;
-
-    return format;
-}
-
 // the region the output is clipped to (Clip To), in canonical coordinates, if it is clipped.
 // BBox clips to the Source RoD, and is no clip without a Source.
 std::optional<OfxRectD>
@@ -687,7 +655,8 @@ RotoPlugin::clipRegion(double time) const
 {
     const bool hasSource = _srcClip && _srcClip->isConnected();
     const auto clipType = static_cast<ClipTypeEnum>( _clipType->getValueAtTime(time) );
-    OfxRectD region = sourceFormat();
+    // the format of the Source (the project without a Source)
+    OfxRectD region = Coords::clipFormatCanonical(_srcClip, *this);
     switch (clipType) {
     case ClipTypeEnum::eNone:
         return std::nullopt;

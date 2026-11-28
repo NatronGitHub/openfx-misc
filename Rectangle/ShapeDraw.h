@@ -37,7 +37,7 @@
 #ifdef OFX_EXTENSIONS_NATRON
 #include "ofxNatron.h"
 #endif
-#include "SoftEdge.h"
+#include "ofxsCurves.h"
 
 #ifdef OFX_EXTENSIONS_NATRON
 #define kParamProcessR kNatronOfxParamProcessR
@@ -95,30 +95,67 @@
 namespace OFX {
 namespace ShapeDraw {
 
-/// The falloff curve of the Softness (the options of the Falloff parameter, in order).
-using SoftEdge::FalloffEnum;
-using SoftEdge::falloff;
+/// The curves of the options of the Falloff parameter, in their order (OfxsCurveEnum has no numeric
+/// meaning: the option index is mapped through this table).
+constexpr OfxsCurveEnum kFalloffCurves[] = {
+    OfxsCurveEnum::eQuadratic, // the default before version 3
+    OfxsCurveEnum::eLinear,
+    OfxsCurveEnum::eSmooth0,
+    OfxsCurveEnum::eSmooth1,
+    OfxsCurveEnum::eSmooth, // the default since version 3
+};
+constexpr int kFalloffCurveCount = static_cast<int>( sizeof(kFalloffCurves) / sizeof(kFalloffCurves[0]) );
+
+/// The curve of the Falloff option index (Quadratic for an index out of range).
+constexpr OfxsCurveEnum
+falloffCurveOfOption(int index)
+{
+    return (index >= 0 && index < kFalloffCurveCount) ? kFalloffCurves[index] : OfxsCurveEnum::eQuadratic;
+}
+
+/// The Falloff option index of curve (0, Quadratic, if it is not an option).
+constexpr int
+falloffOptionOfCurve(OfxsCurveEnum curve)
+{
+    for (int i = 0; i < kFalloffCurveCount; ++i) {
+        if (kFalloffCurves[i] == curve) {
+            return i;
+        }
+    }
+
+    return 0;
+}
+
+/// The weight at the distance t across the soft edge (ofxsFalloff()).
+inline double
+falloff(OfxsCurveEnum curve,
+        double t)
+{
+    return ofxsFalloff(curve, t);
+}
 
 /// Describe the Falloff parameter (put it after Softness), with its default.
 inline void
 describeFalloffParam(ImageEffectDescriptor& desc,
                      PageParamDescriptor* page,
-                     FalloffEnum defaultCurve)
+                     OfxsCurveEnum defaultCurve)
 {
     ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamShapeFalloff);
     param->setLabel(kParamShapeFalloffLabel);
     param->setHint(kParamShapeFalloffHint);
-    assert(param->getNOptions() == (int)FalloffEnum::eFalloffQuadratic);
+    // in the order of kFalloffCurves
+    assert(param->getNOptions() < kFalloffCurveCount && kFalloffCurves[param->getNOptions()] == OfxsCurveEnum::eQuadratic);
     param->appendOption(kParamShapeFalloffOptionQuadratic);
-    assert(param->getNOptions() == (int)FalloffEnum::eFalloffLinear);
+    assert(param->getNOptions() < kFalloffCurveCount && kFalloffCurves[param->getNOptions()] == OfxsCurveEnum::eLinear);
     param->appendOption(kParamShapeFalloffOptionLinear);
-    assert(param->getNOptions() == (int)FalloffEnum::eFalloffSmooth0);
+    assert(param->getNOptions() < kFalloffCurveCount && kFalloffCurves[param->getNOptions()] == OfxsCurveEnum::eSmooth0);
     param->appendOption(kParamShapeFalloffOptionSmooth0);
-    assert(param->getNOptions() == (int)FalloffEnum::eFalloffSmooth1);
+    assert(param->getNOptions() < kFalloffCurveCount && kFalloffCurves[param->getNOptions()] == OfxsCurveEnum::eSmooth1);
     param->appendOption(kParamShapeFalloffOptionSmooth1);
-    assert(param->getNOptions() == (int)FalloffEnum::eFalloffSmooth);
+    assert(param->getNOptions() < kFalloffCurveCount && kFalloffCurves[param->getNOptions()] == OfxsCurveEnum::eSmooth);
     param->appendOption(kParamShapeFalloffOptionSmooth);
-    param->setDefault( static_cast<int>(defaultCurve) );
+    assert(param->getNOptions() == kFalloffCurveCount);
+    param->setDefault( falloffOptionOfCurve(defaultCurve) );
     if (page) {
         page->addChild(*param);
     }
@@ -130,19 +167,19 @@ struct Options
     bool premult = false; // multiply the Source RGB by the shape weight
     bool replace = false; // clear the drawn channels of the Source
     bool invert = false; // swap the colors, and invert the Premultiply weight
-    FalloffEnum falloff = FalloffEnum::eFalloffQuadratic; // the curve of the Softness
+    OfxsCurveEnum falloff = OfxsCurveEnum::eQuadratic; // the curve of the Softness
 };
 
 /// The shape weight of a pixel in the Softness, in versions 3 and later (ProcessorBase::_pixelCenterSoftness):
-/// SoftEdge::softEdgeWeight() at the pixel center, whose distance inside the edge is d, for a Softness and a
+/// ofxsSoftEdgeWeight() at the pixel center, whose distance inside the edge is d, for a Softness and a
 /// half pixel in the same units (halfPixel 0: no other antialiasing, the Softness is the edge).
 inline float
-softWeight(FalloffEnum curve,
+softWeight(OfxsCurveEnum curve,
            double d,
            double softness,
            double halfPixel)
 {
-    return static_cast<float>( SoftEdge::softEdgeWeight(curve, d, softness, halfPixel) );
+    return static_cast<float>( ofxsSoftEdgeWeight(curve, d, softness, halfPixel) );
 }
 
 /// The Source pixel srcPixRGBA (RGBA, not normalized), before the shape is drawn over it: Premultiply
@@ -271,7 +308,7 @@ protected:
         return _process;
     }
 
-    FalloffEnum falloffCurve() const
+    OfxsCurveEnum falloffCurve() const
     {
         return _drawOptions.falloff;
     }
@@ -365,10 +402,8 @@ public:
         o.premult = _premult->getValueAtTime(time);
         o.replace = _replace->getValueAtTime(time);
         o.invert = _invert->getValueAtTime(time);
-        const int curve = _falloff->getValueAtTime(time);
-        // the only range check of the curve (falloff() does not check it)
-        o.falloff = ( (curve >= static_cast<int>(FalloffEnum::eFalloffQuadratic)) && (curve <= static_cast<int>(FalloffEnum::eFalloffSmooth)) ) ?
-                    static_cast<FalloffEnum>(curve) : FalloffEnum::eFalloffQuadratic;
+        // the only range check of the option index (Quadratic out of range)
+        o.falloff = falloffCurveOfOption( _falloff->getValueAtTime(time) );
 
         return o;
     }

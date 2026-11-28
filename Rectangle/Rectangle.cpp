@@ -1525,7 +1525,7 @@ RectanglePluginFactory<majorVersion>::describeInContext(ImageEffectDescriptor &d
     }
 
     // falloff
-    ShapeDraw::describeFalloffParam(desc, page, (majorVersion >= kVersionPixelCenterSoftness) ? ShapeDraw::FalloffEnum::eFalloffSmooth : ShapeDraw::FalloffEnum::eFalloffQuadratic);
+    ShapeDraw::describeFalloffParam(desc, page, (majorVersion >= kVersionPixelCenterSoftness) ? OfxsCurveEnum::eSmooth : OfxsCurveEnum::eQuadratic);
 
     // color1
     {

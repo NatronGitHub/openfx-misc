@@ -26,7 +26,7 @@
 #include "ofxsMacros.h"
 #include "ofxsCopier.h"
 #include "ofxsCoords.h"
-#include "MultiviewFetch.h"
+#include "ofxsMultiView.h"
 
 using namespace OFX;
 
