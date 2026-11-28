@@ -612,7 +612,7 @@ CASES += [
          channels="rgba", tolerance=1e-6),
 ]
 
-# EdgeDetectCImg on alpha only (R, G and B are kept).
+# EdgeDetectCImg on alpha only (the reference's channels rgba.alpha).
 EDGE_ALPHA_ONLY = {"NatronOfxParamProcessR": 0, "NatronOfxParamProcessG": 0,
                    "NatronOfxParamProcessB": 0, "NatronOfxParamProcessA": 1}
 
@@ -2251,28 +2251,59 @@ CASES += [
          ("Soften", {"minimum": .2, "maximum": .7}),
          (CIMG + "CImgSoften", {"minimum": .2, "maximum": .7}),
          input="checker", channels="rgb", tolerance=1e-5),
-    # The reference writes one edge matte into alpha and keeps RGB; on an
-    # image whose R, G, B and A are the same, EdgeDetectCImg on alpha only
-    # should give the same matte. Its scale differs (e.g. 4.5 against 0.25
-    # for Sobel next to a 0.5 step), so Threshold differs too (#314).
-    case("EdgeDetect sobel, grey checker, alpha",
-         ("EdgeDetect", {"edgedetector": "sobel"}),
-         ("eu.cimg.EdgeDetect", dict(EDGE_ALPHA_ONLY, filter="Sobel")),
-         input="greychecker", channels="rgba", tolerance=1e-3, known=314),
-    case("EdgeDetect prewitt, grey checker, alpha",
-         ("EdgeDetect", {"edgedetector": "prewitt"}),
-         ("eu.cimg.EdgeDetect", dict(EDGE_ALPHA_ONLY, filter="Prewitt")),
-         input="greychecker", channels="rgba", tolerance=1e-3, known=314),
-    case("EdgeDetect sobel, threshold 0.2, grey checker, alpha",
-         ("EdgeDetect", {"edgedetector": "sobel", "threshold": .2}),
-         ("eu.cimg.EdgeDetect", dict(EDGE_ALPHA_ONLY, filter="Sobel",
-                                     threshold=.2)),
-         input="greychecker", channels="rgba", tolerance=1e-3, known=314),
-    # The reference writes its edges into alpha, EdgeDetectCImg into RGB.
-    case("EdgeDetect sobel", ("EdgeDetect", {}),
+    # EdgeDetectCImg version 5 writes one edge matte into alpha and keeps
+    # RGB by default, as the reference: the sum, over the processed
+    # channels, of |gx| + |gy| (Sobel and Prewitt kernels not normalized).
+    case("EdgeDetect defaults", ("EdgeDetect", {}),
+         ("eu.cimg.EdgeDetect", {}), input="checker", channels="rgba",
+         tolerance=1e-4),
+    case("EdgeDetect sobel", ("EdgeDetect", {"edgedetector": "sobel"}),
          ("eu.cimg.EdgeDetect", {"filter": "Sobel"}), input="checker",
-         channels="rgba", tolerance=1e-3,
-         known=314),
+         channels="rgba", tolerance=1e-4),
+    case("EdgeDetect prewitt", ("EdgeDetect", {"edgedetector": "prewitt"}),
+         ("eu.cimg.EdgeDetect", {"filter": "Prewitt"}), input="checker",
+         channels="rgba", tolerance=1e-4),
+    case("EdgeDetect defaults on hues", ("EdgeDetect", {}),
+         ("eu.cimg.EdgeDetect", {}), input="hues", channels="rgba",
+         tolerance=1e-4),
+    # on the hues, 1.87 inside and 0.93 on the borders: the borders go
+    case("EdgeDetect sobel, threshold 1.5 on hues",
+         ("EdgeDetect", {"edgedetector": "sobel", "threshold": 1.5}),
+         ("eu.cimg.EdgeDetect", {"filter": "Sobel", "threshold": 1.5}),
+         input="hues", channels="rgba", tolerance=1e-4),
+    # Sum on a single channel (red), into alpha
+    case("EdgeDetect sobel, red only",
+         ("EdgeDetect", {"edgedetector": "sobel", "channels": "rgba.red"}),
+         ("eu.cimg.EdgeDetect", {"NatronOfxParamProcessR": 1,
+                                 "NatronOfxParamProcessG": 0,
+                                 "NatronOfxParamProcessB": 0,
+                                 "NatronOfxParamProcessA": 0,
+                                 "filter": "Sobel"}),
+         input="hues", channels="rgba", tolerance=1e-4),
+    # TODO: a "simple" case, known=<the follow-up issue for a Laplacian
+    # detector> once it is filed
+    case("EdgeDetect sobel, grey checker, alpha",
+         ("EdgeDetect", {"edgedetector": "sobel", "channels": "rgba.alpha"}),
+         ("eu.cimg.EdgeDetect", dict(EDGE_ALPHA_ONLY, filter="Sobel")),
+         input="greychecker", channels="rgba", tolerance=1e-4),
+    case("EdgeDetect prewitt, grey checker, alpha",
+         ("EdgeDetect", {"edgedetector": "prewitt",
+                         "channels": "rgba.alpha"}),
+         ("eu.cimg.EdgeDetect", dict(EDGE_ALPHA_ONLY, filter="Prewitt")),
+         input="greychecker", channels="rgba", tolerance=1e-4),
+    # the edges are 2: an edge equal to the threshold is kept
+    case("EdgeDetect sobel, threshold 2, grey checker, alpha",
+         ("EdgeDetect", {"edgedetector": "sobel", "threshold": 2,
+                         "channels": "rgba.alpha"}),
+         ("eu.cimg.EdgeDetect", dict(EDGE_ALPHA_ONLY, filter="Sobel",
+                                     threshold=2)),
+         input="greychecker", channels="rgba", tolerance=1e-4),
+    case("EdgeDetect sobel, threshold 2.5, grey checker, alpha",
+         ("EdgeDetect", {"edgedetector": "sobel", "threshold": 2.5,
+                         "channels": "rgba.alpha"}),
+         ("eu.cimg.EdgeDetect", dict(EDGE_ALPHA_ONLY, filter="Sobel",
+                                     threshold=2.5)),
+         input="greychecker", channels="rgba", tolerance=1e-4),
     case("Dilate size 1 (DilateCImg 1)", ("Dilate", {"size": 1}),
          (CIMG + "CImgDilate", {"size": [1, 1]}), input="impulse",
          channels="rgba"),
@@ -3108,7 +3139,6 @@ ISSUES = {
     309: 'Retime: output range ignores the speed; no Box filter; No...',
     310: 'FrameBlend: blends 6 frames by default',
     311: 'Anaglyph, MixViews, SideBySide, JoinViews: limited to the...',
-    314: 'EdgeDetectCImg: no Prewitt, no threshold, no single alpha...',
     316: 'ConvolveCImg: per-channel kernels by default',
     317: 'Compatibility tests that cannot be automated yet',
     318: 'Document the behaviours that come from OFX: black outside...',

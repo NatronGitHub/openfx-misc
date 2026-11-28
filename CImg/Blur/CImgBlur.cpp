@@ -27,6 +27,7 @@
 #include <climits>
 #include <cfloat> // DBL_MAX, FLT_EPSILON
 #include <algorithm>
+#include <utility>
 #include <new> // std::bad_alloc
 #include <vector>
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
@@ -196,14 +197,16 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 "It can be used in commercial applications (see http://cimg.eu)."
 
 #define kPluginNameEdgeDetect          "EdgeDetectCImg"
-#define kPluginDescriptionEdgeDetect \
+#define kPluginDescriptionEdgeDetectIntro \
 "Perform edge detection by computing the image gradient magnitude. Optionally, edge detection can be preceded by blurring, and followed by erosion (or dilation, with a negative Erode Size) and non-maxima suppression. Edges weaker than the Threshold are set to 0; in most cases, EdgeDetect is followed by a Grade node to extract the proper edges and generate a mask from these.\n" \
-"\n" \
+"\n"
+#define kPluginDescriptionEdgeDetectMultiChannel \
 "For color or multi-channel images, several edge detection algorithms are proposed to combine the gradients computed in each channel:\n" \
 "- Separate: the gradient magnitude is computed in each channel separately, and the output is a color edge image.\n" \
 "- RMS: the RMS of per-channel gradients magnitudes is computed.\n" \
 "- Max: the maximum per-channel gradient magnitude is computed.\n" \
-"- Tensor: the tensor gradient norm [1].\n" \
+"- Tensor: the tensor gradient norm [1].\n"
+#define kPluginDescriptionEdgeDetectEnd \
 "\n" \
 "References:\n" \
 "- [1] Silvano Di Zenzo, A note on the gradient of a multi-image, CVGIP 33, 116-125 (1986). http://people.csail.mit.edu/tieu/notebook/imageproc/dizenzo86.pdf\n" \
@@ -211,6 +214,20 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 "CImg is a free, open-source library distributed under the CeCILL-C " \
 "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
 "It can be used in commercial applications (see http://cimg.eu)."
+// version 4
+#define kPluginDescriptionEdgeDetectV4 \
+    kPluginDescriptionEdgeDetectIntro \
+    kPluginDescriptionEdgeDetectMultiChannel \
+    kPluginDescriptionEdgeDetectEnd
+// version 5: the Alpha output and the Sum multi-channel operation (#314)
+#define kPluginDescriptionEdgeDetect \
+    kPluginDescriptionEdgeDetectIntro \
+"By default, one edge matte, computed from the processed channels, is written into alpha, and R, G and B are kept (Output). The edges can also replace the processed channels.\n" \
+"\n" \
+    kPluginDescriptionEdgeDetectMultiChannel \
+"- Sum: the sum, over the channels, of the absolute values of the horizontal and vertical gradients (the default).\n" \
+"With the Alpha output and Separate, the matte is the sum of the per-channel gradient magnitudes.\n" \
+    kPluginDescriptionEdgeDetectEnd
 
 #define kPluginIdentifier    "net.sf.cimg.CImgBlur"
 #define kPluginIdentifierLaplacian    "net.sf.cimg.CImgLaplacian"
@@ -234,8 +251,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              ErodeBlur remaps or clamps the values (#324); EdgeExtend: not an identity with a small size (#337)
 // version 5.0 (Blur, Laplacian, Sharpen, Soften; version 4 kept): FIR Gaussian filter, the default (#312);
 //              Sharpen, Soften: Minimum and Maximum parameters, defaults 0 and 1 (#313)
+// version 4.1 (EdgeDetect, kept for backward compatibility): also Prewitt filter and Threshold
+//              parameter, default 0 (#314, #406)
 // version 5.0 (EdgeDetect): fix the gradient direction in RMS multichannel mode; NaN/inf-safe premultiply
-//              (SupportExt #73, #79); Prewitt filter and Threshold parameter, default 0 (#314)
+//              (SupportExt #73, #79); Prewitt filter and Threshold parameter (#314, #406);
+//              Output parameter: one edge matte in alpha, the default (#314); Sum multichannel
+//              operation, the default (#314); Sobel filter by default; Sobel and Prewitt kernels
+//              not normalized, unless Normalize is checked (#314); no RoD expansion with the Alpha output (#314)
 #define kPluginVersionMajorEdgeDetect 5
 #define kPluginVersionMajorFIR 5 // Blur, Laplacian, Sharpen, Soften
 #define kPluginVersionMinorOld 1 // version 3, kept for backward compatibility
@@ -574,7 +596,9 @@ sharpenSoftenDelta(double d,
 
 #define kParamEdgeDetectFilter "filter"
 #define kParamEdgeDetectFilterLabel "Filter"
-#define kParamEdgeDetectFilterHint "Edge detection filter. If the blur size is not zero, it is used as the kernel size for quasi-Gaussian, Gaussian, box, triangle and quadratic filters. For the simple, rotation-invariant, Sobel and Prewitt filters, the image is pre-blurred with a Gaussian filter."
+#define kParamEdgeDetectFilterHintV4 "Edge detection filter. If the blur size is not zero, it is used as the kernel size for quasi-Gaussian, Gaussian, box, triangle and quadratic filters. For the simple, rotation-invariant, Sobel and Prewitt filters, the image is pre-blurred with a Gaussian filter."
+#define kParamEdgeDetectFilterHint kParamEdgeDetectFilterHintV4 " " \
+    "The Sobel and Prewitt kernels are not normalized unless Normalize is checked: on a ramp of slope 1, their gradient is 8 (Sobel) or 6 (Prewitt), instead of 1 for the other filters."
 #define kParamEdgeDetectFilterOptionSimple "Simple", "Gradient is estimated by centered finite differences.", "simple"
 #define kParamEdgeDetectFilterOptionSobel "Sobel", "Compute gradient using the Sobel 3x3 filter.", "sobel"
 #define kParamEdgeDetectFilterOptionRotationInvariant "Rotation Invariant", "Compute gradient using a 3x3 rotation-invariant filter.", "rotinvariant"
@@ -584,7 +608,8 @@ sharpenSoftenDelta(double d,
 #define kParamEdgeDetectFilterOptionTriangle "Triangle", "Triangle/tent filter - FIR (finite support / impulsional response).", "triangle"
 #define kParamEdgeDetectFilterOptionQuadratic "Quadratic", "Quadratic filter - FIR (finite support / impulsional response).", "quadratic"
 #define kParamEdgeDetectFilterOptionPrewitt "Prewitt", "Compute gradient using the Prewitt 3x3 filter.", "prewitt"
-#define kParamEdgeDetectFilterDefault eEdgeDetectFilterGaussian
+#define kParamEdgeDetectFilterDefault eEdgeDetectFilterSobel
+#define kParamEdgeDetectFilterDefaultV4 eEdgeDetectFilterGaussian
 enum EdgeDetectFilterEnum
 {
     eEdgeDetectFilterSimple = 0,
@@ -598,21 +623,30 @@ enum EdgeDetectFilterEnum
     eEdgeDetectFilterPrewitt, // last: added in 5.0 (issue #314)
 };
 
+#define kParamEdgeDetectNormalize "normalize"
+#define kParamEdgeDetectNormalizeLabel "Normalize"
+#define kParamEdgeDetectNormalizeHint "Divide the Sobel and Prewitt kernels by the sum of the absolute values of their weights (8 and 6), so that a ramp of slope 1 gives 1, as with the other filters. Off by default. Only for the Sobel and Prewitt filters."
+
 #define kParamEdgeDetectMultiChannel "multiChannel"
 #define kParamEdgeDetectMultiChannelLabel "Multi-Channel"
-#define kParamEdgeDetectMultiChannelHint "Operation used to combine multi-channel (e.g. color) gradients into an edge detector. This parameter has no effect if a single channel (e.g. alpha) is processed."
-#define kParamEdgeDetectMultiChannelOptionSeparate "Separate", "The gradient magnitude is computed in each channel separately, and the output is a color edge image.", "separate"
+#define kParamEdgeDetectMultiChannelHintV4 "Operation used to combine multi-channel (e.g. color) gradients into an edge detector. This parameter has no effect if a single channel (e.g. alpha) is processed."
+#define kParamEdgeDetectMultiChannelHint "Operation used to combine multi-channel (e.g. color) gradients into an edge detector. If a single channel (e.g. alpha) is processed, Sum gives the sum of the absolute values of its horizontal and vertical gradients, and the other operations its gradient magnitude."
+#define kParamEdgeDetectMultiChannelOptionSeparateV4 "Separate", "The gradient magnitude is computed in each channel separately, and the output is a color edge image.", "separate"
+#define kParamEdgeDetectMultiChannelOptionSeparate "Separate", "The gradient magnitude is computed in each channel separately, and the output is a color edge image. With the Alpha output, the matte is the sum of the per-channel gradient magnitudes.", "separate"
 #define kParamEdgeDetectMultiChannelOptionRMS "RMS", "The RMS of per-channel gradients magnitudes is computed.", "rms"
 #define kParamEdgeDetectMultiChannelOptionMax "Max", "The maximum per-channel gradient magnitude is computed.", "max"
 #define kParamEdgeDetectMultiChannelOptionTensor "Tensor", "The tensor gradient norm is computed. See Silvano Di Zenzo, A note on the gradient of a multi-image, CVGIP 33, 116-125 (1986).", "tensor"
+#define kParamEdgeDetectMultiChannelOptionSum "Sum", "The sum, over the channels, of the absolute values of the horizontal and vertical gradients is computed.", "sum"
 enum EdgeDetectMultiChannelEnum
 {
     eEdgeDetectMultiChannelSeparate = 0,
     eEdgeDetectMultiChannelRMS,
     eEdgeDetectMultiChannelMax,
     eEdgeDetectMultiChannelTensor,
+    eEdgeDetectMultiChannelSum, // last: added in 5.0 (issue #314)
 };
-#define kParamEdgeDetectMultiChannelDefault eEdgeDetectMultiChannelTensor
+#define kParamEdgeDetectMultiChannelDefault eEdgeDetectMultiChannelSum
+#define kParamEdgeDetectMultiChannelDefaultV4 eEdgeDetectMultiChannelTensor
 
 #define kParamEdgeDetectNMS "nms"
 #define kParamEdgeDetectNMSLabel "Non-Maxima Suppression"
@@ -620,8 +654,24 @@ enum EdgeDetectMultiChannelEnum
 
 #define kParamEdgeDetectThreshold "threshold"
 #define kParamEdgeDetectThresholdLabel "Threshold"
-#define kParamEdgeDetectThresholdHint "Edge magnitudes below this value are set to 0 (after the erosion and the non-maxima suppression). With 0, no edge is removed. " \
+#define kParamEdgeDetectThresholdHintV4 "Edge magnitudes below this value are set to 0 (after the erosion and the non-maxima suppression). With 0, no edge is removed. " \
+    kParamEdgeDetectThresholdHintScale
+#define kParamEdgeDetectThresholdHint "Edge values below this value are set to 0 (after the erosion and the non-maxima suppression). With 0, no edge is removed. " \
+    kParamEdgeDetectThresholdHintScale
+#define kParamEdgeDetectThresholdHintScale \
     "The threshold applies to the gradient computed at the render scale, which is not rescaled: at a proxy scale, the gradients are different, so different edges may be kept."
+
+#define kParamEdgeDetectOutput "output"
+#define kParamEdgeDetectOutputLabel "Output"
+#define kParamEdgeDetectOutputHint "Where the edges are written."
+#define kParamEdgeDetectOutputOptionProcessed "Processed Channels", "The edges replace the processed channels (see Multi-Channel).", "processed"
+#define kParamEdgeDetectOutputOptionAlpha "Alpha", "One edge matte, computed from the processed channels (see Multi-Channel), is written into alpha, and R, G and B are kept. An RGB input gets an alpha channel, if the host allows it.", "alpha"
+enum EdgeDetectOutputEnum
+{
+    eEdgeDetectOutputProcessed = 0,
+    eEdgeDetectOutputAlpha,
+};
+#define kParamEdgeDetectOutputDefault eEdgeDetectOutputAlpha // version 5 only
 
 #define kParamEdgeDetectErode "erodeSize"
 #define kParamEdgeDetectErodeLabel "Erode Size"
@@ -1255,6 +1305,9 @@ struct CImgBlurParams
     FilterEnum filter;
     EdgeDetectFilterEnum edgeDetectFilter;
     EdgeDetectMultiChannelEnum edgeDetectMultiChannel;
+    bool edgeDetectOutputAlpha; // one edge matte, written into alpha
+    bool edgeDetectAlphaIsInput; // Process A: the alpha channel is also an input (edgeDetectOutputAlpha)
+    bool edgeDetectNormalize; // divide the Sobel and Prewitt kernels by 8 and 6 (always in version 4)
     bool edgeDetectNMS;
     double edgeDetectThreshold;
     bool expandRoD;
@@ -1460,6 +1513,8 @@ public:
         , _edgeDetectErode(NULL)
         , _edgeDetectNMS(NULL)
         , _edgeDetectThreshold(NULL)
+        , _edgeDetectOutput(NULL)
+        , _edgeDetectNormalize(NULL)
         , _expandRoD(NULL)
         , _cropToFormat(NULL)
         , _alphaThreshold(NULL)
@@ -1540,10 +1595,16 @@ public:
             _edgeDetectErode = fetchDoubleParam(kParamEdgeDetectErode);
             _edgeDetectNMS = fetchBooleanParam(kParamEdgeDetectNMS);
             _edgeDetectThreshold = fetchDoubleParam(kParamEdgeDetectThreshold);
+            if ( paramExists(kParamEdgeDetectOutput) ) { // version 5
+                _edgeDetectOutput = fetchChoiceParam(kParamEdgeDetectOutput);
+                _edgeDetectNormalize = fetchBooleanParam(kParamEdgeDetectNormalize);
+                assert(_edgeDetectNormalize);
+            }
             assert(_edgeDetectFilter && _edgeDetectMultiChannel && _edgeDetectBlur && _edgeDetectErode && _edgeDetectNMS && _edgeDetectThreshold);
+            assert( (_edgeDetectOutput != NULL) == (majorVersion >= kPluginVersionMajorEdgeDetect) );
         } else {
             // kParamFilter and kParamEdgeDetectFilter have the same value
-            assert( /*!paramExists(kParamEdgeDetectFilter) &&*/ !paramExists(kParamEdgeDetectMultiChannel) && !paramExists(kParamEdgeDetectBlur) && !paramExists(kParamEdgeDetectErode) && !paramExists(kParamEdgeDetectNMS) && !paramExists(kParamEdgeDetectThreshold) );
+            assert( /*!paramExists(kParamEdgeDetectFilter) &&*/ !paramExists(kParamEdgeDetectMultiChannel) && !paramExists(kParamEdgeDetectBlur) && !paramExists(kParamEdgeDetectErode) && !paramExists(kParamEdgeDetectNMS) && !paramExists(kParamEdgeDetectThreshold) && !paramExists(kParamEdgeDetectOutput) );
         }
         if (_blurPlugin == eBlurPluginBlur ||
             _blurPlugin == eBlurPluginLaplacian ||
@@ -1589,6 +1650,40 @@ public:
              !_uniform->getValue() &&
              ( _uniform->getNumKeys() == 0) ) {
             _uniform->setIsSecretAndDisabled(true);
+        }
+        updateEdgeDetectEnabled();
+    }
+
+    virtual void changedParam(const InstanceChangedArgs &args,
+                              const std::string &paramName) OVERRIDE FINAL
+    {
+        CImgFilterPluginHelper<CImgBlurParams, false>::changedParam(args, paramName);
+        if ( (paramName == kParamEdgeDetectOutput) || (paramName == kParamEdgeDetectFilter) ) {
+            updateEdgeDetectEnabled();
+        }
+    }
+
+    // EdgeDetect version 5: the Alpha output changes neither the colours nor the RoD, so the
+    // (un)premultiplication and Expand RoD are disabled; Normalize is only for Sobel and Prewitt
+    // (the other filters are normalized)
+    void updateEdgeDetectEnabled()
+    {
+        if (!_edgeDetectOutput) {
+            return;
+        }
+        if (_edgeDetectNormalize && _edgeDetectFilter) {
+            const EdgeDetectFilterEnum filter = (EdgeDetectFilterEnum)_edgeDetectFilter->getValue();
+            _edgeDetectNormalize->setEnabled(filter == eEdgeDetectFilterSobel || filter == eEdgeDetectFilterPrewitt);
+        }
+        const bool outputAlpha = ( (EdgeDetectOutputEnum)_edgeDetectOutput->getValue() == eEdgeDetectOutputAlpha );
+        if (_premult) {
+            _premult->setEnabled(!outputAlpha);
+        }
+        if (_premultChannel) {
+            _premultChannel->setEnabled(!outputAlpha);
+        }
+        if (_expandRoD) {
+            _expandRoD->setEnabled(!outputAlpha);
         }
     }
 
@@ -1827,6 +1922,16 @@ public:
             // _edgeDetectBlur already used for params.sizex/y
             params.edgeDetectNMS = _edgeDetectNMS->getValueAtTime(time);
             params.edgeDetectThreshold = _edgeDetectThreshold->getValueAtTime(time);
+            params.edgeDetectOutputAlpha = _edgeDetectOutput &&
+                                           ( (EdgeDetectOutputEnum)_edgeDetectOutput->getValueAtTime(time) == eEdgeDetectOutputAlpha );
+            params.edgeDetectAlphaIsInput = !_processA || _processA->getValueAtTime(time);
+            // version 4 always normalizes the Sobel and Prewitt kernels
+            params.edgeDetectNormalize = !_edgeDetectNormalize || _edgeDetectNormalize->getValueAtTime(time);
+            if (params.edgeDetectOutputAlpha) {
+                // the colours are kept (as they are outside the source RoD), and the matte is 0
+                // outside the source RoD: no expansion
+                params.expandRoD = false;
+            }
         } else {
             assert(_blurPlugin == eBlurPluginBlur ||
                    _blurPlugin == eBlurPluginLaplacian ||
@@ -1839,6 +1944,9 @@ public:
             params.edgeDetectMultiChannel = eEdgeDetectMultiChannelSeparate;
             params.edgeDetectNMS = false;
             params.edgeDetectThreshold = 0.;
+            params.edgeDetectOutputAlpha = false;
+            params.edgeDetectAlphaIsInput = false;
+            params.edgeDetectNormalize = false;
         }
 
         params.cropToFormat = _cropToFormat ? _cropToFormat->getValueAtTime(time) : false;
@@ -1986,7 +2094,7 @@ public:
 
         if (_blurPlugin == eBlurPluginEdgeDetect) {
             // EdgeDetect has its own render function
-            return renderEdgeDetect(args, params, cimg);
+            return renderEdgeDetect(args, params, cimg, alphaChannel);
         }
        // PROCESSING.
         // This is the only place where the actual processing takes place
@@ -2315,6 +2423,9 @@ public:
         if (_blurPlugin == eBlurPluginLaplacian) {
             return false;
         }
+        if ( _blurPlugin == eBlurPluginEdgeDetect && edgeDetectMatteIsNoOp(params) ) {
+            return true;
+        }
         if (_blurPlugin == eBlurPluginEdgeExtend) {
             // EdgeExtend merges the image over its blurred version Slices times, even when the blur
             // does nothing (blur() is not skipped for EdgeExtend): where alpha is below 1, A over A
@@ -2371,6 +2482,53 @@ public:
 
     // 0: Black/Dirichlet, 1: Nearest/Neumann, 2: Repeat/Periodic
     virtual int getBoundary(const CImgBlurParams& params)  OVERRIDE FINAL { return params.boundary_i; }
+
+    // EdgeDetect with the Alpha output writes the edge matte into alpha, even when A is not processed
+    virtual bool renderWritesAlpha(const CImgBlurParams& params) const OVERRIDE FINAL { return params.edgeDetectOutputAlpha; }
+
+    // EdgeDetect with the Alpha output does nothing if the image has no alpha channel (an RGB or XY
+    // image in the filter context, where it cannot get one), or if no channel is an input (an Alpha
+    // image without Process A)
+    bool edgeDetectMatteIsNoOp(const CImgBlurParams& params) const
+    {
+        if (!params.edgeDetectOutputAlpha || !_srcClip) {
+            return false;
+        }
+        const int nComponents = _srcClip->getPixelComponentCount();
+        if ( !renderHasAlphaChannel(nComponents, /*processA=*/ true) ) {
+            return true; // no alpha to write
+        }
+        if (nComponents == 1) {
+            // the only channel is alpha: an input only if processed
+            return !params.edgeDetectAlphaIsInput;
+        }
+        return false; // R, G, B: if none is processed, nor A, CImgFilterPluginHelper::isIdentity() says so
+    }
+
+    // EdgeDetect with the Alpha output: an RGB (or XY) input and the output are RGBA, so that the
+    // matte has an alpha channel to go to. In the filter context, the plug-in cannot change the
+    // Output components, which are those of Source, so it only does this in the general context,
+    // as CImgFilterPluginHelperBase::getClipPreferences().
+    virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL
+    {
+        CImgFilterPluginHelper<CImgBlurParams, false>::getClipPreferences(clipPreferences);
+        if ( (_blurPlugin != eBlurPluginEdgeDetect) || !_edgeDetectOutput || !_srcClip || !_srcClip->isConnected() ||
+             ( (EdgeDetectOutputEnum)_edgeDetectOutput->getValue() != eEdgeDetectOutputAlpha ) ) {
+            return;
+        }
+        PixelComponentEnum components = _srcClip->getPixelComponents();
+        if ( (getContext() == eContextGeneral) &&
+             ( (components == ePixelComponentRGB) || (components == ePixelComponentXY) ) ) {
+            components = ePixelComponentRGBA;
+            clipPreferences.setClipComponents(*_srcClip, components);
+            clipPreferences.setClipComponents(*_dstClip, components);
+        }
+        // the colours are not premultiplied by the edge matte (an RGB image in the filter context, or
+        // an Alpha image, gets no matte: see edgeDetectMatteIsNoOp())
+        if (components == ePixelComponentRGBA) {
+            clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
+        }
+    }
 
     // describe function for plugin factories
     static void describe(ImageEffectDescriptor& desc, int majorVersion, int minorVersion, BlurPluginEnum blurPlugin = eBlurPluginBlur);
@@ -2486,9 +2644,87 @@ public:
         return BlurResult::eSkipped;
     }
 
+    // EdgeDetect: alphaChannel is the alpha channel of cimg, or -1
     void renderEdgeDetect(const RenderArguments &args,
                           const CImgBlurParams& params,
-                          cimg_library::CImg<cimgpix_t>& cimg)
+                          cimg_library::CImg<cimgpix_t>& cimg,
+                          int alphaChannel)
+    {
+        if (!params.edgeDetectOutputAlpha) {
+            detectEdges(args, params, cimg, EdgeDetectResult::eChannels);
+
+            return;
+        }
+        if (alphaChannel < 0) {
+            // no alpha channel to write (an RGB image in the filter context): unchanged, an identity
+            // (edgeDetectMatteIsNoOp())
+            return;
+        }
+        // the alpha channel is the last one, after the processed R, G and B; it is an input only if
+        // it is processed
+        assert( alphaChannel == cimg.spectrum() - 1 );
+        const int nInputs = params.edgeDetectAlphaIsInput ? cimg.spectrum() : alphaChannel;
+        if (nInputs == 0) {
+            // no channel is processed (an Alpha image without Process A): unchanged, an identity
+            // (edgeDetectMatteIsNoOp())
+            return;
+        }
+        CImg<cimgpix_t> matte = cimg.get_channels(0, nInputs - 1);
+        detectEdges(args, params, matte, EdgeDetectResult::eMatte);
+        if ( abort() ) { return; }
+        assert(matte.spectrum() == 1 && matte.width() == cimg.width() && matte.height() == cimg.height());
+        cimg_forXY(matte, x, y) {
+            cimg(x, y, 0, alphaChannel) = matte(x, y);
+        }
+    }
+
+    // The gradient (gx, gy), flipped so that its largest component is positive: the sum of such
+    // gradients estimates the gradient direction of a multi-channel image (for the non-maxima
+    // suppression).
+    static std::pair<double, double> alignGradientSign(double gx,
+                                                       double gy)
+    {
+        if ( (std::abs(gx) > std::abs(gy)) ? (gx < 0) : (gy < 0) ) {
+            return std::make_pair(-gx, -gy);
+        }
+
+        return std::make_pair(gx, gy);
+    }
+
+    // The sum over the channels of the gradients at (x, y), each flipped by alignGradientSign() if
+    // align is true (versions < 5 of the RMS operation do not flip them).
+    static std::pair<double, double> gradientSum(const CImgList<cimgpix_t>& grad,
+                                                 int x,
+                                                 int y,
+                                                 bool align)
+    {
+        double gradx = 0.;
+        double grady = 0.;
+        cimg_forC(grad[0], c) {
+            std::pair<double, double> g(grad[0](x, y, 0, c), grad[1](x, y, 0, c));
+            if (align) {
+                g = alignGradientSign(g.first, g.second);
+            }
+            gradx += g.first;
+            grady += g.second;
+        }
+
+        return std::make_pair(gradx, grady);
+    }
+
+    // What detectEdges() leaves in its image
+    enum class EdgeDetectResult
+    {
+        eChannels, // the edges of each channel (Separate), or the combined edges in every channel
+        eMatte, // one channel: the combined edges (the sum of the per-channel magnitudes in Separate mode)
+    };
+
+    // The edges of cimg, in place. With EdgeDetectResult::eMatte, cimg must not be shared: it is
+    // replaced by a single channel.
+    void detectEdges(const RenderArguments &args,
+                     const CImgBlurParams& params,
+                     cimg_library::CImg<cimgpix_t>& cimg,
+                     EdgeDetectResult result)
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
@@ -2529,11 +2765,11 @@ public:
                 return;
             }
             if (params.edgeDetectFilter == eEdgeDetectFilterPrewitt) {
-                grad = prewittGradient(cimg);
+                grad = prewittGradient(cimg, params.edgeDetectNormalize);
             } else {
                 grad = cimg.get_gradient(0, scheme);
             }
-            if (params.edgeDetectFilter == eEdgeDetectFilterSobel) {
+            if (params.edgeDetectFilter == eEdgeDetectFilterSobel && params.edgeDetectNormalize) {
                 grad[0] /= 8;
                 grad[1] /= 8;
             }
@@ -2612,7 +2848,8 @@ public:
                 break;
         }
 
-        bool separate = (cimg.spectrum() == 1) || (params.edgeDetectMultiChannel == eEdgeDetectMultiChannelSeparate);
+        bool separate = (params.edgeDetectMultiChannel == eEdgeDetectMultiChannelSeparate) ||
+                        (cimg.spectrum() == 1 && params.edgeDetectMultiChannel != eEdgeDetectMultiChannelSum);
         if (separate) {
             cimg_forXYC(cimg, x, y, c) {
                 double gx = grad[0](x, y, 0, c);
@@ -2625,28 +2862,16 @@ public:
         } else if (params.edgeDetectMultiChannel == eEdgeDetectMultiChannelRMS) {
             cimg_forXY(cimg, x, y) {
                 double sumsq = 0;
-                // estimate gradient direction by making the largest component positive and summing
-                double gradx = 0.;
-                double grady = 0.;
                 cimg_forC(cimg, c) {
                     double gx = grad[0](x, y, 0, c);
                     double gy = grad[1](x, y, 0, c);
                     sumsq += gx * gx + gy * gy;
-                    // versions < 5 tested std::abs(g) < 0, which is always false
-                    if (std::abs(gx) > std::abs(gy)) {
-                        if (_edgeDetectRMSSignFix && gx < 0) {
-                            gx = -gx;
-                            gy = -gy;
-                        }
-                    } else {
-                        if (_edgeDetectRMSSignFix && gy < 0) {
-                            gx = -gx;
-                            gy = -gy;
-                        }
-                    }
-                    gradx += gx;
-                    grady += gy;
                 }
+                // estimate gradient direction by making the largest component positive and summing
+                // (versions < 5 tested std::abs(g) < 0, which is always false)
+                const std::pair<double, double> g = gradientSum(grad, x, y, _edgeDetectRMSSignFix);
+                const double gradx = g.first;
+                const double grady = g.second;
                 double sqe = sumsq / cimg.spectrum();
                 double e = std::sqrt( (std::max)(sqe, 0.) );
                 cimg_forC(cimg, c) {
@@ -2719,6 +2944,42 @@ public:
                     grad[1](x, y, 0, c) = static_cast<T>(e1 - Jx);
                 }
             }
+        } else if (params.edgeDetectMultiChannel == eEdgeDetectMultiChannelSum) {
+            cimg_forXY(cimg, x, y) {
+                double sum = 0.;
+                cimg_forC(cimg, c) {
+                    sum += std::abs( (double)grad[0](x, y, 0, c) ) + std::abs( (double)grad[1](x, y, 0, c) );
+                }
+                const std::pair<double, double> g = gradientSum(grad, x, y, /*align=*/ true);
+                cimg_forC(cimg, c) {
+                    cimg(x, y, 0, c) = static_cast<T>(sum);
+                    grad[0](x, y, 0, c) = static_cast<T>(g.first);
+                    grad[1](x, y, 0, c) = static_cast<T>(g.second);
+                }
+            }
+        }
+
+        if ( abort() ) { return; }
+
+        if ( (result == EdgeDetectResult::eMatte) && (cimg.spectrum() > 1) ) {
+            // one channel: in Separate mode, the sum of the per-channel magnitudes (the gradient
+            // direction is estimated as in RMS mode); in the other modes, all channels are the same
+            if (separate) {
+                cimg_forXY(cimg, x, y) {
+                    double sum = 0.;
+                    cimg_forC(cimg, c) {
+                        sum += cimg(x, y, 0, c);
+                    }
+                    const std::pair<double, double> g = gradientSum(grad, x, y, /*align=*/ true);
+                    cimg(x, y, 0, 0) = static_cast<T>(sum);
+                    grad[0](x, y, 0, 0) = static_cast<T>(g.first);
+                    grad[1](x, y, 0, 0) = static_cast<T>(g.second);
+                }
+                separate = false;
+            }
+            cimg.channel(0);
+            grad[0].channel(0);
+            grad[1].channel(0);
         }
 
         if ( abort() ) { return; }
@@ -2748,10 +3009,12 @@ public:
         }
     }
 
-    // The Prewitt gradient (3x3 kernels), normalized like the other filters: a ramp of slope 1
-    // gives 1. Neumann boundary conditions, as CImg's get_gradient().
-    static CImgList<T> prewittGradient(const CImg<T>& img)
+    // The Prewitt gradient (3x3 kernels): a ramp of slope 1 gives 6, or 1 if normalized, as the
+    // other filters. Neumann boundary conditions, as CImg's get_gradient().
+    static CImgList<T> prewittGradient(const CImg<T>& img,
+                                       bool normalize)
     {
+        const T norm = normalize ? T(6) : T(1);
         CImgList<T> grad(2, img.width(), img.height(), img.depth(), img.spectrum(), (T)0);
         const int w = img.width();
         const int h = img.height();
@@ -2761,9 +3024,9 @@ public:
             const int yp = (std::max)(y - 1, 0);
             const int yn = (std::min)(y + 1, h - 1);
             grad[0](x, y, z, c) = ( ( img(xn, yp, z, c) + img(xn, y, z, c) + img(xn, yn, z, c) ) -
-                                    ( img(xp, yp, z, c) + img(xp, y, z, c) + img(xp, yn, z, c) ) ) / 6;
+                                    ( img(xp, yp, z, c) + img(xp, y, z, c) + img(xp, yn, z, c) ) ) / norm;
             grad[1](x, y, z, c) = ( ( img(xp, yn, z, c) + img(x, yn, z, c) + img(xn, yn, z, c) ) -
-                                    ( img(xp, yp, z, c) + img(x, yp, z, c) + img(xn, yp, z, c) ) ) / 6;
+                                    ( img(xp, yp, z, c) + img(x, yp, z, c) + img(xn, yp, z, c) ) ) / norm;
         }
 
         return grad;
@@ -2921,6 +3184,8 @@ private:
     DoubleParam *_edgeDetectErode;
     BooleanParam *_edgeDetectNMS;
     DoubleParam *_edgeDetectThreshold;
+    ChoiceParam *_edgeDetectOutput;
+    BooleanParam *_edgeDetectNormalize; // version 5
     BooleanParam *_expandRoD;
     BooleanParam *_cropToFormat;
     DoubleParam *_alphaThreshold;
@@ -2972,7 +3237,7 @@ CImgBlurPlugin::describe(ImageEffectDescriptor& desc,
         break;
     case eBlurPluginEdgeDetect:
         desc.setLabel(kPluginNameEdgeDetect);
-        desc.setPluginDescription(kPluginDescriptionEdgeDetect);
+        desc.setPluginDescription( (majorVersion >= kPluginVersionMajorEdgeDetect) ? kPluginDescriptionEdgeDetect : kPluginDescriptionEdgeDetectV4 );
         break;
     }
     desc.setPluginGrouping(kPluginGrouping);
@@ -3034,7 +3299,7 @@ CImgBlurPlugin::describeInContext(ImageEffectDescriptor& desc,
     if (blurPlugin == eBlurPluginEdgeDetect) {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamEdgeDetectFilter);
         param->setLabel(kParamEdgeDetectFilterLabel);
-        param->setHint(kParamEdgeDetectFilterHint);
+        param->setHint( (majorVersion >= kPluginVersionMajorEdgeDetect) ? kParamEdgeDetectFilterHint : kParamEdgeDetectFilterHintV4 );
         assert(param->getNOptions() == eEdgeDetectFilterSimple);
         param->appendOption(kParamEdgeDetectFilterOptionSimple);
         assert(param->getNOptions() == eEdgeDetectFilterSobel);
@@ -3053,7 +3318,18 @@ CImgBlurPlugin::describeInContext(ImageEffectDescriptor& desc,
         param->appendOption(kParamEdgeDetectFilterOptionQuadratic);
         assert(param->getNOptions() == eEdgeDetectFilterPrewitt);
         param->appendOption(kParamEdgeDetectFilterOptionPrewitt);
-        param->setDefault( (int)kParamEdgeDetectFilterDefault );
+        param->setDefault( (int)( (majorVersion >= kPluginVersionMajorEdgeDetect) ? kParamEdgeDetectFilterDefault : kParamEdgeDetectFilterDefaultV4 ) );
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    // EdgeDetect version 5: Normalize (the Sobel and Prewitt kernels), after the filter (version 4
+    // always normalizes them)
+    if (blurPlugin == eBlurPluginEdgeDetect && majorVersion >= kPluginVersionMajorEdgeDetect) {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamEdgeDetectNormalize);
+        param->setLabel(kParamEdgeDetectNormalizeLabel);
+        param->setHint(kParamEdgeDetectNormalizeHint);
+        param->setDefault(false);
         if (page) {
             page->addChild(*param);
         }
@@ -3064,10 +3340,27 @@ CImgBlurPlugin::describeInContext(ImageEffectDescriptor& desc,
     if (blurPlugin == eBlurPluginEdgeDetect) {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEdgeDetectThreshold);
         param->setLabel(kParamEdgeDetectThresholdLabel);
-        param->setHint(kParamEdgeDetectThresholdHint);
+        param->setHint( (majorVersion >= kPluginVersionMajorEdgeDetect) ? kParamEdgeDetectThresholdHint : kParamEdgeDetectThresholdHintV4 );
         param->setRange(0., DBL_MAX);
-        param->setDisplayRange(0., 1.);
+        // version 5: the Sobel and Prewitt edges are not normalized (e.g. Sobel with Sum gives 12 next
+        // to a unit step in R, G and B)
+        param->setDisplayRange(0., (majorVersion >= kPluginVersionMajorEdgeDetect) ? 20. : 1.);
         param->setDefault(0.);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    // EdgeDetect version 5: the output comes after the threshold, as in the node of the same name (issue #314)
+    if (blurPlugin == eBlurPluginEdgeDetect && majorVersion >= kPluginVersionMajorEdgeDetect) {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamEdgeDetectOutput);
+        param->setLabel(kParamEdgeDetectOutputLabel);
+        param->setHint(kParamEdgeDetectOutputHint);
+        assert(param->getNOptions() == eEdgeDetectOutputProcessed);
+        param->appendOption(kParamEdgeDetectOutputOptionProcessed);
+        assert(param->getNOptions() == eEdgeDetectOutputAlpha);
+        param->appendOption(kParamEdgeDetectOutputOptionAlpha);
+        param->setDefault( (int)kParamEdgeDetectOutputDefault );
+        desc.addClipPreferencesSlaveParam(*param); // the Alpha output of an RGB input is RGBA
         if (page) {
             page->addChild(*param);
         }
@@ -3345,16 +3638,25 @@ CImgBlurPlugin::describeInContext(ImageEffectDescriptor& desc,
         {
             ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamEdgeDetectMultiChannel);
             param->setLabel(kParamEdgeDetectMultiChannelLabel);
-            param->setHint(kParamEdgeDetectMultiChannelHint);
+            const bool v5 = (majorVersion >= kPluginVersionMajorEdgeDetect);
+            param->setHint(v5 ? kParamEdgeDetectMultiChannelHint : kParamEdgeDetectMultiChannelHintV4);
             assert(param->getNOptions() == eEdgeDetectMultiChannelSeparate);
-            param->appendOption(kParamEdgeDetectMultiChannelOptionSeparate);
+            if (v5) {
+                param->appendOption(kParamEdgeDetectMultiChannelOptionSeparate);
+            } else {
+                param->appendOption(kParamEdgeDetectMultiChannelOptionSeparateV4);
+            }
             assert(param->getNOptions() == eEdgeDetectMultiChannelRMS);
             param->appendOption(kParamEdgeDetectMultiChannelOptionRMS);
             assert(param->getNOptions() == eEdgeDetectMultiChannelMax);
             param->appendOption(kParamEdgeDetectMultiChannelOptionMax);
             assert(param->getNOptions() == eEdgeDetectMultiChannelTensor);
             param->appendOption(kParamEdgeDetectMultiChannelOptionTensor);
-            param->setDefault( (int)kParamEdgeDetectMultiChannelDefault);
+            if (v5) {
+                assert(param->getNOptions() == eEdgeDetectMultiChannelSum);
+                param->appendOption(kParamEdgeDetectMultiChannelOptionSum);
+            }
+            param->setDefault( (int)(v5 ? kParamEdgeDetectMultiChannelDefault : kParamEdgeDetectMultiChannelDefaultV4) );
             if (page) {
                 page->addChild(*param);
             }
