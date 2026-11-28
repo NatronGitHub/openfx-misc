@@ -35,9 +35,10 @@ CIMG_SHA256=adf13c3e991f6812c2db484ff07aa614421830117924590d3def10e8ac6a485b
 # CImg/patches/ are verbatim copies of openfx-gmic's patches/cimg-*.sh at the openfx-gmic commit
 # CIMG_PATCHES_FROM. openfx-gmic is the source of truth: fix or update the scripts there, then copy
 # them again and update CIMG_PATCHES_FROM (.github/tools/check-cimg-patches.sh, run weekly, reports
-# a drift). They are applied in the order of CIMG_PATCHES, as in openfx-gmic's Makefile, whatever
-# the FFT: CImg.h is the same for every FFT. Changing CIMGVERSION, CIMG_PATCHES_FROM or the patches
-# downloads and patches CImg.h again (CImg.h.version records them).
+# a drift). They are applied in the order of CIMG_PATCHES, as in openfx-gmic's gmic_sources.txt
+# (or its Makefile, before openfx-gmic #263), whatever the FFT: CImg.h is the same for every FFT.
+# Changing CIMGVERSION, CIMG_PATCHES_FROM or the patches downloads and patches CImg.h again
+# (CImg.h.version records them).
 # - cimg-omp-rand.sh: the random numbers of rand(), noise() and the math parser in OpenMP loops
 #   do not depend on thread scheduling (NatronGitHub/openfx-gmic#44, local fix)
 # - cimg-vvar2.sh: vvar() with two arguments called a NULL function pointer (crash)
@@ -74,6 +75,7 @@ CIMG_PATCHES_FROM=d3c0c802628c47378c72c519088746a4421457d4
 CIMG_PATCHES=patches/cimg-omp-rand.sh patches/cimg-vvar2.sh patches/cimg-vargkth2.sh patches/cimg-log1p-peephole.sh patches/cimg-abs-peephole.sh patches/cimg-fusion-guards.sh patches/cimg-vector-assign.sh patches/cimg-same-reuse.sh patches/cimg-hypot-layout.sh patches/cimg-fftw-no-cleanup-at-unload.sh patches/cimg-msvc-snprintf.sh
 
 # pocketfft (FFT=pocketfft), C++ header-only version, at a pinned commit of its 'cpp' branch: the
-# same commit and checksum as openfx-gmic's Makefile
+# same commit and checksum as openfx-gmic's gmic_sources.txt (or its Makefile, before
+# openfx-gmic #263)
 POCKETFFTCOMMIT=4d865cba24359b05b37da4e75aee24498c3b78e7
 POCKETFFT_SHA256=518a95c552aeaee352aa30122137cd9e135d23c91e2863d9272aaa758744c86d
