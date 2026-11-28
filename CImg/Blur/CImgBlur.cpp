@@ -625,7 +625,7 @@ enum EdgeDetectFilterEnum
 
 #define kParamEdgeDetectNormalize "normalize"
 #define kParamEdgeDetectNormalizeLabel "Normalize"
-#define kParamEdgeDetectNormalizeHint "Divide the Sobel and Prewitt kernels by the sum of their weights (8 and 6), so that a ramp of slope 1 gives 1, as with the other filters. Off by default. Only for the Sobel and Prewitt filters."
+#define kParamEdgeDetectNormalizeHint "Divide the Sobel and Prewitt kernels by the sum of the absolute values of their weights (8 and 6), so that a ramp of slope 1 gives 1, as with the other filters. Off by default. Only for the Sobel and Prewitt filters."
 
 #define kParamEdgeDetectMultiChannel "multiChannel"
 #define kParamEdgeDetectMultiChannelLabel "Multi-Channel"
