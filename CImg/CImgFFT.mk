@@ -12,7 +12,8 @@ FFT_HEADERS =
 FFT_RESOURCES =
 ifeq ($(FFT),fftw3)
 # FFTW (GPL, opt-in), multithreaded (CImg only uses its double precision library, libfftw3, and
-# plans under its own lock): as openfx-gmic's GMIC_OFX/Makefile, with fftw3_threads first (it uses
+# plans under its own lock): as openfx-gmic's build (its GMIC_OFX/Makefile, before openfx-gmic
+# #263, and its CMakeLists.txt), with fftw3_threads first (it uses
 # fftw3: the order matters for static links, e.g. MinGW -static)
 FFT_CXXFLAGS = `pkg-config --cflags fftw3` -Dcimg_use_fftw3
 FFT_LINKFLAGS = -lfftw3_threads `pkg-config --libs fftw3`
