@@ -37,10 +37,16 @@ raw=https://raw.githubusercontent.com/$repo/$sha
 from=$(sed -n 's/^CIMG_PATCHES_FROM *= *//p' CImg/CImgVersion.mk)
 echo "openfx-gmic $ref is $sha; CImg/patches come from openfx-gmic $from"
 # the file that sets the variables: gmic_sources.txt, or the Makefile before openfx-gmic #263
+# (only on a 404: any other failure stops with its error). Without -f, curl still retries
+# 408/429/5xx, and -sS still prints network errors.
 src=gmic_sources.txt
-if ! curl_ -o "$work/$src" "$raw/$src" 2>/dev/null; then
+code=$(curl -sSL --retry 3 -o "$work/$src" -w '%{http_code}' "$raw/$src") || code="curl error $?"
+if [ "$code" = 404 ]; then
     src=Makefile
     curl_ -o "$work/$src" "$raw/$src"
+elif [ "$code" != 200 ]; then
+    echo "ERROR: could not download openfx-gmic's $src at $sha ($code)"
+    exit 1
 fi
 srcfile=$work/$src
 echo "reading the variables from openfx-gmic's $src"
@@ -85,8 +91,7 @@ for v in CIMG_PATCHES POCKETFFTCOMMIT POCKETFFT_SHA256; do
         status=1
     elif [ "$mine" != "$theirs" ]; then
         echo "DRIFT: $v differs from openfx-gmic's $src at $sha:"
-        echo "  openfx-misc CImg/CImgVersion.mk: $v=$mine"
-        echo "  openfx-gmic $src: $v=$theirs"
+        printf '  %-33s %s\n' "openfx-misc CImg/CImgVersion.mk:" "$v=$mine" "openfx-gmic $src:" "$v=$theirs"
         status=1
     else
         echo "ok: $v"
