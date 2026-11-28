@@ -51,6 +51,8 @@
 #   does not have the expected maximum value (max=r,g,b,a, as mean=), e.g. the peak
 #   of a blurred impulse, which gives the blur size, has values outside [lo, hi]
 #   (range=lo,hi), or
+#   declares another kOfxImageEffectPropSupportsMultipleClipPARs than expected in its
+#   context (multipar=true or false: hostDemo --describe, with the -m of the render), or
 #   is the same image as an input (changed:Clip: the CRC32 of the output
 #   must differ from the one of the input Clip, copied at the same depth by
 #   Invert with no channel to process; NoOp would be simpler, but its debug
@@ -442,6 +444,10 @@ if out0:
                 if not keys or keys[0][0] != first or keys[-1][0] != last:
                     errors.append("%s: keys at %s, expected %s..%s" % (pname, [k[0] for k in keys], first, last))
                 desc += " %s:keys%s" % (pname, "%g..%g" % (keys[0][0], keys[-1][0]) if keys else "=none")
+        elif expect.startswith("multipar="):
+            # kOfxImageEffectPropSupportsMultipleClipPARs of the plug-in in its context (--describe)
+            if refs.get("multipar") != expect[9:]:
+                errors.append("supportsMultipleClipPARs %s, expected %s" % (refs.get("multipar"), expect[9:]))
         elif expect.startswith("changed:"):
             clip = expect[8:]
             if not refs.get(clip):
@@ -691,6 +697,13 @@ tests=(
     "AdjustRoD out of Source|net.sf.openfx.AdjustRoDPlugin|filter|*|mean=0,0,0,0||-i Source=checker:16 addPixels=100,100 boundary=0 --frames 0 --window 100,590,300,670"
     "AdjustRoD Nearest out|net.sf.openfx.AdjustRoDPlugin|filter|*|nonconst+mean=0.52,0.52,0.52,0.52||-i Source=checker:16 addPixels=100,100 boundary=1 --frames 0 --window 100,590,300,670"
     "AdjustRoD Nearest corner|net.sf.openfx.AdjustRoDPlugin|filter|*|mean=1,1,1,1||-i Source=checker:16 addPixels=100,100 boundary=1 --frames 0 --window 730,590,810,670"
+    # Crop with the Format extent (640x480, PAR 1) and Reformat on a host without multiple clip PARs
+    # (#435): Crop doesn't set the output PAR, and the format keeps its canonical size, 600x480 pixels
+    # of the PAR of Source (768/720)
+    "Crop format, single clip PAR|net.sf.openfx.CropPlugin|filter|*|multipar=false+bounds=0,0,600,480+mean=1,1,1,1||-i Source=solid:1,1,1,1 extent=0 reformat=1 blackOutside=0 --frames 0"
+    # a Format with PAR 2: 1280 canonical, 1200 pixels. The softness at x = 0 was computed with PAR 2:
+    # 0.163 (a pixel is the PAR wide in canonical x; 0.114 with 768/720)
+    "Crop format PAR 2 softness, single clip PAR|net.sf.openfx.CropPlugin|filter|float|mean=0.1143,0.1143,0.1143,0.1143||-i Source=solid:1,1,1,1 extent=0 NatronParamFormatPar=2 reformat=1 softness=4 --frames 0 --window 0,100,1,101"
     "Crop out of Source|net.sf.openfx.CropPlugin|filter|*|mean=0,0,0,0||-i Source=ramp bottomLeft=-100,-100 size=920,776 --frames 0 --window -90,-90,-10,-10"
     # AdjustRoD with negative amounts shrinks the RoD (#299): -100 canonical is 93.75 pixels in x, truncated to
     # 93 in version 2 (version 1: the RoD starts at 93.75, pixel 93 enclosing), and the window 0-100 of the ramp ((x + 0.5) / 720) renders the pixels 93
@@ -1127,8 +1140,8 @@ tests=(
     # a constant image stays constant (the weights sum to 1), also through CornerPin, Card3D and Reformat
     "Transform Lanczos6 rotate solid|net.sf.openfx.TransformPlugin|filter|*|mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 rotate=30 filter=Lanczos6 --frames 0 --window 200,200,400,300"
     "CornerPin Sinc4 solid|net.sf.openfx.CornerPinPlugin|filter|float|mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 filter=Sinc4 to2=700,30 --frames 0 --window 200,200,400,300"
-    "Card3D Lanczos4 solid|net.sf.openfx.Card3D|filter|float|mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 filter=Lanczos4 cardRotate=0,0,10 --frames 0 --window 300,250,400,300"
-    "Reformat Lanczos6 scale 0.5 solid|net.sf.openfx.Reformat|filter|float|mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 reformatType=Scale reformatScale=0.5,0.5 filter=Lanczos6 --frames 0 --window 100,100,200,200"
+    "Card3D Lanczos4 solid|net.sf.openfx.Card3D|filter|float|multipar=true+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 filter=Lanczos4 cardRotate=0,0,10 --frames 0 --window 300,250,400,300"
+    "Reformat Lanczos6 scale 0.5 solid|net.sf.openfx.Reformat|filter|float|multipar=true+mean=0.25,0.5,0.75,1||-i Source=solid:0.25,0.5,0.75,1 reformatType=Scale reformatScale=0.5,0.5 filter=Lanczos6 --frames 0 --window 100,100,200,200"
     # Prefilter Downscaling (#270): a 1-pixel checker scaled by 0.4 aliases with the default
     # supersampling (0.474 to 0.526); with the kernel widened by 2.5, it is uniform grey (0.4996 to 0.5004)
     "Transform prefilter scale 0.4 checker|net.sf.openfx.TransformPlugin|filter|float|range=0.499,0.501||-i Source=checker:1 scale=0.4,0.4 prefilter=1 --frames 0 --window 300,250,340,290"
@@ -1373,7 +1386,7 @@ tests=(
     "Rectangle opaque mix 0|net.sf.openfx.Rectangle|general|*|notidentity||-i Source=file:convsrc.pfm#opaque -i Mask=none mix=0"
     "Radial opaque mix 0|net.sf.openfx.Radial|general|*|notidentity||-i Source=file:convsrc.pfm#opaque -i Mask=none mix=0"
     # the default: the B input (identity)
-    "Shuffle default|net.sf.openfx.ShufflePlugin|general|*|mean=0.5,0.6,0.7,0.8||-i A=solid:0.1,0.2,0.3,0.4 -i B=solid:0.5,0.6,0.7,0.8"
+    "Shuffle default|net.sf.openfx.ShufflePlugin|general|*|multipar=false+mean=0.5,0.6,0.7,0.8||-i A=solid:0.1,0.2,0.3,0.4 -i B=solid:0.5,0.6,0.7,0.8"
     "Shuffle A and B|net.sf.openfx.ShufflePlugin|general|*|mean=0.3,0.6,0.1,0.8||-i A=solid:0.1,0.2,0.3,0.4 -i B=solid:0.5,0.6,0.7,0.8 outputR=2 outputG=7 outputB=0 outputA=9"
     # LayerRename: hostDemo has no multiplane suite, so it is an identity
     # (the planes themselves can only be tested in Natron)
@@ -1431,6 +1444,18 @@ tests=(
     # without multi-resolution (--ofx11), ofxsMaskRoDExcludesRenderWindow() skips its test (SupportExt
     # #232): the same output, but not an identity
     "KeyMix out of mask, OFX 1.1 host|net.sf.openfx.KeyMix|filter|float|notidentity+mean=0.25,0.5,0.75,1||-i A=solid:1,1,1,1 -i Source=solid:0.25,0.5,0.75,1 -i Mask=file:autocrop.pfm --frames 0 --window 100,100,200,200 --ofx11"
+    # SpriteSheet (#434): the output is the sprite (64x64 pixels, RoD 0,0-64,64), black outside it, where a
+    # host without multi-resolution (--ofx11) renders the project too (it showed the neighbouring sprites)
+    "SpriteSheet sprite|net.sf.openfx.SpriteSheet|filter|*|bounds=0,0,64,64+mean=1,1,1,1||-i Source=solid:1,1,1,1 --frames 0"
+    "SpriteSheet sprite, OFX 1.1 host|net.sf.openfx.SpriteSheet|filter|byte float|mean=1,1,1,1||-i Source=solid:1,1,1,1 --frames 0 --window 10,10,20,20 --ofx11"
+    # sprite 12 (11 columns of 64 pixels in 720) is in the second row and column, at 64,448 in the source:
+    # above it (x inside, y outside), the source has the sprite of the row above
+    "SpriteSheet above the sprite, OFX 1.1 host|net.sf.openfx.SpriteSheet|filter|byte float|mean=0,0,0,0||-i Source=solid:1,1,1,1 spriteRange=12,12 --frames 0 --window 10,100,20,110 --ofx11"
+    "SpriteSheet right of the sprite, OFX 1.1 host|net.sf.openfx.SpriteSheet|filter|byte float|mean=0,0,0,0||-i Source=solid:1,1,1,1 --frames 0 --window 100,10,110,20 --ofx11"
+    # the window 60-70 straddles the right edge (x = 64): 4 columns of 10 inside
+    "SpriteSheet sprite edge, OFX 1.1 host|net.sf.openfx.SpriteSheet|filter|byte float|mean=0.4,0.4,0.4,0.4||-i Source=solid:1,1,1,1 --frames 0 --window 60,10,70,20 --ofx11"
+    # at render scale 0.5, a sprite of 63 pixels covers 32 pixels (the RoD, enclosing): the last one is inside
+    "SpriteSheet odd sprite at scale 0.5|net.sf.openfx.SpriteSheet|filter|*|bounds=0,0,32,32+mean=1,1,1,1||-i Source=solid:1,1,1,1 spriteSize=63,63 --scale 0.5 --frames 0"
     # KeyMix Bounding Box (issue #278), with autocrop.pfm (64x48, 1/6 white: 512 pixels, opaque) as inputs
     # and a mask: only the chosen bounding box is rendered. Union: B at (0,0) and A at (100,50) give
     # the box (0,0)-(164,98), 0.5 * 512 + 0.5 * 512 white in 164 * 98 pixels: 0.0319 (B or A alone
@@ -1558,6 +1583,19 @@ tests=(
     "IDistort v2 UV alpha|net.sf.openfx.IDistort|general|float|mean=0.25,0.25,0.25,0.5||-m 2 -i Source=solid:0.5,0.5,0.5,1 -i UV=solid:0,0,0,0.5 -i Mask=none"
     "STMap UV alpha|net.sf.openfx.STMap|general|float|mean=0.5,0.5,0.5,1||-i Source=solid:0.5,0.5,0.5,1 -i UV=solid:0.5,0.5,0,0.5 -i Mask=none"
     "STMap v2 UV alpha|net.sf.openfx.STMap|general|float|mean=0.25,0.25,0.25,0.5||-m 2 -i Source=solid:0.5,0.5,0.5,1 -i UV=solid:0.5,0.5,0,0.5 -i Mask=none"
+    # Multiple clip PARs (#435): STMap sets the output PAR to that of UV (only on hosts that support
+    # multiple clip PARs, not hostDemo), and reads Source in its own pixels; IDistort and LensDistortion
+    # need a single PAR, so they don't set it
+    "STMap multiple clip PARs|net.sf.openfx.STMap|general|float|multipar=true+mean=0.5,0.5,0.5,1||-i Source=solid:0.5,0.5,0.5,1 -i UV=solid:0.5,0.5,0,1 -i Mask=none --frames 0"
+    "Switch multiple clip PARs|net.sf.openfx.switchPlugin|general|*|multipar=true+mean=0.5,0.5,0.5,1||-i 0=solid:0.5,0.5,0.5,1 -i 1=solid:1,1,1,1 --frames 0"
+    "IDistort single clip PAR|net.sf.openfx.IDistort|general|float|multipar=false+mean=0.5,0.5,0.5,1||-i Source=solid:0.5,0.5,0.5,1 -i UV=solid:0,0,0,1 -i Mask=none --frames 0"
+    # LensDistortion with the Format extent (640x480, PAR 1) on a host without multiple clip PARs (#435):
+    # the output keeps the PAR of Source (768/720), and the format its canonical size, 600x480 pixels.
+    # The STMap output of the identity model at x = 300 is U = 300.5 / 600 (300.5 / 640 = 0.4695 when the
+    # model used the 640 pixels of the format)
+    # with a Format PAR of 2: 1280 canonical, 1200 pixels, U = 300.5 / 1200 (it was 300.5 / 640)
+    "LensDistortion format PAR 2, single clip PAR|net.sf.openfx.LensDistortion|general|float|tol=1e-4+mean=0.25042,0.41771,1,1||-i Source=checker:16 extent=0 NatronParamFormatPar=2 outputMode=STMap --frames 0 --window 300,200,301,201"
+    "LensDistortion format, single clip PAR|net.sf.openfx.LensDistortion|general|float|multipar=false+tol=1e-4+mean=0.50083,0.41771,1,1||-i Source=checker:16 extent=0 outputMode=STMap --frames 0 --window 300,200,301,201"
     # Blur Channel B = 4 (square) pixels, across the edge of a 64-pixel checker at x=64: the pixels x=64
     # and 65 are white without blur (Blur Scale 0). The blur along x is 4 / PAR = 3.75 pixels (hostDemo's
     # PAR is 768/720), so with the Box filter (filter=1) the sampled area is 4.75 pixels wide: 2.875/4.75
@@ -1920,6 +1958,32 @@ for t in "${tests[@]}"; do
         bugmsg=${bug##*~}
         bug=${bug%~*}
     fi
+    # multipar=: the plug-in's flags in the context of the render, with its -m (once per test)
+    multipar=
+    case "+$expect+" in
+        *+multipar=*)
+            major=()
+            # shellcheck disable=SC2086
+            set -- $args
+            while [ $# -gt 0 ]; do
+                [ "$1" != -m ] || major=(-m "$2")
+                shift
+            done
+            rm -f desc.json
+            # the contexts are named as in ofxImageEffect.h, e.g. OfxImageEffectContextFilter
+            if hostdemo desc.log -p "$id" "${major[@]}" --describe desc.json &&
+                   multipar=$(python3 -I -c 'import json, sys
+c = "OfxImageEffectContext" + sys.argv[2].capitalize()
+print(str(json.load(open(sys.argv[1]))["contexts"][c]["flags"]["supportsMultipleClipPARs"]).lower())' desc.json "$ctx" 2>> desc.log |
+                                  tr -d '\r'); then
+                :
+            else
+                multipar=
+                printf 'FAIL  %-26s the describe action failed\n' "$label"
+                sed 's/^/  | /' desc.log
+            fi
+            ;;
+    esac
     for depth in $depths; do
         n=$((n + 1))
         name="$label ($depth)"
@@ -1947,6 +2011,7 @@ for t in "${tests[@]}"; do
             continue
         fi
         refs=("frames=$frames" "views=$views" "gpu=$gpu") refok=1
+        [ -z "$multipar" ] || refs+=("multipar=$multipar")
         for e in ${expect//+/ }; do
             case "$e" in
                 changed:*)

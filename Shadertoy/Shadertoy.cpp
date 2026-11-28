@@ -1350,6 +1350,9 @@ ShadertoyPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         int w, h;
         _formatSize->getValueAtTime(time, w, h);
         double par = _formatPar->getValueAtTime(time);
+        if ( !(par > 0.) ) {
+            par = 1.; // as getClipPreferences()
+        }
         OfxRectI pixelFormat;
         pixelFormat.x1 = pixelFormat.y1 = 0;
         pixelFormat.x2 = w;
@@ -1460,15 +1463,34 @@ ShadertoyPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     clipPreferences.setOutputHasContinuousSamples(true);
     BBoxEnum bbox = (BBoxEnum)_bbox->getValue();
     if (bbox == eBBoxFormat) {
+        // Shadertoy does not support multiple clip PARs (its uniforms mix the pixels of the inputs), so it
+        // may not set the output PAR: "If the plugin sets this to 0, then the host will transparently map
+        // all of an effect's input and output clips to a single pixel aspect ratio" (ofxClipPreferences.rst).
+        // The Format keeps its canonical size (getRegionOfDefinition()), in pixels of the output PAR: that
+        // of the first connected input, else the project's
         int w, h;
         _formatSize->getValue(w, h);
-        double par = _formatPar->getValue();
+        double formatPar = _formatPar->getValue();
+        if ( !(formatPar > 0.) ) {
+            formatPar = 1.;
+        }
+        double outputPar = getProjectPixelAspectRatio();
+        for (unsigned i = 0; i < NBINPUTS; ++i) {
+            if ( _srcClips[i] && _srcClips[i]->isConnected() ) {
+                outputPar = _srcClips[i]->getPixelAspectRatio();
+                break;
+            }
+        }
+        if ( !(outputPar > 0.) ) {
+            outputPar = 1.;
+        }
+        const OfxRectI format = {0, 0, w, h};
+        const OfxPointD rsOne = {1., 1.};
+        OfxRectD rod;
+        Coords::toCanonical(format, rsOne, formatPar, &rod);
         OfxRectI pixelFormat;
-        pixelFormat.x1 = pixelFormat.y1 = 0;
-        pixelFormat.x2 = w;
-        pixelFormat.y2 = h;
+        Coords::toPixelNearest(rod, rsOne, outputPar, &pixelFormat);
         clipPreferences.setOutputFormat(pixelFormat);
-        clipPreferences.setPixelAspectRatio(*_dstClip, par);
     }
 }
 

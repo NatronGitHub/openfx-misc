@@ -221,7 +221,6 @@ constexpr int kPluginVersionLensDistortion5 = 5;
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
-#define kSupportsMultipleClipPARs false
 #define kSupportsMultipleClipDepths false
 #define kRenderThreadSafety eRenderFullySafe
 
@@ -232,6 +231,16 @@ enum DistortionPluginEnum
     eDistortionPluginIDistort,
     eDistortionPluginLensDistortion,
 };
+
+// kOfxImageEffectPropSupportsMultipleClipPARs. STMap sets the output PAR to that of UV (whose pixel grid
+// is the output's) and reads Source in its own pixels (U and V are normalized), so Source may have
+// another PAR. IDistort reads Source and UV at the output pixels, and LensDistortion maps the output
+// pixels to Source pixels: both need a single PAR.
+constexpr bool
+pluginSupportsMultipleClipPARs(DistortionPluginEnum plugin)
+{
+    return plugin == eDistortionPluginSTMap;
+}
 
 #ifdef OFX_EXTENSIONS_NATRON
 #define kParamProcessR kNatronOfxParamProcessR
@@ -1525,7 +1534,7 @@ addBlurToFootprint(const Jacobian &j,
 constexpr double kMaxBlurPixels = 1e5;
 
 // The largest blur of IDistort and STMap, in pixels at the render scale: the size of the source RoD (at least
-// 1, and finite for an infinite RoD). PAR: the output's, as the render's coordinates.
+// 1, and finite for an infinite RoD). PAR: the source's (the blur is applied in source pixels).
 static double
 sourceSizePixels(const OfxRectD &srcRod,
                  const OfxPointD &renderScale,
@@ -2755,15 +2764,21 @@ DistortionPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
             formatI.y1 = std::floor(format.y1 + 0.5);
             formatI.x2 = std::floor(format.x2 + 0.5);
             formatI.y2 = std::floor(format.y2 + 0.5);
+            // in pixels of the output PAR, which the host chooses (getLensDistortionFormat())
             clipPreferences.setOutputFormat(formatI);
-            clipPreferences.setPixelAspectRatio(*_dstClip, par);
         }
     } else if ( _plugin == eDistortionPluginSTMap && _uvClip && _uvClip->isConnected() ) {
         double par;
         OfxRectI uvFormat;
         getInputClipFormatI(_uvClip, 0., &par, &uvFormat);
         clipPreferences.setOutputFormat(uvFormat);
-        clipPreferences.setPixelAspectRatio(*_dstClip, par);
+        // the output has the pixels of UV. Only if the host supports multiple clip PARs: "If a host
+        // indicates that it can support multiple pixel aspect ratios, then it will allow the plugin to
+        // explicitly set the output clip's aspect ratio" (ofxImageEffect.h); otherwise all the clips
+        // have the same PAR
+        if (getImageEffectHostDescription()->supportsMultipleClipPARs) {
+            clipPreferences.setPixelAspectRatio(*_dstClip, par);
+        }
     }
 }
 
@@ -3211,18 +3226,30 @@ DistortionPlugin::getLensDistortionFormat(double time,
 
     GeneratorExtentEnum extent = (GeneratorExtentEnum)_extent->getValue();
 
+    // LensDistortion does not support multiple clip PARs, so it can't set the output PAR: "the host will
+    // transparently map all of an effect's input and output clips to a single pixel aspect ratio" ("the
+    // smallest on all the inputs", ofxClipPreferences.rst; Natron: the first connected input's). Source
+    // has that PAR, as the output; without Source, the output has the project's. A format or the project
+    // keeps its size in canonical coordinates, in pixels of that PAR.
+    double outputPar = ( _srcClip && _srcClip->isConnected() ) ? _srcClip->getPixelAspectRatio() : getProjectPixelAspectRatio();
+    if ( !(outputPar > 0.) ) {
+        outputPar = 1.;
+    }
+
     switch (extent) {
         case eGeneratorExtentFormat: {
             int w, h;
             _formatSize->getValue(w, h);
-            *par = _formatPar->getValue();
-            if (*par <= 0.) {
+            double formatPar = _formatPar->getValue();
+            if ( !(formatPar > 0.) ) {
                 // the range of the hidden format PAR is [0,DBL_MAX]: 0 would be a division by zero
-                // (toPixelEnclosing, canonical coordinates): use the default PAR, as the generators do
-                *par = 1.;
+                // (toPixelEnclosing, canonical coordinates), and NaN undefined behaviour (the conversions
+                // to int): use the default PAR, as the generators do
+                formatPar = 1.;
             }
+            *par = outputPar;
             format->x1 = format->y1 = 0;
-            format->x2 = w * renderScale.x;
+            format->x2 = w * formatPar / *par * renderScale.x;
             format->y2 = h * renderScale.y;
 
             return true;
@@ -3234,7 +3261,7 @@ DistortionPlugin::getLensDistortionFormat(double time,
             _btmLeft->getValue(rod.x1, rod.y1);
             rod.x2 += rod.x1;
             rod.y2 += rod.y1;
-            *par = _srcClip ? _srcClip->getPixelAspectRatio() : 1.;
+            *par = outputPar;
             // Coords::toPixelNearest(rod, renderScale, *par, format);
             format->x1 = rod.x1 * renderScale.x / *par;
             format->y1 = rod.y1 * renderScale.y;
@@ -3252,7 +3279,7 @@ DistortionPlugin::getLensDistortionFormat(double time,
             rod.x2 = off.x + siz.x;
             rod.y1 = off.y;
             rod.y2 = off.y + siz.y;
-            *par = getProjectPixelAspectRatio();
+            *par = outputPar;
             // Coords::toPixelNearest(rod, renderScale, *par, format);
             format->x1 = rod.x1 * renderScale.x / *par;
             format->y1 = rod.y1 * renderScale.y;
@@ -3558,8 +3585,12 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
     const UVBehaviourEnum uvBehaviour = (_majorVersion >= kPluginVersionUVSquarePixels) ? eUVBehaviourV3 : eUVBehaviourV2;
     double blurScaleX = 0., blurScaleY = 0.;
     double maxBlur = 1.;
-    const double dstPar = _dstClip->getPixelAspectRatio();
-    const double par = (dstPar > 0.) ? dstPar : 1.;
+    // the blur and the IDistort displacement are in Source pixels (STMap: Source may have another PAR
+    // than UV and the output)
+    double srcPar = (_srcClip && _srcClip->isConnected()) ? _srcClip->getPixelAspectRatio() : _dstClip->getPixelAspectRatio();
+    if ( !(srcPar > 0.) ) {
+        srcPar = 1.;
+    }
     double uScale = 1., vScale = 1.;
     double uOffset = 0., vOffset = 0.;
     WrapEnum uWrap = eWrapClamp;
@@ -3571,7 +3602,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
         // render scale along both axes)
         const double blurScale = _blurScale->getValueAtTime(time);
         if (uvBehaviour == eUVBehaviourV3) {
-            blurScaleX = blurScale * args.renderScale.x / par;
+            blurScaleX = blurScale * args.renderScale.x / srcPar;
             blurScaleY = blurScale * args.renderScale.y;
         } else {
             blurScaleX = blurScaleY = blurScale * args.renderScale.x;
@@ -3586,7 +3617,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
     // the largest blur (IDistort, STMap; LensDistortion 5: the widest kernel is 2 * maxBlur + 1 pixels): the
     // size of the source RoD, in pixels at the render scale (at least 1, and finite for an infinite RoD)
     if ( _srcClip && _srcClip->isConnected() ) {
-        maxBlur = sourceSizePixels(_srcClip->getRegionOfDefinition(time), args.renderScale, par);
+        maxBlur = sourceSizePixels(_srcClip->getRegionOfDefinition(time), args.renderScale, srcPar);
     }
     bool blackOutside = _blackOutside->getValueAtTime(time);
     double mix = _mix->getValueAtTime(time);
@@ -3623,7 +3654,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor,
         if (uvBehaviour == eUVBehaviourV3) {
             // U is in square pixels (as tall as a pixel): divide by the pixel aspect ratio to get pixels
             // along x (version 2 takes U in pixels along x)
-            uScale /= par;
+            uScale /= srcPar;
         }
     }
     OfxRectD format = {0, 0, 1, 1};
@@ -3797,7 +3828,7 @@ DistortionPlugin::render(const RenderArguments &args)
     BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-    assert( kSupportsMultipleClipPARs   || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( pluginSupportsMultipleClipPARs(_plugin) || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
     assert( kSupportsMultipleClipDepths || !_srcClip || !_srcClip->isConnected() || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     assert(OFX_COMPONENTS_OK(dstComponents));
     if (dstComponents == ePixelComponentRGBA) {
@@ -4087,10 +4118,10 @@ DistortionPlugin::getRegionsOfInterest(const RegionsOfInterestArguments &args,
                                  (filter != eFilterImpulse);
         double maxWidth = 1.;
         if (stretchable) {
-            // as in setupAndProcess (the output's PAR)
-            const double dstPar = _dstClip->getPixelAspectRatio();
+            // as in setupAndProcess (the source's PAR)
+            const double srcPar = _srcClip->getPixelAspectRatio();
             maxWidth = separableMaxWidth( sourceSizePixels(_srcClip->getRegionOfDefinition(time), args.renderScale,
-                                                           (dstPar > 0.) ? dstPar : 1.) );
+                                                           (srcPar > 0.) ? srcPar : 1.) );
         }
         double widest = 1.; // the widest kernel (in source pixels) at the points below
         // undistort/distort take pixel coordinates, do not divide by renderScale
@@ -4873,7 +4904,7 @@ DistortionPluginFactory<plugin, majorVersion>::describe(ImageEffectDescriptor &d
     desc.setSupportsTiles(kSupportsTiles);
     desc.setTemporalClipAccess(false);
     desc.setRenderTwiceAlways(false);
-    desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
+    desc.setSupportsMultipleClipPARs( pluginSupportsMultipleClipPARs(plugin) );
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
     desc.setSupportsRenderQuality(true);

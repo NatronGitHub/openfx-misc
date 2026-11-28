@@ -1828,7 +1828,11 @@ Card3DPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     bool setFormat = getOutputFormat(0, renderScale, &format, &par);
     if (setFormat) {
         clipPreferences.setOutputFormat(format);
-        clipPreferences.setPixelAspectRatio(*_dstClip, par);
+        // only on hosts with multiple clip PARs ("it will allow the plugin to explicitly set the output
+        // clip's aspect ratio", ofxImageEffect.h); the RoD is in canonical coordinates either way
+        if (getImageEffectHostDescription()->supportsMultipleClipPARs) {
+            clipPreferences.setPixelAspectRatio(*_dstClip, par);
+        }
     }
 }
 
