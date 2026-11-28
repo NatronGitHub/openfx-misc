@@ -19,14 +19,13 @@
 # The sources of the CImg plug-ins (included by CMakeLists.txt, with BUILD_CIMG_PLUGINS, after the
 # FFT selection, CIMG_FFT): CImg/CImg.h, downloaded at CIMGVERSION and patched as openfx-gmic's,
 # CImg/Inpaint/inpaint.h, and, with FFT=pocketfft, CImg/pocketfft_hdronly.h and its licence
-# (CIMG_POCKETFFT_LICENCE), as CImg/Makefile does (CImg/CImgVersion.mk). Sets CIMG_DIR,
+# (CIMG_POCKETFFT_LICENCE), at the versions of CImg/CImgVersion.mk. Sets CIMG_DIR,
 # CIMGVERSION and CIMG_PATCHES_FROM.
 
 # CImg.h and Inpaint/inpaint.h are not distributed with the sources.
-# Download them at the version used by CImg/Makefile (see CImg/CImgVersion.mk)
-# if they are missing, as "cd CImg && make sources" would do.
+# Download them at the version given in CImg/CImgVersion.mk if they are missing.
 set(CIMG_DIR "${CMAKE_CURRENT_SOURCE_DIR}/CImg")
-# reconfigure (and download again) when CImgVersion.mk changes, as CImg/Makefile does
+# reconfigure (and download again) when CImgVersion.mk changes
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CIMG_DIR}/CImgVersion.mk")
 # cimg_mk_var(NAME VAR): the value of the one-line assignment "NAME=value" of CImgVersion.mk
 function(cimg_mk_var name var)
@@ -55,14 +54,14 @@ function(cimg_download url dest)
     file(REMOVE "${dest}.tmp")
     list(GET _status 1 _msg)
     message(FATAL_ERROR "Failed to download ${url}: ${_msg}\n"
-      "Download it manually to ${dest} (e.g. \"cd CImg && make sources\"), "
-      "or configure with -DBUILD_CIMG_PLUGINS=OFF.")
+      "Check the network connection and configure again, or configure with "
+      "-DBUILD_CIMG_PLUGINS=OFF.")
   endif()
   file(RENAME "${dest}.tmp" "${dest}")
 endfunction()
 
 # CImg.h is patched with the scripts of openfx-gmic (CImg/patches, see CImgVersion.mk): CIMG_PATCHES,
-# in this order, as CImg/Makefile does, whatever the FFT (CImg.h is the same for every FFT). Each
+# in this order, whatever the FFT (CImg.h is the same for every FFT). Each
 # runs as "sh <script> <dir>/CImg.h", and fails if CImg.h does not have the expected code. They need
 # a POSIX sh, awk, head, tr and wc (Linux, macOS, MSYS2; with MSVC, e.g. Git for Windows' sh.exe in the PATH,
 # or -DCIMG_PATCH_SH=<path>).
@@ -76,7 +75,7 @@ endforeach()
 
 # Download the headers again when CIMGVERSION, CIMG_PATCHES_FROM or the applied patches change, or
 # when a patch script is newer than CImg.h: they are recorded in CImg/CImg.h.version (not tracked
-# by git), which CImg/Makefile writes in the same format, so that both builds share CImg.h.
+# by git), so that the build directories of one source tree share CImg.h.
 string(REPLACE ";" " " _cimg_stamp "${CIMGVERSION} ${CIMG_PATCHES_FROM} ${_cimg_applied_patches}")
 set(CIMG_VERSION_STAMP "${CIMG_DIR}/CImg.h.version")
 set(_cimg_downloaded "")
@@ -109,9 +108,8 @@ if(NOT EXISTS "${CIMG_DIR}/Inpaint/inpaint.h")
     message(FATAL_ERROR "Failed to apply CImg/Inpaint/inpaint.h.patch")
   endif()
 endif()
-# The stamp is written before CImg.h, which must be newer than it for CImg/Makefile (CImg.h depends
-# on CImg.h.version there): otherwise a later make would download and patch CImg.h again. If the
-# download or a patch fails, there is no CImg.h, and the next configure tries again.
+# The stamp is written before CImg.h. If the download or a patch fails, there is no CImg.h, and the
+# next configure tries again.
 if(NOT _cimg_downloaded STREQUAL _cimg_stamp)
   file(WRITE "${CIMG_VERSION_STAMP}" "${_cimg_stamp}\n")
 endif()
@@ -145,15 +143,15 @@ if(NOT EXISTS "${CIMG_DIR}/CImg.h")
   file(COPY "${_cimg_tmp}/CImg.h" DESTINATION "${CIMG_DIR}")
   file(REMOVE_RECURSE "${_cimg_tmp}")
   # file(COPY) keeps the time of the temporary file: make CImg.h newer than CImg.h.version and
-  # Inpaint/inpaint.h, its prerequisites in CImg/Makefile
+  # Inpaint/inpaint.h
   file(TOUCH "${CIMG_DIR}/CImg.h")
 endif()
-# reconfigure if another build (e.g. make, or a build directory with another FFT) changes CImg.h
+# reconfigure if another build directory (e.g. with another FFT) changes CImg.h
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CIMG_VERSION_STAMP}")
 
 # pocketfft (FFT=pocketfft): CImg/pocketfft_hdronly.h (next to CImg.h, which includes it when
 # cimg_use_pocketfft is defined and cimg_use_fftw3 is not), at POCKETFFTCOMMIT and checked against
-# POCKETFFT_SHA256 (CImgVersion.mk), as CImg/Makefile does, and
+# POCKETFFT_SHA256 (CImgVersion.mk), and
 # its licence (BSD-3-Clause, which asks for its notice in binary distributions), from the header's
 # first comment, for the bundle's Resources.
 if(CIMG_FFT STREQUAL "pocketfft")

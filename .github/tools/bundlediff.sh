@@ -1,6 +1,6 @@
 #!/bin/bash
-# Compare two sets of OpenFX bundles, e.g. the make bundles and the CMake install
-# tree of the same configuration:
+# Compare two sets of OpenFX bundles, e.g. the CMake install trees of two commits, or of two
+# configurations, to check that a build change keeps the installed bundles:
 #   .github/tools/bundlediff.sh <DIR_A> <DIR_B>
 # Each DIR is searched for *.ofx.bundle directories (a bundle found twice in one DIR
 # is an error). For each bundle, compare:
@@ -12,12 +12,12 @@
 #   with ofxload.cpp), which must be at least one, without an ofxload error (except
 #   DebugProxy, which registers the plug-ins of $OFX_DEBUGPROXY_BINARY);
 # - the libraries each binary links: a difference is an error, except for OpenGL and
-#   pthread (the Makefiles link OpenGL to every bundle, CMake only where it is used;
-#   SupportExt's Threads::Threads links libpthread with glibc < 2.34), which is printed.
+#   pthread (e.g. SupportExt's Threads::Threads links libpthread with glibc < 2.34), which is
+#   printed.
 # The binaries in Contents/Libraries (osxDeploy.sh) are compared by name only.
 # Contents/_CodeSignature on one side only is an expected difference, reported but not
 # an error: openfx's CMake signs the installed macOS bundles (with or without
-# OFX_DEPLOY_BUNDLES), make does not.
+# OFX_DEPLOY_BUNDLES), other builds may not.
 # Run from the top of the source tree (ofxload is built from .github/tools/ofxload.cpp).
 # Exit status: 0 if the bundles match, 1 otherwise.
 set -eo pipefail

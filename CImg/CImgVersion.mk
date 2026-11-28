@@ -1,7 +1,8 @@
 # For CImg.h versions,
 # see https://github.com/dtschump/CImg/commits/master/CImg.h
-# This file is included by CImg/Makefile and parsed by the toplevel
-# CMakeLists.txt, so the version is declared in a single place.
+# This file is read by cmake/OFXMiscCImg.cmake and .github/tools/check-cimg-patches.sh, which
+# compares its "NAME=value" lines with those of openfx-gmic's gmic_sources.txt (its Makefile before openfx-gmic#263).
+# There is no make build any more; the .mk name is kept.
 #
 # commit a841cc3080ee7bc00c5781e94b7f06c2920453ac is CImg 2.2.3+
 # commit 4d54d452896fdf9347af68d3854f98f4986eea4c is CImg 2.3.1
@@ -26,8 +27,8 @@
 # commit 1a9fef439d17b73d9af8d8e59b65df9c989fde7a is CImg 4.0.8 (tag v.4.0.8; its CImg.h is the
 #   one of gmic_4.0.8.tar.gz, git blob 5230131435f958221f15d703e0dbfc9871e07965)
 CIMGVERSION=1a9fef439d17b73d9af8d8e59b65df9c989fde7a
-# sha256 of the CImg.h of CIMGVERSION, as downloaded (before the patches): CImg/Makefile and
-# CMakeLists.txt check it, and fail before patching on a mismatch. Update it with CIMGVERSION.
+# sha256 of the CImg.h of CIMGVERSION, as downloaded (before the patches): the CMake configure
+# checks it, and fail before patching on a mismatch. Update it with CIMGVERSION.
 CIMG_SHA256=adf13c3e991f6812c2db484ff07aa614421830117924590d3def10e8ac6a485b
 
 # CImg.h is patched with the same scripts as NatronGitHub/openfx-gmic, which uses the same CImg
@@ -35,7 +36,7 @@ CIMG_SHA256=adf13c3e991f6812c2db484ff07aa614421830117924590d3def10e8ac6a485b
 # CImg/patches/ are verbatim copies of openfx-gmic's patches/cimg-*.sh at the openfx-gmic commit
 # CIMG_PATCHES_FROM. openfx-gmic is the source of truth: fix or update the scripts there, then copy
 # them again and update CIMG_PATCHES_FROM (.github/tools/check-cimg-patches.sh, run weekly, reports
-# a drift). They are applied in the order of CIMG_PATCHES, as in openfx-gmic's Makefile, whatever
+# a drift). They are applied in the order of CIMG_PATCHES, as in openfx-gmic's gmic_sources.txt, whatever
 # the FFT: CImg.h is the same for every FFT. Changing CIMGVERSION, CIMG_PATCHES_FROM or the patches
 # downloads and patches CImg.h again (CImg.h.version records them).
 # - cimg-omp-rand.sh: the random numbers of rand(), noise() and the math parser in OpenMP loops
@@ -69,11 +70,11 @@ CIMG_SHA256=adf13c3e991f6812c2db484ff07aa614421830117924590d3def10e8ac6a485b
 # (GreycLab/CImg#498), the NaN eigenvectors of symmetric_eigen() (GreycLab/gmic#221), FFTW's
 # fftw_cleanup_threads() after each FFT (4.0.8 moved it to unload, which the script above removes),
 # and pocketfft itself (cimg_use_pocketfft, GreycLab/CImg#497).
-# CMakeLists.txt reads these variables: keep each on one line, as a plain "NAME=value" assignment.
+# cmake/OFXMiscCImg.cmake reads these variables: keep each on one line, as a plain "NAME=value" assignment.
 CIMG_PATCHES_FROM=d3c0c802628c47378c72c519088746a4421457d4
 CIMG_PATCHES=patches/cimg-omp-rand.sh patches/cimg-vvar2.sh patches/cimg-vargkth2.sh patches/cimg-log1p-peephole.sh patches/cimg-abs-peephole.sh patches/cimg-fusion-guards.sh patches/cimg-vector-assign.sh patches/cimg-same-reuse.sh patches/cimg-hypot-layout.sh patches/cimg-fftw-no-cleanup-at-unload.sh patches/cimg-msvc-snprintf.sh
 
 # pocketfft (FFT=pocketfft), C++ header-only version, at a pinned commit of its 'cpp' branch: the
-# same commit and checksum as openfx-gmic's Makefile
+# same commit and checksum as openfx-gmic's gmic_sources.txt (its Makefile before openfx-gmic#263)
 POCKETFFTCOMMIT=4d865cba24359b05b37da4e75aee24498c3b78e7
 POCKETFFT_SHA256=518a95c552aeaee352aa30122137cd9e135d23c91e2863d9272aaa758744c86d

@@ -689,7 +689,7 @@ Caveats/Bugs (see https://github.com/NatronGitHub/openfx-misc/issues/66):
 - VEGAS loads every *.ofx.bundle of its OFX plugin folders, whatever its name (a VEGAS Pro 23 crash
   report shows both Miscz.ofx.bundle and net.sf.openfx.NoOpPlugin.ofx.bundle loaded). Install only
   one copy of each plugin: either the combined bundles (Misc, CImg, Shadertoy) or the separate
-  bundles of the "nomulti" builds, never both. With two copies, the same plugin identifier is loaded
+  bundles (one per plugin, CMake's OFX_PLUGIN_BUNDLES=SEPARATE), never both. With two copies, the same plugin identifier is loaded
   twice.
 - strings with a percent sign: VEGAS Pro 23, 2026 and 2027 crash when NoOp's settings panel opens,
   and the only percent signs in NoOp's strings were in "%TEMP%" (a parameter hint, and the Host Info

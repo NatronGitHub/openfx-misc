@@ -5,16 +5,14 @@
 # Linux, macOS and Windows (MSYS2, e.g. UCRT64, with its python and a hostDemo from
 # -DOFX_BUILD_HOSTDEMO=ON, which needs its expat). The checks need python3.
 #
-# Usage (from the top of the source tree): .github/tools/rendertest.sh [DIR...]
+# Usage (from the top of the source tree): .github/tools/rendertest.sh DIR...
 # RENDERTEST_ONLY=ERE: only the renders whose label (the first field of the test
 # list below) matches the extended regular expression ERE, e.g. ^CImgConvolve.
 # RENDERTEST_TIMEOUT=N: kill a hostDemo run after N seconds (default 300; not on Windows).
 # RENDERTEST_GPU=require: fail if hostDemo can't render with OpenGL (by default, the renders with
 # --gpu=opengl in their arguments are skipped then, see below).
-# The plugins are the *.ofx.bundle found under the DIRs, which should be the
-# build directories of one configuration, e.g. Misc/Linux-64-release
-# CImg/Linux-64-release. Without DIRs, the *-$CONFIG directories of the source
-# tree are used (CONFIG=release by default). A bundle found twice is an error.
+# The plugins are the *.ofx.bundle found under the DIRs, e.g. a CMake install prefix
+# (cmake --install build --prefix DIR). A bundle found twice is an error.
 # hostDemo is $HOSTDEMO if set, else DIR/bin/hostDemo (installed by openfx-misc's
 # CMake with -DOFX_BUILD_HOSTDEMO=ON), else it is built with openfx's CMake out of
 # the openfx tree, in a temporary directory (or in $HOSTDEMO_BUILD_DIR, kept
@@ -86,14 +84,12 @@ trap 'rm -rf "$work"' EXIT
 # with OpenGL): these two are only added for the OpenGL renders (gl_path below). The prunes
 # match names, so that they also work with explicit DIRs.
 if [ $# -eq 0 ]; then
-    filter="*-${CONFIG:-release}"
-    set -- .
-else
-    filter="*"
+    echo "Usage: $0 DIR... (e.g. a CMake install prefix)"
+    exit 2
 fi
 bundles=$(cd "$top" && find "$@" \( -name openfx -o -name DebugProxy \
               -o -name Test.ofx.bundle -o -name Shadertoy.ofx.bundle \) -prune -o \
-              -name '*.ofx.bundle' -path "$filter/*.ofx.bundle" -print -prune | sort)
+              -name '*.ofx.bundle' -print -prune | sort)
 dups=$(echo "$bundles" | sed 's,.*/,,' | sort | uniq -d)
 if [ -n "$dups" ]; then
     echo "bundles found more than once (give the build directories of one configuration):"
@@ -107,7 +103,7 @@ while IFS= read -r d; do
     dirs+=("$d")
 done < <(echo "$bundles" | sed 's,/[^/]*$,,' | sort -u)
 if [ ${#dirs[@]} -eq 0 ]; then
-    echo "no *.ofx.bundle found in $* ($filter)"
+    echo "no *.ofx.bundle found in $*"
     exit 1
 fi
 OFX_PLUGIN_PATH=$(IFS=:; echo "${dirs[*]}")
@@ -119,7 +115,7 @@ while IFS= read -r d; do
     case "$d" in /*) ;; *) d=$top/${d#./} ;; esac
     case " ${gl_dirs[*]} " in *" $d "*) ;; *) gl_dirs+=("$d") ;; esac
 done < <(cd "$top" && find "$@" \( -name openfx -o -name DebugProxy \) -prune -o \
-             \( -name Test.ofx.bundle -o -name Shadertoy.ofx.bundle \) -path "$filter/*.ofx.bundle" -print -prune |
+             \( -name Test.ofx.bundle -o -name Shadertoy.ofx.bundle \) -print -prune |
              sed 's,/[^/]*$,,' | sort -u)
 gl_path=$(IFS=:; echo "${gl_dirs[*]}")
 # Windows: a native list (C:\...;D:\...), for the native hostDemo

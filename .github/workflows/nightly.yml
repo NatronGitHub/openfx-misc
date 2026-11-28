@@ -6,10 +6,8 @@ name: Weekly extra builds
 # without OpenMP (ci.yml uses it on Linux), and Windows MSVC, plus the macOS
 # release build of ci.yml, which there only runs after Linux and Windows pass
 # (this covers master when the push run's macOS job was skipped or cancelled).
-# CI builds with CMake (Natron#1181). The Makefiles are kept as the RB-2.6 fallback: one cheap
-# weekly Linux job (make CONFIG=release, the combined bundles, as Natron's fallback builds them)
-# checks that they still build; the slow one-bundle-per-plugin "make nomulti" jobs are gone: a
-# Linux CMake job builds the separate bundles (OFX_PLUGIN_BUNDLES=SEPARATE) instead.
+# CMake is the only build system (Natron#1181). A Linux job builds the separate bundles
+# (OFX_PLUGIN_BUNDLES=SEPARATE, one bundle per plug-in directory).
 # Every CMake job passes its C++ standard explicitly (OFX_CXX_STANDARD=17 or 20).
 # Each build is followed by the same plugin load test as in ci.yml.
 # The Windows MSVC jobs build the downloadable weekly Windows builds, for x64 and for Windows on Arm
@@ -175,7 +173,7 @@ jobs:
             options: -DOFX_CXX_STANDARD=17 -DCMAKE_BUILD_TYPE=Release -DFFT=fftw3 -DBUILD_TESTING=ON -DOFX_BUILD_HOSTDEMO=ON
             rendertest: true
             packages: libfftw3-dev pkg-config
-          # one bundle per plug-in ("make nomulti"): OFX_PLUGIN_BUNDLES=SEPARATE, load test only
+          # one bundle per plug-in directory: OFX_PLUGIN_BUNDLES=SEPARATE, load test only
           # (each bundle links its own SupportExt sources: a missing one is an undefined symbol,
           # which a Linux module only shows when loaded)
           - name: separate bundles
@@ -184,10 +182,6 @@ jobs:
             # the plug-ins (identifier and version) of Misc, CImg and Shadertoy in a release build:
             # no plug-in is lost in the split (update when a plug-in is added or removed)
             plugins: 212
-          # the Makefiles, as Natron RB-2.6's Linux fallback builds them: combined bundles, with
-          # OpenMP (OPENMP=1), GCC's default standard (gnu++17)
-          - name: make
-            make: CONFIG=release OPENMP=1
     steps:
       - name: Checkout branch
         uses: actions/checkout@v5
@@ -199,21 +193,17 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libglu1-mesa-dev libgl-dev libexpat1-dev cmake ninja-build ${{ matrix.packages }}
-      - name: Build (make)
-        if: matrix.make
-        run: make -j"$(nproc)" ${{ matrix.make }}
-      - name: Build (CMake)
-        if: ${{ !matrix.make }}
+      - name: Build
         # The bundles are installed in install-<config>/OFX/Plugins.
         run: |
           cmake -S . -B build -G Ninja ${{ matrix.options }}
           cmake --build build
           cmake --install build --prefix "$PWD/install-${{ matrix.config }}"
       - name: Load test
-        # make: the source tree; CMake: the install tree. matrix.plugins: the expected number of
+        # The install tree. matrix.plugins: the expected number of
         # plug-ins (ofxload's "<n> binaries, <m> plugins, <e> errors")
         run: |
-          .github/tools/loadtest.sh ${{ matrix.make && ' ' || format('install-{0}', matrix.config) }} | tee loadtest.log
+          .github/tools/loadtest.sh install-${{ matrix.config }} | tee loadtest.log
           if [ -n "${{ matrix.plugins }}" ]; then
             n=$(sed -n 's/^[0-9]* binaries, \([0-9]*\) plugins, .*/\1/p' loadtest.log | head -n 1)
             [ "$n" = "${{ matrix.plugins }}" ] || { echo "::error::$n plug-ins, expected ${{ matrix.plugins }}"; exit 1; }
@@ -274,7 +264,7 @@ jobs:
           # pacboy: the packages of the msystem (UCRT64), without hard-coded prefixes
           install: git base-devel
           pacboy: cc:p cmake:p ninja:p expat:p python:p
-      - name: Build (CMake)
+      - name: Build
         run: |
           set -eo pipefail
           cmake -S . -B build -G Ninja ${{ matrix.options }}

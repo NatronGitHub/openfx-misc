@@ -16,30 +16,29 @@
 # along with openfx-misc.  If not, see <http://www.gnu.org/licenses/gpl-2.0.html>
 # ***** END LICENSE BLOCK *****
 ########################################################################
-# CMake build of the openfx-misc bundles. It builds what the Makefiles build:
-# - Misc.ofx.bundle (Misc/Makefile), CImg.ofx.bundle (CImg/Makefile, BUILD_CIMG_PLUGINS)
-#   and Shadertoy.ofx.bundle (Shadertoy/Makefile, BUILD_SHADERTOY);
-# - in Debug builds only (make CONFIG=debug): Test.ofx.bundle (Test/Makefile,
-#   BUILD_TESTING, also make TESTS=1) and DebugProxy.ofx.bundle (BUILD_DEBUGPROXY);
-# with the bundle layout of openfx/Support/Plugins/Makefile.master, assembled in
-# <build>/Plugins and installed by "cmake --install" into ${CMAKE_INSTALL_PREFIX}/OFX/Plugins
-# (openfx's PLUGIN_INSTALLDIR): use --prefix /usr (Linux) or /Library (macOS) to get the
-# directories of "make install".
+# The build of the openfx-misc bundles (CMake is the only build system):
+# - Misc.ofx.bundle, CImg.ofx.bundle (BUILD_CIMG_PLUGINS) and Shadertoy.ofx.bundle
+#   (BUILD_SHADERTOY);
+# - by default in Debug builds only: Test.ofx.bundle (BUILD_TESTING) and DebugProxy.ofx.bundle
+#   (BUILD_DEBUGPROXY);
+# assembled in <build>/Plugins and installed by "cmake --install" into
+# ${CMAKE_INSTALL_PREFIX}/OFX/Plugins (openfx's PLUGIN_INSTALLDIR): use --prefix /usr (Linux) or
+# /Library (macOS) for the standard OpenFX plug-in directories.
 # -DOFX_PLUGIN_BUNDLES=SEPARATE (openfx's option) builds instead one bundle per plug-in directory,
-# as "make nomulti", named after its OFX identifier (e.g. net.sf.openfx.Invert.ofx.bundle): see
+# named after its OFX identifier (e.g. net.sf.openfx.Invert.ofx.bundle): see
 # the plug-in table, cmake/OFXMiscPlugins.cmake (adding a plug-in = one line there).
 #
 # Options:
 #   -DCMAKE_BUILD_TYPE=Release|Debug|RelWithDebInfo (default: Release)
 #   -DOFX_CXX_STANDARD=17 (default) or 20
 #   -DOFX_USE_OPENMP=ON|OFF (default ON): OpenMP in the CImg plug-ins and DenoiseSharpen
-#      ("make OPENMP=1"). Apple clang uses MacPorts' libomp (port install libomp).
+#      Apple clang uses MacPorts' libomp (port install libomp).
 #   -DOFX_DEPLOY_BUNDLES=ON: at install, copy the non-system libraries into the bundles
-#      (macOS: osxDeploy.sh, as "make CONFIG=release" does; needs gsed)
-#   -DBUILD_CIMG_PLUGINS=OFF ("make HAVE_CIMG=0"), -DBUILD_SHADERTOY=OFF, -DBUILD_MISC=OFF (e.g.
+#      (macOS: osxDeploy.sh; needs gsed)
+#   -DBUILD_CIMG_PLUGINS=OFF, -DBUILD_SHADERTOY=OFF, -DBUILD_MISC=OFF (e.g.
 #      -DBUILD_MISC=OFF -DBUILD_CIMG_PLUGINS=OFF builds only Shadertoy.ofx.bundle)
 #   -DOFX_PLUGIN_BUNDLES=COMBINED (default) or SEPARATE: the combined bundles above, or one bundle
-#      per plug-in directory ("make nomulti"; cmake/OFXMiscPlugins.cmake), which replaces them (the
+#      per plug-in directory (cmake/OFXMiscPlugins.cmake), which replaces them (the
 #      two sets have the same plug-ins: a host must not load both). With SEPARATE, Debug builds
 #      also have Misc.ofx.bundle, with TestRender only (as Test.ofx.bundle).
 #   -DOFXMISC_STANDALONE_BUNDLES="DenoiseSharpen;NoOp": with COMBINED, also build these Misc
@@ -49,13 +48,13 @@
 #      versions: a host must not load both (install one or the other).
 #   -DOFXMISC_ARM64X=ARM64|ARM64EC -DOFXMISC_ARM64X_DIR=<dir> (MSVC): Arm64X plug-ins, from an ARM64
 #      build then an Arm64EC build (cmake/OFXMiscArm64X.cmake; .github/tools/msvc-build.sh arm64x)
-#   -DOFX_LICENSE=GPL (default) or COMMERCIAL ("make LICENSE=...", Natron's NATRON_LICENSE, as in
+#   -DOFX_LICENSE=GPL (default) or COMMERCIAL (Natron's NATRON_LICENSE, as in
 #      openfx-gmic): COMMERCIAL builds refuse FFT=fftw3 (FFTW is GPL)
-#   -DFFT=pocketfft|pow2|fftw3 ("make FFT=..."): the FFT of the CImg plugins: pocketfft
+#   -DFFT=pocketfft|pow2|fftw3: the FFT of the CImg plugins: pocketfft
 #      (default: header-only, downloaded), pow2 (CImg's own FFT, images padded to a power of two:
 #      slower), or fftw3 (opt-in, GPL only: FFTW >= 3.3.5, found with pkg-config)
 #   -DBUILD_TESTING=ON|OFF, -DBUILD_DEBUGPROXY=ON|OFF (default: ON in Debug builds)
-#   -DUSE_OSMESA=ON ("make -C Shadertoy OSMESA=1"): Shadertoy CPU rendering with a mangled
+#   -DUSE_OSMESA=ON: Shadertoy CPU rendering with a mangled
 #      OSMesa in OSMESA_PATH (default /opt/osmesa) and LLVM in LLVM_PATH (default /opt/llvm)
 #   -DOSMESA_PKGCONFIG_STATIC=ON (default OFF): with USE_OSMESA and OSMESA_PATH's osmesa.pc, link
 #      the static libMangledOSMesa32.a with all the flags of "pkg-config --static" (its
@@ -121,7 +120,7 @@ endif()
 
 # Install: the bundles go to ${CMAKE_INSTALL_PREFIX}/${PLUGIN_INSTALLDIR}, where PLUGIN_INSTALLDIR
 # is openfx's OFX/Plugins (cmake/OpenFX.cmake): "cmake --install build --prefix /usr" installs
-# into /usr/OFX/Plugins and "--prefix /Library" into /Library/OFX/Plugins, as "make install".
+# into /usr/OFX/Plugins and "--prefix /Library" into /Library/OFX/Plugins.
 
 # The SupportExt sources: the submodule, or another checkout (SupportExt's CI tests its pull
 # requests with openfx-misc)
@@ -144,7 +143,7 @@ endif()
 option(BUILD_MISC "Build the Misc plugins (Misc.ofx.bundle)" ON)
 option(BUILD_CIMG_PLUGINS "Build the CImg plugins (CImg.ofx.bundle)" ON)
 option(BUILD_SHADERTOY "Build the Shadertoy plugin (Shadertoy.ofx.bundle, needs OpenGL)" ON)
-# Debug-only bundles, as "make CONFIG=debug" (Test also with "make TESTS=1"). The defaults
+# Debug-only bundles by default. The defaults
 # follow CMAKE_BUILD_TYPE at the first configure; set BUILD_TESTING and BUILD_DEBUGPROXY
 # explicitly when changing CMAKE_BUILD_TYPE in an existing build directory.
 string(TOUPPER "${CMAKE_BUILD_TYPE}" _build_type)
@@ -164,17 +163,15 @@ option(OFX_BUILD_HOSTDEMO "Build openfx's hostDemo test host and install it into
 
 # C++ standard: openfx's OFX_CXX_STANDARD (cmake/OpenFX.cmake), 17 by default (Natron RB-2.6,
 # Qt5), or 20 (Qt6, RB-2.7): -DOFX_CXX_STANDARD=20. It is used by add_ofx_plugin and
-# openfx::Support, without compiler extensions (-std=c++17, not -std=gnu++17). The Makefiles
-# pass no -std: they use the compiler's default, or the -std that Natron passes in CXX.
+# openfx::Support, without compiler extensions (-std=c++17, not -std=gnu++17).
 
 # ========================== compiler flags ==========================
-# Release: CMake's default flags (-O3 -DNDEBUG with GCC and Clang; Makefile.master uses
-# -O2 -DNDEBUG). For -O2: -DOFX_OPTFLAG=-O2 (openfx: appended to the plug-ins and
-# openfx::Support), or -DCMAKE_CXX_FLAGS_RELEASE="-O2 -DNDEBUG" (all targets). Debug: -g, plus DEBUG (add_ofx_plugin) and -Wall -Wextra, as Makefile.master.
+# Release: CMake's default flags (-O3 -DNDEBUG with GCC and Clang). For -O2: -DOFX_OPTFLAG=-O2 (openfx: appended to the plug-ins and
+# openfx::Support), or -DCMAKE_CXX_FLAGS_RELEASE="-O2 -DNDEBUG" (all targets). Debug: -g, plus DEBUG (add_ofx_plugin) and -Wall -Wextra.
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|Intel")
   add_compile_options($<$<CONFIG:Debug>:-Wall> $<$<CONFIG:Debug>:-Wextra>)
 endif()
-# openfx::Api adds the MinGW definitions of Makefile.master (_USE_MATH_DEFINES,
+# openfx::Api adds the MinGW definitions (_USE_MATH_DEFINES,
 # __USE_MINGW_ANSI_STDIO=1) and MSVC's /Zc:__cplusplus.
 if(MSVC)
   ADD_COMPILE_OPTIONS(/MP)
@@ -189,8 +186,8 @@ endif()
 # ========================== openfx ==========================
 # openfx::Support (the C++ Support library, static), openfx::HostSupport (hostDemo),
 # add_ofx_plugin and ARCHDIR (cmake/OpenFX.cmake). The OFX_EXTENSIONS_* (NATRON, NUKE,
-# VEGAS, TUTTLE) and OFX_SUPPORTS_OPENGLRENDER options of openfx default to what the
-# Makefiles use, and are usage requirements of these targets.
+# VEGAS, TUTTLE) and OFX_SUPPORTS_OPENGLRENDER options of openfx are ON by default, and are usage
+# requirements of these targets.
 # EXCLUDE_FROM_ALL: only what the bundles link is built, and openfx is not installed.
 # HostSupport is only needed by hostDemo (OFX_BUILD_HOSTDEMO, openfx's BUILD_EXAMPLE_HOSTS),
 # and it needs the system expat (find_package(EXPAT)); DebugProxy compiles the two HostSupport
@@ -223,7 +220,7 @@ endif()
 message(STATUS "    OFX architecture:  ${ARCHDIR}")
 message(STATUS "    Install directory: ${CMAKE_INSTALL_PREFIX}/${PLUGIN_INSTALLDIR}")
 
-# Linux: link libGL, as the Makefiles (-lGL), not GLVND's libOpenGL and libGLX
+# Linux: link libGL (-lGL), not GLVND's libOpenGL and libGLX
 if(NOT DEFINED OpenGL_GL_PREFERENCE)
   set(OpenGL_GL_PREFERENCE LEGACY)
 endif()
@@ -236,8 +233,8 @@ if(MSVC)
   set(OFXMISC_GLEXT_INCLUDE_DIR ${PROJECT_SOURCE_DIR})
 endif()
 
-# Include directory of Makefile.master (ofxsProcessing.H...); SupportExt's comes with
-# supportext_add_sources, Misc's (Misc/Makefile) is on the Misc target
+# Include directory of openfx's Support plug-in helpers (ofxsProcessing.H...); SupportExt's comes
+# with supportext_add_sources, Misc's is on the Misc target
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/openfx/Support/Plugins/include)
 
 # supportext_add_sources(): the SupportExt sources of each bundle, compiled with its flags
@@ -247,8 +244,8 @@ include(${OFXMISC_SUPPORTEXT_DIR}/cmake/SupportExt.cmake)
 # The plug-in bundles: openfx's ofx_plugin_bundle_group(), with the table cmake/OFXMiscPlugins.cmake
 ########################################################################
 # OFX_PLUGIN_BUNDLES (openfx's option) chooses, for each group (Misc, CImg, Shadertoy):
-# - COMBINED (default): Misc.ofx.bundle (Misc/Makefile), CImg.ofx.bundle and Shadertoy.ofx.bundle;
-# - SEPARATE ("make nomulti"): one bundle per plug-in directory, named after its OFX identifier
+# - COMBINED (default): Misc.ofx.bundle, CImg.ofx.bundle and Shadertoy.ofx.bundle;
+# - SEPARATE: one bundle per plug-in directory, named after its OFX identifier
 #   (net.sf.openfx.Invert.ofx.bundle, net.sf.cimg.CImgBlur.ofx.bundle, ...; see the table), with
 #   a generated Info.plist, and the icons and PyPlugs of that directory only. Its target and
 #   install component are the table's short name (Invert, CImgBlur, ...).
@@ -257,7 +254,7 @@ include(${OFXMISC_SUPPORTEXT_DIR}/cmake/SupportExt.cmake)
 include(cmake/OFXMiscPlugins.cmake)
 
 ########################################################################
-# Misc.ofx.bundle (Misc/Makefile)
+# Misc.ofx.bundle
 ########################################################################
 # OFXMISC_STANDALONE_BUNDLES: with OFX_PLUGIN_BUNDLES=COMBINED, these Misc plug-ins also get their
 # own bundle (ALSO_SEPARATE), for the binary releases (release.yml: DenoiseSharpen and NoOp).
@@ -271,7 +268,7 @@ if(BUILD_MISC)
       message(FATAL_ERROR "OFXMISC_STANDALONE_BUNDLES: ${_name} is not a Misc plug-in of cmake/OFXMiscPlugins.cmake")
     endif()
   endforeach()
-  # Test/TestRender.cpp (#ifdef DEBUG) is also in Misc.ofx.bundle, as in Misc/Makefile, in Debug
+  # Test/TestRender.cpp (#ifdef DEBUG) is also in Misc.ofx.bundle in Debug
   # builds (it compiles to nothing in the others); its own bundle is Test.ofx.bundle
   set(_testrender)
   if(_debug_build)
@@ -299,7 +296,7 @@ if(BUILD_MISC)
 endif(BUILD_MISC)
 
 ########################################################################
-# Shadertoy.ofx.bundle (Shadertoy/Makefile)
+# Shadertoy.ofx.bundle
 ########################################################################
 if(BUILD_SHADERTOY)
   # one plug-in: the target is Shadertoy in both modes (Shadertoy.ofx.bundle, or
@@ -310,21 +307,20 @@ if(BUILD_SHADERTOY)
       SOURCES Shadertoy/Shadertoy.cpp Shadertoy/ShadertoyParse.cpp
               Shadertoy/ShadertoyRenderGL.cpp Shadertoy/ShadertoyRenderMesa.cpp
       RESOURCES Shadertoy/net.sf.openfx.Shadertoy.png Shadertoy/net.sf.openfx.Shadertoy.svg
-                Shadertoy/presets) # with its contents, as "cp -r presets"
-  supportext_add_sources(Shadertoy COMPONENTS THREADS) # as Shadertoy/Makefile
+                Shadertoy/presets) # with its contents
+  supportext_add_sources(Shadertoy COMPONENTS THREADS)
   target_link_libraries(Shadertoy PRIVATE OpenGL::GL ${CMAKE_DL_LIBS}) # dl: eglGetCurrentContext lookup
   # MSVC: GL/glext.h. With USE_OSMESA on MSVC, this bundled (2017) glext.h would come before
   # Mesa's for ShadertoyRenderMesa.cpp; that case is theoretical (Natron's OSMesa builds use MinGW).
   target_include_directories(Shadertoy PRIVATE ${OFXMISC_GLEXT_INCLUDE_DIR})
   if(USE_OSMESA)
-    # Shadertoy/Makefile with OSMESA=1: -DHAVE_OSMESA, OSMesa's headers for ShadertoyRenderMesa.cpp
+    # -DHAVE_OSMESA, OSMesa's headers for ShadertoyRenderMesa.cpp
     # only, and -L$(OSMESA_PATH)/lib -lMangledOSMesa32 -lz `llvm-config ...`.
     # Natron's build-plugins.sh may instead give OSMESA_INCLUDES and OSMESA_LIBRARIES (all the
     # link flags, LLVM included).
     target_compile_definitions(Shadertoy PRIVATE HAVE_OSMESA)
     # The OSMesa (and LLVM) link flags go in the imported target OSMesa::OSMesa (SupportExt's
-    # convention); its include directories are only used by ShadertoyRenderMesa.cpp, as in
-    # Shadertoy/Makefile.
+    # convention); its include directories are only used by ShadertoyRenderMesa.cpp.
     if(DEFINED OSMESA_LIBRARIES)
       if(NOT DEFINED OSMESA_INCLUDES)
         set(OSMESA_INCLUDES "${OSMESA_PATH}/include")
@@ -376,7 +372,7 @@ if(BUILD_SHADERTOY)
       if(NOT EXISTS "${_osmesa_includes}/GL/osmesa.h")
         message(FATAL_ERROR "USE_OSMESA: ${_osmesa_includes}/GL/osmesa.h not found (set OSMESA_PATH)")
       endif()
-      # LLVM, as in Shadertoy/Makefile
+      # LLVM
       set(_llvm_config "${LLVM_PATH}/bin/llvm-config")
       if(WIN32 AND NOT EXISTS "${_llvm_config}" AND EXISTS "${_llvm_config}.exe")
         set(_llvm_config "${_llvm_config}.exe")
@@ -421,10 +417,10 @@ if(BUILD_SHADERTOY)
 endif()
 
 ########################################################################
-# CImg.ofx.bundle (CImg/Makefile)
+# CImg.ofx.bundle
 ########################################################################
 if(BUILD_CIMG_PLUGINS)
-# Licence and FFT backend of the CImg plug-ins, as CImg/license.mk (LICENSE and FFT), with the same
+# Licence and FFT backend of the CImg plug-ins (OFX_LICENSE and FFT), with the same
 # names, values and rules as openfx-gmic's CMakeLists.txt (OFX_LICENSE and FFT), plus FFT=pow2,
 # except that pocketfft is the default for all licences (no dependency, no global FFTW planner
 # shared with other plug-ins, and faster than FFTW in our benchmarks).
@@ -462,7 +458,7 @@ set(_cimg_fft_licence)
 set(_cimg_defs)
 set(_cimg_libs)
 set(_cimg_incs ${CIMG_DIR})
-# The FFT library (FFT), as CImg/CImgFFT.mk: defined for all the sources of the bundle, since they
+# The FFT library (FFT): defined for all the sources of the bundle, since they
 # share CImg's inline code.
 if(CIMG_FFT STREQUAL "fftw3")
   # FFTW, multithreaded (fftw3_threads), as openfx-gmic: CImg only uses its double precision library
@@ -556,7 +552,7 @@ foreach(_t IN LISTS _cimg_targets)
   endif()
   supportext_add_sources(${_t} COMPONENTS ${_components}) # LUT: ChromaBlur, HistEQ
   if(NOT MSVC AND TARGET OpenMP::OpenMP_CXX) # MSVC: no OpenMP (the table's OPENMP is not passed)
-    target_compile_definitions(${_t} PRIVATE cimg_use_openmp) # CImg/Makefile: OPENMP=1
+    target_compile_definitions(${_t} PRIVATE cimg_use_openmp)
   endif()
   get_target_property(_fft ${_t} OFXMISC_FFT)
   if(_fft AND _cimg_fft_licence) # the plug-ins that use CImg/CImgFFTConvolve.h
@@ -567,24 +563,24 @@ endforeach()
 endif(BUILD_CIMG_PLUGINS)
 
 ########################################################################
-# Test.ofx.bundle (Test/Makefile; make CONFIG=debug or TESTS=1)
+# Test.ofx.bundle (BUILD_TESTING)
 ########################################################################
 if(BUILD_TESTING)
   add_ofx_plugin(Test INFO_PLIST Test/Info.plist SOURCES
     Test/TestRender.cpp Test/TestPosition.cpp Test/TestGroups.cpp Test/TestHostBehaviour.cpp
     Test/TestOpenGL.cpp Test/TestOpenGLRenderGL.cpp Test/TestOpenGLRenderMesa.cpp)
-  supportext_add_sources(Test COMPONENTS THREADS TRANSFORM3X3) # + SHUTTER, as Test/Makefile
+  supportext_add_sources(Test COMPONENTS THREADS TRANSFORM3X3) # + SHUTTER
   target_link_libraries(Test PRIVATE OpenGL::GL ${CMAKE_DL_LIBS}) # dl: eglGetCurrentContext lookup (TestOpenGL)
   target_include_directories(Test PRIVATE ${OFXMISC_GLEXT_INCLUDE_DIR}) # MSVC: GL/glext.h
   ofx_deploy_bundle(Test)
 endif()
 
 ########################################################################
-# DebugProxy.ofx.bundle (DebugProxy/Makefile; make CONFIG=debug)
+# DebugProxy.ofx.bundle (BUILD_DEBUGPROXY)
 ########################################################################
 if(BUILD_DEBUGPROXY)
   # not linked with openfx::Support: it uses HostSupport's ofxhBinary and ofxhUtilities, compiled
-  # here as in DebugProxy/Makefile, and not openfx::HostSupport, which would link expat (for its
+  # here, and not openfx::HostSupport, which would link expat (for its
   # plug-in cache, which DebugProxy doesn't use) into the bundle, and deploy it
   add_ofx_plugin(DebugProxy INFO_PLIST DebugProxy/Info.plist SOURCES DebugProxy/DebugProxy.cpp
     openfx/HostSupport/src/ofxhBinary.cpp openfx/HostSupport/src/ofxhUtilities.cpp)

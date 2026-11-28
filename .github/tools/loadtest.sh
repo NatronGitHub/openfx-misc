@@ -1,6 +1,7 @@
 #!/bin/bash
 # Plugin load test used by the CI: build ofxload.cpp and run it on every
-# *.ofx.bundle found under the given directories (default: the source tree).
+# *.ofx.bundle found under the given directories (default: the current directory), e.g. a CMake
+# install prefix.
 # Usage (from the top of the source tree): .github/tools/loadtest.sh [DIR...]
 # Windows: the binaries of every Contents/Win* folder (Win64, Win-arm64ec, Win-arm64...), which
 # must all load in ofxload's process: LOADTEST_ARCHDIR=<folder> (e.g. Win-arm64) tests one folder
@@ -25,12 +26,11 @@ else
     ofxload=./ofxload
 fi
 
-# Skip the openfx submodule (not our plugins) and DebugProxy (debug builds
-# only), which wraps the plugin named by $OFX_DEBUGPROXY_BINARY. DebugProxy is
-# also matched by bundle name, for install trees (cmake --install).
+# Skip the openfx submodule (not our plugins) and DebugProxy.ofx.bundle (debug builds
+# only), which wraps the plugin named by $OFX_DEBUGPROXY_BINARY.
 binaries=()
 while IFS= read -r f; do binaries+=("$f"); done < <(
-    find "${@:-.}" \( -path ./openfx -o -path ./DebugProxy -o -name DebugProxy.ofx.bundle \) -prune -o \
+    find "${@:-.}" \( -path ./openfx -o -name DebugProxy.ofx.bundle \) -prune -o \
          -path "*.ofx.bundle/Contents/$arch/*.ofx" -print | sort)
 if [ ${#binaries[@]} -eq 0 ]; then
     echo "no *.ofx.bundle/Contents/$arch/*.ofx found"
@@ -70,16 +70,15 @@ if [ -n "$windows" ]; then
     done
 fi
 
-# The bundles that contain PIK or CImgBlur (the combined Misc or CImg, the separate one of CMake,
-# or of make nomulti) must have the PIKColor or EdgeBlur PyPlug and its icons in
+# The bundles that contain PIK or CImgBlur (the combined Misc or CImg, or the separate one) must have the PIKColor or EdgeBlur PyPlug and its icons in
 # Contents/Resources/PyPlugs, where Natron loads the PyPlugs of a bundle (and finds each icon
 # next to its .py), and not in Contents/Resources itself
 for f in "${binaries[@]}"; do
     bundle=${f%/Contents/*}
     case "${bundle##*/}" in
-        Misc.ofx.bundle|PIK.ofx.bundle|net.sf.openfx.PIK.ofx.bundle)
+        Misc.ofx.bundle|net.sf.openfx.PIK.ofx.bundle)
             pyplugs="PIKColor.py PIKColor.gizmo fr.inria.PIKColor.png fr.inria.PIKColor.svg" ;;
-        CImg.ofx.bundle|CImgBlur.ofx.bundle|net.sf.cimg.CImgBlur.ofx.bundle)
+        CImg.ofx.bundle|net.sf.cimg.CImgBlur.ofx.bundle)
             pyplugs="EdgeBlur.py EdgeBlur.gizmo fr.inria.EdgeBlur.png fr.inria.EdgeBlur.svg" ;;
         *) pyplugs= ;;
     esac

@@ -17,10 +17,10 @@
 # ***** END LICENSE BLOCK *****
 ########################################################################
 # The plug-in table: one ofxmisc_plugin() line per plug-in directory, i.e. per bundle of
-# OFX_PLUGIN_BUNDLES=SEPARATE (openfx's ofx_plugin_bundle_group). Adding a plug-in: one line here.
-# ofxmisc_check_makefiles() (end of this file) stops the configure if the table and the Makefiles
-# (SUBDIRS_NOMULTI, the VPATHs of Misc/Makefile and CImg/Makefile, the RESOURCES) disagree: add a
-# plug-in to both.
+# OFX_PLUGIN_BUNDLES=SEPARATE (openfx's ofx_plugin_bundle_group). Adding a plug-in: one line here
+# (and its entry in the plug-in list of README.md). This table alone defines the sources, the
+# resources and the bundles: the separate bundles get a generated Info.plist, the combined ones
+# Misc/Info.plist and CImg/Info.plist (CMakeLists.txt).
 #
 #   ofxmisc_plugin(<name> [DIR <dir>] ID <ofx id> [COMPONENTS <SupportExt component>...]
 #                  [SOURCES <extra source>...] [PYPLUGS <resource>...] [OPENMP] [DEBUG_ONLY] [FFT]
@@ -35,8 +35,8 @@
 #   combined bundle gets the union);
 # - PYPLUGS: the resources of <dir> (file names) that go to Contents/Resources/PyPlugs instead of
 #   Contents/Resources, where Natron loads the PyPlugs of a bundle: a PyPlug's .py, its .gizmo and
-#   its icons (Natron finds the icon of a PyPlug next to its .py). Make: <dir>/Makefile's PYPLUGS;
-# - COMPONENTS: the SupportExt components (supportext_add_sources), from <dir>/Makefile's objects;
+#   its icons (Natron finds the icon of a PyPlug next to its .py);
+# - COMPONENTS: the SupportExt components (supportext_add_sources) that its sources use;
 # - DEBUG_ONLY: only compiled in debug builds (#ifdef DEBUG): no bundle in other builds;
 # - NO_ID_CHECK: an ID (prefix + dir) that no plug-in identifier of the sources starts with;
 # - LINK_GL: its own code calls OpenGL (an overlay), without a SupportExt component that links it;
@@ -46,6 +46,9 @@
 # - the CImg ones (DIR CImg/...) also get CImg/CImgFilter.cpp and OPENMP.
 # Group: the first plug-ins go to Misc.ofx.bundle, the CImg ones (DIR CImg/...) to CImg.ofx.bundle.
 ########################################################################
+# ofxmisc_check_table() (end of this file) stops the configure if a directory registers a plug-in
+# (mRegisterPluginFactoryInstance in one of its .cpp files) but has no line in the table.
+#
 # ofxmisc_plugin(): appends "PLUGIN <name> ..." to OFXMISC_<group>_PLUGINS (the arguments of
 # ofx_plugin_bundle_group) and its name to OFXMISC_<group>_NAMES
 function(ofxmisc_plugin NAME)
@@ -56,17 +59,12 @@ function(ofxmisc_plugin NAME)
   if(NOT _p_DIR)
     set(_p_DIR ${NAME})
   endif()
-  # every directory of the table, for ofxmisc_check_makefiles()
-  set_property(GLOBAL APPEND PROPERTY OFXMISC_TABLE_DIRS ${_p_DIR})
-  # its PyPlugs resources, for ofxmisc_check_makefiles()
+  set_property(GLOBAL APPEND PROPERTY OFXMISC_TABLE_DIRS ${_p_DIR}) # for ofxmisc_check_table()
   foreach(_f IN LISTS _p_PYPLUGS)
     if(NOT EXISTS "${PROJECT_SOURCE_DIR}/${_p_DIR}/${_f}")
       message(FATAL_ERROR "ofxmisc_plugin(${NAME}): PYPLUGS ${_f} is not in ${_p_DIR}")
     endif()
   endforeach()
-  set_property(GLOBAL PROPERTY OFXMISC_TABLE_PYPLUGS_${NAME} ${_p_PYPLUGS})
-  set_property(GLOBAL PROPERTY OFXMISC_TABLE_PYDIR_${NAME} ${_p_DIR})
-  set_property(GLOBAL APPEND PROPERTY OFXMISC_TABLE_NAMES ${NAME})
   if(_p_DEBUG_ONLY AND NOT _debug_build)
     return()
   endif()
@@ -119,128 +117,6 @@ function(ofxmisc_plugin NAME)
   endif()
   set(OFXMISC_${_group}_PLUGINS ${OFXMISC_${_group}_PLUGINS} ${_args} PARENT_SCOPE)
   set(OFXMISC_${_group}_NAMES ${OFXMISC_${_group}_NAMES} ${NAME} PARENT_SCOPE)
-endfunction()
-
-# _ofxmisc_make_var(<makefile> <var> <out>): the words assigned to <var> in <makefile> (the last
-# "<var> =" line and the "<var> +=" lines after it, with their "\" continuations), "$(TOP_SRCDIR)/" removed
-function(_ofxmisc_make_var MAKEFILE VAR OUT)
-  file(READ "${PROJECT_SOURCE_DIR}/${MAKEFILE}" _text)
-  string(REGEX REPLACE "\\\\\n" " " _text "${_text}") # join the continuation lines
-  string(REPLACE ";" "," _text "${_text}")
-  string(REPLACE "\n" ";" _lines "${_text}")
-  set(_words)
-  foreach(_l IN LISTS _lines)
-    string(REGEX REPLACE "#.*" "" _l "${_l}") # a comment, with its continuation lines (as make)
-    if(_l MATCHES "^[ \t]*${VAR}[ \t]*(\\+?)=(.*)$")
-      if(NOT CMAKE_MATCH_1) # "=" replaces the earlier value, "+=" appends (as make)
-        set(_words)
-      endif()
-      string(REPLACE "$(TOP_SRCDIR)/" "" _v "${CMAKE_MATCH_2}")
-      separate_arguments(_v UNIX_COMMAND "${_v}")
-      list(APPEND _words ${_v})
-    endif()
-  endforeach()
-  set(${OUT} ${_words} PARENT_SCOPE)
-endfunction()
-
-# _ofxmisc_check_set(<what> <table list var> <make list var> <allowed in the table only>...):
-# FATAL_ERROR if the two lists differ, except for the allowed directories
-function(_ofxmisc_check_set WHAT TABLE MAKE)
-  set(_t ${${TABLE}})
-  set(_m ${${MAKE}})
-  list(REMOVE_ITEM _t ${ARGN} "")
-  set(_only_t ${_t})
-  list(REMOVE_ITEM _only_t ${_m} "")
-  set(_only_m ${_m})
-  list(REMOVE_ITEM _only_m ${_t} ${ARGN} "")
-  if(_only_t OR _only_m)
-    message(FATAL_ERROR "cmake/OFXMiscPlugins.cmake and ${WHAT} differ: only in the table: "
-      "[${_only_t}]; only in ${WHAT}: [${_only_m}]. Every plug-in directory and resource must be in both "
-      "(or be one of the exceptions of ofxmisc_check_makefiles())")
-  endif()
-endfunction()
-
-# ofxmisc_check_makefiles(): the table must list the same plug-in directories as the Makefiles,
-# so that a plug-in can't be left out of one build: the top-level Makefile's SUBDIRS_NOMULTI
-# ("make nomulti"), Misc/Makefile's and CImg/Makefile's VPATH (the combined bundles), and, for
-# each directory, its Makefile's RESOURCES and the resources that the table globs.
-function(ofxmisc_check_makefiles)
-  get_property(_dirs GLOBAL PROPERTY OFXMISC_TABLE_DIRS)
-  set(_misc ${_dirs})
-  list(FILTER _misc EXCLUDE REGEX "^CImg/")
-  set(_cimg ${_dirs})
-  list(FILTER _cimg INCLUDE REGEX "^CImg/")
-  # make nomulti: the DEBUG_ONLY directories are added in debug builds only
-  # (SUBDIRS_NOMULTI += TimeBuffer); CImg/Inpaint has no Info.plist and CImg/Matrix no
-  # Makefile: they have no make nomulti bundle (only CMake's SEPARATE builds them)
-  _ofxmisc_make_var(Makefile SUBDIRS_NOMULTI _nomulti)
-  _ofxmisc_check_set("the top-level Makefile's SUBDIRS_NOMULTI" _dirs _nomulti CImg/Inpaint CImg/Matrix)
-  # Misc/Makefile's VPATH also has Misc and Test (TestRender), which are not plug-in directories
-  _ofxmisc_make_var(Misc/Makefile VPATH _vpath)
-  list(REMOVE_ITEM _vpath Misc Test)
-  _ofxmisc_check_set("Misc/Makefile's VPATH" _misc _vpath)
-  _ofxmisc_make_var(CImg/Makefile VPATH _vpath)
-  list(TRANSFORM _vpath PREPEND "CImg/")
-  _ofxmisc_check_set("CImg/Makefile's VPATH" _cimg _vpath)
-  # the resources: those of each <dir>/Makefile (RESOURCES and PYPLUGS, except the pocketfft
-  # licence, which CMake adds with FFT=pocketfft), and the union in Misc/Makefile and CImg/Makefile;
-  # the PyPlugs resources: each <dir>/Makefile's PYPLUGS (also when the table lists none), and the
-  # union in Misc/Makefile's and CImg/Makefile's PYPLUGS
-  get_property(_names GLOBAL PROPERTY OFXMISC_TABLE_NAMES)
-  set(_misc_pyplugs)
-  set(_cimg_pyplugs)
-  foreach(_n IN LISTS _names)
-    get_property(_py GLOBAL PROPERTY OFXMISC_TABLE_PYPLUGS_${_n})
-    get_property(_d GLOBAL PROPERTY OFXMISC_TABLE_PYDIR_${_n})
-    if(EXISTS "${PROJECT_SOURCE_DIR}/${_d}/Makefile")
-      _ofxmisc_make_var(${_d}/Makefile PYPLUGS _mk)
-      _ofxmisc_check_set("${_d}/Makefile's PYPLUGS" _py _mk)
-    endif()
-    if(_py)
-      if(_d MATCHES "^CImg/(.*)$")
-        list(TRANSFORM _py PREPEND "${CMAKE_MATCH_1}/")
-        list(APPEND _cimg_pyplugs ${_py})
-      else()
-        list(TRANSFORM _py PREPEND "${_d}/")
-        list(APPEND _misc_pyplugs ${_py})
-      endif()
-    endif()
-  endforeach()
-  _ofxmisc_make_var(Misc/Makefile PYPLUGS _mk)
-  _ofxmisc_check_set("Misc/Makefile's PYPLUGS" _misc_pyplugs _mk)
-  _ofxmisc_make_var(CImg/Makefile PYPLUGS _mk)
-  _ofxmisc_check_set("CImg/Makefile's PYPLUGS" _cimg_pyplugs _mk)
-  set(_misc_res)
-  set(_cimg_res)
-  foreach(_d IN LISTS _dirs)
-    file(GLOB _res LIST_DIRECTORIES false RELATIVE "${PROJECT_SOURCE_DIR}/${_d}"
-      "${PROJECT_SOURCE_DIR}/${_d}/*.png" "${PROJECT_SOURCE_DIR}/${_d}/*.svg"
-      "${PROJECT_SOURCE_DIR}/${_d}/*.py" "${PROJECT_SOURCE_DIR}/${_d}/*.gizmo"
-      "${PROJECT_SOURCE_DIR}/${_d}/*.nps")
-    if(EXISTS "${PROJECT_SOURCE_DIR}/${_d}/Makefile")
-      _ofxmisc_make_var(${_d}/Makefile RESOURCES _mk)
-      _ofxmisc_make_var(${_d}/Makefile PYPLUGS _mkpy)
-      list(APPEND _mk ${_mkpy})
-      list(FILTER _mk EXCLUDE REGEX "Licence_pocketfft\\.txt$|^\\$")
-      _ofxmisc_check_set("${_d}/Makefile's RESOURCES and PYPLUGS" _res _mk)
-    endif()
-    if(_d MATCHES "^CImg/(.*)$")
-      list(TRANSFORM _res PREPEND "${CMAKE_MATCH_1}/")
-      list(APPEND _cimg_res ${_res})
-    else()
-      list(TRANSFORM _res PREPEND "${_d}/")
-      list(APPEND _misc_res ${_res})
-    endif()
-  endforeach()
-  _ofxmisc_make_var(Misc/Makefile RESOURCES _mk)
-  _ofxmisc_make_var(Misc/Makefile PYPLUGS _mkpy)
-  list(APPEND _mk ${_mkpy})
-  _ofxmisc_check_set("Misc/Makefile's RESOURCES and PYPLUGS" _misc_res _mk)
-  _ofxmisc_make_var(CImg/Makefile RESOURCES _mk)
-  _ofxmisc_make_var(CImg/Makefile PYPLUGS _mkpy)
-  list(APPEND _mk ${_mkpy})
-  list(FILTER _mk EXCLUDE REGEX "Licence_pocketfft\\.txt$|^\\$")
-  _ofxmisc_check_set("CImg/Makefile's RESOURCES and PYPLUGS" _cimg_res _mk)
 endfunction()
 
 # Misc.ofx.bundle
@@ -350,4 +226,29 @@ ofxmisc_plugin(CImgSharpenShock DIR CImg/SharpenShock ID net.sf.cimg.CImgSharpen
 ofxmisc_plugin(CImgSmooth DIR CImg/Smooth ID net.sf.cimg.CImgSmooth COMPONENTS THREADS)
 ofxmisc_plugin(CImgZDefocus DIR CImg/ZDefocus ID net.sf.cimg.CImgZDefocus COMPONENTS THREADS FFT)
 
-ofxmisc_check_makefiles()
+# ofxmisc_check_table(): every directory whose sources register a plug-in factory
+# (mRegisterPluginFactoryInstance) is in the table, so that a new plug-in can't be left out of the
+# bundles; Shadertoy and Test have their own bundles (CMakeLists.txt), and Templates holds models
+# that are not built.
+function(ofxmisc_check_table)
+  get_property(_table GLOBAL PROPERTY OFXMISC_TABLE_DIRS)
+  file(GLOB _srcs RELATIVE "${PROJECT_SOURCE_DIR}"
+    "${PROJECT_SOURCE_DIR}/*/*.cpp" "${PROJECT_SOURCE_DIR}/CImg/*/*.cpp")
+  set(_missing)
+  foreach(_s IN LISTS _srcs)
+    get_filename_component(_d "${_s}" DIRECTORY)
+    if(_d IN_LIST _table OR _d MATCHES "^(Shadertoy|Test|Templates|openfx|SupportExt)$")
+      continue()
+    endif()
+    file(STRINGS "${PROJECT_SOURCE_DIR}/${_s}" _reg REGEX "^[ \t]*mRegisterPluginFactoryInstance")
+    if(_reg)
+      list(APPEND _missing ${_d})
+    endif()
+  endforeach()
+  if(_missing)
+    list(REMOVE_DUPLICATES _missing)
+    message(FATAL_ERROR "cmake/OFXMiscPlugins.cmake: these directories register plug-ins but have "
+      "no ofxmisc_plugin() line: [${_missing}]")
+  endif()
+endfunction()
+ofxmisc_check_table()
