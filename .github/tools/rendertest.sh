@@ -1790,6 +1790,12 @@ tests=(
     "EdgeDetectCImg Prewitt threshold|eu.cimg.EdgeDetect|filter|float|tol=1e-4+mean=0.707107,0.707107,0.707107,1||-i Source=file:impulse.pfm -i Mask=none filter=8 multiChannel=0 output=0 threshold=1.2 --frames 0 --window 33,24,34,26"
     "EdgeDetectCImg 4 Sobel impulse|eu.cimg.EdgeDetect|filter|float|tol=1e-4+mean=0.25,0.25,0.25,1||-m 4 -i Source=file:impulse.pfm -i Mask=none filter=1 multiChannel=0 --frames 0 --window 33,24,34,25"
     "EdgeDetectCImg 4 Prewitt impulse|eu.cimg.EdgeDetect|filter|float|tol=1e-4+mean=0.166667,0.166667,0.166667,1||-m 4 -i Source=file:impulse.pfm -i Mask=none filter=8 multiChannel=0 --frames 0 --window 33,24,34,25"
+    # version 5 with Normalize: the version 4 values (Sobel 2/8, Prewitt 1/6 and sqrt(2)/6)
+    "EdgeDetectCImg Sobel normalize impulse|eu.cimg.EdgeDetect|filter|float|tol=1e-4+mean=0.25,0.25,0.25,1||-i Source=file:impulse.pfm -i Mask=none filter=1 multiChannel=0 output=0 normalize=1 --frames 0 --window 33,24,34,25"
+    "EdgeDetectCImg Prewitt normalize impulse|eu.cimg.EdgeDetect|filter|float|tol=1e-4+mean=0.166667,0.166667,0.166667,1||-i Source=file:impulse.pfm -i Mask=none filter=8 multiChannel=0 output=0 normalize=1 --frames 0 --window 33,24,34,25"
+    "EdgeDetectCImg Prewitt normalize impulse diagonal|eu.cimg.EdgeDetect|filter|float|tol=1e-4+mean=0.235702,0.235702,0.235702,1||-i Source=file:impulse.pfm -i Mask=none filter=8 multiChannel=0 output=0 normalize=1 --frames 0 --window 33,25,34,26"
+    # Normalize with the defaults (Sum into alpha): 3 * 2/8 next to the pixel
+    "EdgeDetectCImg alpha normalize|eu.cimg.EdgeDetect|general|float|tol=1e-4+mean=0,0,0,0.75||-i Source=file:impulse.pfm -i Mask=none normalize=1 --frames 0 --window 33,24,34,25"
     # version 4 defaults (Gaussian, Tensor, the edges in the processed channels): with blur size 0,
     # centred differences, 1/2 in each of R, G and B next to the pixel, so sqrt(3 * (1/2)^2)
     "EdgeDetectCImg 4 defaults impulse|eu.cimg.EdgeDetect|filter|float|tol=1e-4+mean=0.866025,0.866025,0.866025,1||-m 4 -i Source=file:impulse.pfm -i Mask=none --frames 0 --window 33,24,34,25"

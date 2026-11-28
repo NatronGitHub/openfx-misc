@@ -257,7 +257,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 //              (SupportExt #73, #79); Prewitt filter and Threshold parameter (#314, #406);
 //              Output parameter: one edge matte in alpha, the default (#314); Sum multichannel
 //              operation, the default (#314); Sobel filter by default; Sobel and Prewitt kernels
-//              not normalized (#314); no RoD expansion with the Alpha output (#314)
+//              not normalized, unless Normalize is checked (#314); no RoD expansion with the Alpha output (#314)
 #define kPluginVersionMajorEdgeDetect 5
 #define kPluginVersionMajorFIR 5 // Blur, Laplacian, Sharpen, Soften
 #define kPluginVersionMinorOld 1 // version 3, kept for backward compatibility
@@ -598,7 +598,7 @@ sharpenSoftenDelta(double d,
 #define kParamEdgeDetectFilterLabel "Filter"
 #define kParamEdgeDetectFilterHintV4 "Edge detection filter. If the blur size is not zero, it is used as the kernel size for quasi-Gaussian, Gaussian, box, triangle and quadratic filters. For the simple, rotation-invariant, Sobel and Prewitt filters, the image is pre-blurred with a Gaussian filter."
 #define kParamEdgeDetectFilterHint kParamEdgeDetectFilterHintV4 " " \
-    "The Sobel and Prewitt kernels are not normalized: on a ramp of slope 1, their gradient is 8 (Sobel) or 6 (Prewitt), instead of 1 for the other filters."
+    "The Sobel and Prewitt kernels are not normalized unless Normalize is checked: on a ramp of slope 1, their gradient is 8 (Sobel) or 6 (Prewitt), instead of 1 for the other filters."
 #define kParamEdgeDetectFilterOptionSimple "Simple", "Gradient is estimated by centered finite differences.", "simple"
 #define kParamEdgeDetectFilterOptionSobel "Sobel", "Compute gradient using the Sobel 3x3 filter.", "sobel"
 #define kParamEdgeDetectFilterOptionRotationInvariant "Rotation Invariant", "Compute gradient using a 3x3 rotation-invariant filter.", "rotinvariant"
@@ -622,6 +622,10 @@ enum EdgeDetectFilterEnum
     eEdgeDetectFilterQuadratic,
     eEdgeDetectFilterPrewitt, // last: added in 5.0 (issue #314)
 };
+
+#define kParamEdgeDetectNormalize "normalize"
+#define kParamEdgeDetectNormalizeLabel "Normalize"
+#define kParamEdgeDetectNormalizeHint "Divide the Sobel and Prewitt kernels by the sum of their weights (8 and 6), so that a ramp of slope 1 gives 1, as with the other filters. Off by default. Only for the Sobel and Prewitt filters."
 
 #define kParamEdgeDetectMultiChannel "multiChannel"
 #define kParamEdgeDetectMultiChannelLabel "Multi-Channel"
@@ -1303,6 +1307,7 @@ struct CImgBlurParams
     EdgeDetectMultiChannelEnum edgeDetectMultiChannel;
     bool edgeDetectOutputAlpha; // one edge matte, written into alpha
     bool edgeDetectAlphaIsInput; // Process A: the alpha channel is also an input (edgeDetectOutputAlpha)
+    bool edgeDetectNormalize; // divide the Sobel and Prewitt kernels by 8 and 6 (always in version 4)
     bool edgeDetectNMS;
     double edgeDetectThreshold;
     bool expandRoD;
@@ -1483,7 +1488,6 @@ public:
                                                         kDefaultUnpremult)
         , _blurPlugin(blurPlugin)
         , _edgeDetectRMSSignFix(blurPlugin == eBlurPluginEdgeDetect && majorVersion >= kPluginVersionMajorEdgeDetect)
-        , _edgeDetectNormalize3x3(blurPlugin == eBlurPluginEdgeDetect && majorVersion < kPluginVersionMajorEdgeDetect)
         , _sharpenSoftenMinMax( hasSharpenMinMax(blurPlugin, majorVersion) )
         , _sharpenSoftenAmount(NULL)
         , _sharpenSoftenMinimum(NULL)
@@ -1510,6 +1514,7 @@ public:
         , _edgeDetectNMS(NULL)
         , _edgeDetectThreshold(NULL)
         , _edgeDetectOutput(NULL)
+        , _edgeDetectNormalize(NULL)
         , _expandRoD(NULL)
         , _cropToFormat(NULL)
         , _alphaThreshold(NULL)
@@ -1592,6 +1597,8 @@ public:
             _edgeDetectThreshold = fetchDoubleParam(kParamEdgeDetectThreshold);
             if ( paramExists(kParamEdgeDetectOutput) ) { // version 5
                 _edgeDetectOutput = fetchChoiceParam(kParamEdgeDetectOutput);
+                _edgeDetectNormalize = fetchBooleanParam(kParamEdgeDetectNormalize);
+                assert(_edgeDetectNormalize);
             }
             assert(_edgeDetectFilter && _edgeDetectMultiChannel && _edgeDetectBlur && _edgeDetectErode && _edgeDetectNMS && _edgeDetectThreshold);
             assert( (_edgeDetectOutput != NULL) == (majorVersion >= kPluginVersionMajorEdgeDetect) );
@@ -1644,24 +1651,29 @@ public:
              ( _uniform->getNumKeys() == 0) ) {
             _uniform->setIsSecretAndDisabled(true);
         }
-        updateEdgeDetectOutput();
+        updateEdgeDetectEnabled();
     }
 
     virtual void changedParam(const InstanceChangedArgs &args,
                               const std::string &paramName) OVERRIDE FINAL
     {
         CImgFilterPluginHelper<CImgBlurParams, false>::changedParam(args, paramName);
-        if (paramName == kParamEdgeDetectOutput) {
-            updateEdgeDetectOutput();
+        if ( (paramName == kParamEdgeDetectOutput) || (paramName == kParamEdgeDetectFilter) ) {
+            updateEdgeDetectEnabled();
         }
     }
 
     // EdgeDetect version 5: the Alpha output changes neither the colours nor the RoD, so the
-    // (un)premultiplication and Expand RoD are disabled
-    void updateEdgeDetectOutput()
+    // (un)premultiplication and Expand RoD are disabled; Normalize is only for Sobel and Prewitt
+    // (the other filters are normalized)
+    void updateEdgeDetectEnabled()
     {
         if (!_edgeDetectOutput) {
             return;
+        }
+        if (_edgeDetectNormalize && _edgeDetectFilter) {
+            const EdgeDetectFilterEnum filter = (EdgeDetectFilterEnum)_edgeDetectFilter->getValue();
+            _edgeDetectNormalize->setEnabled(filter == eEdgeDetectFilterSobel || filter == eEdgeDetectFilterPrewitt);
         }
         const bool outputAlpha = ( (EdgeDetectOutputEnum)_edgeDetectOutput->getValue() == eEdgeDetectOutputAlpha );
         if (_premult) {
@@ -1913,6 +1925,8 @@ public:
             params.edgeDetectOutputAlpha = _edgeDetectOutput &&
                                            ( (EdgeDetectOutputEnum)_edgeDetectOutput->getValueAtTime(time) == eEdgeDetectOutputAlpha );
             params.edgeDetectAlphaIsInput = !_processA || _processA->getValueAtTime(time);
+            // version 4 always normalizes the Sobel and Prewitt kernels
+            params.edgeDetectNormalize = !_edgeDetectNormalize || _edgeDetectNormalize->getValueAtTime(time);
             if (params.edgeDetectOutputAlpha) {
                 // the colours are kept (as they are outside the source RoD), and the matte is 0
                 // outside the source RoD: no expansion
@@ -1932,6 +1946,7 @@ public:
             params.edgeDetectThreshold = 0.;
             params.edgeDetectOutputAlpha = false;
             params.edgeDetectAlphaIsInput = false;
+            params.edgeDetectNormalize = false;
         }
 
         params.cropToFormat = _cropToFormat ? _cropToFormat->getValueAtTime(time) : false;
@@ -2750,11 +2765,11 @@ public:
                 return;
             }
             if (params.edgeDetectFilter == eEdgeDetectFilterPrewitt) {
-                grad = prewittGradient(cimg, _edgeDetectNormalize3x3);
+                grad = prewittGradient(cimg, params.edgeDetectNormalize);
             } else {
                 grad = cimg.get_gradient(0, scheme);
             }
-            if (params.edgeDetectFilter == eEdgeDetectFilterSobel && _edgeDetectNormalize3x3) {
+            if (params.edgeDetectFilter == eEdgeDetectFilterSobel && params.edgeDetectNormalize) {
                 grad[0] /= 8;
                 grad[1] /= 8;
             }
@@ -3144,7 +3159,6 @@ private:
     // params
     const BlurPluginEnum _blurPlugin;
     const bool _edgeDetectRMSSignFix; // EdgeDetect versions < 5 never flipped the gradient sign in RMS mode
-    const bool _edgeDetectNormalize3x3; // EdgeDetect versions < 5 normalize the Sobel and Prewitt kernels
     const bool _sharpenSoftenMinMax; // Sharpen and Soften version 5: Minimum and Maximum parameters
     DoubleParam *_sharpenSoftenAmount;
     DoubleParam *_sharpenSoftenMinimum;
@@ -3171,6 +3185,7 @@ private:
     BooleanParam *_edgeDetectNMS;
     DoubleParam *_edgeDetectThreshold;
     ChoiceParam *_edgeDetectOutput;
+    BooleanParam *_edgeDetectNormalize; // version 5
     BooleanParam *_expandRoD;
     BooleanParam *_cropToFormat;
     DoubleParam *_alphaThreshold;
@@ -3304,6 +3319,17 @@ CImgBlurPlugin::describeInContext(ImageEffectDescriptor& desc,
         assert(param->getNOptions() == eEdgeDetectFilterPrewitt);
         param->appendOption(kParamEdgeDetectFilterOptionPrewitt);
         param->setDefault( (int)( (majorVersion >= kPluginVersionMajorEdgeDetect) ? kParamEdgeDetectFilterDefault : kParamEdgeDetectFilterDefaultV4 ) );
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    // EdgeDetect version 5: Normalize (the Sobel and Prewitt kernels), after the filter (version 4
+    // always normalizes them)
+    if (blurPlugin == eBlurPluginEdgeDetect && majorVersion >= kPluginVersionMajorEdgeDetect) {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamEdgeDetectNormalize);
+        param->setLabel(kParamEdgeDetectNormalizeLabel);
+        param->setHint(kParamEdgeDetectNormalizeHint);
+        param->setDefault(false);
         if (page) {
             page->addChild(*param);
         }
