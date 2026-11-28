@@ -583,12 +583,20 @@ ColorBarsPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     if (_majorVersion >= kVersionLinearBars) {
         // version 2 has no alpha: an RGB output is opaque ("the image is opaque and so has no
         // premultiplication state", ofxImageEffect.h); in an RGBA output alpha is 0, and the colors
-        // are not premultiplied by it
-        std::string components;
-        if (_outputComponents) {
-            _outputComponents->getOption(_outputComponents->getValue(), components);
+        // are not premultiplied by it. Output Components sets the output components only in the
+        // general context (setsOutputComponents()); elsewhere the host chooses them, and the param
+        // is a hidden default.
+        bool rgba = false;
+        if ( setsOutputComponents() ) {
+            std::string components;
+            if (_outputComponents) {
+                _outputComponents->getOption(_outputComponents->getValue(), components);
+            }
+            rgba = (components == kParamGeneratorOutputComponentsOptionRGBA);
+        } else {
+            rgba = (_dstClip->getPixelComponents() == ePixelComponentRGBA);
         }
-        clipPreferences.setOutputPremultiplication(components == kParamGeneratorOutputComponentsOptionRGBA ? eImageUnPreMultiplied : eImageOpaque);
+        clipPreferences.setOutputPremultiplication(rgba ? eImageUnPreMultiplied : eImageOpaque);
     }
 }
 

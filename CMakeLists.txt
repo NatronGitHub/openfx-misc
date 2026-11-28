@@ -180,7 +180,8 @@ if(MSVC)
   ADD_COMPILE_OPTIONS(/MP)
   add_compile_definitions(NOMINMAX)
   # If the build system is at least Windows Vista (6.0), compile for Windows Vista. (The CImg
-  # plug-ins no longer need it to be interruptible: they use C++11 thread_local, see CImgFilter.h.)
+  # plug-ins no longer need it to be interruptible: their abort test uses openfx's
+  # OFX::MultiThread::ThreadScope, a thread_local on Windows, see CImgFilter.h.)
   IF (NOT ${CMAKE_SYSTEM_VERSION} VERSION_LESS 6.0) # Windows Vista
     add_compile_definitions(_WIN32_WINNT=0x0600 WINVER=0x0600)
   ENDIF ()

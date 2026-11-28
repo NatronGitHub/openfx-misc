@@ -42,6 +42,7 @@
 #ifdef OFX_EXTENSIONS_NATRON
 #include "ofxNatron.h"
 #endif
+#include "ofxsMultiThread.h" // OFX::MultiThread::ThreadScope
 #include "ofxsThreadSuite.h"
 #include "ofxsOpenMP.h" // ofxsPinOpenMPRuntime
 
@@ -70,9 +71,12 @@
 #endif
 #define cimg_verbosity 0
 
-// Abort mechanism:
-// we have a struct with a thread-local storage that holds the OFX::ImageEffect
-// for the thread being rendered (C++11 thread_local)
+#ifndef OFXS_SUPPORT_HAS_THREAD_SCOPE
+#error "CImgFilter.h needs OFX::MultiThread::ThreadScope (openfx a42d97b5 or later)"
+#endif
+
+// Abort mechanism: a CImgAbortScope makes an OFX::ImageEffect the one whose abort() the CImg abort
+// test calls on the thread that renders it (see CImgAbortScope below)
 #define cimg_abort_test gImageEffectAbort()
 inline void gImageEffectAbort();
 
@@ -103,10 +107,34 @@ typedef float cimgpixfloat_t;
 
 #define CIMG_ABORTABLE // use abortable versions of CImg functions
 
-struct tls
+// Makes effect the one whose abort() the CImg abort test (cimg_abort_test, gImageEffectAbort()) and
+// cimgRenderAborted() call on the calling thread, until the scope ends (also on an exception), which
+// restores the enclosing scope's effect. Construct it on the thread that runs the render action, as a
+// local variable: OpenMP worker threads see no effect (and don't call abort()).
+// Not a thread_local variable: macOS never unloads a binary that has one (openfx #385).
+class CImgAbortScope
 {
-    // the effect whose abort() the CImg abort test calls in this thread (null: none)
-    static inline thread_local OFX::ImageEffect* gImageEffect = nullptr;
+public:
+    explicit CImgAbortScope(OFX::ImageEffect* effect)
+        : _effect(effect)
+        , _scope(this)
+    {
+    }
+
+    CImgAbortScope(const CImgAbortScope&) = delete;
+    CImgAbortScope& operator=(const CImgAbortScope&) = delete;
+
+    // the effect of the innermost scope of the calling thread, or nullptr
+    static OFX::ImageEffect* currentEffect() noexcept
+    {
+        const CImgAbortScope* s = OFX::MultiThread::ThreadScope<CImgAbortScope>::current();
+
+        return s ? s->_effect : nullptr;
+    }
+
+private:
+    OFX::ImageEffect* const _effect;
+    OFX::MultiThread::ThreadScope<CImgAbortScope> _scope; // last: pushed once _effect is set
 };
 
 inline void
@@ -117,7 +145,8 @@ gImageEffectAbort()
         return;
     }
 #  endif
-    if ( tls::gImageEffect && tls::gImageEffect->abort() ) {
+    OFX::ImageEffect* effect = CImgAbortScope::currentEffect();
+    if ( effect && effect->abort() ) {
         throw cimg_library::CImgAbortException("");
     }
 }
@@ -133,32 +162,10 @@ cimgRenderAborted()
         return false;
     }
 #  endif
+    OFX::ImageEffect* effect = CImgAbortScope::currentEffect();
 
-    return tls::gImageEffect && tls::gImageEffect->abort();
+    return effect && effect->abort();
 }
-
-// sets the effect checked by the CImg abort test in the current thread,
-// and restores the previous value on exit (including on exceptions)
-class CImgAbortScope
-{
-public:
-    explicit CImgAbortScope(OFX::ImageEffect* effect)
-        : _prev(tls::gImageEffect)
-    {
-        tls::gImageEffect = effect;
-    }
-
-    ~CImgAbortScope()
-    {
-        tls::gImageEffect = _prev;
-    }
-
-    CImgAbortScope(const CImgAbortScope&) = delete;
-    CImgAbortScope& operator=(const CImgAbortScope&) = delete;
-
-private:
-    OFX::ImageEffect* _prev;
-};
 
 
 // The radius in pixels of a (signed) size in pixels at a render scale, rounded half away from zero: 0.5 is a
